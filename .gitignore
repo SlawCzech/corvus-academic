@@ -1,0 +1,14 @@
+.env
+__pycache__/
+.venv/
+.idea/
+.pyright/
+.ruff_cache/
+dist/
+.uv/
+*.pyc
+*.pyo
+.coverage
+coverage.xml
+.pytest_cache/
+.claude/
