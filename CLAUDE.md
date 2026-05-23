@@ -25,6 +25,10 @@ Lokalna aplikacja webowa wspomagająca promotorów i recenzentów w analizie stu
 - Panel administracyjny do zarządzania wytycznymi i kluczami API
 - Monitoring kolejki zadań (Flower UI)
 
+## Dokumentacja
+- docs/sessions.md — plan sesji i prompty
+- docs/architecture.md — architektura systemu
+
 ---
 
 ## 3. Architektura systemu
