@@ -61,34 +61,70 @@ przechodzić bez błędów.
 
 ### Sesja 1.2 — encje domenowe
 ```
-Jesteśmy w projekcie Corvus. Przeczytaj CLAUDE.md.
 
-Stan projektu: sesja 1.1 zakończona — struktura katalogów,
-pyproject.toml z uv i Python 3.12, .gitignore, .env.example.
+Read CLAUDE.md. Create domain entities in agent/src/domain/.
 
-W agent/src/domain/ utwórz encje jako frozen dataclasses:
+metadata.py — Value Object:
+  ThesisMetadata(frozen=True): author: str, title: str,
+  year: int, field_of_study: str
 
-- FindingSeverity(Enum): CRITICAL, MAJOR, MINOR
-- Finding(frozen=True): section: str, description: str,
-  severity: FindingSeverity, suggestion: str
-- ThesisAnalysis: thesis_id: str, findings: list[Finding],
-  requirements: list[str]
-  metody: critical_count() -> int, is_ready_for_review() -> bool
-- Score: criteria: str, points: int, max_points: int,
-  metoda: percentage() -> float
-- Review(frozen=True): thesis_id: str, scores: list[Score],
-  summary: str, recommendation: str
-  metoda: total_percentage() -> float
+analysis.py — Entities:
+  FindingSeverity(Enum): CRITICAL, MAJOR, MINOR
+  Finding(frozen=True): section: str, description: str,
+    severity: FindingSeverity, suggestion: str
+  ThesisAnalysis: thesis_id: UUID, findings: list[Finding],
+    requirements: list[str]
+    methods: critical_count() -> int,
+             is_ready_to_submit() -> bool
 
-Zero importów z FastAPI, LangChain ani żadnego frameworka.
-Pełne type hints. Każda klasa ma jednozdaniowy docstring.
+review.py — Entities:
+  Score(frozen=True): criteria: str, points: int, max_points: int
+    method: percentage() -> float
+  Review(frozen=True): review_id: UUID, thesis_id: UUID,
+    scores: list[Score], summary: str, recommendation: str
+    method: total_percentage() -> float
 
-Napisz testy jednostkowe w agent/tests/domain/test_analysis.py
-i test_review.py pokrywające wszystkie metody biznesowe,
-w tym edge case: pusta lista findings, zerowe punkty.
+evaluation.py — Aggregate Root:
+  EvaluationStatus(Enum): UPLOADED, ANALYZING, ANALYZED,
+    REVIEWED, REJECTED
+  VALID_TRANSITIONS: dict[EvaluationStatus, set[EvaluationStatus]]:
+    UPLOADED  → {ANALYZING}
+    ANALYZING → {ANALYZED, REJECTED}
+    ANALYZED  → {REVIEWED}
+    REVIEWED  → set()
+    REJECTED  → set()
+  ThesisEvaluation (Aggregate Root):
+    id: UUID, metadata: ThesisMetadata,
+    status: EvaluationStatus = UPLOADED,
+    analysis: ThesisAnalysis | None = None,
+    review: Review | None = None
+    private methods: _transition(target: EvaluationStatus) -> None
+    public methods:
+      start_analysis() -> None
+      complete_analysis(analysis: ThesisAnalysis) -> None
+        (sets ANALYZED or REJECTED via is_ready_to_submit())
+      attach_review(review: Review) -> None
+      is_complete() -> bool
 
-Weryfikacja: uv run pytest agent/tests/domain/ -v
-i uv run ruff check . i uv run pyright bez błędów.
+Rules:
+- UUID imported from stdlib uuid module, passed in from outside —
+  entities never generate their own UUID
+- No imports from FastAPI, LangChain, SQLAlchemy or any framework
+- Full type hints everywhere
+- All comments and docstrings in English
+- Each class has a one-sentence docstring
+
+Write tests in agent/tests/domain/ covering:
+- all valid state transitions
+- invalid transitions raise ValueError with descriptive message
+- is_ready_to_submit() with and without CRITICAL findings
+- percentage() and total_percentage() edge cases (zero max_points)
+- ThesisMetadata is frozen (attempted mutation raises TypeError)
+- complete_analysis() correctly routes to ANALYZED vs REJECTED
+
+Verification: uv run pytest agent/tests/domain/ -v
+and uv run ruff check . and uv run pyright must pass with no errors.
+
 ```
 
 ---
@@ -567,7 +603,7 @@ Weryfikacja: Jenkinsfile ma poprawną składnię Groovy
 | Sesja | Status | Data | Notatka |
 |---|---|---|---|
 | 1.1 setup | ✅ | — | struktura, pyproject.toml, uv, Python 3.12 |
-| 1.2 encje | ⬜ | — | — |
+| 1.2 encje | ✅ | 2026-05-24 | 4 pliki domain, 23 testy, pokrycie 100% |
 | 1.3 węzeł | ⬜ | — | — |
 | 1.4 graf | ⬜ | — | — |
 | 2.1 parser | ⬜ | — | — |
