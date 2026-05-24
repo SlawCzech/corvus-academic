@@ -10,14 +10,14 @@
 Wklej to jako pierwszy prompt w nowej sesji Claude Code:
 
 ```
-Jesteśmy w projekcie Corvus. Przeczytaj CLAUDE.md.
+Read CLAUDE.md.
 
-Stan projektu: [co zostało zrobione w poprzedniej sesji]
-Ostatni commit: [krótki opis]
+Project state: [what was done in the previous session]
+Last commit: [short description]
 
-Następny krok: [nazwa sesji z planu poniżej]
+Next step: [session name from the plan below]
 
-[wklej prompt sesji]
+[paste session prompt]
 ```
 
 ---
@@ -26,50 +26,53 @@ Następny krok: [nazwa sesji z planu poniżej]
 
 ### Sesja 1.1 — setup projektu ✅
 ```
-Jesteśmy w projekcie Corvus. Przeczytaj CLAUDE.md.
+Read CLAUDE.md.
 
-Zainicjuj projekt Corvus używając uv jako package managera.
-Utwórz strukturę katalogów:
-agent/src/{domain,application,infrastructure} i agent/tests/domain/.
+Initialize project Corvus using uv as package manager.
+Create directory structure:
+agent/src/{domain,application,infrastructure} and agent/tests/domain/.
 
-Uruchom: uv python pin 3.12
+Run: uv python pin 3.12
 
-Skonfiguruj pyproject.toml z:
+Configure pyproject.toml with:
 - requires-python = ">=3.12,<3.14"
 - [build-system] hatchling
-- [tool.ruff] line-length=88, select=["E","F","I","N","UP","ANN","S","B"]
+- [tool.ruff.lint] line-length=88,
+  select=["E","F","I","N","UP","ANN","S","B"]
+- [tool.ruff.lint.per-file-ignores] "tests/**/*.py" = ["S101"]
 - [tool.pyright] pythonVersion="3.12", typeCheckingMode="strict"
 - [tool.pytest.ini_options] asyncio_mode="auto"
 - [tool.coverage.report] fail_under=80
 
-Dodaj zależności przez uv add:
+Add dependencies via uv add:
 - prod: fastapi pydantic structlog langchain langgraph langchain-anthropic
 - dev: pytest pytest-asyncio pytest-cov ruff pyright
 
-Dodaj .env.example z: MODEL_BACKEND, ANTHROPIC_API_KEY,
-LANGCHAIN_TRACING_V2, LANGCHAIN_API_KEY, REDIS_URL, DATABASE_URL,
-FERNET_KEY, JWT_SECRET.
+Add .env.example with: MODEL_BACKEND, ANTHROPIC_API_KEY,
+LANGCHAIN_TRACING_V2, LANGCHAIN_API_KEY, LANGCHAIN_PROJECT,
+REDIS_URL, DATABASE_URL, FERNET_KEY, JWT_SECRET.
 
-Dodaj .gitignore ignorujący: .env, __pycache__, .venv, .pyright,
+Add .gitignore ignoring: .env, __pycache__, .venv, .pyright,
 .ruff_cache, dist/, .uv/, .claude/.
 
-Weryfikacja: uv run ruff check . i uv run pyright muszą
-przechodzić bez błędów.
+Verification: uv run ruff check . and uv run pyright
+must pass with no errors.
 ```
 
 ---
 
-### Sesja 1.2 — encje domenowe
+### Sesja 1.2 — encje domenowe ✅
 ```
+Read CLAUDE.md.
 
-Read CLAUDE.md. Create domain entities in agent/src/domain/.
+Create domain entities in agent/src/domain/.
 
 metadata.py — Value Object:
   ThesisMetadata(frozen=True): author: str, title: str,
   year: int, field_of_study: str
 
 analysis.py — Entities:
-  FindingSeverity(Enum): CRITICAL, MAJOR, MINOR
+  FindingSeverity(StrEnum): CRITICAL, MAJOR, MINOR
   Finding(frozen=True): section: str, description: str,
     severity: FindingSeverity, suggestion: str
   ThesisAnalysis: thesis_id: UUID, findings: list[Finding],
@@ -85,7 +88,7 @@ review.py — Entities:
     method: total_percentage() -> float
 
 evaluation.py — Aggregate Root:
-  EvaluationStatus(Enum): UPLOADED, ANALYZING, ANALYZED,
+  EvaluationStatus(StrEnum): UPLOADED, ANALYZING, ANALYZED,
     REVIEWED, REJECTED
   VALID_TRANSITIONS: dict[EvaluationStatus, set[EvaluationStatus]]:
     UPLOADED  → {ANALYZING}
@@ -107,6 +110,7 @@ evaluation.py — Aggregate Root:
       is_complete() -> bool
 
 Rules:
+- StrEnum imported from enum (stdlib, Python 3.11+)
 - UUID imported from stdlib uuid module, passed in from outside —
   entities never generate their own UUID
 - No imports from FastAPI, LangChain, SQLAlchemy or any framework
@@ -124,72 +128,139 @@ Write tests in agent/tests/domain/ covering:
 
 Verification: uv run pytest agent/tests/domain/ -v
 and uv run ruff check . and uv run pyright must pass with no errors.
-
 ```
 
 ---
 
-### Sesja 1.3 — pierwszy węzeł LangGraph
+### Sesja 1.3 — AnalysisState + pierwszy węzeł LangGraph
 ```
-Jesteśmy w projekcie Corvus. Przeczytaj CLAUDE.md.
+Read CLAUDE.md.
 
-Stan projektu: sesja 1.2 zakończona — encje domenowe
-w agent/src/domain/ z testami przechodzącymi.
+Project state: session 1.2 complete — domain entities in
+agent/src/domain/ (ThesisMetadata, Finding, ThesisAnalysis,
+Score, Review, ThesisEvaluation with state machine).
+StrEnum for FindingSeverity and EvaluationStatus.
+All tests pass, ruff and pyright clean.
 
-Utwórz TypedDict stanu grafu w agent/src/application/state.py:
-- AnalysisState: thesis_id: str, text: str, guidelines: str,
-  findings: list[Finding], scores: list[Score],
-  review: Review | None, error: str | None
+--- AnalysisState ---
 
-Zaimplementuj węzeł analyze_structure w
-agent/src/application/nodes/structure.py:
-- funkcja analyze_structure(state: AnalysisState) -> AnalysisState
-- używa ChatAnthropic przez llm_factory (jeszcze nie istnieje —
-  utwórz placeholder zwracający ChatAnthropic z env ANTHROPIC_API_KEY)
-- prompt systemowy: analiza struktury rozdziałów pracy dyplomowej
-- zwraca stan z uzupełnioną listą findings (tylko strukturalne)
-- obsługuje wyjątek i zapisuje do state.error
+Create agent/src/application/state.py:
 
-Dodaj LANGCHAIN_TRACING_V2=true i LANGCHAIN_PROJECT=corvus
-do .env.example.
+  class AnalysisState(TypedDict):
+      evaluation_id: str        # UUID serialized as str for LangGraph
+      metadata:      dict       # ThesisMetadata serialized as dict
+      text:          str        # extracted thesis text from parser
+      guidelines:    str        # university + promoter guidelines
+      findings:      list[Finding]  # grows across nodes 1-3
+      scores:        list[Score]    # filled by generate_review node
+      review:        Review | None  # filled by generate_review node
+      status:        str        # EvaluationStatus serialized as str
+      error:         str | None # set on exception, None otherwise
 
-Napisz test w agent/tests/application/test_structure_node.py
-mockujący ChatAnthropic przez unittest.mock.patch.
-Test weryfikuje że węzeł zwraca AnalysisState z niepustą
-listą findings gdy mock zwraca poprawną odpowiedź,
-oraz że error jest ustawiony gdy mock rzuca wyjątek.
+  Note: ThesisMetadata and EvaluationStatus are serialized to
+  dict/str at the graph boundary — LangGraph serializes state
+  to JSON internally. Conversion happens in application layer,
+  not in domain.
 
-Weryfikacja: uv run pytest agent/tests/ -v
-i uv run ruff check . i uv run pyright bez błędów.
+--- llm_factory placeholder ---
+
+Create agent/src/infrastructure/llm_factory.py:
+  - function get_llm() -> BaseChatModel
+  - returns ChatAnthropic(model="claude-sonnet-4-20250514")
+    with api_key loaded from settings via pydantic-settings
+  - this is a placeholder — full model selector comes in session 2.3
+
+Create agent/src/infrastructure/settings.py:
+  - class Settings(BaseSettings) with fields:
+    anthropic_api_key: str
+    langchain_tracing_v2: bool = False
+    langchain_project: str = "corvus"
+  - loaded from .env automatically
+
+--- analyze_structure node ---
+
+Create agent/src/application/nodes/structure.py:
+  - function analyze_structure(state: AnalysisState) -> AnalysisState
+  - calls get_llm() to obtain the model
+  - system prompt: you are a thesis reviewer analyzing chapter
+    structure and coherence of a diploma thesis
+  - user prompt: combines state["text"] and state["guidelines"]
+  - expects model to return a structured list of structural findings
+  - parses response into list[Finding] with severity from FindingSeverity
+  - returns state with state["findings"] extended by structural findings
+  - on any exception: sets state["error"] = str(exception),
+    leaves findings unchanged, returns state
+  - all log messages via structlog, not print()
+
+Add to .env.example:
+  LANGCHAIN_TRACING_V2=true
+  LANGCHAIN_PROJECT=corvus
+
+--- Tests ---
+
+Create agent/tests/application/test_structure_node.py:
+
+  Test 1 — happy path:
+  - patch get_llm at agent.src.application.nodes.structure.get_llm
+  - mock returns AIMessage with a plausible structured response
+  - call analyze_structure(state) with sample state
+  - assert len(result["findings"]) > 0
+  - assert result["error"] is None
+
+  Test 2 — API error:
+  - patch get_llm, mock raises Exception("API timeout")
+  - call analyze_structure(state)
+  - assert result["error"] is not None
+  - assert result["findings"] == []
+
+  Test 3 — state passthrough:
+  - existing findings in state must be preserved (not replaced)
+  - new findings are appended, not overwritten
+
+Rules:
+- No imports from domain layer in tests — use dict literals
+  for AnalysisState construction
+- All comments and docstrings in English
+- No real API calls in tests — always mock get_llm
+
+Verification: uv run pytest agent/tests/ -v
+and uv run ruff check . and uv run pyright must pass with no errors.
 ```
 
 ---
 
 ### Sesja 1.4 — graf LangGraph
 ```
-Jesteśmy w projekcie Corvus. Przeczytaj CLAUDE.md.
+Read CLAUDE.md.
 
-Stan projektu: sesja 1.3 zakończona — węzeł analyze_structure
-z testem, AnalysisState, placeholder llm_factory.
+Project state: session 1.3 complete — AnalysisState TypedDict,
+analyze_structure node with tests, llm_factory placeholder,
+Settings via pydantic-settings.
 
-W agent/src/application/graph.py zbuduj graf LangGraph:
-- StateGraph z AnalysisState
-- węzły: analyze_structure (zaimplementowany),
-  analyze_methodology (stub — zwraca state bez zmian),
-  check_requirements (stub — zwraca state bez zmian),
-  generate_review (stub — zwraca state bez zmian)
-- przepływ: START → analyze_structure → analyze_methodology
-  → check_requirements → generate_review → END
-- funkcja build_analysis_graph() -> CompiledStateGraph
+Create agent/src/application/graph.py:
+  - StateGraph with AnalysisState
+  - nodes:
+      analyze_structure   (implemented in session 1.3)
+      analyze_methodology (stub — returns state unchanged)
+      check_requirements  (stub — returns state unchanged)
+      generate_review     (stub — returns state unchanged)
+  - flow: START → analyze_structure → analyze_methodology
+          → check_requirements → generate_review → END
+  - function build_analysis_graph() -> CompiledStateGraph
 
-Napisz test w agent/tests/application/test_graph.py
-mockujący wszystkie węzły. Test weryfikuje że:
-1. graf przechodzi przez wszystkie węzły w kolejności
-2. stan jest poprawnie przekazywany między węzłami
-3. graph.invoke() zwraca AnalysisState
+Create agent/tests/application/test_graph.py:
+  - mock all four nodes via patch
+  - test 1: graph passes through all nodes in correct order
+  - test 2: state is correctly passed between nodes
+  - test 3: graph.invoke() returns AnalysisState with correct shape
+  - test 4: if analyze_structure sets error, remaining nodes
+    still execute (graph does not short-circuit on error)
 
-Weryfikacja: uv run pytest agent/tests/ -v --tb=short
-i uv run ruff check . i uv run pyright bez błędów.
+Rules:
+- All comments and docstrings in English
+
+Verification: uv run pytest agent/tests/ -v --tb=short
+and uv run ruff check . and uv run pyright must pass with no errors.
 ```
 
 ---
@@ -198,104 +269,112 @@ i uv run ruff check . i uv run pyright bez błędów.
 
 ### Sesja 2.1 — serwis parser
 ```
-Jesteśmy w projekcie Corvus. Przeczytaj CLAUDE.md.
+Read CLAUDE.md.
 
-Stan projektu: faza 1 zakończona — graf LangGraph z 4 węzłami
-(1 zaimplementowany, 3 stuby), wszystkie testy przechodzą.
+Project state: phase 1 complete — LangGraph graph with 4 nodes
+(1 implemented, 3 stubs), all tests pass.
 
-Utwórz mikroserwis parser/ z FastAPI:
-- parser/src/domain/document.py: dataclass Document(text, pages, format)
-- parser/src/application/extractor.py: funkcje extract_pdf(file: bytes)
-  i extract_docx(file: bytes) zwracające Document
-  PDF przez PyMuPDF (fitz), DOCX przez python-docx
+Create microservice parser/ with FastAPI:
+- parser/src/domain/document.py:
+    Document(frozen=True): text: str, pages: int, format: str
+- parser/src/application/extractor.py:
+    extract_pdf(file: bytes) -> Document  via PyMuPDF (fitz)
+    extract_docx(file: bytes) -> Document via python-docx
 - parser/src/infrastructure/router.py: FastAPI router,
-  endpoint POST /extract przyjmujący UploadFile,
-  zwracający {"text": str, "pages": int, "format": str}
-  obsługa błędów: 422 dla nieobsługiwanego formatu,
-  500 dla błędu ekstrakcji z logiem przez structlog
-- parser/main.py: FastAPI app z routerem i /health endpointem
-- parser/pyproject.toml: osobny projekt uv z Python 3.12,
-  zależności: fastapi, uvicorn, pymupdf, python-docx, structlog
+    POST /extract — accepts UploadFile,
+    returns {"text": str, "pages": int, "format": str}
+    422 for unsupported format, 500 for extraction error
+    all errors logged via structlog
+- parser/main.py: FastAPI app with router and GET /health
+- parser/pyproject.toml: separate uv project, Python 3.12,
+    deps: fastapi, uvicorn, pymupdf, python-docx, structlog
 
-Utwórz parser/tests/fixtures/ z mini plikiem test.pdf
-i test.docx (możesz użyć fpdf2 i python-docx do ich generowania
-w conftest.py).
+Create parser/tests/fixtures/ with test.pdf and test.docx
+generated in conftest.py via fpdf2 and python-docx.
 
-Napisz testy w parser/tests/test_extractor.py
-i parser/tests/test_router.py z TestClient.
+Write tests:
+- parser/tests/test_extractor.py — unit tests for extract_pdf
+  and extract_docx with fixture files
+- parser/tests/test_router.py — integration tests with TestClient
 
-Weryfikacja: uv run pytest parser/tests/ -v
-i uv run ruff check parser/ i uv run pyright parser/ bez błędów.
+Verification: uv run pytest parser/tests/ -v
+and uv run ruff check parser/ and uv run pyright parser/
+must pass with no errors.
 ```
 
 ---
 
 ### Sesja 2.2 — Celery + Redis
 ```
-Jesteśmy w projekcie Corvus. Przeczytaj CLAUDE.md.
+Read CLAUDE.md.
 
-Stan projektu: sesja 2.1 zakończona — mikroserwis parser
-z testami przechodzącymi.
+Project state: session 2.1 complete — parser microservice
+with passing tests.
 
-Dodaj do agent/ zależności: uv add celery redis
+Add to agent/: uv add celery redis
 
-W agent/src/application/tasks.py utwórz zadanie Celery:
-- funkcja analyze_thesis(thesis_id: str, text: str,
-  guidelines: str) -> dict
-- dekorator @shared_task(bind=True, max_retries=3,
-  default_retry_delay=60)
-- woła build_analysis_graph().invoke(state)
-- w bloku except: raise self.retry(exc=exc)
-- zwraca słownik z wynikiem analizy
+Create agent/src/application/tasks.py:
+  @shared_task(bind=True, max_retries=3, default_retry_delay=60)
+  def analyze_thesis(self, evaluation_id: str, text: str,
+                     guidelines: str, metadata: dict) -> dict:
+    - builds initial AnalysisState from parameters
+    - calls build_analysis_graph().invoke(state)
+    - on exception: raise self.retry(exc=exc)
+    - returns result dict
 
-W agent/src/infrastructure/celery_app.py:
-- konfiguracja Celery z REDIS_URL z env przez pydantic-settings
-- broker_url i result_backend na Redis
-- task_serializer="json", accept_content=["json"]
+Create agent/src/infrastructure/celery_app.py:
+  - Celery config via pydantic-settings (REDIS_URL from env)
+  - broker_url and result_backend pointing to Redis
+  - task_serializer="json", accept_content=["json"]
 
-Napisz test w agent/tests/application/test_tasks.py:
-- mockuj build_analysis_graph i Redis
-- weryfikuj że zadanie woła graf z poprawnymi argumentami
-- weryfikuj że retry jest wywołany przy wyjątku
+Write agent/tests/application/test_tasks.py:
+  - mock build_analysis_graph and Redis
+  - verify task calls graph with correct arguments
+  - verify retry is triggered on exception
 
-Weryfikacja: uv run pytest agent/tests/ -v
-i uv run ruff check agent/ i uv run pyright agent/ bez błędów.
+Verification: uv run pytest agent/tests/ -v
+and uv run ruff check agent/ and uv run pyright agent/
+must pass with no errors.
 ```
 
 ---
 
 ### Sesja 2.3 — model selector + pozostałe węzły
 ```
-Jesteśmy w projekcie Corvus. Przeczytaj CLAUDE.md.
+Read CLAUDE.md.
 
-Stan projektu: sesja 2.2 zakończona — Celery z Redis,
-zadanie analyze_thesis z retry.
+Project state: session 2.2 complete — Celery with Redis,
+analyze_thesis task with retry.
 
-W agent/src/infrastructure/llm_factory.py zastąp placeholder
-pełną implementacją:
-- funkcja get_llm() -> BaseChatModel
-- match settings.model_backend:
-    "claude"  → ChatAnthropic(model="claude-sonnet-4-20250514")
-    "ollama"  → ChatOllama(model=settings.ollama_model,
-                           base_url=settings.ollama_base_url)
-    "openai"  → ChatOpenAI(model="gpt-4o")
-    default   → ValueError z czytelnym komunikatem
+Replace placeholder in agent/src/infrastructure/llm_factory.py:
+  def get_llm() -> BaseChatModel:
+    match settings.model_backend:
+      case "claude" → ChatAnthropic(model="claude-sonnet-4-20250514")
+      case "ollama" → ChatOllama(model=settings.ollama_model,
+                                 base_url=settings.ollama_base_url)
+      case "openai" → ChatOpenAI(model="gpt-4o")
+      case _        → raise ValueError(f"Unknown MODEL_BACKEND: ...")
 
-Zaimplementuj pozostałe 3 węzły (zastąp stuby):
-- analyze_methodology: sprawdza metodologię i źródła
-- check_requirements: RAG — sprawdza zgodność z wytycznymi
-  (na razie bez prawdziwego RAG — prompt z guidelines w state)
-- generate_review: generuje Review z Score dla każdego kryterium
+Add to Settings: model_backend: str, ollama_model: str,
+ollama_base_url: str.
 
-Napisz testy parametryzowane dla llm_factory:
-@pytest.mark.parametrize("backend", ["claude", "ollama", "openai"])
-mockujące każdy wariant.
+Implement remaining 3 nodes (replace stubs):
+  - analyze_methodology: checks methodology and bibliography
+  - check_requirements: checks conformance with guidelines
+    (no real RAG yet — use guidelines from state directly)
+  - generate_review: produces Review with Score per criterion,
+    calls complete_analysis() on ThesisEvaluation to route
+    status to ANALYZED or REJECTED
 
-Napisz testy dla każdego nowego węzła.
+Write parametrized tests for llm_factory:
+  @pytest.mark.parametrize("backend", ["claude","ollama","openai"])
+  with mocks for each variant.
 
-Weryfikacja: uv run pytest agent/tests/ -v --cov=agent/src
-i uv run ruff check agent/ i uv run pyright agent/ bez błędów.
-Pokrycie musi być >= 80%.
+Write tests for each new node.
+
+Verification: uv run pytest agent/tests/ -v --cov=agent/src
+and uv run ruff check agent/ and uv run pyright agent/
+must pass with no errors. Coverage >= 80%.
 ```
 
 ---
@@ -304,99 +383,105 @@ Pokrycie musi być >= 80%.
 
 ### Sesja 3.1 — gateway + auth
 ```
-Jesteśmy w projekcie Corvus. Przeczytaj CLAUDE.md.
+Read CLAUDE.md.
 
-Stan projektu: faza 2 zakończona — parser, Celery, model selector,
-wszystkie 4 węzły LangGraph zaimplementowane.
+Project state: phase 2 complete — parser, Celery, model selector,
+all 4 LangGraph nodes implemented.
 
-Utwórz mikroserwis gateway/ z FastAPI:
-- gateway/src/domain/user.py: dataclass User(id, email, role)
-  Role(Enum): ADMIN, PROMOTOR
-- gateway/src/application/auth.py: funkcje create_token(user) -> str,
-  verify_token(token) -> User używające python-jose i JWT_SECRET z env
+Create microservice gateway/ with FastAPI:
+- gateway/src/domain/user.py:
+    Role(StrEnum): ADMIN, PROMOTOR
+    User(frozen=True): id: UUID, email: str, role: Role
+- gateway/src/application/auth.py:
+    create_token(user: User) -> str
+    verify_token(token: str) -> User
+    using python-jose and JWT_SECRET from env
 - gateway/src/infrastructure/router.py:
-  POST /auth/login → {"access_token": str, "token_type": "bearer"}
-  POST /analysis → {"task_id": str} (wymaga auth, wysyła do Celery)
-  GET  /analysis/{task_id} → {"status": str, "result": dict | None}
-  GET  /health → {"status": "ok"}
-- Dependency Injection: get_current_user przez Bearer token
+    POST /auth/login  → {"access_token": str, "token_type": "bearer"}
+    POST /analysis    → {"task_id": str} (auth required, sends to Celery)
+    GET  /analysis/{task_id} → {"status": str, "result": dict | None}
+    GET  /health      → {"status": "ok"}
+    Dependency: get_current_user via Bearer token
 - gateway/pyproject.toml: fastapi, uvicorn, python-jose,
-  celery, redis, pydantic-settings, structlog
+    celery, redis, pydantic-settings, structlog
 
-Napisz testy z TestClient mockując Celery:
-- test logowania z poprawnymi i błędnymi danymi
-- test endpointów z tokenem i bez tokena
-- test statusu zadania
+Write tests with TestClient mocking Celery:
+- login with correct and incorrect credentials
+- protected endpoints with and without token
+- task status endpoint
 
-Weryfikacja: uv run pytest gateway/tests/ -v
-i uv run ruff check gateway/ i uv run pyright gateway/ bez błędów.
+Verification: uv run pytest gateway/tests/ -v
+and uv run ruff check gateway/ and uv run pyright gateway/
+must pass with no errors.
 ```
 
 ---
 
 ### Sesja 3.2 — Postgres + Alembic
 ```
-Jesteśmy w projekcie Corvus. Przeczytaj CLAUDE.md.
+Read CLAUDE.md.
 
-Stan projektu: sesja 3.1 zakończona — gateway z JWT auth
-i endpointami.
+Project state: session 3.1 complete — gateway with JWT auth
+and endpoints.
 
-Dodaj do gateway/ i agent/: uv add sqlalchemy asyncpg alembic
+Add to gateway/ and agent/: uv add sqlalchemy asyncpg alembic
 
-W gateway/src/infrastructure/models.py utwórz modele SQLAlchemy 2.0:
-- UserModel: id (UUID), email, role, hashed_password, created_at
-- AnalysisModel: id (UUID), thesis_id, user_id (FK), status,
-  result (JSON), created_at, updated_at
+Create gateway/src/infrastructure/models.py (SQLAlchemy 2.0):
+  UserModel:     id (UUID PK), email, role, hashed_password, created_at
+  AnalysisModel: id (UUID PK), evaluation_id, user_id (FK),
+                 status, result (JSON), created_at, updated_at
 
-W gateway/src/infrastructure/repositories.py:
-- AnalysisRepository: save(analysis) i find_by_id(id) jako async
-- UserRepository: find_by_email(email) jako async
+Create gateway/src/infrastructure/repositories.py:
+  AnalysisRepository: async save() and async find_by_id()
+  UserRepository:     async find_by_email()
 
-Zainicjuj Alembic: alembic init gateway/alembic
-Utwórz pierwszą migrację: alembic revision --autogenerate
+Initialize Alembic: alembic init gateway/alembic
+Create first migration: alembic revision --autogenerate
   -m "initial schema"
 
-Napisz testy integracyjne z pytest-asyncio używające
-SQLite w pamięci (sqlite+aiosqlite:///:memory:):
-- test zapisu i odczytu Analysis
-- test zapisu i odczytu User
+Write integration tests with pytest-asyncio using
+in-memory SQLite (sqlite+aiosqlite:///:memory:):
+- save and retrieve Analysis
+- save and retrieve User
 
-Weryfikacja: uv run pytest gateway/tests/ -v
-i uv run ruff check gateway/ i uv run pyright gateway/ bez błędów.
+Verification: uv run pytest gateway/tests/ -v
+and uv run ruff check gateway/ and uv run pyright gateway/
+must pass with no errors.
 ```
 
 ---
 
 ### Sesja 3.3 — secret vault
 ```
-Jesteśmy w projekcie Corvus. Przeczytaj CLAUDE.md.
+Read CLAUDE.md.
 
-Stan projektu: sesja 3.2 zakończona — Postgres z Alembic,
-repozytoria async.
+Project state: session 3.2 complete — Postgres with Alembic,
+async repositories.
 
-W gateway/src/infrastructure/secrets.py:
-- klasa SecretService z __init__(self, key: bytes)
-- encrypt(plain: str) -> str używając cryptography.fernet.Fernet
-- decrypt(token: str) -> str
-- FERNET_KEY ładowany z env przez pydantic-settings
+Create gateway/src/infrastructure/secrets.py:
+  class SecretService:
+    __init__(self, key: bytes) -> None
+    encrypt(plain: str) -> str  via cryptography.fernet.Fernet
+    decrypt(token: str) -> str
+    FERNET_KEY loaded from env via pydantic-settings
 
-Dodaj do UserModel pole api_key_encrypted: str | None
+Add to UserModel: api_key_encrypted: str | None
 
-W gateway/src/infrastructure/router.py dodaj:
-- PATCH /settings/api-key (tylko rola ADMIN):
-  przyjmuje {"api_key": str, "provider": str},
-  szyfruje i zapisuje do DB
-- GET /settings/api-key/status: zwraca {"configured": bool}
-  bez odkrywania klucza
+Add to gateway/src/infrastructure/router.py:
+  PATCH /settings/api-key  (ADMIN only):
+    accepts {"api_key": str, "provider": str},
+    encrypts and saves to DB
+  GET /settings/api-key/status:
+    returns {"configured": bool} — never exposes plain key
 
-Napisz testy:
-- test szyfrowania i deszyfrowania z fixture kluczem testowym
-- test że endpoint nie zwraca plain text klucza nigdy
-- test że ADMIN może ustawić klucz, PROMOTOR nie może
+Write tests:
+- encrypt/decrypt roundtrip with fixture key
+- endpoint never returns plain text key
+- ADMIN can set key, PROMOTOR cannot
 
-Weryfikacja: uv run pytest gateway/tests/ -v --cov=gateway/src
-i uv run ruff check gateway/ i uv run pyright gateway/ bez błędów.
-Pokrycie >= 80%.
+Verification: uv run pytest gateway/tests/ -v --cov=gateway/src
+and uv run ruff check gateway/ and uv run pyright gateway/
+must pass with no errors. Coverage >= 80%.
 ```
 
 ---
@@ -405,77 +490,76 @@ Pokrycie >= 80%.
 
 ### Sesja 4.1 — setup Next.js + upload
 ```
-Jesteśmy w projekcie Corvus. Przeczytaj CLAUDE.md.
+Read CLAUDE.md.
 
-Stan projektu: faza 3 zakończona — gateway z auth, Postgres,
-secret vault.
+Project state: phase 3 complete — gateway with auth,
+Postgres, secret vault.
 
-Utwórz frontend/ z Next.js App Router i TypeScript strict:
-- npx create-next-app@latest frontend --typescript --app
-  --tailwind --eslint --no-src-dir
-- skonfiguruj tsconfig.json strict: true
-- dodaj: npm install vitest @testing-library/react
-  @testing-library/user-event react-dropzone swr zod
-  react-hook-form
+Create frontend/ with Next.js App Router and strict TypeScript:
+  npx create-next-app@latest frontend --typescript --app
+    --tailwind --eslint --no-src-dir
+  configure tsconfig.json: strict: true
+  add: npm install vitest @testing-library/react
+    @testing-library/user-event react-dropzone swr zod react-hook-form
 
-Wygeneruj typy API z OpenAPI schema gateway:
-- npm install -D openapi-typescript
-- dodaj skrypt: "gen-types": "openapi-typescript
-  http://localhost:8000/openapi.json -o src/lib/api.types.ts"
+Generate API types from gateway OpenAPI schema:
+  npm install -D openapi-typescript
+  add script: "gen-types": "openapi-typescript
+    http://localhost:8000/openapi.json -o lib/api.types.ts"
 
-Utwórz stronę /analysis:
-- komponent FileUpload (react-dropzone): akceptuje PDF i DOCX,
-  max 50MB, pokazuje nazwę i rozmiar pliku
-- hook useAnalysis: POST /analysis → task_id,
-  polling GET /analysis/{task_id} co 3s przez useSWR
-  zatrzymuje polling gdy status === "done" lub "error"
-- komponent AnalysisResult: wyświetla findings pogrupowane
-  po severity, scores jako progress bary, summary i recommendation
+Create page /analysis:
+  - FileUpload component (react-dropzone): PDF and DOCX only,
+    max 50MB, shows filename and size
+  - useAnalysis hook: POST /analysis → task_id,
+    polls GET /analysis/{task_id} every 3s via useSWR,
+    stops polling when status === "done" or "error"
+  - AnalysisResult component: findings grouped by severity,
+    scores as progress bars, summary and recommendation
 
-Napisz testy Vitest + Testing Library:
-- test FileUpload: akceptuje właściwe formaty, odrzuca inne
-- test useAnalysis: polling zatrzymuje się przy "done"
-- test AnalysisResult: renderuje findings i scores
+Write Vitest + Testing Library tests:
+  - FileUpload: accepts correct formats, rejects others
+  - useAnalysis: polling stops at "done"
+  - AnalysisResult: renders findings and scores
 
-Weryfikacja: npm run typecheck i npm test i npm run lint
-bez błędów.
+Verification: npm run typecheck and npm test and npm run lint
+must pass with no errors.
 ```
 
 ---
 
 ### Sesja 4.2 — panel admina + logowanie
 ```
-Jesteśmy w projekcie Corvus. Przeczytaj CLAUDE.md.
+Read CLAUDE.md.
 
-Stan projektu: sesja 4.1 zakończona — strona /analysis
-z uploadem, pollingiem i wyświetlaniem wyników.
+Project state: session 4.1 complete — /analysis page
+with upload, polling and results display.
 
-Utwórz stronę /login:
-- formularz (React Hook Form + Zod): email, password
-- walidacja: email poprawny format, password min 8 znaków
-- wywołuje POST /auth/login, zapisuje token w httpOnly cookie
-  przez API route Next.js (nie localStorage)
-- redirect do /analysis po sukcesie
+Create page /login:
+  - form (React Hook Form + Zod): email, password
+  - validation: valid email format, password min 8 chars
+  - calls POST /auth/login, stores token in httpOnly cookie
+    via Next.js API route (not localStorage)
+  - redirects to /analysis on success
 
-Utwórz stronę /admin (chroniona — redirect do /login
-jeśli brak tokena lub rola !== ADMIN):
-- sekcja "Model AI": radio buttons LOCAL/CLOUD,
-  pole na API key (type="password" z togglem widoczności),
-  przycisk zapisz → PATCH /settings/api-key
-- sekcja "Wytyczne": dropzone na PDF wytycznych uczelnianych,
-  lista załadowanych plików z datą
-- sekcja "Użytkownicy": tabela z listą promotorów
+Create page /admin (protected — redirect to /login
+if no token or role !== ADMIN):
+  - section "AI Model": radio LOCAL/CLOUD,
+    API key field (type="password" with visibility toggle),
+    save button → PATCH /settings/api-key
+  - section "Guidelines": PDF dropzone,
+    list of uploaded files with date
+  - section "Users": table of promoters
 
-Middleware Next.js do ochrony /admin i /analysis
-(sprawdza cookie z tokenem).
+Next.js middleware to protect /admin and /analysis
+(checks cookie token).
 
-Napisz testy:
-- test formularza logowania: walidacja, submit, redirect
-- test /admin: redirect gdy brak tokena
-- test sekcji API key: toggle widoczności, submit
+Write tests:
+  - login form: validation, submit, redirect
+  - /admin: redirect when no token
+  - API key section: visibility toggle, submit
 
-Weryfikacja: npm run typecheck i npm test i npm run lint
-bez błędów.
+Verification: npm run typecheck and npm test and npm run lint
+must pass with no errors.
 ```
 
 ---
@@ -484,114 +568,112 @@ bez błędów.
 
 ### Sesja 5.1 — docker-compose
 ```
-Jesteśmy w projekcie Corvus. Przeczytaj CLAUDE.md.
+Read CLAUDE.md.
 
-Stan projektu: faza 4 zakończona — frontend z logowaniem,
-uploadem i panelem admina.
+Project state: phase 4 complete — frontend with login,
+upload and admin panel.
 
-Utwórz infra/docker-compose.yml ze wszystkimi serwisami:
-- frontend: build ./frontend, port 3000, depends_on gateway
-- gateway: build ./gateway, port 8000, env_file .env,
-  depends_on postgres redis, healthcheck GET /health
-- parser: build ./parser, port 8001, healthcheck GET /health
-- agent: build ./agent, command: celery worker,
-  env_file .env, depends_on redis postgres ollama
-- flower: image mher/flower, port 5555, depends_on redis
-- ollama: image ollama/ollama, port 11434, volumes ollama_data
-- redis: image redis:7-alpine, port 6379,
-  healthcheck redis-cli ping
-- postgres: image postgres:16-alpine, port 5432,
-  volumes postgres_data, healthcheck pg_isready
-- jenkins: image jenkins/jenkins:lts, port 8080,
-  volumes jenkins_data
-- sonarqube: image sonarqube:community, port 9000,
-  volumes sonarqube_data
+Create infra/docker-compose.yml with all services:
+  frontend:   build ./frontend,  port 3000, depends_on gateway
+  gateway:    build ./gateway,   port 8000, env_file .env,
+              depends_on postgres redis, healthcheck GET /health
+  parser:     build ./parser,    port 8001, healthcheck GET /health
+  agent:      build ./agent,     command: celery worker,
+              env_file .env, depends_on redis postgres ollama
+  flower:     image mher/flower, port 5555, depends_on redis
+  ollama:     image ollama/ollama, port 11434, volumes ollama_data
+  redis:      image redis:7-alpine, port 6379,
+              healthcheck redis-cli ping
+  postgres:   image postgres:16-alpine, port 5432,
+              volumes postgres_data, healthcheck pg_isready
+  jenkins:    image jenkins/jenkins:lts, port 8080,
+              volumes jenkins_data
+  sonarqube:  image sonarqube:community, port 9000,
+              volumes sonarqube_data
 
-Utwórz Dockerfile dla każdego serwisu Python:
-- multi-stage build: builder (uv sync) + runtime (bez dev deps)
-- non-root user
-- healthcheck
+Create Dockerfile for each Python service:
+  - multi-stage: builder (uv sync) + runtime (no dev deps)
+  - non-root user
+  - HEALTHCHECK instruction
 
-Utwórz infra/docker-compose.override.yml dla lokalnego dev:
-- mounted volumes dla hot-reload
-- DEBUG=true
+Create infra/docker-compose.override.yml for local dev:
+  - mounted volumes for hot-reload
+  - DEBUG=true
 
-Weryfikacja: docker-compose config bez błędów,
-docker-compose up --build uruchamia wszystkie serwisy.
+Verification: docker-compose config passes with no errors,
+docker-compose up --build starts all services.
 ```
 
 ---
 
 ### Sesja 5.2 — GitHub Actions + pre-commit
 ```
-Jesteśmy w projekcie Corvus. Przeczytaj CLAUDE.md.
+Read CLAUDE.md.
 
-Stan projektu: sesja 5.1 zakończona — docker-compose
-z wszystkimi serwisami.
+Project state: session 5.1 complete — docker-compose
+with all services.
 
-Utwórz .github/workflows/ci.yml:
-- trigger: push i pull_request na main i develop
-- job test-gateway: uv run pytest gateway/tests/ --cov-report=xml
-  + uv run ruff check gateway/ + uv run pyright gateway/
-- job test-parser: analogicznie dla parser/
-- job test-agent: analogicznie dla agent/
-- job test-frontend: npm ci + npm run typecheck + npm test
-- job sonarqube: SonarSource/sonarqube-scan-action@v2
-  needs: [test-gateway, test-parser, test-agent, test-frontend]
-  secrets: SONAR_TOKEN, SONAR_HOST_URL
+Create .github/workflows/ci.yml:
+  trigger: push and pull_request on main and develop
+  job test-gateway:   uv run pytest + ruff check + pyright
+  job test-parser:    same for parser/
+  job test-agent:     same for agent/
+  job test-frontend:  npm ci + typecheck + vitest
+  job sonarqube:      SonarSource/sonarqube-scan-action@v2
+    needs: [test-gateway, test-parser, test-agent, test-frontend]
+    secrets: SONAR_TOKEN, SONAR_HOST_URL
 
-Utwórz .github/workflows/cd.yml:
-- trigger: push na main (po merge PR)
-- build i push obrazów Docker na GHCR
-- SSH na serwer i docker-compose pull + up -d
+Create .github/workflows/cd.yml:
+  trigger: push on main (after PR merge)
+  build and push Docker images to GHCR
+  SSH to server: docker-compose pull + up -d
 
-Utwórz .pre-commit-config.yaml:
-- ruff check i ruff format dla Python
-- prettier dla TypeScript/JSON
-- pyright dla Python
-- check-added-large-files (max 1MB)
-- detect-private-key
+Create .pre-commit-config.yaml:
+  - ruff check and ruff format for Python
+  - prettier for TypeScript/JSON
+  - pyright for Python
+  - check-added-large-files (max 1MB)
+  - detect-private-key
 
-Utwórz infra/sonarqube/sonar-project.properties.
+Create infra/sonarqube/sonar-project.properties.
 
-Weryfikacja: pre-commit run --all-files bez błędów.
+Verification: pre-commit run --all-files passes with no errors.
 ```
 
 ---
 
-### Sesja 5.3 — Jenkinsfile
+### Sesja 5.3 — Jenkinsfile + README
 ```
-Jesteśmy w projekcie Corvus. Przeczytaj CLAUDE.md.
+Read CLAUDE.md.
 
-Stan projektu: sesja 5.2 zakończona — GitHub Actions CI/CD,
+Project state: session 5.2 complete — GitHub Actions CI/CD,
 pre-commit hooks.
 
-Utwórz infra/jenkins/Jenkinsfile:
-stages:
-1. Checkout: git checkout
-2. Test Python: uv run pytest dla każdego serwisu równolegle
-3. Test TypeScript: npm ci + npm test w frontend/
-4. SonarQube: sonar-scanner z wynikami pokrycia
-5. Build images: docker build dla każdego serwisu
-6. Push to GHCR: docker push (tylko na main)
-7. Deploy: SSH + docker-compose pull + up -d (tylko na main)
-8. Healthcheck: curl wszystkich /health endpointów
-9. Notify: email przy failure
+Create infra/jenkins/Jenkinsfile with stages:
+  1. Checkout
+  2. Test Python  — uv run pytest per service, parallel
+  3. Test TypeScript — npm ci + npm test in frontend/
+  4. SonarQube    — sonar-scanner with coverage results
+  5. Build images — docker build per service
+  6. Push to GHCR — docker push (main branch only)
+  7. Deploy       — SSH + docker-compose pull + up -d (main only)
+  8. Healthcheck  — curl all /health endpoints
+  9. Notify       — email on failure
 
-Użyj Jenkins Credentials dla:
-- GITHUB_TOKEN (GHCR push)
-- SSH_KEY (deploy na serwer)
-- SONAR_TOKEN
+Use Jenkins Credentials for:
+  GITHUB_TOKEN (GHCR push)
+  SSH_KEY      (server deploy)
+  SONAR_TOKEN
 
-Utwórz README.md dla projektu:
-- opis projektu Corvus
-- wymagania (Docker, uv, Node 26)
-- instrukcja uruchomienia lokalnie (5 kroków)
-- architektura (krótki opis serwisów)
-- zmienne środowiskowe (tabela)
+Create README.md:
+  - Corvus project description
+  - requirements: Docker, uv, Node 26
+  - local setup in 5 steps
+  - service architecture table
+  - environment variables table
 
-Weryfikacja: Jenkinsfile ma poprawną składnię Groovy
-(można sprawdzić przez Jenkins Pipeline Linter).
+Verification: Jenkinsfile syntax valid
+(check via Jenkins Pipeline Linter).
 ```
 
 ---
@@ -602,13 +684,13 @@ Weryfikacja: Jenkinsfile ma poprawną składnię Groovy
 
 | Sesja | Status | Data | Notatka |
 |---|---|---|---|
-| 1.1 setup | ✅ | — | struktura, pyproject.toml, uv, Python 3.12 |
-| 1.2 encje | ✅ | 2026-05-24 | 4 pliki domain, 23 testy, pokrycie 100% |
-| 1.3 węzeł | ⬜ | — | — |
-| 1.4 graf | ⬜ | — | — |
+| 1.1 setup | ✅ | — | structure, pyproject.toml, uv, Python 3.12 |
+| 1.2 entities | ✅ | 2026-05-24 | 4 domain files, 23 tests, 100% coverage. StrEnum for FindingSeverity and EvaluationStatus. ThesisEvaluation as Aggregate Root with state machine via VALID_TRANSITIONS. |
+| 1.3 node | ⬜ | — | — |
+| 1.4 graph | ⬜ | — | — |
 | 2.1 parser | ⬜ | — | — |
 | 2.2 Celery | ⬜ | — | — |
-| 2.3 modele | ⬜ | — | — |
+| 2.3 models | ⬜ | — | — |
 | 3.1 gateway | ⬜ | — | — |
 | 3.2 Postgres | ⬜ | — | — |
 | 3.3 secrets | ⬜ | — | — |
@@ -620,10 +702,24 @@ Weryfikacja: Jenkinsfile ma poprawną składnię Groovy
 
 ---
 
+## Zmiany względem pierwotnego planu
+
+| Sesja | Zmiana | Powód |
+|---|---|---|
+| 1.2 | `StrEnum` zamiast `Enum` | Natywna serializacja do str, brak potrzeby `.value` przy JSON |
+| 1.2 | `ThesisEvaluation` jako Aggregate Root zamiast `ThesisSubmission` | Lepsza nazwa domenowa — obiekt reprezentuje ewaluację pracy |
+| 1.2 | `ThesisMetadata` jako osobny Value Object | Dane opisowe nie należą do `ThesisAnalysis` — separacja odpowiedzialności |
+| 1.2 | State machine przez `VALID_TRANSITIONS` dict | Czysta domena bez zewnętrznych bibliotek, Pyright weryfikuje kompletność |
+| 1.3 | `AnalysisState` rozszerzony o `metadata`, `status` | Wynika ze zmian w domenie — agregat ma metadane i status |
+| 1.3 | `Settings` przez pydantic-settings | Spójna konfiguracja przez env w całym projekcie |
+| Wszystkie | Prompty w języku angielskim | Spójność z kodem — komentarze i docstringi w English |
+
+---
+
 ## Checklist przed każdym commitem
 
-- [ ] `uv run ruff check .` — bez błędów
-- [ ] `uv run pyright` — bez błędów
-- [ ] `uv run pytest --cov` — wszystkie testy przechodzą, pokrycie >= 80%
-- [ ] brak `.env` w staged files (`git status`)
-- [ ] commit message w formacie `feat:` / `fix:` / `test:` / `chore:`
+- [ ] `uv run ruff check .` — no errors
+- [ ] `uv run pyright` — no errors
+- [ ] `uv run pytest --cov` — all tests pass, coverage >= 80%
+- [ ] no `.env` in staged files (`git status`)
+- [ ] commit message: `feat:` / `fix:` / `test:` / `chore:` / `docs:` / `refactor:`
