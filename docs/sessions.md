@@ -686,7 +686,7 @@ Verification: Jenkinsfile syntax valid
 |---|---|---|---|
 | 1.1 setup | ✅ | — | structure, pyproject.toml, uv, Python 3.12 |
 | 1.2 entities | ✅ | 2026-05-24 | 4 domain files, 23 tests, 100% coverage. StrEnum for FindingSeverity and EvaluationStatus. ThesisEvaluation as Aggregate Root with state machine via VALID_TRANSITIONS. |
-| 1.3 node | ⬜ | — | — |
+| 1.3 node | ✅ | 2026-05-24 | AnalysisState TypedDict, Settings via pydantic-settings, get_llm placeholder, analyze_structure node with structlog. 3 tests, 99.3% coverage. |
 | 1.4 graph | ⬜ | — | — |
 | 2.1 parser | ⬜ | — | — |
 | 2.2 Celery | ⬜ | — | — |
