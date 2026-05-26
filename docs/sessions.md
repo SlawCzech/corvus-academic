@@ -139,28 +139,33 @@ Read CLAUDE.md.
 Project state: session 1.2 complete — domain entities in
 agent/src/domain/ (ThesisMetadata, Finding, ThesisAnalysis,
 Score, Review, ThesisEvaluation with state machine).
-StrEnum for FindingSeverity and EvaluationStatus.
+FindingSeverity uses StrEnum; EvaluationStatus uses plain Enum
+(serialized to str via .value at the graph boundary).
 All tests pass, ruff and pyright clean.
 
 --- AnalysisState ---
 
 Create agent/src/application/state.py:
 
-  class AnalysisState(TypedDict):
-      evaluation_id: str        # UUID serialized as str for LangGraph
-      metadata:      dict       # ThesisMetadata serialized as dict
-      text:          str        # extracted thesis text from parser
-      guidelines:    str        # university + promoter guidelines
-      findings:      list[Finding]  # grows across nodes 1-3
-      scores:        list[Score]    # filled by generate_review node
-      review:        Review | None  # filled by generate_review node
-      status:        str        # EvaluationStatus serialized as str
-      error:         str | None # set on exception, None otherwise
+  class ThesisMetadataDict(TypedDict):
+      author: str
+      title: str
+      year: int
+      field_of_study: str
 
-  Note: ThesisMetadata and EvaluationStatus are serialized to
-  dict/str at the graph boundary — LangGraph serializes state
-  to JSON internally. Conversion happens in application layer,
-  not in domain.
+  class AnalysisState(TypedDict):
+      evaluation_id: str             # UUID serialized as str for LangGraph
+      metadata:      ThesisMetadataDict  # ThesisMetadata serialized at boundary
+      text:          str             # extracted thesis text from parser
+      guidelines:    str             # university + promoter guidelines
+      findings:      list[Finding]   # grows across nodes 1-3
+      scores:        list[Score]     # filled by generate_review node
+      review:        Review | None   # filled by generate_review node
+      status:        str             # EvaluationStatus.value (plain Enum)
+      error:         str | None      # set on exception, None otherwise
+
+  Note: ThesisMetadata → ThesisMetadataDict and EvaluationStatus → str
+  happen at the graph boundary. Conversion in application layer, not domain.
 
 --- llm_factory placeholder ---
 
@@ -198,10 +203,10 @@ Add to .env.example:
 
 --- Tests ---
 
-Create agent/tests/application/test_structure_node.py:
+Create agent/tests/test_application/test_structure_node.py:
 
   Test 1 — happy path:
-  - patch get_llm at agent.src.application.nodes.structure.get_llm
+  - patch get_llm at src.application.nodes.structure.get_llm
   - mock returns AIMessage with a plausible structured response
   - call analyze_structure(state) with sample state
   - assert len(result["findings"]) > 0
@@ -223,7 +228,7 @@ Rules:
 - All comments and docstrings in English
 - No real API calls in tests — always mock get_llm
 
-Verification: uv run pytest agent/tests/ -v
+Verification: run from agent/ — uv run pytest tests/ -v
 and uv run ruff check . and uv run pyright must pass with no errors.
 ```
 
@@ -233,33 +238,78 @@ and uv run ruff check . and uv run pyright must pass with no errors.
 ```
 Read CLAUDE.md.
 
-Project state: session 1.3 complete — AnalysisState TypedDict,
-analyze_structure node with tests, llm_factory placeholder,
-Settings via pydantic-settings.
+Project state: session 1.3 complete — AnalysisState TypedDict
+(with ThesisMetadataDict for metadata), analyze_structure node
+with 3 tests, llm_factory placeholder (ChatAnthropic),
+Settings via pydantic-settings. FindingSeverity is StrEnum;
+EvaluationStatus is plain Enum — serialized as .value in state.
+All tests pass, ruff and pyright clean.
+
+--- Stub nodes ---
+
+Create these three files (each returns state unchanged):
+  agent/src/application/nodes/methodology.py
+    def analyze_methodology(state: AnalysisState) -> AnalysisState
+  agent/src/application/nodes/requirements.py
+    def check_requirements(state: AnalysisState) -> AnalysisState
+  agent/src/application/nodes/review.py
+    def generate_review(state: AnalysisState) -> AnalysisState
+
+Each stub has a one-sentence docstring and logs via structlog.
+
+--- Graph ---
 
 Create agent/src/application/graph.py:
-  - StateGraph with AnalysisState
-  - nodes:
-      analyze_structure   (implemented in session 1.3)
-      analyze_methodology (stub — returns state unchanged)
-      check_requirements  (stub — returns state unchanged)
-      generate_review     (stub — returns state unchanged)
-  - flow: START → analyze_structure → analyze_methodology
-          → check_requirements → generate_review → END
+  from langgraph.graph import StateGraph, START, END
+  from langgraph.graph.state import CompiledStateGraph
+
+  - StateGraph(AnalysisState) with four nodes:
+      "analyze_structure"   → src.application.nodes.structure
+      "analyze_methodology" → src.application.nodes.methodology
+      "check_requirements"  → src.application.nodes.requirements
+      "generate_review"     → src.application.nodes.review
+  - edges: START → analyze_structure → analyze_methodology
+           → check_requirements → generate_review → END
   - function build_analysis_graph() -> CompiledStateGraph
 
-Create agent/tests/application/test_graph.py:
-  - mock all four nodes via patch
-  - test 1: graph passes through all nodes in correct order
-  - test 2: state is correctly passed between nodes
-  - test 3: graph.invoke() returns AnalysisState with correct shape
-  - test 4: if analyze_structure sets error, remaining nodes
-    still execute (graph does not short-circuit on error)
+--- Tests ---
+
+Create agent/tests/test_application/test_graph.py.
+Patch all four node functions inside src.application.graph
+(that is where the graph imports them):
+  patch("src.application.graph.analyze_structure", ...)
+  patch("src.application.graph.analyze_methodology", ...)
+  etc.
+
+Each mock must accept state and return it unchanged so the graph
+can pass state through: side_effect = lambda s: s
+
+  Test 1 — all nodes called:
+  - invoke graph with a minimal valid AnalysisState dict
+  - assert each of the four mocks was called exactly once
+
+  Test 2 — node order:
+  - use a shared call_log list; each mock appends its name via
+    side_effect before returning state
+  - assert call_log == ["analyze_structure", "analyze_methodology",
+                        "check_requirements", "generate_review"]
+
+  Test 3 — return shape:
+  - invoke graph with minimal state (all required keys present,
+    findings=[], scores=[], review=None, error=None)
+  - assert result is a dict containing all nine AnalysisState keys
+
+  Test 4 — no short-circuit on error:
+  - set analyze_structure mock to set state["error"] = "boom"
+    and return that state
+  - assert remaining three nodes are still called
 
 Rules:
+- Construct AnalysisState input as a plain dict (cast if needed)
+- No real LLM calls — nodes are fully mocked
 - All comments and docstrings in English
 
-Verification: uv run pytest agent/tests/ -v --tb=short
+Verification: run from agent/ — uv run pytest tests/ -v --tb=short
 and uv run ruff check . and uv run pyright must pass with no errors.
 ```
 
@@ -706,10 +756,11 @@ Verification: Jenkinsfile syntax valid
 
 | Sesja | Zmiana | Powód |
 |---|---|---|
-| 1.2 | `StrEnum` zamiast `Enum` | Natywna serializacja do str, brak potrzeby `.value` przy JSON |
+| 1.2 | `StrEnum` dla `FindingSeverity` (nie `EvaluationStatus`) | `FindingSeverity` serializuje się natywnie do str; `EvaluationStatus` pozostaje plain `Enum` — wymaga `.value` przy serializacji |
 | 1.2 | `ThesisEvaluation` jako Aggregate Root zamiast `ThesisSubmission` | Lepsza nazwa domenowa — obiekt reprezentuje ewaluację pracy |
 | 1.2 | `ThesisMetadata` jako osobny Value Object | Dane opisowe nie należą do `ThesisAnalysis` — separacja odpowiedzialności |
 | 1.2 | State machine przez `VALID_TRANSITIONS` dict | Czysta domena bez zewnętrznych bibliotek, Pyright weryfikuje kompletność |
+| 1.3 | `metadata: ThesisMetadataDict` zamiast `dict` | Precyzyjne typowanie pola metadata w `AnalysisState` — TypedDict zamiast opaque dict |
 | 1.3 | `AnalysisState` rozszerzony o `metadata`, `status` | Wynika ze zmian w domenie — agregat ma metadane i status |
 | 1.3 | `Settings` przez pydantic-settings | Spójna konfiguracja przez env w całym projekcie |
 | Wszystkie | Prompty w języku angielskim | Spójność z kodem — komentarze i docstringi w English |
