@@ -30,20 +30,27 @@ def _make_state() -> AnalysisState:
     )
 
 
+def _passthrough(state: AnalysisState) -> AnalysisState:
+    """Typed stand-in for node mocks that must return state unchanged."""
+    return state
+
+
 def test_all_nodes_called() -> None:
     """Each of the four nodes is invoked exactly once when the graph runs."""
     with (
-        patch("src.application.graph.analyze_structure", side_effect=lambda s: s) as m1,
         patch(
-            "src.application.graph.analyze_methodology", side_effect=lambda s: s
+            "src.application.graph.analyze_structure", side_effect=_passthrough
+        ) as m1,
+        patch(
+            "src.application.graph.analyze_methodology", side_effect=_passthrough
         ) as m2,
         patch(
-            "src.application.graph.check_requirements", side_effect=lambda s: s
+            "src.application.graph.check_requirements", side_effect=_passthrough
         ) as m3,
-        patch("src.application.graph.generate_review", side_effect=lambda s: s) as m4,
+        patch("src.application.graph.generate_review", side_effect=_passthrough) as m4,
     ):
         graph = build_analysis_graph()
-        graph.invoke(_make_state())
+        graph.invoke(_make_state())  # pyright: ignore[reportUnknownMemberType]
 
     m1.assert_called_once()
     m2.assert_called_once()
@@ -81,7 +88,7 @@ def test_node_order() -> None:
         ),
     ):
         graph = build_analysis_graph()
-        graph.invoke(_make_state())
+        graph.invoke(_make_state())  # pyright: ignore[reportUnknownMemberType]
 
     assert call_log == [
         "analyze_structure",
@@ -94,13 +101,14 @@ def test_node_order() -> None:
 def test_return_shape() -> None:
     """Graph result contains all nine required AnalysisState keys."""
     with (
-        patch("src.application.graph.analyze_structure", side_effect=lambda s: s),
-        patch("src.application.graph.analyze_methodology", side_effect=lambda s: s),
-        patch("src.application.graph.check_requirements", side_effect=lambda s: s),
-        patch("src.application.graph.generate_review", side_effect=lambda s: s),
+        patch("src.application.graph.analyze_structure", side_effect=_passthrough),
+        patch("src.application.graph.analyze_methodology", side_effect=_passthrough),
+        patch("src.application.graph.check_requirements", side_effect=_passthrough),
+        patch("src.application.graph.generate_review", side_effect=_passthrough),
     ):
         graph = build_analysis_graph()
-        result = graph.invoke(_make_state())
+        # Command[Unknown] in invoke() overloads is a LangGraph internal issue
+        result = graph.invoke(_make_state())  # pyright: ignore[reportUnknownMemberType]
 
     required_keys = {
         "evaluation_id",
@@ -151,7 +159,8 @@ def test_no_short_circuit_on_error() -> None:
         ),
     ):
         graph = build_analysis_graph()
-        result = graph.invoke(_make_state())
+        # Command[Unknown] in invoke() overloads is a LangGraph internal issue
+        result = graph.invoke(_make_state())  # pyright: ignore[reportUnknownMemberType]
 
     assert result["error"] == "boom"
     assert call_log == ["analyze_methodology", "check_requirements", "generate_review"]

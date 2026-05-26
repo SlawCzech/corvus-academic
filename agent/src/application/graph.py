@@ -1,5 +1,12 @@
 """LangGraph analysis pipeline graph definition."""
 
+# LangGraph's add_node/compile overloads reference CachePolicy[Unknown] internally,
+# which makes every call site reportUnknownMemberType. All other project code is
+# fully typed — this suppression is scoped to this file only.
+# pyright: reportUnknownMemberType=false
+
+from typing import Any
+
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
@@ -10,9 +17,9 @@ from .nodes.structure import analyze_structure
 from .state import AnalysisState
 
 
-def build_analysis_graph() -> CompiledStateGraph:
+def build_analysis_graph() -> CompiledStateGraph[AnalysisState, None, Any, Any]:
     """Build and compile the sequential thesis analysis graph."""
-    builder: StateGraph = StateGraph(AnalysisState)
+    builder: StateGraph[AnalysisState, None, Any, Any] = StateGraph(AnalysisState)
 
     builder.add_node("analyze_structure", analyze_structure)
     builder.add_node("analyze_methodology", analyze_methodology)
