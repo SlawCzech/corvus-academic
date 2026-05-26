@@ -9,6 +9,7 @@ dependencies = [
     "langchain-anthropic>=1.4.3",
     "langgraph>=1.2.1",
     "pydantic>=2.13.4",
+    "pydantic-settings>=2.14.1",
     "structlog>=25.5.0",
 ]
 
