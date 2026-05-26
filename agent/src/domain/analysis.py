@@ -33,9 +33,7 @@ class ThesisAnalysis:
 
     def critical_count(self) -> int:
         """Return the number of CRITICAL findings."""
-        return sum(
-            1 for f in self.findings if f.severity == FindingSeverity.CRITICAL
-        )
+        return sum(1 for f in self.findings if f.severity == FindingSeverity.CRITICAL)
 
     def is_ready_to_submit(self) -> bool:
         """Return True when no CRITICAL findings remain."""

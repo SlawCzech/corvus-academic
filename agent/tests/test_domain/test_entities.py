@@ -106,9 +106,7 @@ def test_is_ready_to_submit_no_criticals(
 def test_is_ready_to_submit_with_critical(
     thesis_id: UUID, critical_finding: Finding
 ) -> None:
-    analysis = ThesisAnalysis(
-        thesis_id=thesis_id, findings=[critical_finding]
-    )
+    analysis = ThesisAnalysis(thesis_id=thesis_id, findings=[critical_finding])
     assert analysis.is_ready_to_submit() is False
 
 
@@ -124,7 +122,7 @@ def test_score_percentage_normal() -> None:
 
 def test_score_percentage_zero_max() -> None:
     score = Score(criteria="Empty", points=0, max_points=0)
-    assert score.percentage() == pytest.approx(0.0)
+    assert score.percentage() == pytest.approx(0.0)  # pyright: ignore[reportUnknownMemberType]
 
 
 def test_score_is_frozen() -> None:
@@ -154,9 +152,7 @@ def test_review_total_percentage(thesis_id: UUID, review_id: UUID) -> None:
     assert review.total_percentage() == pytest.approx(76.666, rel=1e-3)  # pyright: ignore[reportUnknownMemberType]
 
 
-def test_review_total_percentage_zero_max(
-    thesis_id: UUID, review_id: UUID
-) -> None:
+def test_review_total_percentage_zero_max(thesis_id: UUID, review_id: UUID) -> None:
     review = Review(
         review_id=review_id,
         thesis_id=thesis_id,
@@ -164,7 +160,7 @@ def test_review_total_percentage_zero_max(
         summary="",
         recommendation="",
     )
-    assert review.total_percentage() == pytest.approx(0.0)
+    assert review.total_percentage() == pytest.approx(0.0)  # pyright: ignore[reportUnknownMemberType]
 
 
 def test_review_is_frozen(thesis_id: UUID, review_id: UUID) -> None:
@@ -188,9 +184,7 @@ def test_all_valid_transitions_present() -> None:
     assert set(VALID_TRANSITIONS.keys()) == set(EvaluationStatus)
 
 
-def test_start_analysis(
-    thesis_id: UUID, sample_metadata: ThesisMetadata
-) -> None:
+def test_start_analysis(thesis_id: UUID, sample_metadata: ThesisMetadata) -> None:
     ev = ThesisEvaluation(id=thesis_id, metadata=sample_metadata)
     ev.start_analysis()
     assert ev.status == EvaluationStatus.ANALYZING
@@ -214,9 +208,7 @@ def test_complete_analysis_rejected(
 ) -> None:
     ev = ThesisEvaluation(id=thesis_id, metadata=sample_metadata)
     ev.start_analysis()
-    analysis = ThesisAnalysis(
-        thesis_id=thesis_id, findings=[critical_finding]
-    )
+    analysis = ThesisAnalysis(thesis_id=thesis_id, findings=[critical_finding])
     ev.complete_analysis(analysis)
     assert ev.status == EvaluationStatus.REJECTED
 
@@ -229,9 +221,7 @@ def test_attach_review(
 ) -> None:
     ev = ThesisEvaluation(id=thesis_id, metadata=sample_metadata)
     ev.start_analysis()
-    ev.complete_analysis(
-        ThesisAnalysis(thesis_id=thesis_id, findings=[minor_finding])
-    )
+    ev.complete_analysis(ThesisAnalysis(thesis_id=thesis_id, findings=[minor_finding]))
     review = Review(
         review_id=review_id,
         thesis_id=thesis_id,
@@ -265,9 +255,7 @@ def test_invalid_transition_reviewed_to_analyzing(
 ) -> None:
     ev = ThesisEvaluation(id=thesis_id, metadata=sample_metadata)
     ev.start_analysis()
-    ev.complete_analysis(
-        ThesisAnalysis(thesis_id=thesis_id, findings=[minor_finding])
-    )
+    ev.complete_analysis(ThesisAnalysis(thesis_id=thesis_id, findings=[minor_finding]))
     ev.attach_review(
         Review(
             review_id=review_id,
@@ -300,9 +288,7 @@ def test_invalid_transition_rejected_to_analyzing(
 # ---------------------------------------------------------------------------
 
 
-def test_is_complete_initial(
-    thesis_id: UUID, sample_metadata: ThesisMetadata
-) -> None:
+def test_is_complete_initial(thesis_id: UUID, sample_metadata: ThesisMetadata) -> None:
     ev = ThesisEvaluation(id=thesis_id, metadata=sample_metadata)
     assert ev.is_complete() is False
 
@@ -315,9 +301,7 @@ def test_is_complete_after_review(
 ) -> None:
     ev = ThesisEvaluation(id=thesis_id, metadata=sample_metadata)
     ev.start_analysis()
-    ev.complete_analysis(
-        ThesisAnalysis(thesis_id=thesis_id, findings=[minor_finding])
-    )
+    ev.complete_analysis(ThesisAnalysis(thesis_id=thesis_id, findings=[minor_finding]))
     ev.attach_review(
         Review(
             review_id=review_id,
