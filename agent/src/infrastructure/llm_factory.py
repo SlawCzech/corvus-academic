@@ -10,5 +10,6 @@ def get_llm() -> BaseChatModel:
     """Return a Claude Sonnet instance configured from environment settings."""
     # pyright can't see ChatAnthropic's Pydantic-generated constructor params
     return ChatAnthropic(
-        model="claude-sonnet-4-20250514", anthropic_api_key=settings.anthropic_api_key
-    )  # pyright: ignore[reportCallIssue]
+        model="claude-sonnet-4-20250514",  # pyright: ignore[reportCallIssue]
+        anthropic_api_key=settings.anthropic_api_key,  # pyright: ignore[reportCallIssue]
+    )
