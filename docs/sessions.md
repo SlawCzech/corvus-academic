@@ -737,7 +737,7 @@ Verification: Jenkinsfile syntax valid
 | 1.1 setup | ✅ | — | structure, pyproject.toml, uv, Python 3.12 |
 | 1.2 entities | ✅ | 2026-05-24 | 4 domain files, 23 tests, 100% coverage. StrEnum for FindingSeverity and EvaluationStatus. ThesisEvaluation as Aggregate Root with state machine via VALID_TRANSITIONS. |
 | 1.3 node | ✅ | 2026-05-24 | AnalysisState TypedDict, Settings via pydantic-settings, get_llm placeholder, analyze_structure node with structlog. 3 tests, 99.3% coverage. |
-| 1.4 graph | ⬜ | — | — |
+| 1.4 graph | ✅ | 2026-05-26 | 3 stub nodes, CompiledStateGraph pipeline, 4 graph tests. 30 tests total, 96.2% coverage. pyproject.toml: `reportMissingTypeStubs = false` only. Inline suppressions for LangGraph's `CachePolicy[Unknown]` (file-level in graph.py) and `Command[Unknown]` (per-line in test_graph.py). |
 | 2.1 parser | ⬜ | — | — |
 | 2.2 Celery | ⬜ | — | — |
 | 2.3 models | ⬜ | — | — |
@@ -764,6 +764,8 @@ Verification: Jenkinsfile syntax valid
 | 1.3 | `AnalysisState` rozszerzony o `metadata`, `status` | Wynika ze zmian w domenie — agregat ma metadane i status |
 | 1.3 | `Settings` przez pydantic-settings | Spójna konfiguracja przez env w całym projekcie |
 | Wszystkie | Prompty w języku angielskim | Spójność z kodem — komentarze i docstringi w English |
+| 1.4 | Pyright suppressions inline zamiast globalnych w pyproject.toml | Szerokie wyłączenia (`reportUnknownMemberType` itp.) ukrywałyby błędy w kodzie projektu; zamiast tego: `reportMissingTypeStubs = false` globalnie + `# pyright: reportUnknownMemberType=false` na poziomie pliku graph.py + per-line ignore w structure.py i test_graph.py |
+| 1.4 | `StateGraph[AnalysisState, None, Any, Any]` zamiast `StateGraph` bez type args | Explicit type args eliminują `reportMissingTypeArgument` bez wyłączania całej reguły; `Any` dla InputT/OutputT bo LangGraph nie eksponuje tych typów publicznie |
 
 ---
 
