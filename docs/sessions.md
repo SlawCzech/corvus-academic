@@ -739,7 +739,7 @@ Verification: Jenkinsfile syntax valid
 | 1.3 node | ✅ | 2026-05-24 | AnalysisState TypedDict, Settings via pydantic-settings, get_llm placeholder, analyze_structure node with structlog. 3 tests, 99.3% coverage. |
 | 1.4 graph | ✅ | 2026-05-26 | 3 stub nodes, CompiledStateGraph pipeline, 4 graph tests. 30 tests total, 96.2% coverage. pyproject.toml: `reportMissingTypeStubs = false` only. Inline suppressions for LangGraph's `CachePolicy[Unknown]` (file-level in graph.py) and `Command[Unknown]` (per-line in test_graph.py). |
 | 2.1 parser | ✅ | 2026-05-27 | parser/ microservice: Document entity, extract_pdf/extract_docx, FastAPI POST /extract + GET /health. 14 tests, 98.6% coverage. python-multipart added as required dep. |
-| 2.2 Celery | ⬜ | — | — |
+| 2.2 Celery | ✅ | 2026-05-27 | celery_app.py + analyze_thesis task, 3 tests. celery-types added for pyright. In eager mode, self.retry() raises Retry (not MaxRetriesExceededError). 33 tests total, 96.65% coverage. |
 | 2.3 models | ⬜ | — | — |
 | 3.1 gateway | ⬜ | — | — |
 | 3.2 Postgres | ⬜ | — | — |
