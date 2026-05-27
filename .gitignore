@@ -12,3 +12,4 @@ dist/
 coverage.xml
 .pytest_cache/
 .claude/
+.python-version
