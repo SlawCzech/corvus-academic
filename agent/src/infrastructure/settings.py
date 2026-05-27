@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     langchain_tracing_v2: bool = False
     langchain_project: str = "corvus"
+    redis_url: str = "redis://localhost:6379/0"
 
 
 settings = Settings()
