@@ -6,6 +6,7 @@ from collections.abc import Sequence
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from src.application.prompts import methodology as prompts
 from src.domain.analysis import Finding, FindingSeverity
 from src.infrastructure.llm_factory import get_llm
 
@@ -13,24 +14,13 @@ from ..state import AnalysisState
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
-_SYSTEM_PROMPT = (
-    "You are a thesis reviewer evaluating the research methodology and bibliography "
-    "of a diploma thesis. Assess clarity of research design, appropriateness of "
-    "methods, and quality and completeness of citations. "
-    "Return your findings as a JSON array. "
-    "Each element must have these fields: "
-    "section (str), description (str), "
-    "severity (one of: critical, major, minor), suggestion (str). "
-    "Return only the raw JSON array — no markdown, no explanation."
-)
-
 
 def analyze_methodology(state: AnalysisState) -> AnalysisState:
     """Analyze methodology and bibliography, extend state with methodology findings."""
     try:
         llm = get_llm()
         messages = [
-            SystemMessage(content=_SYSTEM_PROMPT),
+            SystemMessage(content=prompts.SYSTEM_PROMPT),
             HumanMessage(
                 content=(
                     f"Thesis text:\n{state['text']}\n\n"
