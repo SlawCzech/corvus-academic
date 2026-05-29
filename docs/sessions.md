@@ -741,7 +741,7 @@ Verification: Jenkinsfile syntax valid
 | 2.1 parser | ✅ | 2026-05-27 | parser/ microservice: Document entity, extract_pdf/extract_docx, FastAPI POST /extract + GET /health. 14 tests, 98.6% coverage. python-multipart added as required dep. |
 | 2.2 Celery | ✅ | 2026-05-27 | celery_app.py + analyze_thesis task, 3 tests. celery-types added for pyright. In eager mode, self.retry() raises Retry (not MaxRetriesExceededError). 33 tests total, 96.65% coverage. |
 | 2.3 models | ✅ | 2026-05-28 | Full model selector (claude/ollama/openai), 3 implemented nodes (methodology, requirements, review). generate_review uses ThesisEvaluation.complete_analysis() for ANALYZED/REJECTED routing. 51 tests, 100% coverage. |
-| 3.1 gateway | ⬜ | — | — |
+| 3.1 gateway | ✅ | 2026-05-29 | gateway/ microservice: Role/User domain, JWT auth (python-jose), in-memory user store (bcrypt), Celery client, 4 endpoints. 18 tests, 94.4% coverage. passlib replaced by direct bcrypt (bcrypt 5.x incompatibility). |
 | 3.2 Postgres | ⬜ | — | — |
 | 3.3 secrets | ⬜ | — | — |
 | 4.1 upload | ⬜ | — | — |
