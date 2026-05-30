@@ -745,7 +745,7 @@ Verification: Jenkinsfile syntax valid
 | 3.2 Postgres | ✅ | 2026-05-30 | SQLAlchemy 2.0 models (UserModel, AnalysisModel), async repositories, Alembic init + initial migration. 24 tests, 95.98% coverage. JSONB with SQLite variant for cross-DB tests (aiosqlite in-memory). greenlet required for sqlalchemy[asyncio]. |
 | 3.3 secrets | ✅ | 2026-05-30 | SecretService (Fernet), api_key_encrypted on UserModel, Alembic migration, PATCH /settings/api-key (ADMIN only) + GET /settings/api-key/status. 37 tests, 92.51% coverage. |
 | 4.1 upload | ✅ | 2026-05-30 | Next.js 16 App Router, FileUpload (react-dropzone), useAnalysis hook (SWR polling), AnalysisResult component. Route handlers proxy to parser+gateway. 22 tests (vitest + Testing Library), typecheck and lint clean. |
-| 4.2 admin | ⬜ | — | — |
+| 4.2 admin | ✅ | 2026-05-30 | Login page (RHF + Zod + zodResolver), httpOnly cookie via API route, /admin page with AI Model/Guidelines/Users sections, Next.js middleware protecting /admin and /analysis. 39 tests, typecheck and lint clean. noValidate on form required to bypass jsdom's native HTML5 email validation in tests. |
 | 5.1 Docker | ⬜ | — | — |
 | 5.2 CI/CD | ⬜ | — | — |
 | 5.3 Jenkins | ⬜ | — | — |
@@ -756,6 +756,8 @@ Verification: Jenkinsfile syntax valid
 
 | Sesja | Zmiana | Powód |
 |---|---|---|
+| 4.2 | `noValidate` na formularzu logowania | jsdom egzekwuje HTML5 constraint validation na `input[type="email"]` — blokuje zdarzenie `submit` zanim react-hook-form uruchomi walidację; `noValidate` wyłącza natywną walidację przeglądarki |
+| 4.2 | Inline `zodResolver` zastąpiony `@hookform/resolvers` v5 | v5 obsługuje zarówno Zod v3 jak i v4 przez detekcję `_zod` na schemacie; nie wymaga własnej implementacji resolvera |
 | 1.2 | `StrEnum` dla `FindingSeverity` (nie `EvaluationStatus`) | `FindingSeverity` serializuje się natywnie do str; `EvaluationStatus` pozostaje plain `Enum` — wymaga `.value` przy serializacji |
 | 1.2 | `ThesisEvaluation` jako Aggregate Root zamiast `ThesisSubmission` | Lepsza nazwa domenowa — obiekt reprezentuje ewaluację pracy |
 | 1.2 | `ThesisMetadata` jako osobny Value Object | Dane opisowe nie należą do `ThesisAnalysis` — separacja odpowiedzialności |
