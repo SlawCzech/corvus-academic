@@ -1,0 +1,8 @@
+node_modules
+.next
+coverage
+*.test.ts
+*.test.tsx
+vitest.config.ts
+vitest.setup.ts
+.DS_Store

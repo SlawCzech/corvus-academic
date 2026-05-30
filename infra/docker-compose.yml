@@ -12,6 +12,18 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  migrate:
+    build:
+      context: ../gateway
+      dockerfile: Dockerfile
+    command: alembic upgrade head
+    env_file:
+      - ../.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   gateway:
     build:
       context: ../gateway
@@ -25,6 +37,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
