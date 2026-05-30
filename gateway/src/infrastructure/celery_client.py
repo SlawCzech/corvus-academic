@@ -46,5 +46,12 @@ def send_analysis_task(
 def get_task_result(task_id: str) -> dict[str, Any]:
     """Return the current status and result payload for a Celery task."""
     async_result = celery_app.AsyncResult(task_id)
+    celery_status = async_result.status
+    if celery_status == "SUCCESS":
+        status = "done"
+    elif celery_status in ("FAILURE", "REVOKED"):
+        status = "error"
+    else:
+        status = "analyzing"
     result: Any = async_result.result if async_result.ready() else None
-    return {"status": async_result.status, "result": result}
+    return {"status": status, "result": result}

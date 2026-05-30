@@ -1,10 +1,12 @@
+import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
 const PARSER_URL = process.env.PARSER_URL ?? "http://localhost:8001"
 const GATEWAY_URL = process.env.GATEWAY_URL ?? "http://localhost:8000"
-const GATEWAY_TOKEN = process.env.GATEWAY_SERVICE_TOKEN ?? ""
 
 export async function POST(request: Request): Promise<Response> {
+  const token = (await cookies()).get("token")?.value ?? ""
+
   const formData = await request.formData()
   const file = formData.get("file")
   if (!(file instanceof File)) {
@@ -31,7 +33,7 @@ export async function POST(request: Request): Promise<Response> {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${GATEWAY_TOKEN}`,
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({
       evaluation_id: crypto.randomUUID(),

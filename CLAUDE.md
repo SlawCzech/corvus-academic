@@ -448,7 +448,7 @@ LANGCHAIN_API_KEY=                       # uzupełnij lokalnie
 LANGCHAIN_PROJECT=thesis-reviewer
 
 # Baza danych
-DATABASE_URL=postgresql://user:pass@postgres:5432/thesis_reviewer
+DATABASE_URL=postgresql+asyncpg://user:pass@postgres:5432/thesis_reviewer
 
 # Redis
 REDIS_URL=redis://redis:6379/0
