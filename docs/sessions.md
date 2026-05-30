@@ -742,7 +742,7 @@ Verification: Jenkinsfile syntax valid
 | 2.2 Celery | ✅ | 2026-05-27 | celery_app.py + analyze_thesis task, 3 tests. celery-types added for pyright. In eager mode, self.retry() raises Retry (not MaxRetriesExceededError). 33 tests total, 96.65% coverage. |
 | 2.3 models | ✅ | 2026-05-28 | Full model selector (claude/ollama/openai), 3 implemented nodes (methodology, requirements, review). generate_review uses ThesisEvaluation.complete_analysis() for ANALYZED/REJECTED routing. 51 tests, 100% coverage. |
 | 3.1 gateway | ✅ | 2026-05-29 | gateway/ microservice: Role/User domain, JWT auth (python-jose), in-memory user store (bcrypt), Celery client, 4 endpoints. 18 tests, 94.4% coverage. passlib replaced by direct bcrypt (bcrypt 5.x incompatibility). |
-| 3.2 Postgres | ⬜ | — | — |
+| 3.2 Postgres | ✅ | 2026-05-30 | SQLAlchemy 2.0 models (UserModel, AnalysisModel), async repositories, Alembic init + initial migration. 24 tests, 95.98% coverage. JSONB with SQLite variant for cross-DB tests (aiosqlite in-memory). greenlet required for sqlalchemy[asyncio]. |
 | 3.3 secrets | ⬜ | — | — |
 | 4.1 upload | ⬜ | — | — |
 | 4.2 admin | ⬜ | — | — |
