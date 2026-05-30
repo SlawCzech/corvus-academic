@@ -746,7 +746,7 @@ Verification: Jenkinsfile syntax valid
 | 3.3 secrets | ✅ | 2026-05-30 | SecretService (Fernet), api_key_encrypted on UserModel, Alembic migration, PATCH /settings/api-key (ADMIN only) + GET /settings/api-key/status. 37 tests, 92.51% coverage. |
 | 4.1 upload | ✅ | 2026-05-30 | Next.js 16 App Router, FileUpload (react-dropzone), useAnalysis hook (SWR polling), AnalysisResult component. Route handlers proxy to parser+gateway. 22 tests (vitest + Testing Library), typecheck and lint clean. |
 | 4.2 admin | ✅ | 2026-05-30 | Login page (RHF + Zod + zodResolver), httpOnly cookie via API route, /admin page with AI Model/Guidelines/Users sections, Next.js middleware protecting /admin and /analysis. 39 tests, typecheck and lint clean. noValidate on form required to bypass jsdom's native HTML5 email validation in tests. |
-| 5.1 Docker | ✅ | 2026-05-30 | infra/docker-compose.yml (10 services), docker-compose.override.yml (hot-reload), Dockerfiles for gateway/parser/agent (uv multi-stage, non-root) and frontend (Next.js standalone). next.config.ts: output="standalone". docker compose config passes. |
+| 5.1 Docker | ✅ | 2026-05-30 | infra/docker-compose.yml (10 services + migrate one-shot), docker-compose.override.yml (hot-reload), Dockerfiles for gateway/parser/agent (uv multi-stage, non-root) and frontend (Next.js standalone). .dockerignore for all 4 services. next.config.ts: output="standalone". /api/health route added to frontend. Default model: qwen3:30b-a3b. LANGCHAIN_TRACING_V2=false by default. docker compose config passes. |
 | 5.2 CI/CD | ⬜ | — | — |
 | 5.3 Jenkins | ⬜ | — | — |
 
@@ -768,6 +768,11 @@ Verification: Jenkinsfile syntax valid
 | Wszystkie | Prompty w języku angielskim | Spójność z kodem — komentarze i docstringi w English |
 | 1.4 | Pyright suppressions inline zamiast globalnych w pyproject.toml | Szerokie wyłączenia (`reportUnknownMemberType` itp.) ukrywałyby błędy w kodzie projektu; zamiast tego: `reportMissingTypeStubs = false` globalnie + `# pyright: reportUnknownMemberType=false` na poziomie pliku graph.py + per-line ignore w structure.py i test_graph.py |
 | 1.4 | `StateGraph[AnalysisState, None, Any, Any]` zamiast `StateGraph` bez type args | Explicit type args eliminują `reportMissingTypeArgument` bez wyłączania całej reguły; `Any` dla InputT/OutputT bo LangGraph nie eksponuje tych typów publicznie |
+| 5.1 | Dodano serwis `migrate` (one-shot `alembic upgrade head`) | Bez niego gateway startuje bez schematu DB i każde żądanie do bazy kończy się błędem |
+| 5.1 | `.dockerignore` dla każdego serwisu | Bez nich build context zawierał `.venv`, `node_modules`, `tests/`, pliki coverage — wolne buildy i większe obrazy |
+| 5.1 | Endpoint `/api/health` w Next.js | Healthcheck w Dockerfile trafiał w nieistniejący URL — kontener był zawsze `unhealthy` |
+| 5.1 | `LANGCHAIN_TRACING_V2=false` jako domyślna wartość | Przy `true` bez `LANGCHAIN_API_KEY` LangChain próbuje połączyć się z LangSmith i loguje błędy przy każdym wywołaniu LLM |
+| 5.1 | Domyślny model zmieniony na `qwen3:30b-a3b` | Model `qwen3.6:14b` nie był pobrany lokalnie; `qwen3:30b-a3b` jest dostępny i lepszy jakościowo |
 
 ---
 

@@ -436,14 +436,14 @@ Zasady:
 ```bash
 # Model
 MODEL_BACKEND=ollama                     # ollama | claude | openai
-OLLAMA_MODEL=qwen3.6:14b
+OLLAMA_MODEL=qwen3:30b-a3b
 OLLAMA_BASE_URL=http://ollama:11434
 
 # Claude API
 ANTHROPIC_API_KEY=                       # uzupełnij lokalnie
 
 # LangSmith
-LANGCHAIN_TRACING_V2=true
+LANGCHAIN_TRACING_V2=false              # set to true + add key to enable LangSmith
 LANGCHAIN_API_KEY=                       # uzupełnij lokalnie
 LANGCHAIN_PROJECT=thesis-reviewer
 
