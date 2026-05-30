@@ -746,7 +746,7 @@ Verification: Jenkinsfile syntax valid
 | 3.3 secrets | ✅ | 2026-05-30 | SecretService (Fernet), api_key_encrypted on UserModel, Alembic migration, PATCH /settings/api-key (ADMIN only) + GET /settings/api-key/status. 37 tests, 92.51% coverage. |
 | 4.1 upload | ✅ | 2026-05-30 | Next.js 16 App Router, FileUpload (react-dropzone), useAnalysis hook (SWR polling), AnalysisResult component. Route handlers proxy to parser+gateway. 22 tests (vitest + Testing Library), typecheck and lint clean. |
 | 4.2 admin | ✅ | 2026-05-30 | Login page (RHF + Zod + zodResolver), httpOnly cookie via API route, /admin page with AI Model/Guidelines/Users sections, Next.js middleware protecting /admin and /analysis. 39 tests, typecheck and lint clean. noValidate on form required to bypass jsdom's native HTML5 email validation in tests. |
-| 5.1 Docker | ⬜ | — | — |
+| 5.1 Docker | ✅ | 2026-05-30 | infra/docker-compose.yml (10 services), docker-compose.override.yml (hot-reload), Dockerfiles for gateway/parser/agent (uv multi-stage, non-root) and frontend (Next.js standalone). next.config.ts: output="standalone". docker compose config passes. |
 | 5.2 CI/CD | ⬜ | — | — |
 | 5.3 Jenkins | ⬜ | — | — |
 

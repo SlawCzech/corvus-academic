@@ -1,0 +1,34 @@
+services:
+  frontend:
+    build:
+      target: deps
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev
+    environment:
+      - NODE_ENV=development
+
+  gateway:
+    volumes:
+      - ../gateway/src:/app/src
+      - ../gateway/main.py:/app/main.py
+    environment:
+      - DEBUG=true
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  parser:
+    volumes:
+      - ../parser/src:/app/src
+      - ../parser/main.py:/app/main.py
+    environment:
+      - DEBUG=true
+    command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+
+  agent:
+    volumes:
+      - ../agent/src:/app/src
+    environment:
+      - DEBUG=true
+    command: celery -A src.infrastructure.celery_app worker --loglevel=debug
