@@ -744,7 +744,7 @@ Verification: Jenkinsfile syntax valid
 | 3.1 gateway | ✅ | 2026-05-29 | gateway/ microservice: Role/User domain, JWT auth (python-jose), in-memory user store (bcrypt), Celery client, 4 endpoints. 18 tests, 94.4% coverage. passlib replaced by direct bcrypt (bcrypt 5.x incompatibility). |
 | 3.2 Postgres | ✅ | 2026-05-30 | SQLAlchemy 2.0 models (UserModel, AnalysisModel), async repositories, Alembic init + initial migration. 24 tests, 95.98% coverage. JSONB with SQLite variant for cross-DB tests (aiosqlite in-memory). greenlet required for sqlalchemy[asyncio]. |
 | 3.3 secrets | ✅ | 2026-05-30 | SecretService (Fernet), api_key_encrypted on UserModel, Alembic migration, PATCH /settings/api-key (ADMIN only) + GET /settings/api-key/status. 37 tests, 92.51% coverage. |
-| 4.1 upload | ⬜ | — | — |
+| 4.1 upload | ✅ | 2026-05-30 | Next.js 16 App Router, FileUpload (react-dropzone), useAnalysis hook (SWR polling), AnalysisResult component. Route handlers proxy to parser+gateway. 22 tests (vitest + Testing Library), typecheck and lint clean. |
 | 4.2 admin | ⬜ | — | — |
 | 5.1 Docker | ⬜ | — | — |
 | 5.2 CI/CD | ⬜ | — | — |
