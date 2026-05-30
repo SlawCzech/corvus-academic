@@ -1,4 +1,4 @@
-"""FastAPI router — auth, analysis dispatch, and health endpoints."""
+"""FastAPI router — auth, analysis dispatch, health, and secret-vault endpoints."""
 
 from typing import Any
 
@@ -6,10 +6,14 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.auth import create_token, verify_token
-from src.domain.user import User
+from src.domain.user import Role, User
 from src.infrastructure import celery_client, user_store
+from src.infrastructure.database import get_db_session
+from src.infrastructure.repositories import UserRepository
+from src.infrastructure.secrets import get_secret_service
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -17,7 +21,7 @@ router = APIRouter()
 _bearer = HTTPBearer()
 
 
-# ---------- dependency ----------
+# ---------- dependencies ----------
 
 
 def get_current_user(
@@ -32,6 +36,13 @@ def get_current_user(
             detail=str(exc),
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
+
+
+def get_user_repo(
+    session: AsyncSession = Depends(get_db_session),
+) -> UserRepository:
+    """FastAPI dependency — return a UserRepository for the current request session."""
+    return UserRepository(session)
 
 
 # ---------- schemas ----------
@@ -71,6 +82,19 @@ class TaskStatusResponse(BaseModel):
 
     status: str
     result: dict[str, Any] | None
+
+
+class ApiKeyRequest(BaseModel):
+    """Payload for storing a provider API key."""
+
+    api_key: str
+    provider: str
+
+
+class ApiKeyStatusResponse(BaseModel):
+    """Indicates whether an API key has been configured — never exposes the key."""
+
+    configured: bool
 
 
 # ---------- endpoints ----------
@@ -124,3 +148,32 @@ def get_analysis_status(
         status=str(data["status"]),
         result=result,
     )
+
+
+@router.patch("/settings/api-key", response_model=ApiKeyStatusResponse)
+async def set_api_key(
+    body: ApiKeyRequest,
+    user: User = Depends(get_current_user),
+    repo: UserRepository = Depends(get_user_repo),
+) -> ApiKeyStatusResponse:
+    """Encrypt and persist an AI provider API key — ADMIN only."""
+    if user.role != Role.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin role required",
+        )
+    encrypted = get_secret_service().encrypt(body.api_key)
+    await repo.update_api_key(user.id, encrypted)
+    logger.info("api_key_stored", user_id=str(user.id), provider=body.provider)
+    return ApiKeyStatusResponse(configured=True)
+
+
+@router.get("/settings/api-key/status", response_model=ApiKeyStatusResponse)
+async def get_api_key_status(
+    user: User = Depends(get_current_user),
+    repo: UserRepository = Depends(get_user_repo),
+) -> ApiKeyStatusResponse:
+    """Return whether the current user has an API key configured."""
+    db_user = await repo.find_by_id(user.id)
+    configured = db_user is not None and db_user.api_key_encrypted is not None
+    return ApiKeyStatusResponse(configured=configured)

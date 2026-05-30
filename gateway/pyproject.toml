@@ -15,6 +15,7 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0.50",
     "asyncpg>=0.31.0",
     "alembic>=1.18.4",
+    "cryptography>=48.0.0",
 ]
 
 [build-system]

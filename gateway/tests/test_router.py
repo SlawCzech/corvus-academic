@@ -2,14 +2,16 @@
 
 import os
 import uuid
-from collections.abc import Generator
+from collections.abc import AsyncGenerator, Generator
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 os.environ.setdefault("JWT_SECRET", "test-secret-key-that-is-long-enough-32ch")
+os.environ.setdefault("FERNET_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
 
 # ---------- helpers ----------
 
@@ -181,3 +183,132 @@ def test_get_task_status_pending(client: TestClient) -> None:
     body: dict[str, Any] = resp.json()
     assert body["status"] == "PENDING"
     assert body["result"] is None
+
+
+# ---------- api-key vault fixtures ----------
+
+_ADMIN_UUID = uuid.UUID("00000000-0000-0000-0000-000000000001")
+_PROMOTOR_UUID = uuid.UUID("00000000-0000-0000-0000-000000000002")
+_SQLITE_URL = "sqlite+aiosqlite:///:memory:"
+
+
+@pytest.fixture
+async def db_with_users() -> AsyncGenerator[AsyncSession, None]:
+    """In-memory SQLite session pre-seeded with admin and promotor records."""
+    from src.infrastructure.models import Base, UserModel
+
+    engine = create_async_engine(_SQLITE_URL)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with factory() as session:
+        session.add(
+            UserModel(
+                id=_ADMIN_UUID,
+                email=_ADMIN_EMAIL,
+                role="admin",
+                hashed_password="x",
+            )
+        )
+        session.add(
+            UserModel(
+                id=_PROMOTOR_UUID,
+                email=_PROMOTOR_EMAIL,
+                role="promotor",
+                hashed_password="x",
+            )
+        )
+        await session.commit()
+        yield session
+    await engine.dispose()
+
+
+@pytest.fixture
+async def db_client(db_with_users: AsyncSession) -> AsyncGenerator[TestClient, None]:
+    """TestClient with the DB session dependency overridden to use in-memory SQLite."""
+    from main import app
+    from src.infrastructure.database import get_db_session
+
+    async def _override() -> AsyncGenerator[AsyncSession, None]:
+        yield db_with_users
+
+    app.dependency_overrides[get_db_session] = _override
+    yield TestClient(app)
+    app.dependency_overrides.pop(get_db_session, None)
+
+
+# ---------- PATCH /settings/api-key ----------
+
+
+async def test_set_api_key_admin_success(db_client: TestClient) -> None:
+    token = _login(db_client, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+    resp = db_client.patch(
+        "/settings/api-key",
+        json={"api_key": "sk-ant-test-key", "provider": "claude"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {"configured": True}
+
+
+async def test_set_api_key_promotor_forbidden(db_client: TestClient) -> None:
+    token = _login(db_client, _PROMOTOR_EMAIL, _PROMOTOR_PASSWORD)
+    resp = db_client.patch(
+        "/settings/api-key",
+        json={"api_key": "sk-openai-test", "provider": "openai"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 403
+
+
+async def test_set_api_key_requires_auth(db_client: TestClient) -> None:
+    resp = db_client.patch(
+        "/settings/api-key",
+        json={"api_key": "sk-test", "provider": "claude"},
+    )
+    assert resp.status_code in (401, 403)
+
+
+async def test_response_never_contains_plain_key(db_client: TestClient) -> None:
+    plain_key = "sk-ant-super-secret-value"
+    token = _login(db_client, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+    resp = db_client.patch(
+        "/settings/api-key",
+        json={"api_key": plain_key, "provider": "claude"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    assert plain_key not in resp.text
+
+
+# ---------- GET /settings/api-key/status ----------
+
+
+async def test_get_status_not_configured(db_client: TestClient) -> None:
+    token = _login(db_client, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+    resp = db_client.get(
+        "/settings/api-key/status",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {"configured": False}
+
+
+async def test_get_status_configured_after_set(db_client: TestClient) -> None:
+    token = _login(db_client, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+    db_client.patch(
+        "/settings/api-key",
+        json={"api_key": "sk-ant-key", "provider": "claude"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    resp = db_client.get(
+        "/settings/api-key/status",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {"configured": True}
+
+
+async def test_get_status_requires_auth(db_client: TestClient) -> None:
+    resp = db_client.get("/settings/api-key/status")
+    assert resp.status_code in (401, 403)

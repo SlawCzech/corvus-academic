@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     redis_url: str = "redis://localhost:6379/0"
     database_url: str = "postgresql+asyncpg://user:pass@localhost:5432/thesis_reviewer"
+    # 32-byte dev key (base64url of b"\x00"*32) — override via FERNET_KEY env var
+    fernet_key: str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="  # noqa: S105
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

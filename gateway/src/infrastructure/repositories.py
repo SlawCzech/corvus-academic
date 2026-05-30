@@ -37,9 +37,23 @@ class UserRepository:
         await self._session.commit()
         await self._session.refresh(model)
 
+    async def find_by_id(self, user_id: uuid.UUID) -> UserModel | None:
+        """Return the user with the given id, or None if not found."""
+        return await self._session.get(UserModel, user_id)
+
     async def find_by_email(self, email: str) -> UserModel | None:
         """Return the user with the given email, or None if not found."""
         result = await self._session.execute(
             select(UserModel).where(UserModel.email == email)
         )
         return result.scalar_one_or_none()
+
+    async def update_api_key(
+        self, user_id: uuid.UUID, encrypted: str | None
+    ) -> None:
+        """Store the encrypted API key on the user record and commit."""
+        user = await self._session.get(UserModel, user_id)
+        if user is None:
+            return
+        user.api_key_encrypted = encrypted
+        await self._session.commit()
