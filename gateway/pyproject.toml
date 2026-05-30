@@ -12,6 +12,9 @@ dependencies = [
     "structlog>=25.5.0",
     "uvicorn>=0.48.0",
     "pyjwt>=2.10.0",
+    "sqlalchemy[asyncio]>=2.0.50",
+    "asyncpg>=0.31.0",
+    "alembic>=1.18.4",
 ]
 
 [build-system]
@@ -23,6 +26,7 @@ packages = ["src"]
 
 [dependency-groups]
 dev = [
+    "aiosqlite>=0.22.1",
     "celery-types>=0.23.0",
     "httpx>=0.28.1",
     "pyright>=1.1.409",
@@ -39,7 +43,7 @@ line-length = 88
 select = ["E", "F", "I", "N", "UP", "ANN", "S", "B"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S101", "S105"]
+"tests/**/*.py" = ["S101", "S105", "S106"]
 "src/infrastructure/router.py" = ["B008"]
 
 [tool.pyright]
