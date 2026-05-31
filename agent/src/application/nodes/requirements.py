@@ -18,7 +18,7 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 def check_requirements(state: AnalysisState) -> AnalysisState:
     """Check conformance with university guidelines using guidelines text from state."""
     try:
-        llm = get_llm()
+        llm = get_llm(state["model"])
         messages = [
             SystemMessage(content=prompts.SYSTEM_PROMPT),
             HumanMessage(

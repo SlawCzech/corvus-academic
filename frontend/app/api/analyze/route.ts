@@ -12,6 +12,8 @@ export async function POST(request: Request): Promise<Response> {
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 })
   }
+  const model = String(formData.get("model") ?? "qwen3:30b-a3b")
+  const mode = String(formData.get("mode") ?? "full")
 
   // Step 1: extract text via parser service
   const parserForm = new FormData()
@@ -40,6 +42,8 @@ export async function POST(request: Request): Promise<Response> {
       text,
       guidelines: "",
       metadata: { filename: file.name },
+      model,
+      mode,
     }),
   })
   if (!gatewayRes.ok) {

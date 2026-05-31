@@ -18,7 +18,7 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 def analyze_methodology(state: AnalysisState) -> AnalysisState:
     """Analyze methodology and bibliography, extend state with methodology findings."""
     try:
-        llm = get_llm()
+        llm = get_llm(state["model"])
         messages = [
             SystemMessage(content=prompts.SYSTEM_PROMPT),
             HumanMessage(

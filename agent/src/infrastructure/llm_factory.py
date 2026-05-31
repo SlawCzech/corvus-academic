@@ -8,8 +8,12 @@ from langchain_openai import ChatOpenAI
 from src.infrastructure.settings import settings
 
 
-def get_llm() -> BaseChatModel:
-    """Return a chat model instance configured by MODEL_BACKEND env variable."""
+def get_llm(model_override: str | None = None) -> BaseChatModel:
+    """Return a chat model instance configured by MODEL_BACKEND env variable.
+
+    When model_override is provided and the backend is ollama, it is used
+    instead of the default ollama_model setting.
+    """
     match settings.model_backend:
         case "claude":
             return ChatAnthropic(  # pyright: ignore[reportCallIssue]
@@ -18,7 +22,7 @@ def get_llm() -> BaseChatModel:
             )
         case "ollama":
             return ChatOllama(  # pyright: ignore[reportCallIssue]
-                model=settings.ollama_model,
+                model=model_override or settings.ollama_model,
                 base_url=settings.ollama_base_url,
             )
         case "openai":

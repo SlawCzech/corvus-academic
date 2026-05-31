@@ -18,7 +18,7 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 def analyze_structure(state: AnalysisState) -> AnalysisState:
     """Analyze chapter structure and extend state with structural findings."""
     try:
-        llm = get_llm()
+        llm = get_llm(state["model"])
         messages = [
             SystemMessage(content=prompts.SYSTEM_PROMPT),
             HumanMessage(

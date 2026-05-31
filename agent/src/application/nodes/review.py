@@ -1,6 +1,7 @@
 """LangGraph node: generate final review and scores."""
 
 import json
+import re
 from collections.abc import Sequence
 from uuid import UUID
 
@@ -8,9 +9,8 @@ import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.application.prompts import review as prompts
-from src.domain.analysis import ThesisAnalysis
-from src.domain.evaluation import EvaluationStatus, ThesisEvaluation
-from src.domain.metadata import ThesisMetadata
+from src.domain.analysis import FindingSeverity, ThesisAnalysis
+from src.domain.evaluation import EvaluationStatus
 from src.domain.review import Review, Score
 from src.infrastructure.llm_factory import get_llm
 
@@ -18,11 +18,19 @@ from ..state import AnalysisState
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
+_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
+
+
+def _extract_json(text: str) -> str:
+    """Strip markdown code fences if present, otherwise return text as-is."""
+    match = _FENCE_RE.search(text)
+    return match.group(1) if match else text.strip()
+
 
 def generate_review(state: AnalysisState) -> AnalysisState:
     """Generate final review with scores and update evaluation status."""
     try:
-        llm = get_llm()
+        llm = get_llm(state["model"])
         findings_summary = "\n".join(
             f"[{f.severity}] {f.section}: {f.description}"
             for f in state["findings"]
@@ -40,7 +48,7 @@ def generate_review(state: AnalysisState) -> AnalysisState:
         response = llm.invoke(messages)
         raw: str | Sequence[object] = response.content  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
         content: str = raw if isinstance(raw, str) else json.dumps(raw)
-        data: dict[str, object] = json.loads(content)
+        data: dict[str, object] = json.loads(_extract_json(content))
 
         scores_data: list[dict[str, object]] = data["scores"]  # type: ignore[assignment]
         scores: list[Score] = [
@@ -57,40 +65,33 @@ def generate_review(state: AnalysisState) -> AnalysisState:
             review_id=evaluation_uuid,
             thesis_id=evaluation_uuid,
             scores=scores,
-            summary=str(data["summary"]),
+            summary=str(data["review_text"]),
             recommendation=str(data["recommendation"]),
         )
 
-        # Use the domain aggregate to determine ANALYZED vs REJECTED status.
-        meta = state["metadata"]
-        thesis_metadata = ThesisMetadata(
-            author=meta["author"],
-            title=meta["title"],
-            year=meta["year"],
-            field_of_study=meta["field_of_study"],
-        )
+        # Derive status from findings — avoids requiring full ThesisMetadata
+        # which is not available when submitted from the upload form.
         analysis = ThesisAnalysis(
             thesis_id=evaluation_uuid,
             findings=state["findings"],
         )
-        evaluation = ThesisEvaluation(
-            id=evaluation_uuid,
-            metadata=thesis_metadata,
-            status=EvaluationStatus.ANALYZING,
+        final_status = (
+            EvaluationStatus.REJECTED
+            if not analysis.is_ready_to_submit()
+            else EvaluationStatus.ANALYZED
         )
-        evaluation.complete_analysis(analysis)
 
         logger.info(
             "review_generated",
             recommendation=review.recommendation,
-            status=evaluation.status.value,
+            status=final_status.value,
             score=review.total_percentage(),
         )
 
         result: AnalysisState = state.copy()
         result["scores"] = scores
         result["review"] = review
-        result["status"] = evaluation.status.value
+        result["status"] = final_status.value
         result["error"] = None
         return result
     except Exception as exc:

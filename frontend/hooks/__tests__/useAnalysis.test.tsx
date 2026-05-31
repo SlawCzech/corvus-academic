@@ -74,6 +74,7 @@ describe("useAnalysis", () => {
     await act(async () => {
       await result.current.submit(
         new File(["pdf"], "thesis.pdf", { type: "application/pdf" }),
+        { model: "qwen3:30b-a3b", mode: "full" },
       )
     })
 
@@ -93,6 +94,7 @@ describe("useAnalysis", () => {
     await act(async () => {
       await result.current.submit(
         new File(["pdf"], "thesis.pdf", { type: "application/pdf" }),
+        { model: "qwen3:30b-a3b", mode: "full" },
       )
     })
 
@@ -132,6 +134,7 @@ describe("useAnalysis", () => {
     await act(async () => {
       await result.current.submit(
         new File(["pdf"], "thesis.pdf", { type: "application/pdf" }),
+        { model: "qwen3:30b-a3b", mode: "full" },
       )
     })
 
@@ -158,6 +161,7 @@ describe("useAnalysis", () => {
     await act(async () => {
       await result.current.submit(
         new File(["pdf"], "thesis.pdf", { type: "application/pdf" }),
+        { model: "qwen3:30b-a3b", mode: "full" },
       )
     })
 

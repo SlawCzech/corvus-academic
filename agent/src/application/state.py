@@ -27,3 +27,5 @@ class AnalysisState(TypedDict):
     review: Review | None
     status: str
     error: str | None
+    model: str
+    mode: str

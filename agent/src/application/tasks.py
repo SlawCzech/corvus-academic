@@ -33,9 +33,21 @@ def analyze_thesis(
     text: str,
     guidelines: str,
     metadata: dict[str, Any],
+    model: str = "qwen3:30b-a3b",
+    mode: str = "full",
 ) -> dict[str, Any]:
-    """Run the full thesis analysis pipeline as a Celery task."""
-    logger.info("analyze_thesis.started", evaluation_id=evaluation_id)
+    """Run the thesis analysis pipeline as a Celery task.
+
+    mode="full"        — all four analysis nodes
+    mode="review_only" — skip to review generation immediately
+    model              — ollama model tag to use (overrides settings default)
+    """
+    logger.info(
+        "analyze_thesis.started",
+        evaluation_id=evaluation_id,
+        model=model,
+        mode=mode,
+    )
     try:
         state: AnalysisState = cast(
             AnalysisState,
@@ -49,12 +61,23 @@ def analyze_thesis(
                 "review": None,
                 "status": "analyzing",
                 "error": None,
+                "model": model,
+                "mode": mode,
             },
         )
-        graph = build_analysis_graph()
+        graph = build_analysis_graph(mode=mode)
         result: dict[str, Any] = dict(graph.invoke(state))  # type: ignore[arg-type]
+        json_result: dict[str, Any] = _to_json(result)
+
+        # Promote review fields to top level so the frontend AnalysisResult
+        # type can read summary and recommendation directly.
+        review_data = json_result.get("review")
+        if isinstance(review_data, dict):
+            json_result["summary"] = review_data.get("summary")
+            json_result["recommendation"] = review_data.get("recommendation")
+
         logger.info("analyze_thesis.completed", evaluation_id=evaluation_id)
-        return _to_json(result)
+        return json_result
     except Exception as exc:
         logger.error(
             "analyze_thesis.failed", evaluation_id=evaluation_id, error=str(exc)

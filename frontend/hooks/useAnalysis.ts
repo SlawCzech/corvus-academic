@@ -2,13 +2,17 @@
 
 import { useState } from "react"
 import useSWR from "swr"
-import { fetchTaskStatus, submitAnalysis } from "@/lib/api.client"
+import {
+  fetchTaskStatus,
+  submitAnalysis,
+  type AnalysisOptions,
+} from "@/lib/api.client"
 import type { AnalysisResult, TaskStatusResponse } from "@/lib/api.types"
 
 export type AnalysisStatus = "idle" | "uploading" | "analyzing" | "done" | "error"
 
 export interface UseAnalysisReturn {
-  submit: (file: File) => Promise<void>
+  submit: (file: File, options: AnalysisOptions) => Promise<void>
   status: AnalysisStatus
   result: AnalysisResult | null
   error: string | null
@@ -40,12 +44,12 @@ export function useAnalysis(): UseAnalysisReturn {
     },
   )
 
-  const submit = async (file: File): Promise<void> => {
+  const submit = async (file: File, options: AnalysisOptions): Promise<void> => {
     setStatus("uploading")
     setError(null)
     setTaskId(null)
     try {
-      const { task_id } = await submitAnalysis(file)
+      const { task_id } = await submitAnalysis(file, options)
       setTaskId(task_id)
       setStatus("analyzing")
     } catch (err) {

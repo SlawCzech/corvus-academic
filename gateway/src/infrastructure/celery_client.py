@@ -32,14 +32,23 @@ def send_analysis_task(
     text: str,
     guidelines: str,
     metadata: dict[str, str],
+    model: str = "qwen3:30b-a3b",
+    mode: str = "full",
 ) -> str:
     """Dispatch analyze_thesis to the Celery worker and return the task ID."""
     async_result = celery_app.send_task(
         _TASK_NAME,
         args=[evaluation_id, text, guidelines, metadata],
+        kwargs={"model": model, "mode": mode},
     )
     task_id: str = str(async_result.id)
-    logger.info("analysis_task_sent", task_id=task_id, evaluation_id=evaluation_id)
+    logger.info(
+        "analysis_task_sent",
+        task_id=task_id,
+        evaluation_id=evaluation_id,
+        model=model,
+        mode=mode,
+    )
     return task_id
 
 
