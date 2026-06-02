@@ -13,6 +13,16 @@ class FindingSeverity(StrEnum):
     MINOR = "minor"
 
 
+class ReviewTone(StrEnum):
+    """Tone style for the generated thesis review."""
+
+    AUTO = "auto"
+    ENTHUSIASTIC = "enthusiastic"
+    POSITIVE = "positive"
+    DIPLOMATIC = "diplomatic"
+    NEGATIVE = "negative"
+
+
 @dataclass(frozen=True)
 class Finding:
     """A single observation about the thesis, immutable once created."""

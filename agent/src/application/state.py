@@ -13,6 +13,8 @@ class ThesisMetadataDict(TypedDict):
     title: str
     year: int
     field_of_study: str
+    thesis_type: str
+    review_tone: str
 
 
 class AnalysisState(TypedDict):
@@ -29,3 +31,4 @@ class AnalysisState(TypedDict):
     error: str | None
     model: str
     mode: str
+    review_tone: str

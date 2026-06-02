@@ -35,6 +35,7 @@ def analyze_thesis(
     metadata: dict[str, Any],
     model: str = "qwen3:30b-a3b",
     mode: str = "full",
+    review_tone: str = "auto",
 ) -> dict[str, Any]:
     """Run the thesis analysis pipeline as a Celery task.
 
@@ -47,6 +48,7 @@ def analyze_thesis(
         evaluation_id=evaluation_id,
         model=model,
         mode=mode,
+        review_tone=review_tone,
     )
     try:
         state: AnalysisState = cast(
@@ -63,6 +65,7 @@ def analyze_thesis(
                 "error": None,
                 "model": model,
                 "mode": mode,
+                "review_tone": review_tone,
             },
         )
         graph = build_analysis_graph(mode=mode)

@@ -71,6 +71,7 @@ class AnalysisRequest(BaseModel):
     metadata: dict[str, str] = {}
     model: str = "qwen3:30b-a3b"
     mode: str = "full"
+    review_tone: str = "auto"
 
 
 class AnalysisTaskResponse(BaseModel):
@@ -135,6 +136,7 @@ def submit_analysis(
         metadata=body.metadata,
         model=body.model,
         mode=body.mode,
+        review_tone=body.review_tone,
     )
     return AnalysisTaskResponse(task_id=task_id)
 

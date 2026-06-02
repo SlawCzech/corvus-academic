@@ -14,6 +14,7 @@ export async function POST(request: Request): Promise<Response> {
   }
   const model = String(formData.get("model") ?? "qwen3:30b-a3b")
   const mode = String(formData.get("mode") ?? "full")
+  const review_tone = String(formData.get("review_tone") ?? "auto")
 
   // Step 1: extract text via parser service
   const parserForm = new FormData()
@@ -44,6 +45,7 @@ export async function POST(request: Request): Promise<Response> {
       metadata: { filename: file.name },
       model,
       mode,
+      review_tone,
     }),
   })
   if (!gatewayRes.ok) {

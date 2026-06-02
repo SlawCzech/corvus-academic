@@ -24,13 +24,43 @@ const MODES = [
   },
 ] as const
 
+const TONES = [
+  {
+    value: "auto",
+    label: "Automatyczny",
+    description: "Model dobiera ton na podstawie analizy",
+  },
+  {
+    value: "enthusiastic",
+    label: "Entuzjastyczny",
+    description: "Wyróżniająca, wysoka ocena",
+  },
+  {
+    value: "positive",
+    label: "Pozytywny",
+    description: "Dobra praca, bez przesady",
+  },
+  {
+    value: "diplomatic",
+    label: "Dyplomatyczny",
+    description: "Spełnia minimum, powściągliwy",
+  },
+  {
+    value: "negative",
+    label: "Negatywny",
+    description: "Krytyczny, wymaga poprawy",
+  },
+] as const
+
 type ModelValue = (typeof MODELS)[number]["value"]
 type ModeValue = (typeof MODES)[number]["value"]
+type ToneValue = (typeof TONES)[number]["value"]
 
 export default function AnalysisPage() {
   const { submit, status, result, error } = useAnalysis()
   const [model, setModel] = useState<ModelValue>("qwen3:30b-a3b")
   const [mode, setMode] = useState<ModeValue>("full")
+  const [tone, setTone] = useState<ToneValue>("auto")
 
   const idle = status === "idle" || status === "uploading"
   const busy = status === "uploading" || status === "analyzing"
@@ -103,8 +133,39 @@ export default function AnalysisPage() {
             </div>
           </fieldset>
 
+          <fieldset disabled={status === "uploading"}>
+            <legend className="mb-2 text-[13px] font-medium text-gray-700 dark:text-gray-300">
+              Ton recenzji
+            </legend>
+            <div className="flex flex-col gap-2">
+              {TONES.map(({ value, label, description }) => (
+                <label
+                  key={value}
+                  className="flex items-start gap-2.5 cursor-pointer"
+                >
+                  <input
+                    type="radio"
+                    name="tone"
+                    value={value}
+                    checked={tone === value}
+                    onChange={() => setTone(value)}
+                    className="mt-0.5 accent-gray-900 dark:accent-white"
+                  />
+                  <div>
+                    <span className="text-[14px] text-gray-900 dark:text-gray-100">
+                      {label}
+                    </span>
+                    <p className="text-[12px] text-gray-400 leading-snug">
+                      {description}
+                    </p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
           <FileUpload
-            onFileSelect={(file) => submit(file, { model, mode })}
+            onFileSelect={(file) => submit(file, { model, mode, review_tone: tone })}
             disabled={status === "uploading"}
           />
         </div>

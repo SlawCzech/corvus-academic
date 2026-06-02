@@ -3,6 +3,7 @@ import type { TaskStatusResponse } from "./api.types"
 export interface AnalysisOptions {
   model: string
   mode: string
+  review_tone: string
 }
 
 export async function submitAnalysis(
@@ -13,6 +14,7 @@ export async function submitAnalysis(
   formData.append("file", file)
   formData.append("model", options.model)
   formData.append("mode", options.mode)
+  formData.append("review_tone", options.review_tone)
   const res = await fetch("/api/analyze", { method: "POST", body: formData })
   if (!res.ok) {
     const msg = await res.text()
