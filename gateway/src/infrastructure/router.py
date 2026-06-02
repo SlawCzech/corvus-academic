@@ -67,8 +67,11 @@ class AnalysisRequest(BaseModel):
 
     evaluation_id: str
     text: str
-    guidelines: str
-    metadata: dict[str, str] = {}
+    thesis_type: str = "bachelor"
+    author: str = ""
+    title: str = ""
+    year: int = 0
+    field_of_study: str = ""
     model: str = "qwen3:30b-a3b"
     mode: str = "full"
     review_tone: str = "auto"
@@ -132,8 +135,14 @@ def submit_analysis(
     task_id = celery_client.send_analysis_task(
         evaluation_id=body.evaluation_id,
         text=body.text,
-        guidelines=body.guidelines,
-        metadata=body.metadata,
+        metadata={
+            "author": body.author,
+            "title": body.title,
+            "year": str(body.year),
+            "field_of_study": body.field_of_study,
+            "thesis_type": body.thesis_type,
+            "review_tone": body.review_tone,
+        },
         model=body.model,
         mode=body.mode,
         review_tone=body.review_tone,

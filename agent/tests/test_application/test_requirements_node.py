@@ -1,5 +1,6 @@
 """Tests for the check_requirements node."""
 
+import json
 from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
@@ -7,51 +8,108 @@ from langchain_core.messages import AIMessage
 
 from src.application.nodes.requirements import check_requirements
 from src.application.state import AnalysisState
+from src.domain.analysis import Finding, FindingSeverity
 
-_VALID_RESPONSE = (
-    '[{"section": "Formatting", "description": "Page margins do not match guidelines",'
-    ' "severity": "minor", "suggestion": "Set margins to 2.5cm as required."}]'
+_MINOR_RESPONSE = json.dumps(
+    [
+        {
+            "section": "1.5 Formatowanie",
+            "description": "Marginesy nie spełniają wymagań (3 cm zamiast 3,5 cm)",
+            "severity": "minor",
+            "suggestion": "Ustaw margines lewy na 3,5 cm.",
+        }
+    ]
+)
+
+_CRITICAL_RESPONSE = json.dumps(
+    [
+        {
+            "section": "1.3 Wstęp",
+            "description": "Brak celu pracy i pytań badawczych we wstępie",
+            "severity": "critical",
+            "suggestion": "Dodaj cel pracy oraz co najmniej jedno pytanie badawcze.",
+        }
+    ]
 )
 
 _EMPTY_RESPONSE = "[]"
 
+_BACHELOR_GUIDELINES = (
+    "## 4. Klasyfikacja uchybień\n"
+    "### CRITICAL — Brak celu pracy\n"
+    "### MAJOR — Niekompletny wstęp\n"
+    "### MINOR — Błędy edytorskie\n"
+)
 
-def _make_state() -> AnalysisState:
+
+def _make_state(
+    extra_findings: list[Finding] | None = None,
+    guidelines: str = _BACHELOR_GUIDELINES,
+) -> AnalysisState:
     return cast(
         AnalysisState,
         {
             "evaluation_id": "550e8400-e29b-41d4-a716-446655440000",
             "metadata": {
-                "author": "Jan Kowalski",
+                "author": "Anna Kowalska",
                 "title": "Test Thesis",
                 "year": 2024,
-                "field_of_study": "Computer Science",
+                "field_of_study": "Ekonomia",
+                "thesis_type": "bachelor",
+                "review_tone": "auto",
             },
-            "text": "Chapter 1: Introduction. Chapter 2: Background.",
-            "guidelines": "Thesis must have at least 5 chapters and proper margins.",
-            "findings": [],
+            "text": "Rozdział 1: Wprowadzenie. Rozdział 2: Przegląd literatury.",
+            "guidelines": guidelines,
+            "findings": extra_findings or [],
             "scores": [],
             "review": None,
             "status": "analyzing",
             "error": None,
+            "model": "qwen3:30b-a3b",
+            "mode": "full",
+            "review_tone": "auto",
         },
     )
 
 
-def test_check_requirements_happy_path() -> None:
-    """Node returns non-empty findings and no error on successful LLM call."""
+# ---------------------------------------------------------------------------
+# Spec tests
+# ---------------------------------------------------------------------------
+
+
+def test_node_appends_findings_to_existing_not_replaces() -> None:
+    """New findings are appended to pre-existing findings, not overwritten."""
+    existing = Finding(
+        section="2.1 Bibligrafia",
+        description="Za mało źródeł",
+        severity=FindingSeverity.MAJOR,
+        suggestion="Dodaj więcej źródeł.",
+    )
     mock_llm = MagicMock()
-    mock_llm.invoke.return_value = AIMessage(content=_VALID_RESPONSE)
+    mock_llm.invoke.return_value = AIMessage(content=_MINOR_RESPONSE)
+
+    with patch("src.application.nodes.requirements.get_llm", return_value=mock_llm):
+        result = check_requirements(_make_state(extra_findings=[existing]))
+
+    assert len(result["findings"]) == 2
+    assert result["findings"][0] is existing
+
+
+def test_node_parses_critical_severity_correctly() -> None:
+    """Node correctly maps the 'critical' string to FindingSeverity.CRITICAL."""
+    mock_llm = MagicMock()
+    mock_llm.invoke.return_value = AIMessage(content=_CRITICAL_RESPONSE)
 
     with patch("src.application.nodes.requirements.get_llm", return_value=mock_llm):
         result = check_requirements(_make_state())
 
-    assert len(result["findings"]) > 0
+    assert len(result["findings"]) == 1
+    assert result["findings"][0].severity == FindingSeverity.CRITICAL
     assert result["error"] is None
 
 
-def test_check_requirements_no_violations() -> None:
-    """Node returns empty findings when thesis fully conforms to guidelines."""
+def test_node_returns_empty_findings_for_conforming_thesis() -> None:
+    """Node returns empty findings list when model returns []."""
     mock_llm = MagicMock()
     mock_llm.invoke.return_value = AIMessage(content=_EMPTY_RESPONSE)
 
@@ -62,10 +120,10 @@ def test_check_requirements_no_violations() -> None:
     assert result["error"] is None
 
 
-def test_check_requirements_api_error() -> None:
-    """Node sets error and preserves existing findings when LLM raises."""
-    mock_llm: Any = MagicMock()
-    mock_llm.invoke.side_effect = Exception("Timeout")
+def test_node_sets_error_when_model_returns_invalid_json() -> None:
+    """Node sets state['error'] and does not crash when LLM returns non-JSON."""
+    mock_llm = MagicMock()
+    mock_llm.invoke.return_value = AIMessage(content="Przepraszam, nie mogę odpowiedzieć.")
 
     with patch("src.application.nodes.requirements.get_llm", return_value=mock_llm):
         result = check_requirements(_make_state())
@@ -74,16 +132,20 @@ def test_check_requirements_api_error() -> None:
     assert result["findings"] == []
 
 
-def test_check_requirements_appends_not_replaces() -> None:
-    """New findings are appended to existing ones, not overwritten."""
+def test_node_passes_guidelines_from_state_to_model_prompt() -> None:
+    """Guidelines from state are included verbatim in the message sent to the LLM."""
+    custom_guidelines = "UNIQUE_GUIDELINE_MARKER_XYZ"
     mock_llm = MagicMock()
-    mock_llm.invoke.return_value = AIMessage(content=_VALID_RESPONSE)
+    captured_messages: list[Any] = []
+
+    def capture_invoke(messages: list[Any]) -> AIMessage:
+        captured_messages.extend(messages)
+        return AIMessage(content=_EMPTY_RESPONSE)
+
+    mock_llm.invoke.side_effect = capture_invoke
 
     with patch("src.application.nodes.requirements.get_llm", return_value=mock_llm):
-        first_result = check_requirements(_make_state())
-        initial_count = len(first_result["findings"])
-        assert initial_count > 0
+        check_requirements(_make_state(guidelines=custom_guidelines))
 
-        second_result = check_requirements(first_result)
-
-    assert len(second_result["findings"]) == initial_count * 2
+    human_content = str(captured_messages[1].content)
+    assert custom_guidelines in human_content

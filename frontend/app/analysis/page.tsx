@@ -24,6 +24,19 @@ const MODES = [
   },
 ] as const
 
+const THESIS_TYPES = [
+  {
+    value: "bachelor",
+    label: "Praca licencjacka",
+    description: "Wymagania dla prac licencjackich",
+  },
+  {
+    value: "master_article",
+    label: "Praca magisterska",
+    description: "Wymagania dla prac magisterskich w formie artykułu",
+  },
+] as const
+
 const TONES = [
   {
     value: "auto",
@@ -55,12 +68,14 @@ const TONES = [
 type ModelValue = (typeof MODELS)[number]["value"]
 type ModeValue = (typeof MODES)[number]["value"]
 type ToneValue = (typeof TONES)[number]["value"]
+type ThesisTypeValue = (typeof THESIS_TYPES)[number]["value"]
 
 export default function AnalysisPage() {
   const { submit, status, result, error } = useAnalysis()
   const [model, setModel] = useState<ModelValue>("qwen3:30b-a3b")
   const [mode, setMode] = useState<ModeValue>("full")
   const [tone, setTone] = useState<ToneValue>("auto")
+  const [thesisType, setThesisType] = useState<ThesisTypeValue>("bachelor")
 
   const idle = status === "idle" || status === "uploading"
   const busy = status === "uploading" || status === "analyzing"
@@ -73,6 +88,37 @@ export default function AnalysisPage() {
 
       {idle && (
         <div className="space-y-6">
+          <fieldset disabled={status === "uploading"}>
+            <legend className="mb-2 text-[13px] font-medium text-gray-700 dark:text-gray-300">
+              Typ pracy
+            </legend>
+            <div className="flex flex-col gap-2">
+              {THESIS_TYPES.map(({ value, label, description }) => (
+                <label
+                  key={value}
+                  className="flex items-start gap-2.5 cursor-pointer"
+                >
+                  <input
+                    type="radio"
+                    name="thesis_type"
+                    value={value}
+                    checked={thesisType === value}
+                    onChange={() => setThesisType(value)}
+                    className="mt-0.5 accent-gray-900 dark:accent-white"
+                  />
+                  <div>
+                    <span className="text-[14px] text-gray-900 dark:text-gray-100">
+                      {label}
+                    </span>
+                    <p className="text-[12px] text-gray-400 leading-snug">
+                      {description}
+                    </p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
           <fieldset disabled={status === "uploading"}>
             <legend className="mb-2 text-[13px] font-medium text-gray-700 dark:text-gray-300">
               Model AI
@@ -165,7 +211,9 @@ export default function AnalysisPage() {
           </fieldset>
 
           <FileUpload
-            onFileSelect={(file) => submit(file, { model, mode, review_tone: tone })}
+            onFileSelect={(file) =>
+              submit(file, { model, mode, review_tone: tone, thesis_type: thesisType })
+            }
             disabled={status === "uploading"}
           />
         </div>

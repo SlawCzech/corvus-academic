@@ -11,3 +11,5 @@ class ThesisMetadata:
     title: str
     year: int
     field_of_study: str
+    thesis_type: str = "bachelor"
+    review_tone: str = "auto"

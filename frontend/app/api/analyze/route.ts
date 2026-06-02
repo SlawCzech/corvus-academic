@@ -15,6 +15,7 @@ export async function POST(request: Request): Promise<Response> {
   const model = String(formData.get("model") ?? "qwen3:30b-a3b")
   const mode = String(formData.get("mode") ?? "full")
   const review_tone = String(formData.get("review_tone") ?? "auto")
+  const thesis_type = String(formData.get("thesis_type") ?? "bachelor")
 
   // Step 1: extract text via parser service
   const parserForm = new FormData()
@@ -41,8 +42,7 @@ export async function POST(request: Request): Promise<Response> {
     body: JSON.stringify({
       evaluation_id: crypto.randomUUID(),
       text,
-      guidelines: "",
-      metadata: { filename: file.name },
+      thesis_type,
       model,
       mode,
       review_tone,

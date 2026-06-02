@@ -11,12 +11,14 @@ from src.infrastructure.celery_app import celery_app
 
 _EVALUATION_ID = "550e8400-e29b-41d4-a716-446655440000"
 _TEXT = "Chapter 1: Introduction. Chapter 2: Methodology."
-_GUIDELINES = "The thesis must have at least five chapters."
+_GUIDELINES = "## 4. CRITICAL: brak celu pracy."
 _METADATA: dict[str, Any] = {
     "author": "Jan Kowalski",
     "title": "Test Thesis",
     "year": 2024,
     "field_of_study": "Computer Science",
+    "thesis_type": "bachelor",
+    "review_tone": "auto",
 }
 
 
@@ -45,8 +47,11 @@ def test_task_calls_graph_with_correct_state() -> None:
     mock_graph = MagicMock()
     mock_graph.invoke.return_value = _graph_result()
 
-    with patch("src.application.tasks.build_analysis_graph", return_value=mock_graph):
-        analyze_thesis.apply(args=(_EVALUATION_ID, _TEXT, _GUIDELINES, _METADATA))
+    with (
+        patch("src.application.tasks.build_analysis_graph", return_value=mock_graph),
+        patch("src.application.tasks.load_guidelines", return_value=_GUIDELINES),
+    ):
+        analyze_thesis.apply(args=(_EVALUATION_ID, _TEXT, _METADATA))
 
     mock_graph.invoke.assert_called_once()
     call_state: dict[str, Any] = mock_graph.invoke.call_args[0][0]
@@ -64,23 +69,26 @@ def test_task_returns_graph_result() -> None:
     mock_graph = MagicMock()
     mock_graph.invoke.return_value = expected
 
-    with patch("src.application.tasks.build_analysis_graph", return_value=mock_graph):
-        result = analyze_thesis.apply(
-            args=(_EVALUATION_ID, _TEXT, _GUIDELINES, _METADATA)
-        )
+    with (
+        patch("src.application.tasks.build_analysis_graph", return_value=mock_graph),
+        patch("src.application.tasks.load_guidelines", return_value=_GUIDELINES),
+    ):
+        result = analyze_thesis.apply(args=(_EVALUATION_ID, _TEXT, _METADATA))
 
     assert result.get() == expected
 
 
 def test_task_retries_on_exception() -> None:
     """Task signals retry when the graph raises an exception."""
-    with patch("src.application.tasks.build_analysis_graph") as mock_factory:
+    with (
+        patch("src.application.tasks.load_guidelines", return_value=_GUIDELINES),
+        patch("src.application.tasks.build_analysis_graph") as mock_factory,
+    ):
         mock_factory.side_effect = Exception("Graph failed")
 
-        # In eager mode, self.retry() raises Retry rather than re-executing
         with pytest.raises(Retry):
             analyze_thesis.apply(
-                args=(_EVALUATION_ID, _TEXT, _GUIDELINES, _METADATA),
+                args=(_EVALUATION_ID, _TEXT, _METADATA),
                 throw=True,
             )
 

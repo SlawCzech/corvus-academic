@@ -23,6 +23,13 @@ class ReviewTone(StrEnum):
     NEGATIVE = "negative"
 
 
+class ThesisType(StrEnum):
+    """Type of thesis being evaluated."""
+
+    BACHELOR = "bachelor"
+    MASTER_ARTICLE = "master_article"
+
+
 @dataclass(frozen=True)
 class Finding:
     """A single observation about the thesis, immutable once created."""

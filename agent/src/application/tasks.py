@@ -8,7 +8,9 @@ import structlog
 from celery import Task, shared_task
 
 from src.application.graph import build_analysis_graph
+from src.application.guidelines import load_guidelines
 from src.application.state import AnalysisState, ThesisMetadataDict
+from src.domain.analysis import ThesisType
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -31,7 +33,6 @@ def analyze_thesis(
     self: Task,  # type: ignore[type-arg]
     evaluation_id: str,
     text: str,
-    guidelines: str,
     metadata: dict[str, Any],
     model: str = "qwen3:30b-a3b",
     mode: str = "full",
@@ -42,15 +43,19 @@ def analyze_thesis(
     mode="full"        — all four analysis nodes
     mode="review_only" — skip to review generation immediately
     model              — ollama model tag to use (overrides settings default)
+    Guidelines are loaded from disk based on metadata["thesis_type"].
     """
+    thesis_type: str = str(metadata.get("thesis_type", ThesisType.BACHELOR))
     logger.info(
         "analyze_thesis.started",
         evaluation_id=evaluation_id,
         model=model,
         mode=mode,
         review_tone=review_tone,
+        thesis_type=thesis_type,
     )
     try:
+        guidelines = load_guidelines(thesis_type)
         state: AnalysisState = cast(
             AnalysisState,
             {

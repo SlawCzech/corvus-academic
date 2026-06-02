@@ -252,9 +252,11 @@ def generate_review(state: AnalysisState) -> AnalysisState:
         scores_data: list[dict[str, object]] = data["scores"]  # type: ignore[assignment]
         scores: list[Score] = [
             Score(
-                criteria=str(s["criteria"]),
-                points=int(str(s["points"])),
-                max_points=int(str(s["max_points"])),
+                criteria=str(
+                    s.get("criteria") or s.get("criterion") or s.get("name") or s.get("category") or "Unknown"  # type: ignore[attr-defined]
+                ),
+                points=int(str(s.get("points") or s.get("score") or s.get("value") or 0)),  # type: ignore[attr-defined]
+                max_points=int(str(s.get("max_points") or s.get("max") or s.get("maximum") or 10)),  # type: ignore[attr-defined]
             )
             for s in scores_data
         ]
@@ -264,8 +266,8 @@ def generate_review(state: AnalysisState) -> AnalysisState:
             review_id=evaluation_uuid,
             thesis_id=evaluation_uuid,
             scores=scores,
-            summary=str(data["review_text"]),
-            recommendation=str(data["recommendation"]),
+            summary=str(data.get("review_text") or data.get("summary") or data.get("review") or ""),  # type: ignore[attr-defined]
+            recommendation=str(data.get("recommendation") or data.get("decision") or ""),  # type: ignore[attr-defined]
         )
 
         analysis = ThesisAnalysis(

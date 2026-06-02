@@ -4,6 +4,7 @@ export interface AnalysisOptions {
   model: string
   mode: string
   review_tone: string
+  thesis_type: string
 }
 
 export async function submitAnalysis(
@@ -15,6 +16,7 @@ export async function submitAnalysis(
   formData.append("model", options.model)
   formData.append("mode", options.mode)
   formData.append("review_tone", options.review_tone)
+  formData.append("thesis_type", options.thesis_type)
   const res = await fetch("/api/analyze", { method: "POST", body: formData })
   if (!res.ok) {
     const msg = await res.text()

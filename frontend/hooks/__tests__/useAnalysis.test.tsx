@@ -74,7 +74,7 @@ describe("useAnalysis", () => {
     await act(async () => {
       await result.current.submit(
         new File(["pdf"], "thesis.pdf", { type: "application/pdf" }),
-        { model: "qwen3:30b-a3b", mode: "full", review_tone: "auto" },
+        { model: "qwen3:30b-a3b", mode: "full", review_tone: "auto", thesis_type: "bachelor" },
       )
     })
 
@@ -94,7 +94,7 @@ describe("useAnalysis", () => {
     await act(async () => {
       await result.current.submit(
         new File(["pdf"], "thesis.pdf", { type: "application/pdf" }),
-        { model: "qwen3:30b-a3b", mode: "full", review_tone: "auto" },
+        { model: "qwen3:30b-a3b", mode: "full", review_tone: "auto", thesis_type: "bachelor" },
       )
     })
 
@@ -134,7 +134,7 @@ describe("useAnalysis", () => {
     await act(async () => {
       await result.current.submit(
         new File(["pdf"], "thesis.pdf", { type: "application/pdf" }),
-        { model: "qwen3:30b-a3b", mode: "full", review_tone: "auto" },
+        { model: "qwen3:30b-a3b", mode: "full", review_tone: "auto", thesis_type: "bachelor" },
       )
     })
 
@@ -161,7 +161,7 @@ describe("useAnalysis", () => {
     await act(async () => {
       await result.current.submit(
         new File(["pdf"], "thesis.pdf", { type: "application/pdf" }),
-        { model: "qwen3:30b-a3b", mode: "full", review_tone: "auto" },
+        { model: "qwen3:30b-a3b", mode: "full", review_tone: "auto", thesis_type: "bachelor" },
       )
     })
 

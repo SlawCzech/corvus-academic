@@ -30,7 +30,6 @@ celery_app = _make_celery_app()
 def send_analysis_task(
     evaluation_id: str,
     text: str,
-    guidelines: str,
     metadata: dict[str, str],
     model: str = "qwen3:30b-a3b",
     mode: str = "full",
@@ -39,7 +38,7 @@ def send_analysis_task(
     """Dispatch analyze_thesis to the Celery worker and return the task ID."""
     async_result = celery_app.send_task(
         _TASK_NAME,
-        args=[evaluation_id, text, guidelines, metadata],
+        args=[evaluation_id, text, metadata],
         kwargs={"model": model, "mode": mode, "review_tone": review_tone},
     )
     task_id: str = str(async_result.id)
