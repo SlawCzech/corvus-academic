@@ -18,8 +18,10 @@ class ReviewTone(StrEnum):
 
     AUTO = "auto"
     ENTHUSIASTIC = "enthusiastic"
+    COMMENDABLE = "commendable"
     POSITIVE = "positive"
     DIPLOMATIC = "diplomatic"
+    RESERVED = "reserved"
     NEGATIVE = "negative"
 
 

@@ -46,22 +46,32 @@ const TONES = [
   {
     value: "enthusiastic",
     label: "Entuzjastyczny",
-    description: "Wyróżniająca, wysoka ocena",
+    description: "Wyróżniająca, wyjątkowy poziom",
+  },
+  {
+    value: "commendable",
+    label: "Pochlebny",
+    description: "Bardzo dobra, warta podkreślenia",
   },
   {
     value: "positive",
     label: "Pozytywny",
-    description: "Dobra praca, bez przesady",
+    description: "Dobra praca, spełnia wymagania",
   },
   {
     value: "diplomatic",
     label: "Dyplomatyczny",
-    description: "Spełnia minimum, powściągliwy",
+    description: "Spełnia minimum, bez pochwał",
+  },
+  {
+    value: "reserved",
+    label: "Powściągliwy",
+    description: "Spełnia minimum, z wyraźnymi słabościami",
   },
   {
     value: "negative",
     label: "Negatywny",
-    description: "Krytyczny, wymaga poprawy",
+    description: "Nie spełnia wymagań, wymaga poprawy",
   },
 ] as const
 

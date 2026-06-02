@@ -260,6 +260,134 @@ def test_invalid_tone_falls_back_to_auto_without_crashing() -> None:
     assert "Tone instruction: AUTO" in system_content
 
 
+def test_commendable_tone_prompt_includes_notable_strength_phrase() -> None:
+    """COMMENDABLE tone instruction contains the mandatory notable-strength opener."""
+    mock_llm = MagicMock()
+    captured_messages: list[Any] = []
+
+    def capture_invoke(messages: list[Any]) -> AIMessage:
+        captured_messages.extend(messages)
+        return AIMessage(content=_VALID_RESPONSE)
+
+    mock_llm.invoke.side_effect = capture_invoke
+
+    with patch("src.application.nodes.review.get_llm", return_value=mock_llm):
+        generate_review(_make_state(review_tone="commendable"))
+
+    system_content = str(captured_messages[0].content)
+    assert "Tone instruction: COMMENDABLE" in system_content
+    assert "Na szczególne podkreślenie" in system_content
+
+
+def test_commendable_tone_prompt_opening_differs_from_enthusiastic() -> None:
+    """COMMENDABLE opening uses 'dobry poziom', not 'wysoki poziom' like ENTHUSIASTIC."""
+    mock_llm = MagicMock()
+    captured_messages: list[Any] = []
+
+    def capture_invoke(messages: list[Any]) -> AIMessage:
+        captured_messages.extend(messages)
+        return AIMessage(content=_VALID_RESPONSE)
+
+    mock_llm.invoke.side_effect = capture_invoke
+
+    with patch("src.application.nodes.review.get_llm", return_value=mock_llm):
+        generate_review(_make_state(review_tone="commendable"))
+
+    system_content = str(captured_messages[0].content)
+    # The COMMENDABLE opening line contains "dobry poziom"
+    assert "dobry poziom" in system_content
+    # The COMMENDABLE instruction opening does NOT use "wysoki poziom merytoryczny"
+    # (that exact phrase belongs to the ENTHUSIASTIC opening only)
+    assert "wysoki poziom merytoryczny" not in system_content
+
+
+def test_reserved_tone_prompt_includes_minimalne_wymagania() -> None:
+    """RESERVED tone instruction contains the mandatory 'minimalne wymagania' opener."""
+    mock_llm = MagicMock()
+    captured_messages: list[Any] = []
+
+    def capture_invoke(messages: list[Any]) -> AIMessage:
+        captured_messages.extend(messages)
+        return AIMessage(content=_VALID_RESPONSE)
+
+    mock_llm.invoke.side_effect = capture_invoke
+
+    with patch("src.application.nodes.review.get_llm", return_value=mock_llm):
+        generate_review(_make_state(with_major=True, review_tone="reserved"))
+
+    system_content = str(captured_messages[0].content)
+    assert "Tone instruction: RESERVED" in system_content
+    assert "minimalne wymagania" in system_content
+
+
+def test_reserved_recommendation_is_stored_correctly() -> None:
+    """RESERVED tone with MAJOR findings stores the z-zastrzeżeniami recommendation."""
+    reserved_response = json.dumps(
+        {
+            "scores": [
+                {"criteria": "Struktura i spójność", "points": 5, "max_points": 10},
+                {
+                    "criteria": "Metodologia i bibliografia",
+                    "points": 4,
+                    "max_points": 10,
+                },
+                {"criteria": "Zgodność z wymogami", "points": 5, "max_points": 10},
+                {"criteria": "Jakość merytoryczna", "points": 4, "max_points": 10},
+            ],
+            "review_text": (
+                "Praca spełnia minimalne wymagania stawiane pracom dyplomowym."
+            ),
+            "recommendation": "Dopuścić do obrony z zastrzeżeniami",
+        }
+    )
+    mock_llm = MagicMock()
+    mock_llm.invoke.return_value = AIMessage(content=reserved_response)
+
+    with patch("src.application.nodes.review.get_llm", return_value=mock_llm):
+        result = generate_review(_make_state(with_major=True, review_tone="reserved"))
+
+    assert result["review"] is not None
+    assert result["review"].recommendation == "Dopuścić do obrony z zastrzeżeniami"
+
+
+def test_auto_tone_prompt_includes_commendable_threshold() -> None:
+    """Updated AUTO instruction contains COMMENDABLE threshold range (7.5–8.9)."""
+    mock_llm = MagicMock()
+    captured_messages: list[Any] = []
+
+    def capture_invoke(messages: list[Any]) -> AIMessage:
+        captured_messages.extend(messages)
+        return AIMessage(content=_VALID_RESPONSE)
+
+    mock_llm.invoke.side_effect = capture_invoke
+
+    with patch("src.application.nodes.review.get_llm", return_value=mock_llm):
+        generate_review(_make_state(review_tone="auto"))
+
+    system_content = str(captured_messages[0].content)
+    assert "COMMENDABLE" in system_content
+    assert "7.5" in system_content
+
+
+def test_auto_tone_prompt_includes_reserved_threshold() -> None:
+    """Updated AUTO instruction contains RESERVED threshold range (3.5–4.9)."""
+    mock_llm = MagicMock()
+    captured_messages: list[Any] = []
+
+    def capture_invoke(messages: list[Any]) -> AIMessage:
+        captured_messages.extend(messages)
+        return AIMessage(content=_VALID_RESPONSE)
+
+    mock_llm.invoke.side_effect = capture_invoke
+
+    with patch("src.application.nodes.review.get_llm", return_value=mock_llm):
+        generate_review(_make_state(with_major=True, review_tone="auto"))
+
+    system_content = str(captured_messages[0].content)
+    assert "RESERVED" in system_content
+    assert "3.5" in system_content
+
+
 def test_json_parse_error_sets_state_error() -> None:
     """Non-JSON LLM response causes state['error'] to be set (no exception propagated)."""
     mock_llm = MagicMock()

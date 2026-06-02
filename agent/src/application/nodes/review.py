@@ -10,7 +10,7 @@ from uuid import UUID
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from src.domain.analysis import FindingSeverity, ReviewTone, ThesisAnalysis
+from src.domain.analysis import ReviewTone, ThesisAnalysis
 from src.domain.evaluation import EvaluationStatus
 from src.domain.review import Review, Score
 from src.infrastructure.llm_factory import get_llm
@@ -114,15 +114,30 @@ _TONE_INSTRUCTIONS: dict[str, str] = {
     ReviewTone.AUTO: """
 ## Tone instruction: AUTO
 
-Assess the findings and scores independently and select the most \
-appropriate tone from the options below. Apply it consistently.
+Assess the findings and scores independently. Select the most
+appropriate tone and apply it consistently. Do not mention
+that tone was selected automatically.
 
-- If no CRITICAL or MAJOR findings and average score >= 8: use ENTHUSIASTIC
-- If no CRITICAL findings and average score 6–7: use POSITIVE
-- If MAJOR findings present but no CRITICAL, average score 5–6: use DIPLOMATIC
-- If any CRITICAL finding present: use NEGATIVE
+Selection rules (based on average score across all criteria
+and severity of findings):
 
-Do not mention that tone was selected automatically.
+avg >= 9.0, no CRITICAL, no MAJOR:
+  → ENTHUSIASTIC
+
+avg 7.5–8.9, no CRITICAL, at most one MINOR:
+  → COMMENDABLE
+
+avg 6.0–7.4, no CRITICAL, MINOR findings only:
+  → POSITIVE
+
+avg 5.0–5.9, no CRITICAL, MAJOR findings present:
+  → DIPLOMATIC
+
+avg 3.5–4.9, no CRITICAL, multiple MAJOR findings:
+  → RESERVED
+
+any CRITICAL finding present:
+  → NEGATIVE
 """,
     ReviewTone.ENTHUSIASTIC: """
 ## Tone instruction: ENTHUSIASTIC
@@ -185,6 +200,65 @@ jej jako całości."
 Scores: 5–7 range. Reflect the lukewarm quality honestly.
 Recommendation: "Dopuścić do obrony" or "Dopuścić do obrony \
 z zastrzeżeniami" depending on severity of MAJOR findings.
+""",
+    ReviewTone.COMMENDABLE: """
+## Tone instruction: COMMENDABLE
+
+The thesis is genuinely good and deserves explicit recognition,
+but does not reach the exceptional level of ENTHUSIASTIC.
+The reviewer is clearly pleased without being effusive.
+
+Opening (mandatory):
+  "Praca prezentuje dobry poziom merytoryczny i formalny."
+  OR if particularly strong in one dimension:
+  "Praca prezentuje dobry poziom [merytoryczny/formalny],
+  wyróżniając się [specific dimension]."
+
+Notable strength section: MANDATORY — identify one specific
+strength that elevates this thesis above average. Be concrete:
+name the method, the source quality, the analytical approach,
+or the empirical contribution.
+  "Na szczególne podkreślenie zasługuje [specific achievement]."
+
+Closing (mandatory):
+  "Strona formalna oraz redakcyjna opracowania nie budzi
+  żadnych zastrzeżeń."
+  OR if minor issues present:
+  "W pracy obecne są drobne niedociągnięcia formalne
+  nie rzutujące na jej ogólnie wysoki poziom."
+
+Scores: 7–9 range. Reflect genuine quality honestly.
+Recommendation: "Dopuścić do obrony" unless CRITICAL finding
+forces otherwise.
+""",
+    ReviewTone.RESERVED: """
+## Tone instruction: RESERVED
+
+The thesis formally meets the minimum requirements but has
+notable substantive or methodological weaknesses. The reviewer
+acknowledges the minimum standard is met while making the
+weaknesses clearly visible — without being harsh.
+This is the appropriate tone when you would not recommend
+distinction and want the student to be aware of the shortcomings.
+
+Opening (mandatory):
+  "Praca spełnia minimalne wymagania stawiane pracom dyplomowym,
+  jednak prezentuje wyraźne słabości [merytoryczne/metodologiczne/formalne]."
+
+Notable strength section: DO NOT include unless a specific
+element genuinely stands out despite overall weakness.
+
+Body: name the main weaknesses explicitly and specifically.
+Draw directly from MAJOR findings. Be precise — not personal.
+
+Closing (mandatory):
+  "Wskazane niedociągnięcia nie dyskwalifikują pracy jako całości,
+  jednak rzutują na jej ostateczną ocenę."
+
+Scores: 4–6 range. Do not soften scores to protect the student.
+Recommendation: "Dopuścić do obrony z zastrzeżeniami" in most cases.
+  Use "Dopuścić do obrony" only if all scores >= 6 despite weaknesses.
+  Use "Zwrócić do poprawy" only if CRITICAL finding is present.
 """,
     ReviewTone.NEGATIVE: """
 ## Tone instruction: NEGATIVE
