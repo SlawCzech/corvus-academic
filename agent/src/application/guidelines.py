@@ -7,7 +7,7 @@ from pathlib import Path
 
 from src.domain.analysis import ThesisType
 
-_GUIDELINES_DIR = Path(__file__).parent.parent.parent / "prompts" / "guidelines"
+_GUIDELINES_DIR = Path(__file__).parent / "prompts" / "guidelines"
 
 _GUIDELINES_FILES: dict[str, str] = {
     ThesisType.BACHELOR: "university_requirements_bachelor.md",
