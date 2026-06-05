@@ -22,7 +22,7 @@ export async function POST(request: Request): Promise<Response> {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 15,
+    maxAge: 60 * 60 * 8, // 8h — tymczasowo do czasu implementacji refresh token flow
   })
   if (data.refresh_token) {
     response.cookies.set("refresh_token", data.refresh_token, {

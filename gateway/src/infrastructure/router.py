@@ -20,6 +20,7 @@ from src.application.user_service import UserService
 from src.domain.user import Role, User, UserRegistration
 from src.infrastructure import celery_client
 from src.infrastructure.database import get_db_session
+from src.infrastructure.limiter import limiter
 from src.infrastructure.models import AnalysisModel, LoginEventModel
 from src.infrastructure.repositories import (
     AnalysisRepository,
@@ -178,6 +179,7 @@ class LoginEventResponse(BaseModel):
 
 
 @router.post("/auth/login", response_model=LoginResponse)
+@limiter.limit("5/minute")
 async def login(
     body: LoginRequest,
     request: Request,
@@ -384,7 +386,6 @@ async def submit_analysis(
             "year": str(body.year),
             "field_of_study": body.field_of_study,
             "thesis_type": body.thesis_type,
-            "review_tone": body.review_tone,
         },
         model=body.model,
         mode=body.mode,
