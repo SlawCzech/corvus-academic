@@ -10,7 +10,7 @@ function fakeJwt(payload: Record<string, unknown>): string {
 
 function makeRequest(path: string, token?: string): NextRequest {
   const headers: Record<string, string> = {}
-  if (token) headers["cookie"] = `token=${token}`
+  if (token) headers["cookie"] = `access_token=${token}`
   return new NextRequest(`http://localhost${path}`, { headers })
 }
 

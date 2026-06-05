@@ -1,17 +1,24 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { decodeToken } from "@/lib/auth"
+import { isTokenExpired, getRole } from "@/lib/auth"
 
 export function middleware(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl
-  const token = request.cookies.get("token")?.value
+  const accessToken = request.cookies.get("access_token")?.value
+  const refreshToken = request.cookies.get("refresh_token")?.value
 
-  if (!token) {
+  if (!accessToken && !refreshToken) {
     return NextResponse.redirect(new URL("/login", request.url))
   }
 
+  if ((!accessToken || isTokenExpired(accessToken)) && refreshToken) {
+    const url = new URL("/api/auth/refresh", request.url)
+    url.searchParams.set("redirect", pathname)
+    return NextResponse.redirect(url)
+  }
+
   if (pathname.startsWith("/admin")) {
-    const payload = decodeToken(token)
-    if (!payload || payload.role !== "ADMIN") {
+    const role = getRole(accessToken!)
+    if (role !== "ADMIN") {
       return NextResponse.redirect(new URL("/login", request.url))
     }
   }
@@ -20,5 +27,5 @@ export function middleware(request: NextRequest): NextResponse {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/analysis/:path*"],
+  matcher: ["/admin/:path*", "/analysis/:path*", "/profile/:path*"],
 }

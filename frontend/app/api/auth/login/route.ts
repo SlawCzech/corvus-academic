@@ -12,13 +12,26 @@ export async function POST(request: Request): Promise<Response> {
   if (!gatewayRes.ok) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
   }
-  const data = (await gatewayRes.json()) as { access_token: string }
+  const data = (await gatewayRes.json()) as {
+    access_token: string
+    refresh_token?: string
+  }
   const response = NextResponse.json({ ok: true })
-  response.cookies.set("token", data.access_token, {
+  response.cookies.set("access_token", data.access_token, {
     httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24,
+    maxAge: 60 * 15,
   })
+  if (data.refresh_token) {
+    response.cookies.set("refresh_token", data.refresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+    })
+  }
   return response
 }

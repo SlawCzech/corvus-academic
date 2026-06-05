@@ -7,7 +7,7 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ taskId: string }> },
 ): Promise<Response> {
-  const token = (await cookies()).get("token")?.value ?? ""
+  const token = (await cookies()).get("access_token")?.value ?? ""
   const { taskId } = await params
   const res = await fetch(`${GATEWAY_URL}/analysis/${taskId}`, {
     headers: { Authorization: `Bearer ${token}` },

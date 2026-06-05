@@ -5,7 +5,7 @@ const PARSER_URL = process.env.PARSER_URL ?? "http://localhost:8001"
 const GATEWAY_URL = process.env.GATEWAY_URL ?? "http://localhost:8000"
 
 export async function POST(request: Request): Promise<Response> {
-  const token = (await cookies()).get("token")?.value ?? ""
+  const token = (await cookies()).get("access_token")?.value ?? ""
 
   const formData = await request.formData()
   const file = formData.get("file")

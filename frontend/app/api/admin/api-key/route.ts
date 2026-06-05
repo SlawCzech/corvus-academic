@@ -5,7 +5,7 @@ const GATEWAY_URL = process.env.GATEWAY_URL ?? "http://localhost:8000"
 
 export async function PATCH(request: Request): Promise<Response> {
   const cookieStore = await cookies()
-  const token = cookieStore.get("token")?.value
+  const token = cookieStore.get("access_token")?.value
   if (!token) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }

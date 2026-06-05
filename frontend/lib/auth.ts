@@ -5,6 +5,7 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   access_token: string
+  refresh_token: string
   token_type: string
 }
 
@@ -25,4 +26,18 @@ export function decodeToken(token: string): TokenPayload | null {
   } catch {
     return null
   }
+}
+
+export function isTokenExpired(token: string): boolean {
+  const payload = decodeToken(token)
+  if (!payload) return true
+  return Date.now() / 1000 >= payload.exp
+}
+
+export function getRole(token: string): string | null {
+  return decodeToken(token)?.role ?? null
+}
+
+export function getUserId(token: string): string | null {
+  return decodeToken(token)?.sub ?? null
 }
