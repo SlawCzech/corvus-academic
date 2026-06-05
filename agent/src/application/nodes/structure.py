@@ -19,11 +19,13 @@ def analyze_structure(state: AnalysisState) -> AnalysisState:
     """Analyze chapter structure and extend state with structural findings."""
     try:
         llm = get_llm(state["model"])
+        max_chars = 12000
+        thesis_text = state["text"][:max_chars]
         messages = [
             SystemMessage(content=prompts.SYSTEM_PROMPT),
             HumanMessage(
                 content=(
-                    f"Thesis text:\n{state['text']}\n\n"
+                    f"Thesis text:\n{thesis_text}\n\n"
                     f"Guidelines:\n{state['guidelines']}"
                 )
             ),

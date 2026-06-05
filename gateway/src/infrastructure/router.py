@@ -7,7 +7,7 @@ from typing import Any
 import structlog
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.auth import (
@@ -114,6 +114,14 @@ class RegisterRequest(BaseModel):
     password: str
     role: str = "promotor"
 
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, v: str) -> str:
+        allowed = {r.value for r in Role}
+        if v not in allowed:
+            raise ValueError(f"role must be one of {sorted(allowed)}, got {v!r}")
+        return v
+
 
 class UserResponse(BaseModel):
     id: uuid.UUID
@@ -126,10 +134,20 @@ class ChangePasswordRequest(BaseModel):
     new_password: str
 
 
+_MAX_TEXT_BYTES = 2 * 1024 * 1024  # 2 MB
+
+
 class AnalysisRequest(BaseModel):
     evaluation_id: str
     text: str
     thesis_type: str = "bachelor"
+
+    @field_validator("text")
+    @classmethod
+    def validate_text_size(cls, v: str) -> str:
+        if len(v.encode()) > _MAX_TEXT_BYTES:
+            raise ValueError("text exceeds 2 MB limit")
+        return v
     author: str = ""
     title: str = ""
     year: int = 0
@@ -300,13 +318,7 @@ async def create_user(
     svc: UserService = Depends(get_user_service),
 ) -> UserResponse:
     """Register a new user — ADMIN only."""
-    try:
-        role = Role(body.role)
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Unknown role: {body.role!r}",
-        ) from exc
+    role = Role(body.role)
     registration = UserRegistration(
         email=body.email,
         hashed_password=UserService.hash_password(body.password),

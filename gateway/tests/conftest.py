@@ -14,6 +14,7 @@ os.environ.setdefault("FERNET_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
 from main import app  # noqa: E402
 from src.infrastructure.database import get_db_session  # noqa: E402
+from src.infrastructure.limiter import limiter  # noqa: E402
 from src.infrastructure.models import Base, UserModel  # noqa: E402
 
 _SQLITE_URL = "sqlite+aiosqlite:///:memory:"
@@ -28,6 +29,12 @@ PROMOTOR_PASSWORD = "promotor-secret"
 
 def _hash(plain: str) -> str:
     return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter() -> None:
+    """Clear rate limiter state between tests to prevent cross-test interference."""
+    limiter._storage.reset()  # type: ignore[union-attr]
 
 
 @pytest.fixture

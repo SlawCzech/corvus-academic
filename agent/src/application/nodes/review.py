@@ -302,6 +302,16 @@ def generate_review(state: AnalysisState) -> AnalysisState:
             for f in state["findings"]
         )
 
+        # Truncate thesis text to avoid exceeding model context window.
+        # The review node primarily relies on findings — full text is supplementary.
+        thesis_text: str = state["text"]
+        max_text_chars = 6000
+        truncated_text = (
+            thesis_text[:max_text_chars] + "\n\n[...tekst skrócony...]"
+            if len(thesis_text) > max_text_chars
+            else thesis_text
+        )
+
         user_message = (
             f"Thesis title: {state['metadata'].get('title', 'Unknown')}\n"  # type: ignore[attr-defined]
             f"Author: {state['metadata'].get('author', 'Unknown')}\n"  # type: ignore[attr-defined]
@@ -309,7 +319,7 @@ def generate_review(state: AnalysisState) -> AnalysisState:
             f"Field: {state['metadata'].get('field_of_study', 'Unknown')}\n\n"  # type: ignore[attr-defined]
             f"Guidelines:\n{state['guidelines']}\n\n"
             f"Accumulated findings:\n{findings_summary or 'None'}\n\n"
-            f"Thesis text:\n{state['text']}"
+            f"Thesis text (first {max_text_chars} chars):\n{truncated_text}"
         )
 
         llm = get_llm(state["model"])
