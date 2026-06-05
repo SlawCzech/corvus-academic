@@ -2,38 +2,33 @@
 
 import os
 import uuid
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import Generator
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 os.environ.setdefault("JWT_SECRET", "test-secret-key-that-is-long-enough-32ch")
 os.environ.setdefault("FERNET_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
 
-# ---------- helpers ----------
-
-_ADMIN_EMAIL = "admin@corvus.local"
-_ADMIN_PASSWORD = "admin-secret"
-_PROMOTOR_EMAIL = "promotor@corvus.local"
-_PROMOTOR_PASSWORD = "promotor-secret"
+from tests.conftest import (  # noqa: E402
+    ADMIN_EMAIL,
+    ADMIN_PASSWORD,
+    PROMOTOR_EMAIL,
+    PROMOTOR_PASSWORD,
+)
 
 
 def _login(client: TestClient, email: str, password: str) -> str:
     """POST /auth/login and return the access token."""
     resp = client.post("/auth/login", json={"email": email, "password": password})
-    assert resp.status_code == 200
+    assert resp.status_code == 200, resp.text
     return str(resp.json()["access_token"])
-
-
-# ---------- fixtures ----------
 
 
 @pytest.fixture
 def mock_celery() -> Generator[MagicMock, None, None]:
-    """Patch the celery_client module used by the router."""
     fake_task_id = str(uuid.uuid4())
     with patch(
         "src.infrastructure.router.celery_client.send_analysis_task",
@@ -63,7 +58,7 @@ def test_health(client: TestClient) -> None:
 
 def test_login_admin_success(client: TestClient) -> None:
     resp = client.post(
-        "/auth/login", json={"email": _ADMIN_EMAIL, "password": _ADMIN_PASSWORD}
+        "/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}
     )
     assert resp.status_code == 200
     body: dict[str, Any] = resp.json()
@@ -74,7 +69,7 @@ def test_login_admin_success(client: TestClient) -> None:
 def test_login_promotor_success(client: TestClient) -> None:
     resp = client.post(
         "/auth/login",
-        json={"email": _PROMOTOR_EMAIL, "password": _PROMOTOR_PASSWORD},
+        json={"email": PROMOTOR_EMAIL, "password": PROMOTOR_PASSWORD},
     )
     assert resp.status_code == 200
     assert "access_token" in resp.json()
@@ -82,7 +77,7 @@ def test_login_promotor_success(client: TestClient) -> None:
 
 def test_login_wrong_password(client: TestClient) -> None:
     resp = client.post(
-        "/auth/login", json={"email": _ADMIN_EMAIL, "password": "wrong"}
+        "/auth/login", json={"email": ADMIN_EMAIL, "password": "wrong"}
     )
     assert resp.status_code == 401
 
@@ -98,9 +93,7 @@ def test_login_unknown_email(client: TestClient) -> None:
 
 
 def test_submit_analysis_requires_auth(client: TestClient) -> None:
-    resp = client.post(
-        "/analysis", json={"evaluation_id": "x", "text": "t", "guidelines": "g"}
-    )
+    resp = client.post("/analysis", json={"evaluation_id": "x", "text": "t"})
     assert resp.status_code in (401, 403)
 
 
@@ -113,25 +106,114 @@ def test_invalid_token_rejected(client: TestClient) -> None:
     headers = {"Authorization": "Bearer not.a.valid.token"}
     resp = client.post(
         "/analysis",
-        json={"evaluation_id": "x", "text": "t", "guidelines": "g"},
+        json={"evaluation_id": "x", "text": "t"},
         headers=headers,
     )
     assert resp.status_code == 401
+
+
+# ---------- /users/me ----------
+
+
+def test_get_me(client: TestClient) -> None:
+    token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    resp = client.get("/users/me", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    body: dict[str, Any] = resp.json()
+    assert body["email"] == ADMIN_EMAIL
+    assert body["role"] == "admin"
+
+
+# ---------- /users CRUD ----------
+
+
+def test_list_users_admin(client: TestClient) -> None:
+    token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    resp = client.get("/users", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    emails = [u["email"] for u in resp.json()]
+    assert ADMIN_EMAIL in emails
+    assert PROMOTOR_EMAIL in emails
+
+
+def test_list_users_forbidden_for_promotor(client: TestClient) -> None:
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    resp = client.get("/users", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 403
+
+
+def test_create_user_admin(client: TestClient) -> None:
+    token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    resp = client.post(
+        "/users",
+        json={"email": "new@corvus.local", "password": "pass123", "role": "promotor"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 201
+    body: dict[str, Any] = resp.json()
+    assert body["email"] == "new@corvus.local"
+    assert body["role"] == "promotor"
+
+
+def test_create_user_duplicate_email(client: TestClient) -> None:
+    token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    client.post(
+        "/users",
+        json={"email": "dup@corvus.local", "password": "pass", "role": "promotor"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    resp = client.post(
+        "/users",
+        json={"email": "dup@corvus.local", "password": "pass2", "role": "promotor"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 409
+
+
+def test_create_user_forbidden_for_promotor(client: TestClient) -> None:
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    resp = client.post(
+        "/users",
+        json={"email": "x@x.com", "password": "p", "role": "promotor"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 403
+
+
+def test_delete_user_admin(client: TestClient) -> None:
+    token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    create_resp = client.post(
+        "/users",
+        json={"email": "todelete@corvus.local", "password": "pass", "role": "promotor"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    user_id = create_resp.json()["id"]
+    resp = client.delete(
+        f"/users/{user_id}", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert resp.status_code == 204
+
+
+def test_change_password(client: TestClient) -> None:
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    resp = client.patch(
+        "/users/me/password",
+        json={"new_password": "new-secure-password"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 204
+    new_token = _login(client, PROMOTOR_EMAIL, "new-secure-password")
+    assert len(new_token) > 0
 
 
 # ---------- submit analysis ----------
 
 
 def test_submit_analysis_success(client: TestClient, mock_celery: MagicMock) -> None:
-    token = _login(client, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+    token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
     resp = client.post(
         "/analysis",
-        json={
-            "evaluation_id": str(uuid.uuid4()),
-            "text": "thesis content",
-            "guidelines": "university guidelines",
-            "metadata": {"author": "Jan Kowalski"},
-        },
+        json={"evaluation_id": str(uuid.uuid4()), "text": "thesis content"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 202
@@ -144,20 +226,46 @@ def test_submit_analysis_success(client: TestClient, mock_celery: MagicMock) -> 
 def test_submit_analysis_as_promotor(
     client: TestClient, mock_celery: MagicMock
 ) -> None:
-    token = _login(client, _PROMOTOR_EMAIL, _PROMOTOR_PASSWORD)
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
     resp = client.post(
         "/analysis",
-        json={"evaluation_id": "e1", "text": "text", "guidelines": "g"},
+        json={"evaluation_id": "e1", "text": "text"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 202
 
 
+# ---------- analysis history ----------
+
+
+def test_list_analyses_empty(client: TestClient) -> None:
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    resp = client.get("/analysis", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+def test_list_analyses_after_submit(
+    client: TestClient, mock_celery: MagicMock
+) -> None:
+    token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    client.post(
+        "/analysis",
+        json={"evaluation_id": "e1", "text": "t"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    resp = client.get("/analysis", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
+
 # ---------- task status ----------
 
 
-def test_get_task_status_success(client: TestClient, mock_celery: MagicMock) -> None:
-    token = _login(client, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+def test_get_task_status_admin_sees_any(
+    client: TestClient, mock_celery: MagicMock
+) -> None:
+    token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
     resp = client.get(
         f"/analysis/{mock_celery.task_id}",
         headers={"Authorization": f"Bearer {token}"},
@@ -166,11 +274,44 @@ def test_get_task_status_success(client: TestClient, mock_celery: MagicMock) -> 
     body: dict[str, Any] = resp.json()
     assert body["status"] == "SUCCESS"
     assert body["result"] == {"score": 85}
-    mock_celery.get.assert_called_once_with(mock_celery.task_id)
+
+
+def test_get_task_status_owner_can_see(
+    client: TestClient, mock_celery: MagicMock
+) -> None:
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    submit = client.post(
+        "/analysis",
+        json={"evaluation_id": "e1", "text": "t"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    task_id = submit.json()["task_id"]
+    resp = client.get(
+        f"/analysis/{task_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+
+
+def test_get_task_status_non_owner_gets_404(
+    client: TestClient, mock_celery: MagicMock
+) -> None:
+    admin_token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    client.post(
+        "/analysis",
+        json={"evaluation_id": "e1", "text": "t"},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    promotor_token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    resp = client.get(
+        f"/analysis/{mock_celery.task_id}",
+        headers={"Authorization": f"Bearer {promotor_token}"},
+    )
+    assert resp.status_code == 404
 
 
 def test_get_task_status_pending(client: TestClient) -> None:
-    token = _login(client, _ADMIN_EMAIL, _ADMIN_PASSWORD)
+    token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
     with patch(
         "src.infrastructure.router.celery_client.get_task_result",
         return_value={"status": "PENDING", "result": None},
@@ -180,69 +321,40 @@ def test_get_task_status_pending(client: TestClient) -> None:
             headers={"Authorization": f"Bearer {token}"},
         )
     assert resp.status_code == 200
-    body: dict[str, Any] = resp.json()
-    assert body["status"] == "PENDING"
-    assert body["result"] is None
+    assert resp.json()["status"] == "PENDING"
+    assert resp.json()["result"] is None
 
 
-# ---------- api-key vault fixtures ----------
-
-_ADMIN_UUID = uuid.UUID("00000000-0000-0000-0000-000000000001")
-_PROMOTOR_UUID = uuid.UUID("00000000-0000-0000-0000-000000000002")
-_SQLITE_URL = "sqlite+aiosqlite:///:memory:"
+# ---------- admin login-events ----------
 
 
-@pytest.fixture
-async def db_with_users() -> AsyncGenerator[AsyncSession, None]:
-    """In-memory SQLite session pre-seeded with admin and promotor records."""
-    from src.infrastructure.models import Base, UserModel
-
-    engine = create_async_engine(_SQLITE_URL)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    factory = async_sessionmaker(engine, expire_on_commit=False)
-    async with factory() as session:
-        session.add(
-            UserModel(
-                id=_ADMIN_UUID,
-                email=_ADMIN_EMAIL,
-                role="admin",
-                hashed_password="x",
-            )
-        )
-        session.add(
-            UserModel(
-                id=_PROMOTOR_UUID,
-                email=_PROMOTOR_EMAIL,
-                role="promotor",
-                hashed_password="x",
-            )
-        )
-        await session.commit()
-        yield session
-    await engine.dispose()
+def test_admin_login_events(client: TestClient) -> None:
+    token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    resp = client.get(
+        "/admin/login-events",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    events = resp.json()
+    assert len(events) >= 1
+    assert any(e["email"] == ADMIN_EMAIL and e["success"] for e in events)
 
 
-@pytest.fixture
-async def db_client(db_with_users: AsyncSession) -> AsyncGenerator[TestClient, None]:
-    """TestClient with the DB session dependency overridden to use in-memory SQLite."""
-    from main import app
-    from src.infrastructure.database import get_db_session
-
-    async def _override() -> AsyncGenerator[AsyncSession, None]:
-        yield db_with_users
-
-    app.dependency_overrides[get_db_session] = _override
-    yield TestClient(app)
-    app.dependency_overrides.pop(get_db_session, None)
+def test_admin_login_events_forbidden_for_promotor(client: TestClient) -> None:
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    resp = client.get(
+        "/admin/login-events",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 403
 
 
 # ---------- PATCH /settings/api-key ----------
 
 
-async def test_set_api_key_admin_success(db_client: TestClient) -> None:
-    token = _login(db_client, _ADMIN_EMAIL, _ADMIN_PASSWORD)
-    resp = db_client.patch(
+def test_set_api_key_admin_success(client: TestClient) -> None:
+    token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    resp = client.patch(
         "/settings/api-key",
         json={"api_key": "sk-ant-test-key", "provider": "claude"},
         headers={"Authorization": f"Bearer {token}"},
@@ -251,9 +363,9 @@ async def test_set_api_key_admin_success(db_client: TestClient) -> None:
     assert resp.json() == {"configured": True}
 
 
-async def test_set_api_key_promotor_forbidden(db_client: TestClient) -> None:
-    token = _login(db_client, _PROMOTOR_EMAIL, _PROMOTOR_PASSWORD)
-    resp = db_client.patch(
+def test_set_api_key_promotor_forbidden(client: TestClient) -> None:
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    resp = client.patch(
         "/settings/api-key",
         json={"api_key": "sk-openai-test", "provider": "openai"},
         headers={"Authorization": f"Bearer {token}"},
@@ -261,18 +373,18 @@ async def test_set_api_key_promotor_forbidden(db_client: TestClient) -> None:
     assert resp.status_code == 403
 
 
-async def test_set_api_key_requires_auth(db_client: TestClient) -> None:
-    resp = db_client.patch(
+def test_set_api_key_requires_auth(client: TestClient) -> None:
+    resp = client.patch(
         "/settings/api-key",
         json={"api_key": "sk-test", "provider": "claude"},
     )
     assert resp.status_code in (401, 403)
 
 
-async def test_response_never_contains_plain_key(db_client: TestClient) -> None:
+def test_response_never_contains_plain_key(client: TestClient) -> None:
     plain_key = "sk-ant-super-secret-value"
-    token = _login(db_client, _ADMIN_EMAIL, _ADMIN_PASSWORD)
-    resp = db_client.patch(
+    token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    resp = client.patch(
         "/settings/api-key",
         json={"api_key": plain_key, "provider": "claude"},
         headers={"Authorization": f"Bearer {token}"},
@@ -284,9 +396,9 @@ async def test_response_never_contains_plain_key(db_client: TestClient) -> None:
 # ---------- GET /settings/api-key/status ----------
 
 
-async def test_get_status_not_configured(db_client: TestClient) -> None:
-    token = _login(db_client, _ADMIN_EMAIL, _ADMIN_PASSWORD)
-    resp = db_client.get(
+def test_get_status_not_configured(client: TestClient) -> None:
+    token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    resp = client.get(
         "/settings/api-key/status",
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -294,14 +406,14 @@ async def test_get_status_not_configured(db_client: TestClient) -> None:
     assert resp.json() == {"configured": False}
 
 
-async def test_get_status_configured_after_set(db_client: TestClient) -> None:
-    token = _login(db_client, _ADMIN_EMAIL, _ADMIN_PASSWORD)
-    db_client.patch(
+def test_get_status_configured_after_set(client: TestClient) -> None:
+    token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    client.patch(
         "/settings/api-key",
         json={"api_key": "sk-ant-key", "provider": "claude"},
         headers={"Authorization": f"Bearer {token}"},
     )
-    resp = db_client.get(
+    resp = client.get(
         "/settings/api-key/status",
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -309,6 +421,6 @@ async def test_get_status_configured_after_set(db_client: TestClient) -> None:
     assert resp.json() == {"configured": True}
 
 
-async def test_get_status_requires_auth(db_client: TestClient) -> None:
-    resp = db_client.get("/settings/api-key/status")
+def test_get_status_requires_auth(client: TestClient) -> None:
+    resp = client.get("/settings/api-key/status")
     assert resp.status_code in (401, 403)

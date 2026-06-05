@@ -2,58 +2,126 @@
 
 import os
 import uuid
+from datetime import UTC, datetime
 
 import pytest
 
 os.environ.setdefault("JWT_SECRET", "test-secret-key-that-is-long-enough-32ch")
 
-from src.application.auth import create_token, verify_token
+from src.application.auth import (
+    create_access_token,
+    create_refresh_token,
+    create_token,
+    verify_access_token,
+    verify_refresh_token,
+    verify_token,
+)
 from src.domain.user import Role, User
 
 
 @pytest.fixture
 def admin_user() -> User:
-    return User(id=uuid.uuid4(), email="admin@test.com", role=Role.ADMIN)
+    return User(
+        id=uuid.uuid4(),
+        email="admin@test.com",
+        role=Role.ADMIN,
+        created_at=datetime.now(UTC),
+    )
 
 
 @pytest.fixture
 def promotor_user() -> User:
-    return User(id=uuid.uuid4(), email="promotor@test.com", role=Role.PROMOTOR)
+    return User(
+        id=uuid.uuid4(),
+        email="promotor@test.com",
+        role=Role.PROMOTOR,
+        created_at=datetime.now(UTC),
+    )
 
 
-def test_create_token_returns_string(admin_user: User) -> None:
-    token = create_token(admin_user)
+# ---------- access token ----------
+
+
+def test_create_access_token_returns_string(admin_user: User) -> None:
+    token = create_access_token(admin_user)
     assert isinstance(token, str)
     assert len(token) > 0
 
 
-def test_roundtrip_admin(admin_user: User) -> None:
-    token = create_token(admin_user)
-    recovered = verify_token(token)
+def test_access_token_roundtrip_admin(admin_user: User) -> None:
+    token = create_access_token(admin_user)
+    recovered = verify_access_token(token)
     assert recovered.id == admin_user.id
     assert recovered.email == admin_user.email
     assert recovered.role == Role.ADMIN
 
 
-def test_roundtrip_promotor(promotor_user: User) -> None:
-    token = create_token(promotor_user)
-    recovered = verify_token(token)
+def test_access_token_roundtrip_promotor(promotor_user: User) -> None:
+    token = create_access_token(promotor_user)
+    recovered = verify_access_token(token)
     assert recovered.role == Role.PROMOTOR
 
 
-def test_verify_invalid_token_raises() -> None:
+def test_verify_access_token_invalid_raises() -> None:
     with pytest.raises(ValueError, match="Invalid token"):
-        verify_token("not.a.valid.jwt")
+        verify_access_token("not.a.valid.jwt")
 
 
-def test_verify_tampered_token_raises(admin_user: User) -> None:
-    token = create_token(admin_user)
-    # Flip one character in the signature segment
+def test_verify_access_token_tampered_raises(admin_user: User) -> None:
+    token = create_access_token(admin_user)
     tampered = token[:-3] + "xxx"
     with pytest.raises(ValueError):
-        verify_token(tampered)
+        verify_access_token(tampered)
 
 
-def test_verify_empty_token_raises() -> None:
+def test_verify_access_token_empty_raises() -> None:
     with pytest.raises(ValueError):
-        verify_token("")
+        verify_access_token("")
+
+
+def test_refresh_token_rejected_as_access(admin_user: User) -> None:
+    refresh, _jti = create_refresh_token(admin_user)
+    with pytest.raises(ValueError, match="Not an access token"):
+        verify_access_token(refresh)
+
+
+# ---------- refresh token ----------
+
+
+def test_create_refresh_token_returns_tuple(admin_user: User) -> None:
+    token, jti = create_refresh_token(admin_user)
+    assert isinstance(token, str)
+    assert isinstance(jti, str)
+    assert len(token) > 0
+    assert len(jti) > 0
+
+
+def test_refresh_token_roundtrip(admin_user: User) -> None:
+    token, jti = create_refresh_token(admin_user)
+    user_id, recovered_jti = verify_refresh_token(token)
+    assert user_id == admin_user.id
+    assert recovered_jti == jti
+
+
+def test_access_token_rejected_as_refresh(admin_user: User) -> None:
+    access = create_access_token(admin_user)
+    with pytest.raises(ValueError, match="Not a refresh token"):
+        verify_refresh_token(access)
+
+
+def test_refresh_tokens_have_unique_jti(admin_user: User) -> None:
+    _, jti1 = create_refresh_token(admin_user)
+    _, jti2 = create_refresh_token(admin_user)
+    assert jti1 != jti2
+
+
+# ---------- legacy aliases ----------
+
+
+def test_create_token_alias(admin_user: User) -> None:
+    assert create_token(admin_user) == create_access_token(admin_user)
+
+
+def test_verify_token_alias(admin_user: User) -> None:
+    token = create_access_token(admin_user)
+    assert verify_token(token).id == admin_user.id
