@@ -16,7 +16,7 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 _FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
 
-_SYSTEM_PROMPT = """You are checking a thesis against university requirements.
+_SYSTEM_PROMPT_BASE = """You are checking a thesis against university requirements.
 
 The requirements document is provided below. Check each requirement
 systematically. For each violation found, create a Finding with:
@@ -28,16 +28,28 @@ systematically. For each violation found, create a Finding with:
 
 Return ONLY a JSON array of findings:
 [
-  {
+  {{
     "section": "<requirement section reference>",
     "description": "<what is missing or wrong>",
     "severity": "critical" | "major" | "minor",
     "suggestion": "<concrete corrective action>"
-  }
+  }}
 ]
 
 If no violations found, return an empty array: []
-Return raw JSON only — no markdown, no explanation."""
+Return raw JSON only — no markdown, no explanation.
+{lang_instruction}"""
+
+_LANG_INSTRUCTIONS = {
+    "pl": "Write all text fields (section, description, suggestion) in Polish.",
+    "en": "Write all text fields (section, description, suggestion) in English.",
+}
+
+
+def _get_system_prompt(language: str = "pl") -> str:
+    return _SYSTEM_PROMPT_BASE.format(
+        lang_instruction=_LANG_INSTRUCTIONS.get(language, _LANG_INSTRUCTIONS["pl"])
+    )
 
 
 def _extract_json(text: str) -> str:
@@ -51,7 +63,7 @@ def check_requirements(state: AnalysisState) -> AnalysisState:
         llm = get_llm(state["model"])
         response = llm.invoke(
             [
-                SystemMessage(content=_SYSTEM_PROMPT),
+                SystemMessage(content=_get_system_prompt(state.get("language", "pl"))),  # type: ignore[attr-defined]
                 HumanMessage(
                     content=(
                         f"University requirements:\n{state['guidelines']}\n\n"

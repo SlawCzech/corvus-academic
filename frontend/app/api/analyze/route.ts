@@ -16,6 +16,7 @@ export async function POST(request: Request): Promise<Response> {
   const mode = String(formData.get("mode") ?? "full")
   const review_tone = String(formData.get("review_tone") ?? "auto")
   const thesis_type = String(formData.get("thesis_type") ?? "bachelor")
+  const language = String(formData.get("language") ?? "pl")
 
   // Step 1: extract text via parser service
   const parserForm = new FormData()
@@ -46,6 +47,7 @@ export async function POST(request: Request): Promise<Response> {
       model,
       mode,
       review_tone,
+      language,
     }),
   })
   if (!gatewayRes.ok) {

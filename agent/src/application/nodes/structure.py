@@ -22,7 +22,9 @@ def analyze_structure(state: AnalysisState) -> AnalysisState:
         max_chars = 12000
         thesis_text = state["text"][:max_chars]
         messages = [
-            SystemMessage(content=prompts.SYSTEM_PROMPT),
+            SystemMessage(  # type: ignore[attr-defined]
+                content=prompts.get_system_prompt(state.get("language", "pl"))
+            ),
             HumanMessage(
                 content=(
                     f"Thesis text:\n{thesis_text}\n\n"

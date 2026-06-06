@@ -285,9 +285,34 @@ Recommendation: MUST be "Zwrócić do poprawy".
 """,
 }
 
+_LANGUAGE_OVERRIDES: dict[str, str] = {
+    "pl": "",
+    "en": """
+## Language override: ENGLISH
+
+CRITICAL: Ignore all Polish language instructions above.
+Write the entire review_text in formal English academic prose.
+All sentences, phrases, and quotations must be in English.
+
+Translate the recommendation field to English:
+- "Dopuścić do obrony" → "Approved for defense"
+- "Dopuścić do obrony z zastrzeżeniami" → "Approved for defense with reservations"
+- "Zwrócić do poprawy" → "Returned for revision"
+
+Translate the scores criteria labels to English:
+- "Struktura i spójność" → "Structure and coherence"
+- "Metodologia i bibliografia" → "Methodology and bibliography"
+- "Zgodność z wymogami" → "Conformance with requirements"
+- "Jakość merytoryczna" → "Substantive quality"
+
+Opening sentences and all stylistic examples given in Polish above
+must be adapted to their English equivalents in meaning and register.
+""",
+}
+
 
 def generate_review(state: AnalysisState) -> AnalysisState:
-    """Generate final review with tone-controlled Polish prose."""
+    """Generate final review with tone and language control."""
     try:
         tone_value: str = state.get("review_tone", ReviewTone.AUTO)  # type: ignore[attr-defined]
         try:
@@ -295,7 +320,12 @@ def generate_review(state: AnalysisState) -> AnalysisState:
         except ValueError:
             tone = ReviewTone.AUTO
 
-        system_prompt = _BASE_SYSTEM_PROMPT + _TONE_INSTRUCTIONS[tone]
+        language: str = state.get("language", "pl")  # type: ignore[attr-defined]
+        system_prompt = (
+            _BASE_SYSTEM_PROMPT
+            + _TONE_INSTRUCTIONS[tone]
+            + _LANGUAGE_OVERRIDES.get(language, "")
+        )
 
         findings_summary = "\n".join(
             f"- [{f.severity.upper()}] {f.section}: {f.description}"
@@ -307,7 +337,7 @@ def generate_review(state: AnalysisState) -> AnalysisState:
         thesis_text: str = state["text"]
         max_text_chars = 6000
         truncated_text = (
-            thesis_text[:max_text_chars] + "\n\n[...tekst skrócony...]"
+            thesis_text[:max_text_chars] + "\n\n[...text truncated...]"
             if len(thesis_text) > max_text_chars
             else thesis_text
         )

@@ -75,10 +75,16 @@ const TONES = [
   },
 ] as const
 
+const LANGUAGES = [
+  { value: "pl", label: "Polski" },
+  { value: "en", label: "English" },
+] as const
+
 type ModelValue = (typeof MODELS)[number]["value"]
 type ModeValue = (typeof MODES)[number]["value"]
 type ToneValue = (typeof TONES)[number]["value"]
 type ThesisTypeValue = (typeof THESIS_TYPES)[number]["value"]
+type LanguageValue = (typeof LANGUAGES)[number]["value"]
 
 export default function AnalysisPage() {
   const { submit, status, result, error } = useAnalysis()
@@ -86,6 +92,7 @@ export default function AnalysisPage() {
   const [mode, setMode] = useState<ModeValue>("full")
   const [tone, setTone] = useState<ToneValue>("auto")
   const [thesisType, setThesisType] = useState<ThesisTypeValue>("bachelor")
+  const [language, setLanguage] = useState<LanguageValue>("pl")
 
   const idle = status === "idle" || status === "uploading"
   const busy = status === "uploading" || status === "analyzing"
@@ -124,6 +131,32 @@ export default function AnalysisPage() {
                       {description}
                     </p>
                   </div>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset disabled={status === "uploading"}>
+            <legend className="mb-2 text-[13px] font-medium text-gray-700 dark:text-gray-300">
+              Język wyników
+            </legend>
+            <div className="flex gap-4">
+              {LANGUAGES.map(({ value, label }) => (
+                <label
+                  key={value}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <input
+                    type="radio"
+                    name="language"
+                    value={value}
+                    checked={language === value}
+                    onChange={() => setLanguage(value)}
+                    className="accent-gray-900 dark:accent-white"
+                  />
+                  <span className="text-[14px] text-gray-900 dark:text-gray-100">
+                    {label}
+                  </span>
                 </label>
               ))}
             </div>
@@ -222,7 +255,7 @@ export default function AnalysisPage() {
 
           <FileUpload
             onFileSelect={(file) =>
-              submit(file, { model, mode, review_tone: tone, thesis_type: thesisType })
+              submit(file, { model, mode, review_tone: tone, thesis_type: thesisType, language })
             }
             disabled={status === "uploading"}
           />

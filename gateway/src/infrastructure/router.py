@@ -148,6 +148,7 @@ class AnalysisRequest(BaseModel):
     model: str = "qwen3:30b-a3b"
     mode: str = "full"
     review_tone: str = "auto"
+    language: str = "pl"
 
     @field_validator("text")
     @classmethod
@@ -404,6 +405,7 @@ async def submit_analysis(
         model=body.model,
         mode=body.mode,
         review_tone=body.review_tone,
+        language=body.language,
     )
     record = AnalysisModel(
         id=uuid.uuid4(),

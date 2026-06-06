@@ -37,6 +37,7 @@ def analyze_thesis(
     model: str = "qwen3:30b-a3b",
     mode: str = "full",
     review_tone: str = "auto",
+    language: str = "pl",
 ) -> dict[str, Any]:
     """Run the thesis analysis pipeline as a Celery task.
 
@@ -52,6 +53,7 @@ def analyze_thesis(
         model=model,
         mode=mode,
         review_tone=review_tone,
+        language=language,
         thesis_type=thesis_type,
     )
     try:
@@ -71,6 +73,7 @@ def analyze_thesis(
                 "model": model,
                 "mode": mode,
                 "review_tone": review_tone,
+                "language": language,
             },
         )
         graph = build_analysis_graph(mode=mode)

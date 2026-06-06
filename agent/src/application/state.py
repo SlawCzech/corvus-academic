@@ -32,3 +32,4 @@ class AnalysisState(TypedDict):
     model: str
     mode: str
     review_tone: str
+    language: str
