@@ -25,16 +25,21 @@ class RefreshTokenStore:
         try:
             await self._redis.setex(f"revoked_jti:{jti}", ttl_seconds, "1")  # type: ignore[misc]
         except RedisError:
-            logger.warning("token_store_revoke_failed", jti=jti)
+            logger.error("token_store_revoke_failed", jti=jti)
 
     async def is_revoked(self, jti: str) -> bool:
         """Return True if the jti has been blacklisted.
 
         Falls back to False on Redis unavailability — tokens remain usable
         until Redis recovers, which is preferable to a hard outage.
+        This is a conscious security trade-off; monitor for ERROR log events.
         """
         try:
             return await self._redis.exists(f"revoked_jti:{jti}") > 0  # type: ignore[misc]
         except RedisError:
-            logger.warning("token_store_check_failed", jti=jti)
+            logger.error(
+                "token_store_check_failed_fail_open",
+                jti=jti,
+                warning="revoked token may be accepted until Redis recovers",
+            )
             return False

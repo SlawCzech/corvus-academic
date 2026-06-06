@@ -16,10 +16,15 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 30
 
     redis_url: str = "redis://localhost:6379/0"
-    database_url: str = "postgresql+asyncpg://user:pass@localhost:5432/thesis_reviewer"
+    database_url: str = Field(
+        ...,
+        description="PostgreSQL DSN, e.g. postgresql+asyncpg://user:pass@host:5432/db",
+    )
 
     admin_email: str = "admin@corvus.local"
-    admin_password: str = ""  # noqa: S105
+    admin_password: str = Field(
+        ..., min_length=12, description="Initial admin password (min 12 chars)"  # noqa: S105
+    )
 
     cors_origins: list[str] = ["http://localhost:3000"]
 

@@ -141,13 +141,6 @@ class AnalysisRequest(BaseModel):
     evaluation_id: str
     text: str
     thesis_type: str = "bachelor"
-
-    @field_validator("text")
-    @classmethod
-    def validate_text_size(cls, v: str) -> str:
-        if len(v.encode()) > _MAX_TEXT_BYTES:
-            raise ValueError("text exceeds 2 MB limit")
-        return v
     author: str = ""
     title: str = ""
     year: int = 0
@@ -155,6 +148,13 @@ class AnalysisRequest(BaseModel):
     model: str = "qwen3:30b-a3b"
     mode: str = "full"
     review_tone: str = "auto"
+
+    @field_validator("text")
+    @classmethod
+    def validate_text_size(cls, v: str) -> str:
+        if len(v.encode()) > _MAX_TEXT_BYTES:
+            raise ValueError("text exceeds 2 MB limit")
+        return v
 
 
 class AnalysisTaskResponse(BaseModel):
@@ -383,7 +383,9 @@ async def change_password(
     response_model=AnalysisTaskResponse,
     status_code=status.HTTP_202_ACCEPTED,
 )
+@limiter.limit("10/minute")
 async def submit_analysis(
+    request: Request,
     body: AnalysisRequest,
     user: User = Depends(get_current_user),
     analysis_repo: AnalysisRepository = Depends(get_analysis_repo),

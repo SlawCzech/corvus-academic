@@ -11,6 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 os.environ.setdefault("JWT_SECRET", "test-secret-key-that-is-long-enough-32ch")
 os.environ.setdefault("FERNET_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+os.environ.setdefault(
+    "DATABASE_URL", "postgresql+asyncpg://user:pass@localhost:5432/thesis_reviewer"
+)
+os.environ.setdefault("ADMIN_PASSWORD", "test-admin-password-123")
 
 from main import app  # noqa: E402
 from src.infrastructure.database import get_db_session  # noqa: E402
