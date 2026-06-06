@@ -1,6 +1,6 @@
-"""Shared SlowAPI rate-limiter instance."""
+"""Rate-limiter dependencies backed by Redis via fastapi-limiter."""
 
-from slowapi import Limiter  # type: ignore[import-untyped]
-from slowapi.util import get_remote_address  # type: ignore[import-untyped]
+from fastapi_limiter.depends import RateLimiter
 
-limiter: Limiter = Limiter(key_func=get_remote_address)
+login_rate_limit = RateLimiter(times=5, seconds=60)
+analysis_rate_limit = RateLimiter(times=10, seconds=60)

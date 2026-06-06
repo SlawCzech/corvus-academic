@@ -20,7 +20,7 @@ from src.application.user_service import UserService
 from src.domain.user import Role, User, UserRegistration
 from src.infrastructure import celery_client
 from src.infrastructure.database import get_db_session
-from src.infrastructure.limiter import limiter
+from src.infrastructure.limiter import analysis_rate_limit, login_rate_limit
 from src.infrastructure.models import AnalysisModel, LoginEventModel
 from src.infrastructure.repositories import (
     AnalysisRepository,
@@ -198,13 +198,13 @@ class LoginEventResponse(BaseModel):
 
 
 @router.post("/auth/login", response_model=LoginResponse)
-@limiter.limit("5/minute")
 async def login(
     body: LoginRequest,
     request: Request,
     response: Response,
     svc: UserService = Depends(get_user_service),
     event_repo: LoginEventRepository = Depends(get_login_event_repo),
+    _rl: None = Depends(login_rate_limit),
 ) -> LoginResponse:
     """Validate credentials, set httpOnly refresh cookie, return access token."""
     user = await svc.authenticate(body.email, body.password)
@@ -384,12 +384,11 @@ async def change_password(
     response_model=AnalysisTaskResponse,
     status_code=status.HTTP_202_ACCEPTED,
 )
-@limiter.limit("10/minute")
 async def submit_analysis(
-    request: Request,
     body: AnalysisRequest,
     user: User = Depends(get_current_user),
     analysis_repo: AnalysisRepository = Depends(get_analysis_repo),
+    _rl: None = Depends(analysis_rate_limit),
 ) -> AnalysisTaskResponse:
     """Enqueue a thesis analysis and persist the task record."""
     task_id = celery_client.send_analysis_task(
