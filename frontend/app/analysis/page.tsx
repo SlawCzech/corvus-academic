@@ -8,6 +8,7 @@ import { useAnalysis } from "@/hooks/useAnalysis"
 const MODELS = [
   { value: "qwen3:30b-a3b", label: "Qwen 3 · 30B" },
   { value: "gemma4:26b", label: "Gemma 4 · 26B" },
+  { value: "gemma4:12b", label: "Gemma 4 · 12B" },
   { value: "deepseek-r1:32b", label: "DeepSeek R1 · 32B" },
 ] as const
 
