@@ -14,17 +14,26 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  migrate:
+  identity:
     build:
-      context: ../gateway
+      context: ../identity
       dockerfile: Dockerfile
-    command: alembic upgrade head
+    ports:
+      - "8003:8003"
     env_file:
       - ../.env
     depends_on:
       postgres:
         condition: service_healthy
-    restart: "no"
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/health')"]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
+    restart: unless-stopped
 
   gateway:
     build:
@@ -35,12 +44,10 @@ services:
     env_file:
       - ../.env
     depends_on:
-      postgres:
+      identity:
         condition: service_healthy
-      redis:
+      agent:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
@@ -67,13 +74,32 @@ services:
     build:
       context: ../agent
       dockerfile: Dockerfile
+    ports:
+      - "8002:8002"
+    env_file:
+      - ../.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
+    restart: unless-stopped
+
+  agent-worker:
+    build:
+      context: ../agent
+      dockerfile: Dockerfile
     command: celery -A src.infrastructure.celery_app worker --loglevel=info
     env_file:
       - ../.env
     depends_on:
-      redis:
-        condition: service_healthy
-      postgres:
+      agent:
         condition: service_healthy
       ollama:
         condition: service_started

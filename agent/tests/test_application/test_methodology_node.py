@@ -27,6 +27,7 @@ def _make_state() -> AnalysisState:
             },
             "text": "Chapter 3: Methodology. We used a qualitative approach.",
             "guidelines": "The thesis must describe the research method in detail.",
+            "model": "qwen3:30b-a3b",
             "findings": [],
             "scores": [],
             "review": None,

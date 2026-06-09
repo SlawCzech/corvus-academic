@@ -29,6 +29,16 @@ services:
   agent:
     volumes:
       - ../agent/src:/app/src
+      - ../agent/main.py:/app/main.py
+      - ../agent/alembic:/app/alembic
+    environment:
+      - DEBUG=true
+    # entrypoint.sh: alembic upgrade head → uvicorn :8002
+    # No command override — uses Dockerfile CMD ["/app/entrypoint.sh"]
+
+  agent-worker:
+    volumes:
+      - ../agent/src:/app/src
     environment:
       - DEBUG=true
     command: celery -A src.infrastructure.celery_app worker --loglevel=debug

@@ -27,6 +27,7 @@ def _make_state() -> AnalysisState:
             },
             "text": "Chapter 1: Introduction. Chapter 2: Methodology.",
             "guidelines": "The thesis must have at least five chapters.",
+            "model": "qwen3:30b-a3b",
             "findings": [],
             "scores": [],
             "review": None,
