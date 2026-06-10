@@ -15,6 +15,8 @@ import httpx
 
 from src.infrastructure.settings import settings
 
+_REQUEST_ID_HEADER = "x-request-id"
+
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 router = APIRouter()
@@ -29,31 +31,39 @@ async def _proxy(request: Request, base_url: str, path: str) -> Response:
     Forwards body, headers (including Authorization and Cookie), and query params.
     Cookies (e.g. httpOnly refresh_token) are passed through transparently.
     """
+    request_id: str = getattr(request.state, "request_id", "")
+    bound_logger: structlog.stdlib.BoundLogger = logger.bind(
+        request_id=request_id, path=path
+    )
+
     body = await request.body()
     headers = {
         k: v
         for k, v in request.headers.items()
         if k.lower() not in ("host", "content-length", "transfer-encoding")
     }
+    headers[_REQUEST_ID_HEADER] = request_id
+
+    client: httpx.AsyncClient = request.app.state.http_client
 
     try:
-        async with httpx.AsyncClient(base_url=base_url, timeout=30.0) as client:
-            resp = await client.request(
-                method=request.method,
-                url=path,
-                content=body,
-                headers=headers,
-                params=dict(request.query_params),
-            )
+        resp = await client.request(
+            method=request.method,
+            url=path,
+            base_url=base_url,
+            content=body,
+            headers=headers,
+            params=dict(request.query_params),
+        )
     except httpx.ConnectError as exc:
         service = base_url.split("//")[-1]
-        logger.error("proxy_connect_error", service=service, path=path, error=str(exc))
+        bound_logger.error("proxy_connect_error", service=service, error=str(exc))
         return JSONResponse(
             {"detail": f"Service unavailable: {service}"},
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
     except httpx.TimeoutException:
-        logger.error("proxy_timeout", base_url=base_url, path=path)
+        bound_logger.error("proxy_timeout", base_url=base_url)
         return JSONResponse(
             {"detail": "Upstream service timed out"},
             status_code=status.HTTP_504_GATEWAY_TIMEOUT,
