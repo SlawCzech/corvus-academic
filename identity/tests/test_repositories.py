@@ -24,16 +24,16 @@ async def session() -> AsyncGenerator[AsyncSession, None]:
     await engine.dispose()
 
 
-def _make_user(email: str = "test@corvus.local", role: str = "promotor") -> UserModel:
+def _make_user(email: str = "test@example.com", role: str = "promotor") -> UserModel:
     return UserModel(id=uuid.uuid4(), email=email, role=role, hashed_password="hashed")
 
 
 async def test_save_and_retrieve_user(session: AsyncSession) -> None:
-    user = _make_user("test@corvus.local", "admin")
+    user = _make_user("test@example.com", "admin")
     repo = UserRepository(session)
     await repo.save(user)
 
-    found = await repo.find_by_email("test@corvus.local")
+    found = await repo.find_by_email("test@example.com")
     assert found is not None
     assert found.role == "admin"
 
@@ -72,11 +72,11 @@ async def test_update_password(session: AsyncSession) -> None:
 async def test_user_id_is_preserved(session: AsyncSession) -> None:
     user_id = uuid.uuid4()
     user = UserModel(
-        id=user_id, email="unique@corvus.local", role="promotor", hashed_password="pw"
+        id=user_id, email="unique@example.com", role="promotor", hashed_password="pw"
     )
     repo = UserRepository(session)
     await repo.save(user)
-    found = await repo.find_by_email("unique@corvus.local")
+    found = await repo.find_by_email("unique@example.com")
     assert found is not None
     assert found.id == user_id
 

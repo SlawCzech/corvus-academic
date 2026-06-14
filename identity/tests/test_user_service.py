@@ -32,7 +32,7 @@ async def svc(session: AsyncSession) -> UserService:
 
 
 def _reg(
-    email: str = "user@corvus.local", role: Role = Role.PROMOTOR
+    email: str = "user@example.com", role: Role = Role.PROMOTOR
 ) -> UserRegistration:
     return UserRegistration(
         email=email,
@@ -43,7 +43,7 @@ def _reg(
 
 async def test_register_creates_user(svc: UserService) -> None:
     user = await svc.register(_reg())
-    assert user.email == "user@corvus.local"
+    assert user.email == "user@example.com"
     assert user.role == Role.PROMOTOR
     assert isinstance(user.id, uuid.UUID)
 
@@ -66,19 +66,19 @@ async def test_register_invalid_email_raises(svc: UserService) -> None:
 
 async def test_authenticate_valid_credentials(svc: UserService) -> None:
     await svc.register(_reg())
-    user = await svc.authenticate("user@corvus.local", "secret123")
+    user = await svc.authenticate("user@example.com", "secret123")
     assert user is not None
-    assert user.email == "user@corvus.local"
+    assert user.email == "user@example.com"
 
 
 async def test_authenticate_wrong_password(svc: UserService) -> None:
     await svc.register(_reg())
-    user = await svc.authenticate("user@corvus.local", "wrong")
+    user = await svc.authenticate("user@example.com", "wrong")
     assert user is None
 
 
 async def test_authenticate_unknown_email(svc: UserService) -> None:
-    user = await svc.authenticate("nobody@corvus.local", "pass")
+    user = await svc.authenticate("nobody@example.com", "pass")
     assert user is None
 
 
@@ -109,5 +109,5 @@ async def test_delete_removes_user(svc: UserService) -> None:
 async def test_change_password(svc: UserService) -> None:
     user = await svc.register(_reg())
     await svc.change_password(user.id, "new-password")
-    assert await svc.authenticate("user@corvus.local", "new-password") is not None
-    assert await svc.authenticate("user@corvus.local", "secret123") is None
+    assert await svc.authenticate("user@example.com", "new-password") is not None
+    assert await svc.authenticate("user@example.com", "secret123") is None

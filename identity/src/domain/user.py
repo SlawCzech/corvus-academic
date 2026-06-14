@@ -1,11 +1,12 @@
 """Domain entities for the identity bounded context."""
 
-import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
 from uuid import UUID
 
+from email_validator import EmailNotValidError
+from email_validator import validate_email as _validate_email_lib
 
 class Role(StrEnum):
     """User role within the Corvus system."""
@@ -14,13 +15,18 @@ class Role(StrEnum):
     PROMOTOR = "promotor"
 
 
-_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+class Permission(StrEnum):
+    """Fine-grained permissions granted to roles."""
+
+    MANAGE_USERS = "manage_users"
+    VIEW_ALL_ANALYSES = "view_all_analyses"
+    SUBMIT_ANALYSIS = "submit_analysis"
 
 
-def validate_email(email: str) -> None:
-    """Raise ValueError if the email format is invalid."""
-    if not _EMAIL_RE.match(email):
-        raise ValueError(f"Invalid email format: {email!r}")
+_ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
+    Role.ADMIN: frozenset(Permission),
+    Role.PROMOTOR: frozenset({Permission.SUBMIT_ANALYSIS}),
+}
 
 
 @dataclass(frozen=True)
@@ -32,8 +38,12 @@ class User:
     role: Role
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
+    def can(self, permission: Permission) -> bool:
+        """Return True if this user's role grants the given permission."""
+        return permission in _ROLE_PERMISSIONS.get(self.role, frozenset())
 
-@dataclass(frozen=True)
+
+@dataclass
 class UserRegistration:
     """Value object carrying validated registration input.
 
@@ -44,3 +54,11 @@ class UserRegistration:
     email: str
     hashed_password: str
     role: Role = Role.PROMOTOR
+
+    def __post_init__(self) -> None:
+        try:
+            self.email = _validate_email_lib(
+                self.email, check_deliverability=False
+            ).normalized
+        except EmailNotValidError as exc:
+            raise ValueError(f"Invalid email: {exc}") from exc

@@ -16,6 +16,7 @@ dependencies = [
     "alembic>=1.18.4",
     "cryptography>=48.0.0",
     "fastapi-limiter>=0.1.6",
+    "email-validator>=2.2.0",
 ]
 
 [build-system]

@@ -6,7 +6,7 @@ from uuid import UUID
 
 import bcrypt
 
-from src.domain.user import Role, User, UserRegistration, validate_email
+from src.domain.user import Role, User, UserRegistration
 from src.infrastructure.models import UserModel
 from src.infrastructure.repositories import UserRepository
 
@@ -36,7 +36,6 @@ class UserService:
 
     async def register(self, registration: UserRegistration) -> User:
         """Persist a new user. Raises ValueError on duplicate email."""
-        validate_email(registration.email)
         existing = await self._repo.find_by_email(registration.email)
         if existing is not None:
             raise ValueError(f"Email already registered: {registration.email}")

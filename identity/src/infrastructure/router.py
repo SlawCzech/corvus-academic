@@ -17,7 +17,7 @@ from src.application.auth import (
     verify_refresh_token,
 )
 from src.application.user_service import UserService
-from src.domain.user import Role, User, UserRegistration
+from src.domain.user import Permission, Role, User, UserRegistration
 from src.infrastructure.database import get_db_session
 from src.infrastructure.limiter import login_rate_limit
 from src.infrastructure.models import LoginEventModel
@@ -53,8 +53,8 @@ def get_current_user(
 
 
 def require_admin(user: User = Depends(get_current_user)) -> User:
-    """FastAPI dependency — assert ADMIN role."""
-    if user.role != Role.ADMIN:
+    """FastAPI dependency — assert MANAGE_USERS permission."""
+    if not user.can(Permission.MANAGE_USERS):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin role required",

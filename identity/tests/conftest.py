@@ -27,9 +27,9 @@ _SCHEMA_TRANSLATE = {"schema_translate_map": {"identity": None}}
 
 ADMIN_UUID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 PROMOTOR_UUID = uuid.UUID("00000000-0000-0000-0000-000000000002")
-ADMIN_EMAIL = "admin@corvus.local"
+ADMIN_EMAIL = "admin@example.com"
 ADMIN_PASSWORD = "admin-secret"
-PROMOTOR_EMAIL = "promotor@corvus.local"
+PROMOTOR_EMAIL = "promotor@example.com"
 PROMOTOR_PASSWORD = "promotor-secret"
 
 

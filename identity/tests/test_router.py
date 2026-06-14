@@ -103,12 +103,12 @@ def test_create_user_admin(client: TestClient) -> None:
     token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
     resp = client.post(
         "/users",
-        json={"email": "new@corvus.local", "password": "pass123", "role": "promotor"},
+        json={"email": "new@example.com", "password": "pass123", "role": "promotor"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 201
     body: dict[str, Any] = resp.json()
-    assert body["email"] == "new@corvus.local"
+    assert body["email"] == "new@example.com"
     assert body["role"] == "promotor"
 
 
@@ -116,12 +116,12 @@ def test_create_user_duplicate_email(client: TestClient) -> None:
     token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
     client.post(
         "/users",
-        json={"email": "dup@corvus.local", "password": "pass", "role": "promotor"},
+        json={"email": "dup@example.com", "password": "pass", "role": "promotor"},
         headers={"Authorization": f"Bearer {token}"},
     )
     resp = client.post(
         "/users",
-        json={"email": "dup@corvus.local", "password": "pass2", "role": "promotor"},
+        json={"email": "dup@example.com", "password": "pass2", "role": "promotor"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 409
@@ -142,7 +142,7 @@ def test_delete_user_admin(client: TestClient) -> None:
     create_resp = client.post(
         "/users",
         json={
-            "email": "todelete@corvus.local",
+            "email": "todelete@example.com",
             "password": "pass",
             "role": "promotor",
         },
