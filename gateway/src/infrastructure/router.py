@@ -49,8 +49,7 @@ async def _proxy(request: Request, base_url: str, path: str) -> Response:
     try:
         resp = await client.request(
             method=request.method,
-            url=path,
-            base_url=base_url,
+            url=f"{base_url}{path}",
             content=body,
             headers=headers,
             params=dict(request.query_params),
