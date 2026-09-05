@@ -10,21 +10,15 @@ services:
     environment:
       - NODE_ENV=development
 
-  gateway:
+  app:
     volumes:
-      - ../gateway/src:/app/src
-      - ../gateway/main.py:/app/main.py
+      - ../app/src:/app/src
+      - ../app/main.py:/app/main.py
+      - ../app/alembic_identity:/app/alembic_identity
     environment:
       - DEBUG=true
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-
-  parser:
-    volumes:
-      - ../parser/src:/app/src
-      - ../parser/main.py:/app/main.py
-    environment:
-      - DEBUG=true
-    command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+    # entrypoint.sh: alembic upgrade head → seed_admin → uvicorn :8000
+    # No command override — uses Dockerfile CMD ["/app/entrypoint.sh"]
 
   agent:
     volumes:

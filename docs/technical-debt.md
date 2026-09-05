@@ -5,7 +5,42 @@
 
 ---
 
-## Gateway
+## Jakość kodu — stan faktyczny (zweryfikowany 2026-09-05)
+
+- [ ] **`pyright --strict` NIE przechodzi i nigdy nie przechodził** — wbrew temu, co
+  deklaruje `docs/sessions.md` ("ruff and pyright clean" przy sesjach 1.x–5.1).
+  Zmierzone na kodzie sprzed konsolidacji (git worktree na HEAD): `identity` **736
+  błędów**, `parser` **88**. Po konsolidacji `app` ma **160** (spadek wynika z usunięcia
+  duplikatów i martwego kodu, nie z naprawy). Prawie wszystkie to
+  `reportUnknownMemberType` na `TestClient`/`httpx` w testach.
+  Naprawka: albo anotować odpowiedzi w testach, albo per-file suppression dla `tests/**`
+  — ale świadomie, jako osobna zmiana, nie przy okazji refaktoru.
+
+- [ ] **`ruff` w `agent/` — 36 błędów** (stan zastany, `agent` nietknięty przez Fazę 0).
+  `app/` jest czysty. Do naprawy przy Fazie 2, która i tak wchodzi w `agent`.
+
+- [ ] **Piny `fastapi==0.136.3` + `starlette==1.2.1` w `app/pyproject.toml`** — świeży
+  lockfile podbijał je do 0.141 / 1.6, co wciągnęłoby nietestowany upgrade zależności
+  w środek refaktoru strukturalnego. Odpiąć i zaktualizować osobno (starlette 1.6
+  deprecjonuje też `httpx` w `TestClient`).
+
+---
+
+## Pozostałości po konsolidacji (Faza 0 → do usunięcia w Fazie 3)
+
+- [ ] **`app/src/proxy/`** — przejściowe proxy `/analysis/*` → `agent`, żeby istniejący
+  flow frontendu nie padł zanim powstaną endpointy mentoringowe. Znika razem z
+  `/students/{id}/actions`.
+
+- [ ] **`app/src/document/router.py` (`POST /extract`)** — z tego samego powodu.
+  Docelowo ekstrakcja jest wołana in-process przez upload draftu, bez endpointu HTTP.
+
+- [ ] **Frontend nadal czyta `GATEWAY_URL` i `PARSER_URL`** — oba wskazują teraz na
+  `app:8000`. Zwinąć do jednego `APP_URL` przy przepisywaniu route handlerów.
+
+---
+
+## Gateway (historyczne — serwis usunięty w Fazie 0, dług przeniesiony do `app`)
 
 ### Bezpieczeństwo
 
@@ -29,7 +64,8 @@
 
 ### Drobne
 
-- [ ] **Email validation regex zbyt prosta** — `^[^@\s]+@[^@\s]+\.[^@\s]+$` w `domain/user.py` odrzuca niektóre poprawne RFC 5321 adresy. Rozważyć `email-validator` (biblioteka) lub bardziej precyzyjny regex.
+- [x] ~~**Email validation regex zbyt prosta**~~ — naprawione: `UserRegistration` używa
+  biblioteki `email-validator` (commit `097798c`).
 
 - [ ] **Brak rate limitingu na `GET /analysis`** — polling statusu zadania nie jest ograniczony. Może być nadużywany przez frontend przy agresywnym pollingu.
 
@@ -49,4 +85,4 @@
 
 ---
 
-*Ostatnia aktualizacja: 2026-06-06*
+*Ostatnia aktualizacja: 2026-09-05 (po Fazie 0 — konsolidacja serwisów)*

@@ -1,0 +1,72 @@
+[project]
+name = "app"
+version = "0.1.0"
+description = "Corvus app service — identity, document extraction, mentoring domain"
+requires-python = ">=3.12"
+dependencies = [
+    # Pinned to the versions the merged code was actually tested against. A fresh
+    # lockfile resolved fastapi 0.136 -> 0.141 and starlette 1.2 -> 1.6, which would
+    # have folded an untested dependency upgrade into a structural refactor. Unpin
+    # and upgrade deliberately, as its own change — see docs/technical-debt.md.
+    "fastapi==0.136.3",
+    "starlette==1.2.1",
+    "bcrypt>=4.3.0",
+    "pydantic-settings>=2.10.1",
+    "redis>=6.2.0",
+    "structlog>=25.5.0",
+    "uvicorn>=0.48.0",
+    "pyjwt>=2.10.0",
+    "sqlalchemy[asyncio]>=2.0.50",
+    "asyncpg>=0.31.0",
+    "alembic>=1.18.4",
+    "cryptography>=48.0.0",
+    "fastapi-limiter>=0.1.6",
+    "email-validator>=2.2.0",
+    "httpx>=0.28.1",
+    "pymupdf>=1.27.2.3",
+    "python-docx>=1.2.0",
+    "python-multipart>=0.0.29",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[dependency-groups]
+dev = [
+    "aiosqlite>=0.22.1",
+    "fpdf2>=2.8.7",
+    "pyright>=1.1.409",
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.4.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.15.14",
+]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "ANN", "S", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "S105", "S106"]
+"src/identity/infrastructure/router.py" = ["B008"]
+"src/document/router.py" = ["B008"]
+"main.py" = ["B008"]
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+reportMissingTypeStubs = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "--cov=src --cov-report=xml"
+pythonpath = ["."]
+
+[tool.coverage.report]
+fail_under = 80

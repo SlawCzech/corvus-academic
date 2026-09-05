@@ -1,6 +1,6 @@
 COMPOSE = docker compose -f infra/docker-compose.yml
 
-.PHONY: up down build logs ps restart migrate shell-gateway shell-agent
+.PHONY: up down build logs ps restart migrate shell-app shell-agent
 
 up:
 	$(COMPOSE) up
@@ -24,10 +24,10 @@ restart:
 	$(COMPOSE) restart
 
 migrate:
-	$(COMPOSE) run --rm migrate
+	$(COMPOSE) run --rm app alembic -c alembic_identity.ini upgrade head
 
-shell-gateway:
-	$(COMPOSE) exec gateway bash
+shell-app:
+	$(COMPOSE) exec app bash
 
 shell-agent:
 	$(COMPOSE) exec agent bash

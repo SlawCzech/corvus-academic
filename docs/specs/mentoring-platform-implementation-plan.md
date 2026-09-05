@@ -154,7 +154,7 @@ Sequencing follows the user's "AI first, simple interface" preference: Phase 0 i
 
 | Phase | Status |
 |---|---|
-| 0 — service consolidation | ⬜ not started |
+| 0 — service consolidation | ✅ done 2026-09-05 (81 tests, 88.3% cov, ruff clean) |
 | 1 — Student + MeetingNote backbone | ⬜ not started |
 | 2 — first AI action end-to-end (`propose_topic`) | ⬜ not started |
 | 3 — remaining actions | ⬜ not started |
@@ -162,7 +162,17 @@ Sequencing follows the user's "AI first, simple interface" preference: Phase 0 i
 | 5 — pgvector RAG for guidelines | ⬜ not started |
 | 6 — deploy/CI groundwork | ⬜ not started |
 
-**Phase 0 — service consolidation** (§ above). Critical files: `app/pyproject.toml`, `app/main.py`, `app/src/shared/*`, `app/alembic_identity/`, `infra/docker-compose.yml`.
+**Phase 0 — service consolidation** — ✅ **done 2026-09-05**. Deviations from the plan as written, all deliberate:
+
+1. **`/extract` and the `/analysis/*` proxy were kept, not deleted.** The plan had parser's router deleted immediately and extraction called in-process. Doing that in Phase 0 would have broken the existing frontend analysis flow for Phases 1–3, since the mentoring endpoints that replace it don't exist yet. Both live on in `app/src/document/router.py` and `app/src/proxy/` marked TRANSITIONAL, and are deleted in Phase 3. Consequence: parser's `test_router.py` survived too, so `app` reproduces more of the old coverage than planned.
+2. **`/internal/users/{id}` and `/internal/token/introspect` were deleted** (identity router). Their only protection was that gateway didn't proxy them; mounted on the merged public port they would have been an unauthenticated user lookup and a public token oracle. Nothing called them — `agent` verifies JWT locally. Replaced by a test asserting they 404.
+3. **`fastapi` and `starlette` pinned exactly** (`==0.136.3` / `==1.2.1`). A fresh lockfile resolved them to 0.141 / 1.6, folding an untested dependency upgrade into a structural refactor.
+4. **Frontend left untouched.** `GATEWAY_URL` and `PARSER_URL` both now point at `app:8000` via compose. Collapsing them into one `APP_URL` is frontend churn better done in Phase 3 when those route handlers get rewritten anyway.
+5. **`Makefile`'s `migrate` target fixed in passing** — it referenced a `migrate` compose service that has not existed for some time; now runs alembic inside `app`.
+
+**Finding that invalidates a plan assumption:** the plan's verification step assumed `ruff` and `pyright` were clean before Phase 0, per `docs/sessions.md`. Measured on pre-refactor `HEAD` via a git worktree, they were not: `identity` had **736** pyright errors and 6 ruff errors, `parser` had **88** pyright errors. `app` now has 160 pyright errors and 0 ruff. Pyright strict has therefore never passed on this codebase; treat "pyright clean" in `docs/sessions.md` as aspirational. Recorded in `docs/technical-debt.md` — fix deliberately, not inside a refactor.
+
+Critical files: `app/pyproject.toml`, `app/main.py`, `app/src/shared/*`, `app/alembic_identity/`, `infra/docker-compose.yml`.
 
 **Phase 1 — minimal Student + MeetingNote backbone**. `app/src/mentoring/domain/student.py`, `infrastructure/models.py` (all 4 tables, `agent_actions` created now even though unused until Phase 2 — one migration), `alembic_mentoring/versions/0001_initial_mentoring_schema.py`, `infrastructure/router.py` (`POST/GET /students`, `POST /students/{id}/meeting-notes`), new `Permission.MANAGE_STUDENTS` in `identity/domain/user.py::_ROLE_PERMISSIONS`. Verification: domain + repository + router tests (ownership check: promoter sees only their students, admin sees all), manual `curl` smoke test.
 

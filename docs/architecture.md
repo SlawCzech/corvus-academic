@@ -3,66 +3,55 @@
 > Dokument referencyjny dla Claude Code i developerów.
 > Aktualizuj przy każdej znaczącej zmianie architektury.
 >
-> Ostatnia aktualizacja: 2026-09-05 — po ekstrakcji `identity` jako
-> osobnego serwisu i przejściu `gateway` na czyste proxy.
+> Ostatnia aktualizacja: 2026-09-05 — po Fazie 0 pivotu: `gateway` + `identity`
+> + `parser` scalone w serwis `app`.
 
 ---
 
-## ⚠ Zaplanowany pivot — architektura docelowa jeszcze niezaimplementowana
+## Stan: po Fazie 0 (konsolidacja serwisów)
 
-Poniższy dokument opisuje **stan faktyczny** (4 serwisy Python: gateway/identity/parser/agent).
-2026-09-05 podjęto decyzję o zmianie scope'u Corvusa (z analizy jednego dokumentu na
-platformę mentoringową dla promotorów — studenci, notatki, cykl predefiniowanych akcji AI)
-oraz o konsolidacji do **2 serwisów** (`app` + `agent`). Żadna z tych zmian nie jest jeszcze
-wdrożona w kodzie — plan i uzasadnienie:
+Corvus przechodzi pivot z narzędzia do analizy jednego dokumentu na platformę
+mentoringową dla promotorów. Kontekst i uzasadnienie:
 
-- [docs/adr/](adr/) — 5 ADR-ów: [0001](adr/0001-ai-first-mentoring-platform-pivot.md) (pivot scope'u),
+- [docs/adr/](adr/) — [0001](adr/0001-ai-first-mentoring-platform-pivot.md) (pivot scope'u),
   [0002](adr/0002-consolidate-services-into-app-and-agent.md) (konsolidacja serwisów),
   [0003](adr/0003-postgres-pgvector-for-persistence-and-rag.md) (Postgres/pgvector),
   [0004](adr/0004-self-hosted-default-model-with-byok.md) (model/BYOK),
   [0005](adr/0005-predefined-actions-not-open-chat.md) (predefiniowane akcje zamiast czatu)
-- [docs/specs/mentoring-platform-implementation-plan.md](specs/mentoring-platform-implementation-plan.md) — plan fazowania (Faza 0–6) z listą plików do zmiany per faza
+- [docs/specs/mentoring-platform-implementation-plan.md](specs/mentoring-platform-implementation-plan.md) — plan fazowania (Faza 0–6)
 
-Nie edytuj sekcji poniżej pod kątem architektury docelowej, dopóki Faza 0 z planu
-nie wyląduje — ten dokument ma opisywać to, co faktycznie działa, nie plany.
-Po Fazie 0 (konsolidacja serwisów) ten plik zostanie przepisany pod nową architekturę
-`app` + `agent`.
+**Zrobione (Faza 0):** `gateway` + `identity` + `parser` scalone w jeden serwis `app`.
+**Jeszcze nie:** domena mentoringowa (studenci, notatki, akcje AI) — Fazy 1–3.
+Dopóki nie powstanie, `app` wystawia *przejściowo* stary kontrakt: `POST /extract`
+oraz proxy `/analysis/*` → `agent`, żeby istniejący frontend działał bez zmian.
 
 ---
 
 ## Cel systemu
 
-Corvus to lokalna aplikacja webowa wspomagająca promotorów
-i recenzentów w analizie studenckich prac dyplomowych.
-System analizuje przesłany dokument (PDF/DOCX) pod kątem
-struktury, metodologii i zgodności z wymogami uczelnianymi,
-a następnie generuje szkic recenzji.
+Corvus to aplikacja webowa wspomagająca promotorów i recenzentów w prowadzeniu
+studentów przez cykl pracy dyplomowej: notatki ze spotkań, propozycja i ocena
+tematu, ocena metodologii, wykrywanie zmian między wersjami, recenzja końcowa.
 
-Projekt służy jednocześnie jako platforma edukacyjna do nauki
-nowoczesnego stacku Python + TypeScript w architekturze
-microservices z DDD.
+Projekt służy jednocześnie jako platforma edukacyjna — od 2026-09-05 nacisk
+przesunięty z DDD/mikroserwisów na wzorce budowy aplikacji AI (LangGraph,
+tool use, structured output, BYOK, ewaluacje).
 
 ---
 
 ## Bounded Contexts (DDD)
 
-Każdy mikroserwis odpowiada jednemu Bounded Context.
-Komunikacja między kontekstami wyłącznie przez API — nigdy
-przez wspólną bazę danych.
+Konteksty są rozdzielone na poziomie pakietów Pythona i schematów Postgresa,
+nie na poziomie sieci — `app` to jeden proces obsługujący kilka kontekstów.
+Referencje między kontekstami to gołe UUID bez kluczy obcych.
 
-| Context | Serwis | Odpowiedzialność |
-|---|---|---|
-| document | parser | ekstrakcja tekstu z PDF i DOCX |
-| analysis | agent | orkiestracja LangGraph, węzły analizy |
-| review | agent | generowanie recenzji, ton, ocena punktowa |
-| identity | identity | autentykacja, użytkownicy, role/permissions, klucze API |
-| — | gateway | brak własnej domeny — czyste reverse proxy + JWT |
-
-`identity` zostało wydzielone z gateway w trakcie implementacji
-(patrz [Zmiany względem pierwotnego planu](sessions.md#zmiany-względem-pierwotnego-planu)
-w `sessions.md`). Gateway nie ma już własnej bazy danych ani logiki
-domenowej — weryfikuje JWT lokalnie (ten sam `JWT_SECRET`) i przekierowuje
-żądania do `identity` lub `agent`.
+| Context | Lokalizacja | Schemat DB | Odpowiedzialność |
+|---|---|---|---|
+| identity | `app/src/identity/` | `identity` | autentykacja, użytkownicy, role/permissions, audyt, klucze API |
+| document | `app/src/document/` | — | ekstrakcja tekstu z PDF i DOCX (bezstanowa) |
+| mentoring | `app/src/mentoring/` | `mentoring` | **jeszcze nie istnieje** — Faza 1 |
+| analysis | `agent/src/` | `analysis` | orkiestracja LangGraph, węzły analizy |
+| review | `agent/src/` | `analysis` | generowanie recenzji, ton, ocena punktowa |
 
 ---
 
@@ -71,22 +60,23 @@ domenowej — weryfikuje JWT lokalnie (ten sam `JWT_SECRET`) i przekierowuje
 | Serwis | Port | Stack | Opis |
 |---|---|---|---|
 | frontend | 3000 | Next.js, TypeScript | interfejs webowy |
-| gateway | 8000 | FastAPI, Python | reverse proxy, weryfikacja JWT |
-| identity | 8003 | FastAPI, Postgres | auth, użytkownicy, role, klucze API, audyt logowań |
-| parser | 8001 | FastAPI, Python | ekstrakcja tekstu |
+| app | 8000 | FastAPI, Postgres | auth/użytkownicy/role/audyt + ekstrakcja + proxy do agenta |
 | agent | 8002 | FastAPI | HTTP API — przyjmowanie zadań analizy, status, historia |
 | agent-worker | — | Celery | worker wykonujący graf LangGraph (ten sam obraz co `agent`) |
 | ollama | 11434 | Ollama | lokalne modele LLM |
-| redis | 6379 | Redis | broker Celery |
+| redis | 6379 | Redis | broker Celery + blacklist refresh tokenów |
 | postgres | 5432 | PostgreSQL 16 | dane identity + analiz |
 | flower | 5555 | Celery Flower | monitoring kolejki |
-| jenkins | 8080 | Jenkins LTS | CI/CD pipeline (jeszcze nieskonfigurowany — sesja 5.3) |
-| sonarqube | 9000 | SonarQube CE | analiza jakości kodu (jeszcze nieskonfigurowany — sesja 5.2) |
+| jenkins | 8080 | Jenkins LTS | CI/CD pipeline (jeszcze nieskonfigurowany — Faza 6) |
+| sonarqube | 9000 | SonarQube CE | analiza jakości kodu (jeszcze nieskonfigurowany — Faza 6) |
 
 `agent` i `agent-worker` współdzielą ten sam obraz Dockera —
 `agent` uruchamia serwer FastAPI (przyjmuje żądania, zapisuje rekord
 w Postgres, wrzuca zadanie do Celery), `agent-worker` uruchamia
 `celery worker` i faktycznie wykonuje graf LangGraph.
+
+Jedyny podział sieciowy, jaki został: szybkie, synchroniczne CRUD (`app`)
+kontra wolne, asynchroniczne wywołania LLM (`agent`) — patrz ADR 0002.
 
 ---
 
@@ -96,21 +86,20 @@ w Postgres, wrzuca zadanie do Celery), `agent-worker` uruchamia
 Użytkownik (przeglądarka)
   │
   ▼
-frontend :3000  (Next.js route handlers jako proxy do gateway/parser)
+frontend :3000  (Next.js route handlers jako proxy do app)
   │  POST /api/analyze  (multipart: plik)
   ▼
-parser :8001  → ekstrakcja tekstu (PyMuPDF / python-docx)
+app :8000
   │
-  ▼
-frontend  → POST /analysis (JWT w Authorization header)
-  ▼
-gateway :8000  (czyste proxy — weryfikuje JWT lokalnie, brak własnej domeny)
-  │
-  ├──► /auth/*, /users/*, /admin/*, /settings/*  →  identity :8003
+  ├──► /auth/*, /users/*, /admin/*, /settings/*   — obsługiwane IN-PROCESS
   │      login, refresh (httpOnly cookie), rejestracja,
   │      role/permissions, audyt logowań, szyfrowanie kluczy API (Fernet)
   │
+  ├──► POST /extract  — ekstrakcja tekstu in-process (PyMuPDF / python-docx)
+  │      [PRZEJŚCIOWE — w Fazie 3 zastąpione uploadem draftu studenta]
+  │
   └──► /analysis/*  →  agent :8002 (HTTP API)
+         [PRZEJŚCIOWE — w Fazie 3 zastąpione /students/{id}/actions]
          zapis rekordu AnalysisModel w Postgres
          Celery send_task(evaluation_id, text, metadata,
                            model, mode, review_tone, language)
@@ -157,10 +146,10 @@ corvus/
 │   │   │   ├── users/            # zarządzanie użytkownikami
 │   │   │   └── login-events/     # audyt logowań
 │   │   ├── profile/               # profil użytkownika, zmiana hasła
-│   │   └── api/                    # route handlers — proxy do gateway/parser
+│   │   └── api/                    # route handlers — proxy do app
 │   │       ├── auth/{login,logout,refresh}/
-│   │       ├── analyze/            # upload → parser
-│   │       ├── analysis/           # → gateway → agent
+│   │       ├── analyze/            # upload → app /extract
+│   │       ├── analysis/           # → app → agent
 │   │       ├── status/[taskId]/
 │   │       ├── users/
 │   │       └── admin/
@@ -172,43 +161,37 @@ corvus/
 │   ├── eslint.config.mjs
 │   └── tsconfig.json            # strict: true
 │
-├── gateway/                    # FastAPI — czyste reverse proxy, brak domeny/bazy
+├── app/                        # FastAPI, Postgres — identity + document + (wkrótce) mentoring
+│   ├── main.py                  # montuje routery: identity, document, proxy, health
+│   ├── alembic_identity.ini
+│   ├── alembic_identity/        # lineage migracji dla schematu `identity`
+│   │                              (Faza 1 dokłada alembic_mentoring/)
+│   ├── scripts/seed_admin.py
 │   ├── src/
-│   │   └── infrastructure/
-│   │       ├── router.py        # proxy do identity i agent (httpx.AsyncClient)
-│   │       └── settings.py      # IDENTITY_URL, AGENT_URL
-│   ├── tests/
-│   └── pyproject.toml
-│
-├── identity/                   # FastAPI, Postgres — auth i użytkownicy
-│   ├── src/
-│   │   ├── domain/
-│   │   │   └── user.py          # Role, Permission, User, UserRegistration
-│   │   │                          (email-validator, uprawnienia per-rola)
-│   │   ├── application/
-│   │   │   ├── auth.py          # create/verify access+refresh tokens (JWT)
-│   │   │   └── user_service.py  # rejestracja, uwierzytelnianie, hashe (bcrypt)
-│   │   └── infrastructure/
-│   │       ├── router.py        # /auth/*, /users/*, /admin/*, /settings/*
-│   │       ├── models.py        # SQLAlchemy — UserModel, LoginEventModel
-│   │       ├── repositories.py
-│   │       ├── secrets.py       # Fernet encryption kluczy API
-│   │       ├── token_store.py   # RefreshTokenStore (Redis, revocation)
-│   │       └── limiter.py       # rate limiting na /auth/login
-│   ├── alembic/
-│   ├── tests/
-│   └── pyproject.toml
-│
-├── parser/                     # FastAPI, PyMuPDF, python-docx
-│   ├── src/
-│   │   ├── domain/
-│   │   │   └── document.py      # Document dataclass
-│   │   ├── application/
-│   │   │   └── extractor.py     # extract_pdf, extract_docx
-│   │   └── infrastructure/
-│   │       └── router.py        # POST /extract
-│   ├── tests/
-│   │   └── fixtures/            # test.pdf, test.docx
+│   │   ├── identity/
+│   │   │   ├── domain/user.py       # Role, Permission, User, UserRegistration
+│   │   │   │                          (email-validator, uprawnienia per-rola)
+│   │   │   ├── application/
+│   │   │   │   ├── auth.py          # create/verify access+refresh tokens (JWT)
+│   │   │   │   └── user_service.py  # rejestracja, uwierzytelnianie, bcrypt
+│   │   │   └── infrastructure/
+│   │   │       ├── router.py        # /auth/*, /users/*, /admin/*, /settings/*
+│   │   │       ├── models.py        # SQLAlchemy — UserModel, LoginEventModel
+│   │   │       ├── repositories.py
+│   │   │       ├── secrets.py       # Fernet encryption kluczy API
+│   │   │       ├── token_store.py   # RefreshTokenStore (Redis, revocation)
+│   │   │       └── limiter.py       # rate limiting na /auth/login
+│   │   ├── document/
+│   │   │   ├── document.py          # Document dataclass
+│   │   │   ├── extractor.py         # extract_pdf, extract_docx
+│   │   │   └── router.py            # POST /extract [PRZEJŚCIOWE — patrz Faza 3]
+│   │   ├── proxy/                    # [PRZEJŚCIOWE] /analysis/* → agent + /health
+│   │   └── shared/
+│   │       ├── settings.py           # scalona konfiguracja (identity + gateway)
+│   │       ├── database.py           # jeden async engine + session factory
+│   │       ├── logging.py            # structlog JSON
+│   │       └── middleware.py         # request_id
+│   ├── tests/{test_identity,test_document,test_proxy}/
 │   └── pyproject.toml
 │
 ├── agent/                      # FastAPI (HTTP API) + Celery + LangGraph
@@ -243,9 +226,8 @@ corvus/
 │   └── pyproject.toml
 │
 ├── infra/
-│   ├── docker-compose.yml        # 12 serwisów: frontend, gateway, identity,
-│   │                                parser, agent, agent-worker, flower, ollama,
-│   │                                redis, postgres, jenkins, sonarqube
+│   ├── docker-compose.yml        # 10 serwisów: frontend, app, agent, agent-worker,
+│   │                                flower, ollama, redis, postgres, jenkins, sonarqube
 │   └── docker-compose.override.yml  # lokalne overrides (hot-reload, DEBUG)
 │
 ├── docs/
@@ -254,8 +236,8 @@ corvus/
 │   ├── technical-debt.md         # dług techniczny
 │   └── specs/                    # specyfikacje pojedynczych funkcji
 │
-├── .github/workflows/            # jeszcze nieutworzone — sesja 5.2
-├── .pre-commit-config.yaml       # jeszcze nieutworzony — sesja 5.2
+├── .github/workflows/            # jeszcze nieutworzone — Faza 6
+├── .pre-commit-config.yaml       # jeszcze nieutworzony — Faza 6
 ├── .env.example
 ├── Makefile                      # skróty do docker-compose
 ├── CLAUDE.md
@@ -278,14 +260,14 @@ Warstwa `domain/` nie importuje nic z FastAPI, LangChain,
 SQLAlchemy ani żadnego frameworka. Zawiera wyłącznie
 czystą logikę biznesową jako dataclasses i enums.
 
-`gateway/` jest wyjątkiem świadomym: nie ma warstwy `domain/`
-ani `application/`, ponieważ nie ma własnej logiki biznesowej —
-to czysty adapter HTTP → HTTP.
+`app/src/proxy/` i `app/src/document/` są wyjątkami świadomymi: nie mają
+warstwy `domain/`, bo nie mają własnej logiki biznesowej — pierwszy to czysty
+adapter HTTP → HTTP, drugi to cienka warstwa nad PyMuPDF/python-docx.
 
 ### Przykład — warstwa domain (identity)
 
 ```python
-# identity/src/domain/user.py
+# app/src/identity/domain/user.py
 class Role(StrEnum):
     ADMIN = "admin"
     PROMOTOR = "promotor"
@@ -311,13 +293,13 @@ class User:
         return permission in _ROLE_PERMISSIONS.get(self.role, frozenset())
 ```
 
-### Przykład — gateway jako czyste proxy
+### Przykład — przejściowe proxy do agenta
 
 ```python
-# gateway/src/infrastructure/router.py
-@router.api_route("/auth/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
-async def proxy_identity_auth(path: str, request: Request) -> Response:
-    return await _proxy(request, settings.identity_url, f"/auth/{path}")
+# app/src/proxy/router.py
+@router.api_route("/analysis/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+async def proxy_agent_analysis(path: str, request: Request) -> Response:
+    return await _proxy(request, settings.agent_url, f"/analysis/{path}")
 ```
 
 `_proxy()` przekazuje body, headers (w tym `Authorization` i `Cookie`)
@@ -381,15 +363,15 @@ Pełna referencja: [.env.example](../.env.example).
 | `OLLAMA_BASE_URL` | agent | `http://host.docker.internal:11434` lokalnie |
 | `ANTHROPIC_API_KEY` | agent | klucz Claude API |
 | `LANGCHAIN_TRACING_V2` / `LANGCHAIN_API_KEY` / `LANGCHAIN_PROJECT` | agent | LangSmith tracing (opcjonalne) |
-| `DATABASE_URL` | identity, agent | PostgreSQL connection string |
-| `REDIS_URL` | agent, identity | broker Celery + refresh token store |
-| `JWT_SECRET` / `JWT_ALGORITHM` | identity, gateway, agent | wspólny sekret — każdy serwis weryfikuje JWT lokalnie |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` / `REFRESH_TOKEN_EXPIRE_DAYS` | identity | TTL tokenów |
-| `FERNET_KEY` | identity | szyfrowanie kluczy API użytkowników |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | identity | seed pierwszego konta admina (wymagane, min. 12 znaków hasła) |
-| `IDENTITY_URL` | gateway | adres serwisu identity (`http://identity:8003`) |
-| `AGENT_URL` | gateway | adres serwisu agent (`http://agent:8002`) |
-| `SONAR_TOKEN` / `SONAR_HOST_URL` | CI/CD | jeszcze nieużywane — sesja 5.2 |
+| `ENVIRONMENT` | app | `local` \| `production` — steruje flagą `Secure` na cookie, log levelem |
+| `DATABASE_URL` | app, agent | PostgreSQL connection string |
+| `REDIS_URL` | agent, app | broker Celery + refresh token store |
+| `JWT_SECRET` / `JWT_ALGORITHM` | app, agent | wspólny sekret — każdy serwis weryfikuje JWT lokalnie |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` / `REFRESH_TOKEN_EXPIRE_DAYS` | app | TTL tokenów |
+| `FERNET_KEY` | app | szyfrowanie kluczy API użytkowników |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | app | seed pierwszego konta admina (wymagane, min. 12 znaków hasła) |
+| `AGENT_URL` | app | adres serwisu agent (`http://agent:8002`) |
+| `SONAR_TOKEN` / `SONAR_HOST_URL` | CI/CD | jeszcze nieużywane — Faza 6 |
 
 Generowanie kluczy:
 ```bash
@@ -404,18 +386,15 @@ python -c "import secrets; print(secrets.token_hex(32))"
 
 ## CI/CD pipeline
 
-> Status: **nieukończone** — sesje 5.2 (GitHub Actions + pre-commit)
-> i 5.3 (Jenkinsfile + README) z `sessions.md` jeszcze nie zrealizowane.
-> Poniżej docelowy kształt z pierwotnego planu.
+> Status: **nieukończone** — Faza 6 planu. Poniżej docelowy kształt,
+> zaktualizowany o topologię 2-serwisową.
 
 ```
 git push
   │
   ▼
 GitHub Actions (ci.yml) — przy każdym PR
-  ├── test-identity  (pytest + ruff + pyright)
-  ├── test-gateway   (pytest + ruff + pyright)
-  ├── test-parser    (pytest + ruff + pyright)
+  ├── test-app       (pytest + ruff + pyright)
   ├── test-agent     (pytest + ruff + pyright)
   ├── test-frontend  (vitest + tsc + eslint)
   └── sonarqube      (skan po przejściu testów)
@@ -433,15 +412,18 @@ Jenkins (Jenkinsfile)
 ## Bezpieczeństwo
 
 - `.env` zawsze w `.gitignore` — nigdy w repo
-- JWT_SECRET współdzielony przez identity/gateway/agent — każdy serwis
-  weryfikuje token lokalnie, bez wywołania sieciowego do identity
-  (endpoint `/internal/token/introspect` istnieje dla przyszłych serwisów
-  bez dostępu do sekretu, ale obecnie nieużywany)
+- JWT_SECRET współdzielony przez `app` i `agent` — każdy weryfikuje token
+  lokalnie, bez wywołania sieciowego
+- endpointy `/internal/*` (nieuwierzytelniony lookup użytkownika i introspekcja
+  tokenu) **usunięte w Fazie 0** — ich jedyną ochroną była topologia sieci
+  (gateway ich nie proxował); po scaleniu na publicznym porcie byłyby dziurą.
+  Nic ich nie wołało
 - access token (15 min) + refresh token (30 dni) w httpOnly cookie,
-  `secure`, `samesite=strict`, ograniczony do path `/auth/refresh`
+  `samesite=strict`, ograniczony do path `/auth/refresh`; flaga `Secure`
+  zależna od `ENVIRONMENT` (włączona tylko na produkcji, żeby lokalny HTTP działał)
 - refresh tokeny odwoływalne przez `RefreshTokenStore` (Redis, JTI blacklist)
   — **ale bez rewokacji access tokenów** (patrz `technical-debt.md`)
-- klucze API użytkowników szyfrowane Fernetem w Postgres (identity)
+- klucze API użytkowników szyfrowane Fernetem w Postgres
 - każdy serwis ma non-root user w Dockerze
 - audyt logowań (`LoginEventModel`) — IP, user-agent, sukces/porażka
 - rate limiting na `/auth/login` (fastapi-limiter)
