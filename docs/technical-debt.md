@@ -10,9 +10,11 @@
 - [ ] **`pyright --strict` NIE przechodzi i nigdy nie przechodził** — wbrew temu, co
   deklaruje `docs/sessions.md` ("ruff and pyright clean" przy sesjach 1.x–5.1).
   Zmierzone na kodzie sprzed konsolidacji (git worktree na HEAD): `identity` **736
-  błędów**, `parser` **88**. Po konsolidacji `app` ma **160** (spadek wynika z usunięcia
-  duplikatów i martwego kodu, nie z naprawy). Prawie wszystkie to
-  `reportUnknownMemberType` na `TestClient`/`httpx` w testach.
+  błędów**, `parser` **88**. Po konsolidacji `app` miał **160** (spadek wynika z usunięcia
+  duplikatów i martwego kodu, nie z naprawy), po Fazie 1 ma **264**. Prawie wszystkie to
+  `reportUnknownMemberType` na `TestClient`/`httpx` w testach — same **97** z nowych
+  104 siedzi w `tests/test_mentoring/test_router.py`; `src/mentoring/` jest czyste
+  (0 błędów w trybie strict).
   Naprawka: albo anotować odpowiedzi w testach, albo per-file suppression dla `tests/**`
   — ale świadomie, jako osobna zmiana, nie przy okazji refaktoru.
 
@@ -23,6 +25,19 @@
   lockfile podbijał je do 0.141 / 1.6, co wciągnęłoby nietestowany upgrade zależności
   w środek refaktoru strukturalnego. Odpiąć i zaktualizować osobno (starlette 1.6
   deprecjonuje też `httpx` w `TestClient`).
+
+- [ ] **Coverage nie mierzy ciał async endpointów wykonywanych przez `TestClient`** —
+  np. `/auth/login` w `identity/infrastructure/router.py` pokazuje się jako niepokryte
+  mimo kilkudziesięciu wywołań w testach (kod leci w wątku roboczym portalu anyio).
+  Skutek praktyczny: pokrycie warstwy application trzeba robić testami bezpośrednimi,
+  a liczby dla routerów są zaniżone. Do zdiagnozowania osobno (prawdopodobnie
+  `COVERAGE_CORE=sysmon` / tracing wątków).
+
+- [ ] **SQLite w testach gubi `tzinfo`** — `DateTime(timezone=True)` odczytany po
+  `refresh()` wraca naiwny, na Postgresie zostaje aware. Jedno miejsce już to
+  obchodzi (`tests/test_mentoring/test_student_service.py`). Przy Fazie 2 dochodzą
+  kolejne znaczniki czasu (`accepted_at`, `updated_at`) — albo znormalizować odczyt
+  w repozytoriach, albo testować czas na Postgresie.
 
 ---
 

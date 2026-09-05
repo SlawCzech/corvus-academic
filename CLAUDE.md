@@ -35,8 +35,8 @@ Lokalna aplikacja webowa wspomagająca promotorów i recenzentów w analizie stu
 
 > ⚠ **Projekt jest w trakcie pivotu.** Scope zmienił się z analizy jednego
 > dokumentu na platformę mentoringową (studenci, notatki, predefiniowane akcje AI).
-> Faza 0 (konsolidacja 4 serwisów → 2) jest **zrobiona**; domena mentoringowa
-> jeszcze nie istnieje. Decyzje: [docs/adr/](docs/adr/) · plan i status faz:
+> Faza 0 (konsolidacja 4 serwisów → 2) i Faza 1 (szkielet domeny mentoringowej)
+> są **zrobione**; akcje AI jeszcze nie istnieją. Decyzje: [docs/adr/](docs/adr/) · plan i status faz:
 > [docs/specs/mentoring-platform-implementation-plan.md](docs/specs/mentoring-platform-implementation-plan.md).
 > Sekcja 9 poniżej (kolejność implementacji) jest **nieaktualna** — zastąpiona tym planem.
 
@@ -47,7 +47,8 @@ Konteksty rozdzielone na poziomie pakietów i schematów Postgresa, nie sieci.
 ```
 app/src/identity/    — autentykacja, użytkownicy, role/permissions, audyt, klucze API
 app/src/document/    — ekstrakcja tekstu z PDF/DOCX (bezstanowa)
-app/src/mentoring/   — studenci, notatki, akcje AI  [JESZCZE NIE ISTNIEJE — Faza 1]
+app/src/mentoring/   — studenci, notatki ze spotkań, drafty, log akcji AI
+                       (akcje AI dochodzą w Fazie 2)
 agent/src/           — analysis + review: graf LangGraph, węzły, recenzja
 ```
 
@@ -76,6 +77,7 @@ Użytkownik
   → frontend (upload PDF/DOCX)
   → app :8000
       ├─ /auth/*, /users/*, /admin/*, /settings/*  — obsługiwane in-process
+      ├─ /students/*   — roster + notatki ze spotkań, in-process
       ├─ POST /extract — ekstrakcja in-process     [PRZEJŚCIOWE, znika w Fazie 3]
       └─ /analysis/* → agent :8002                 [PRZEJŚCIOWE, znika w Fazie 3]
   → Celery task (broker: Redis) → agent-worker
@@ -116,9 +118,11 @@ corvus/
 │   ├── prettier.config.mjs
 │   └── tsconfig.json
 │
-├── app/                      # identity + document (+ mentoring w Fazie 1)
-│   ├── main.py               # montuje routery: identity, document, proxy, health
+├── app/                      # identity + document + mentoring
+│   ├── main.py               # montuje routery: identity, mentoring, document,
+│   │                           proxy, health
 │   ├── alembic_identity/     # lineage migracji schematu `identity`
+│   ├── alembic_mentoring/    # lineage migracji schematu `mentoring`
 │   ├── scripts/seed_admin.py
 │   ├── src/
 │   │   ├── identity/
@@ -126,10 +130,16 @@ corvus/
 │   │   │   ├── application/  # auth.py (JWT), user_service.py (bcrypt)
 │   │   │   └── infrastructure/  # router, models, repositories, secrets,
 │   │   │                          token_store, limiter
+│   │   ├── mentoring/
+│   │   │   ├── domain/       # Student, MeetingNote, StudentStatus, ThesisType,
+│   │   │   │                   ActionType, ActionStatus
+│   │   │   ├── application/  # student_service.py (Caller, reguła własności)
+│   │   │   └── infrastructure/  # router (/students/*), models (4 tabele),
+│   │   │                          repositories
 │   │   ├── document/         # document.py, extractor.py, router.py [PRZEJŚCIOWY]
 │   │   ├── proxy/            # /analysis/* → agent + /health  [PRZEJŚCIOWY]
 │   │   └── shared/           # settings, database, logging, middleware
-│   ├── tests/{test_identity,test_document,test_proxy}/
+│   ├── tests/{test_identity,test_mentoring,test_document,test_proxy}/
 │   ├── pyproject.toml
 │   └── Dockerfile
 │
@@ -419,7 +429,7 @@ Aktualny plan i status faz:
 | Faza | Zakres | Status |
 |---|---|---|
 | 0 | konsolidacja serwisów (gateway+identity+parser → app) | ✅ 2026-09-05 |
-| 1 | model danych mentoringu: Student, MeetingNote, ThesisDraft, AgentAction | ⬜ |
+| 1 | model danych mentoringu: Student, MeetingNote, ThesisDraft, AgentAction | ✅ 2026-09-05 |
 | 2 | pierwsza akcja AI end-to-end (`propose_topic`) + naprawa trwałości statusu | ⬜ |
 | 3 | pozostałe akcje; usunięcie przejściowych `/extract` i proxy `/analysis/*` | ⬜ |
 | 4 | BYOK — klucz usera zamiast globalnego | ⬜ |

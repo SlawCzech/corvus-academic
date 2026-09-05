@@ -4,6 +4,11 @@ set -e
 echo "[app] Running identity migrations..."
 alembic -c alembic_identity.ini upgrade head
 
+# One Alembic lineage per Postgres schema — they share a database but not a
+# version table, so each is upgraded on its own.
+echo "[app] Running mentoring migrations..."
+alembic -c alembic_mentoring.ini upgrade head
+
 echo "[app] Seeding admin user..."
 python scripts/seed_admin.py
 

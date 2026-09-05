@@ -1,6 +1,6 @@
 # Corvus pivot: AI-first student-mentoring platform — implementation plan
 
-> Status: approved 2026-09-05, implementation not yet started (Phase 0 pending).
+> Status: approved 2026-09-05. Phases 0 and 1 are done; Phase 2 is next.
 > Architecture decisions referenced here are recorded as ADRs in [docs/adr/](../adr/):
 > [0001](../adr/0001-ai-first-mentoring-platform-pivot.md) (scope pivot),
 > [0002](../adr/0002-consolidate-services-into-app-and-agent.md) (service consolidation),
@@ -155,7 +155,7 @@ Sequencing follows the user's "AI first, simple interface" preference: Phase 0 i
 | Phase | Status |
 |---|---|
 | 0 — service consolidation | ✅ done 2026-09-05 (81 tests, 88.3% cov, ruff clean) |
-| 1 — Student + MeetingNote backbone | ⬜ not started |
+| 1 — Student + MeetingNote backbone | ✅ done 2026-09-05 (150 tests, 90.4% cov, ruff clean) |
 | 2 — first AI action end-to-end (`propose_topic`) | ⬜ not started |
 | 3 — remaining actions | ⬜ not started |
 | 4 — BYOK wiring | ⬜ not started |
@@ -174,7 +174,16 @@ Sequencing follows the user's "AI first, simple interface" preference: Phase 0 i
 
 Critical files: `app/pyproject.toml`, `app/main.py`, `app/src/shared/*`, `app/alembic_identity/`, `infra/docker-compose.yml`.
 
-**Phase 1 — minimal Student + MeetingNote backbone**. `app/src/mentoring/domain/student.py`, `infrastructure/models.py` (all 4 tables, `agent_actions` created now even though unused until Phase 2 — one migration), `alembic_mentoring/versions/0001_initial_mentoring_schema.py`, `infrastructure/router.py` (`POST/GET /students`, `POST /students/{id}/meeting-notes`), new `Permission.MANAGE_STUDENTS` in `identity/domain/user.py::_ROLE_PERMISSIONS`. Verification: domain + repository + router tests (ownership check: promoter sees only their students, admin sees all), manual `curl` smoke test.
+**Phase 1 — minimal Student + MeetingNote backbone** — ✅ **done 2026-09-05**. Built as planned: `app/src/mentoring/{domain/student.py,application/student_service.py,infrastructure/{models,repositories,router}.py}`, all four tables in `alembic_mentoring/versions/0001_initial_mentoring_schema.py`, `Permission.MANAGE_STUDENTS` added to `identity/domain/user.py::_ROLE_PERMISSIONS`. 69 new tests (150 total in `app`, 90.4% coverage), `ruff` clean, `pyright` clean on `src/mentoring`. Verified end-to-end against the real stack: both Alembic lineages run from `entrypoint.sh`, the four tables exist in Postgres with their FKs, and login → create student → list → set topic → add note → list notes works over HTTP (smoke data deleted afterwards; the cascade to `meeting_notes` was confirmed by that delete).
+
+Deviations from the plan as written, all deliberate:
+
+1. **A second permission, `VIEW_ALL_STUDENTS`, was added.** The plan named only `MANAGE_STUDENTS`, but admin holds every permission by construction (`frozenset(Permission)`), so that one permission cannot express "promoter sees only their own roster, admin sees all". `VIEW_ALL_STUDENTS` mirrors the existing `VIEW_ALL_ANALYSES` exactly, so the rule is data, not an `if role == ADMIN` branch.
+2. **`GET /students/{id}` and `PATCH /students/{id}` added** beyond the listed endpoints. Without a read-one endpoint the roster is not usable, and `PATCH` (topic/status) is what gives `Student.set_topic()` a caller before Phase 2 — the same field the accepted `propose_topic` action will write.
+3. **Invisible students return 404, not 403**, so a promoter cannot probe whether another promoter's student id exists. One `StudentNotFoundError` covers "does not exist" and "not yours".
+4. **`Caller(user_id, can_view_all)` instead of passing identity's `User` into `mentoring`.** The service needs who is acting and whether they may look past their own roster; the router does the permission lookup. Keeps the mentoring context free of identity imports, matching the plain-UUID cross-context rule.
+5. **Application-layer unit tests added (`test_student_service.py`)**, not just domain/repository/router. Coverage in this repo does not trace async endpoint bodies executed inside `TestClient`'s worker thread — identity's `/auth/login` shows as uncovered for the same reason — so the ownership rule is tested directly as well as over HTTP. That is also how identity's application layer is tested.
+6. **Dockerfile, `docker-compose.override.yml` and `make migrate` updated** to carry the second Alembic lineage — the plan mentioned only `entrypoint.sh`.
 
 **Phase 2 — one full AI action end-to-end (proof slice): `propose_topic`.** Recommended first slice because it needs no document upload, no guidelines file, no accumulated findings — just a `Student` row and optional free text. Exercises the entire new pipeline shape (button → context assembly → HTTP call → Celery → LLM → structured output → poll → human review/accept → `Student.current_topic` update) before any other action reuses it. Also **fixes the status-persistence bug**: `agent`'s task must write `status`/`output` back to its own Postgres row (renamed `AnalysisModel`→`AgentTaskModel`, `+action_type` column) on completion, not rely solely on Celery's Redis result TTL. Files: `agent/src/application/state.py` (→`ActionState`), `nodes/propose_topic.py` + `prompts/propose_topic.py`, `graph.py::build_action_graph`, `tasks.py` (generalize + persist status), `infrastructure/api/router.py` (`POST/GET /actions`), `app/src/mentoring/application/{context,agent_client,action_service}.py`, `app/src/mentoring/infrastructure/router.py` (`POST /students/{id}/actions`, `PATCH .../accept`). Verification: node test mirroring `test_structure_node.py`'s 3-case style, graph test, router test, **a durability regression test** (clear Redis, confirm Postgres still has the right status), manual end-to-end run via `docker compose up`.
 

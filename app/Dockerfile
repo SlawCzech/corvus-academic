@@ -9,8 +9,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 COPY src/ ./src/
 COPY scripts/ ./scripts/
-COPY main.py alembic_identity.ini entrypoint.sh ./
+COPY main.py alembic_identity.ini alembic_mentoring.ini entrypoint.sh ./
 COPY alembic_identity/ ./alembic_identity/
+COPY alembic_mentoring/ ./alembic_mentoring/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
@@ -25,6 +26,8 @@ COPY --from=builder /app/scripts /app/scripts
 COPY --from=builder /app/main.py /app/main.py
 COPY --from=builder /app/alembic_identity.ini /app/alembic_identity.ini
 COPY --from=builder /app/alembic_identity /app/alembic_identity
+COPY --from=builder /app/alembic_mentoring.ini /app/alembic_mentoring.ini
+COPY --from=builder /app/alembic_mentoring /app/alembic_mentoring
 COPY --from=builder /app/entrypoint.sh /app/entrypoint.sh
 
 ENV PATH="/app/.venv/bin:$PATH" \

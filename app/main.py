@@ -5,6 +5,9 @@
   - parser    — PDF/DOCX text extraction (now an in-process module)
   - gateway   — reverse proxy (only the `/analysis/*` → agent hop survives)
 
+plus `mentoring`, the bounded context the pivot is built on: students,
+meeting notes, and (from Phase 2) the AI action log.
+
 `agent` remains a separate service: LLM work is slow and asynchronous.
 """
 
@@ -17,6 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.document.router import router as document_router
 from src.identity.infrastructure.router import router as identity_router
+from src.mentoring.infrastructure.router import router as mentoring_router
 from src.proxy.health import health_router
 from src.proxy.router import router as proxy_router
 from src.shared.logging import configure_logging
@@ -47,6 +51,7 @@ app.add_middleware(
 app.middleware("http")(request_id_middleware)
 
 app.include_router(identity_router)
+app.include_router(mentoring_router)
 app.include_router(document_router)
 app.include_router(proxy_router)
 app.include_router(health_router)

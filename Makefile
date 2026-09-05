@@ -35,8 +35,9 @@ ps:  ## Show container status
 restart:  ## Restart every service
 	$(COMPOSE) restart
 
-migrate:  ## Run identity database migrations
+migrate:  ## Run database migrations (both app lineages: identity + mentoring)
 	$(COMPOSE) run --rm app alembic -c alembic_identity.ini upgrade head
+	$(COMPOSE) run --rm app alembic -c alembic_mentoring.ini upgrade head
 
 # ---------- dev stack (hot reload) ----------
 # Edits to app/src, agent/src and frontend/ take effect without a rebuild.

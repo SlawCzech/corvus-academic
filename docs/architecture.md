@@ -8,7 +8,7 @@
 
 ---
 
-## Stan: po Fazie 0 (konsolidacja serwisów)
+## Stan: po Fazie 1 (szkielet mentoringu)
 
 Corvus przechodzi pivot z narzędzia do analizy jednego dokumentu na platformę
 mentoringową dla promotorów. Kontekst i uzasadnienie:
@@ -21,9 +21,13 @@ mentoringową dla promotorów. Kontekst i uzasadnienie:
 - [docs/specs/mentoring-platform-implementation-plan.md](specs/mentoring-platform-implementation-plan.md) — plan fazowania (Faza 0–6)
 
 **Zrobione (Faza 0):** `gateway` + `identity` + `parser` scalone w jeden serwis `app`.
-**Jeszcze nie:** domena mentoringowa (studenci, notatki, akcje AI) — Fazy 1–3.
-Dopóki nie powstanie, `app` wystawia *przejściowo* stary kontrakt: `POST /extract`
-oraz proxy `/analysis/*` → `agent`, żeby istniejący frontend działał bez zmian.
+**Zrobione (Faza 1):** kontekst `mentoring` — schemat Postgresa z czterema tabelami
+(`students`, `thesis_drafts`, `meeting_notes`, `agent_actions`), własny lineage
+Alembica i endpointy `/students/*` (roster + notatki ze spotkań).
+**Jeszcze nie:** akcje AI (`agent_actions` i `thesis_drafts` są utworzone, ale
+jeszcze nikt do nich nie pisze) — Fazy 2–3. Dopóki nie powstaną, `app` wystawia
+*przejściowo* stary kontrakt: `POST /extract` oraz proxy `/analysis/*` → `agent`,
+żeby istniejący frontend działał bez zmian.
 
 ---
 
@@ -49,7 +53,7 @@ Referencje między kontekstami to gołe UUID bez kluczy obcych.
 |---|---|---|---|
 | identity | `app/src/identity/` | `identity` | autentykacja, użytkownicy, role/permissions, audyt, klucze API |
 | document | `app/src/document/` | — | ekstrakcja tekstu z PDF i DOCX (bezstanowa) |
-| mentoring | `app/src/mentoring/` | `mentoring` | **jeszcze nie istnieje** — Faza 1 |
+| mentoring | `app/src/mentoring/` | `mentoring` | studenci, notatki ze spotkań, wersje draftów, log akcji AI |
 | analysis | `agent/src/` | `analysis` | orkiestracja LangGraph, węzły analizy |
 | review | `agent/src/` | `analysis` | generowanie recenzji, ton, ocena punktowa |
 
@@ -94,6 +98,12 @@ app :8000
   ├──► /auth/*, /users/*, /admin/*, /settings/*   — obsługiwane IN-PROCESS
   │      login, refresh (httpOnly cookie), rejestracja,
   │      role/permissions, audyt logowań, szyfrowanie kluczy API (Fernet)
+  │
+  ├──► /students/*  — roster i notatki ze spotkań, IN-PROCESS
+  │      POST/GET /students, GET/PATCH /students/{id},
+  │      POST/GET /students/{id}/meeting-notes
+  │      widoczność: promotor widzi swoich, admin wszystkich
+  │      (VIEW_ALL_STUDENTS); cudzy student to 404, nie 403
   │
   ├──► POST /extract  — ekstrakcja tekstu in-process (PyMuPDF / python-docx)
   │      [PRZEJŚCIOWE — w Fazie 3 zastąpione uploadem draftu studenta]
@@ -161,11 +171,14 @@ corvus/
 │   ├── eslint.config.mjs
 │   └── tsconfig.json            # strict: true
 │
-├── app/                        # FastAPI, Postgres — identity + document + (wkrótce) mentoring
-│   ├── main.py                  # montuje routery: identity, document, proxy, health
+├── app/                        # FastAPI, Postgres — identity + document + mentoring
+│   ├── main.py                  # montuje routery: identity, mentoring, document,
+│   │                              proxy, health
 │   ├── alembic_identity.ini
 │   ├── alembic_identity/        # lineage migracji dla schematu `identity`
-│   │                              (Faza 1 dokłada alembic_mentoring/)
+│   ├── alembic_mentoring.ini
+│   ├── alembic_mentoring/       # lineage migracji dla schematu `mentoring`
+│   │                              (entrypoint.sh podnosi oba, po kolei)
 │   ├── scripts/seed_admin.py
 │   ├── src/
 │   │   ├── identity/
@@ -181,6 +194,17 @@ corvus/
 │   │   │       ├── secrets.py       # Fernet encryption kluczy API
 │   │   │       ├── token_store.py   # RefreshTokenStore (Redis, revocation)
 │   │   │       └── limiter.py       # rate limiting na /auth/login
+│   │   ├── mentoring/
+│   │   │   ├── domain/student.py    # Student, MeetingNote, StudentStatus,
+│   │   │   │                          ThesisType, ActionType, ActionStatus
+│   │   │   ├── application/
+│   │   │   │   └── student_service.py  # Caller (kto pyta + czy widzi wszystko),
+│   │   │   │                             reguła własności, use case'y
+│   │   │   └── infrastructure/
+│   │   │       ├── router.py        # /students/*
+│   │   │       ├── models.py        # StudentModel, ThesisDraftModel,
+│   │   │       │                      MeetingNoteModel, AgentActionModel
+│   │   │       └── repositories.py
 │   │   ├── document/
 │   │   │   ├── document.py          # Document dataclass
 │   │   │   ├── extractor.py         # extract_pdf, extract_docx
@@ -191,7 +215,7 @@ corvus/
 │   │       ├── database.py           # jeden async engine + session factory
 │   │       ├── logging.py            # structlog JSON
 │   │       └── middleware.py         # request_id
-│   ├── tests/{test_identity,test_document,test_proxy}/
+│   ├── tests/{test_identity,test_mentoring,test_document,test_proxy}/
 │   └── pyproject.toml
 │
 ├── agent/                      # FastAPI (HTTP API) + Celery + LangGraph
@@ -276,10 +300,14 @@ class Permission(StrEnum):
     MANAGE_USERS = "manage_users"
     VIEW_ALL_ANALYSES = "view_all_analyses"
     SUBMIT_ANALYSIS = "submit_analysis"
+    MANAGE_STUDENTS = "manage_students"
+    VIEW_ALL_STUDENTS = "view_all_students"
 
 _ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
     Role.ADMIN: frozenset(Permission),
-    Role.PROMOTOR: frozenset({Permission.SUBMIT_ANALYSIS}),
+    Role.PROMOTOR: frozenset(
+        {Permission.SUBMIT_ANALYSIS, Permission.MANAGE_STUDENTS}
+    ),
 }
 
 @dataclass(frozen=True)

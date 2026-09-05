@@ -22,11 +22,15 @@ class Permission(StrEnum):
     MANAGE_USERS = "manage_users"
     VIEW_ALL_ANALYSES = "view_all_analyses"
     SUBMIT_ANALYSIS = "submit_analysis"
+    MANAGE_STUDENTS = "manage_students"
+    VIEW_ALL_STUDENTS = "view_all_students"
 
 
 _ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
     Role.ADMIN: frozenset(Permission),
-    Role.PROMOTOR: frozenset({Permission.SUBMIT_ANALYSIS}),
+    Role.PROMOTOR: frozenset(
+        {Permission.SUBMIT_ANALYSIS, Permission.MANAGE_STUDENTS}
+    ),
 }
 
 
