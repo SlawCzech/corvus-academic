@@ -8,6 +8,28 @@
 
 ---
 
+## ⚠ Zaplanowany pivot — architektura docelowa jeszcze niezaimplementowana
+
+Poniższy dokument opisuje **stan faktyczny** (4 serwisy Python: gateway/identity/parser/agent).
+2026-09-05 podjęto decyzję o zmianie scope'u Corvusa (z analizy jednego dokumentu na
+platformę mentoringową dla promotorów — studenci, notatki, cykl predefiniowanych akcji AI)
+oraz o konsolidacji do **2 serwisów** (`app` + `agent`). Żadna z tych zmian nie jest jeszcze
+wdrożona w kodzie — plan i uzasadnienie:
+
+- [docs/adr/](adr/) — 5 ADR-ów: [0001](adr/0001-ai-first-mentoring-platform-pivot.md) (pivot scope'u),
+  [0002](adr/0002-consolidate-services-into-app-and-agent.md) (konsolidacja serwisów),
+  [0003](adr/0003-postgres-pgvector-for-persistence-and-rag.md) (Postgres/pgvector),
+  [0004](adr/0004-self-hosted-default-model-with-byok.md) (model/BYOK),
+  [0005](adr/0005-predefined-actions-not-open-chat.md) (predefiniowane akcje zamiast czatu)
+- [docs/specs/mentoring-platform-implementation-plan.md](specs/mentoring-platform-implementation-plan.md) — plan fazowania (Faza 0–6) z listą plików do zmiany per faza
+
+Nie edytuj sekcji poniżej pod kątem architektury docelowej, dopóki Faza 0 z planu
+nie wyląduje — ten dokument ma opisywać to, co faktycznie działa, nie plany.
+Po Fazie 0 (konsolidacja serwisów) ten plik zostanie przepisany pod nową architekturę
+`app` + `agent`.
+
+---
+
 ## Cel systemu
 
 Corvus to lokalna aplikacja webowa wspomagająca promotorów

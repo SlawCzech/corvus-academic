@@ -2,6 +2,11 @@
 
 > Używaj tego pliku jako przewodnika przez każdą fazę.
 > Po każdej sesji aktualizuj sekcję "Stan projektu" na końcu.
+>
+> ⚠ 2026-09-05: projekt przechodzi pivot (patrz [docs/adr/0001](adr/0001-ai-first-mentoring-platform-pivot.md)).
+> Fazy 5.2/5.3 poniżej są zastąpione planem w
+> [docs/specs/mentoring-platform-implementation-plan.md](specs/mentoring-platform-implementation-plan.md) —
+> ten plik zostaje jako historia sesji 1.1–5.1, ale nie jest już źródłem prawdy o kolejnych krokach.
 
 ---
 
