@@ -13,3 +13,6 @@ coverage.xml
 .pytest_cache/
 .claude/
 .python-version
+.DS_Store
+.mypy_cache/
+tsconfig.tsbuildinfo

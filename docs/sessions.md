@@ -747,8 +747,16 @@ Verification: Jenkinsfile syntax valid
 | 4.1 upload | ✅ | 2026-05-30 | Next.js 16 App Router, FileUpload (react-dropzone), useAnalysis hook (SWR polling), AnalysisResult component. Route handlers proxy to parser+gateway. 22 tests (vitest + Testing Library), typecheck and lint clean. |
 | 4.2 admin | ✅ | 2026-05-30 | Login page (RHF + Zod + zodResolver), httpOnly cookie via API route, /admin page with AI Model/Guidelines/Users sections, Next.js middleware protecting /admin and /analysis. 39 tests, typecheck and lint clean. noValidate on form required to bypass jsdom's native HTML5 email validation in tests. |
 | 5.1 Docker | ✅ | 2026-05-30 | infra/docker-compose.yml (10 services + migrate one-shot), docker-compose.override.yml (hot-reload), Dockerfiles for gateway/parser/agent (uv multi-stage, non-root) and frontend (Next.js standalone). .dockerignore for all 4 services. next.config.ts: output="standalone". /api/health route added to frontend. Default model: qwen3:30b-a3b. LANGCHAIN_TRACING_V2=false by default. docker compose config passes. |
-| 5.2 CI/CD | ⬜ | — | — |
-| 5.3 Jenkins | ⬜ | — | — |
+| post-5.1 (a) landing page | ✅ | 2026-05-31 | Next.js landing page (`app/page.tsx`) dodana poza planem sesji 4.x. |
+| post-5.1 (b) model selector v2 | ✅ | 2026-05-31 | Wybór modelu per-request (nie tylko przez env), tryb `mode="review_only"` (pomija węzły struktura/metodologia/wymogi i idzie prosto do recenzji), poprawki w węźle review. `graph.py`: `build_analysis_graph(mode=...)`. |
+| post-5.1 (c) RAG wytycznych + ReviewTone | ✅ | 2026-06-02 — 2026-06-03 | `agent/src/application/guidelines.py` (loader wytycznych uczelnianych/promotora, `check_requirements` podpięty), `agent/prompts/` z promptami per węzeł, `ReviewTone` (StrEnum: auto/enthusiastic/commendable/positive/diplomatic/reserved/negative) z AUTO jako domyślnym. |
+| post-5.1 (d) user management + historia analiz | ✅ | 2026-06-05 | Gateway: zarządzanie użytkownikami i historia analiz (przed ekstrakcją identity — kod ten later przeniesiony). Frontend: nawigacja, auth refresh flow, strony user management. |
+| post-5.1 (e) hardening + rate limiting | ✅ | 2026-06-05 — 2026-06-06 | Rate limiting na `/auth/login` (najpierw slowapi, potem `fastapi-limiter`), hardening gateway pod produkcję (przed ekstrakcją identity). |
+| post-5.1 (f) wybór języka recenzji | ✅ | 2026-06-06 | `language` (pl/en) dodany do `AnalysisRequest`/`AnalysisState`, przekazywany przez agent → gateway → frontend UI. |
+| post-5.1 (g) **ekstrakcja `identity`** | ✅ | 2026-06-09 — 2026-06-10 | Duży refaktor architektury (poza pierwotnym planem CLAUDE.md — patrz [Zmiany względem pierwotnego planu](#zmiany-względem-pierwotnego-planu)): auth/users/role/permissions/secrets wydzielone z `gateway` do nowego serwisu `identity` (port 8003, własna baza + Alembic). `gateway` staje się czystym reverse proxy (`httpx.AsyncClient`, brak domain/infrastructure poza router+settings). `agent` dostaje własne HTTP API (`infrastructure/api/`) zamiast przyjmowania zadań wyłącznie przez gateway→Celery bezpośrednio. |
+| post-5.1 (h) identity — testy i hardening | ✅ | 2026-06-14 | Testy proxy w gateway, poprawki parametrów proxy, `Permission` enum + uprawnienia per-rola, walidacja email przez `email-validator` w `identity/src/domain/user.py`. Stan na dziś: identity 61 testów/84.6% cov, gateway 17 testów/100% cov, agent 83 testy/94.8% cov, parser 14 testów/98.6% cov, frontend 39 testów. |
+| 5.2 CI/CD | ⬜ | — | GitHub Actions (`ci.yml`) i pre-commit hooks z sekcji 5.2 pierwotnego planu — nie rozpoczęte. Musi zostać zaktualizowane o serwis `identity` (5 jobów zamiast 4). |
+| 5.3 Jenkins | ⬜ | — | Jenkinsfile + README z sekcji 5.3 — nie rozpoczęte. Uwaga: `README.md` już istnieje (commit `36f4502`, 2026-06-09), ale bez treści opisanej w planie sesji 5.3 (wymaga weryfikacji zawartości). |
 
 ---
 
@@ -773,6 +781,10 @@ Verification: Jenkinsfile syntax valid
 | 5.1 | Endpoint `/api/health` w Next.js | Healthcheck w Dockerfile trafiał w nieistniejący URL — kontener był zawsze `unhealthy` |
 | 5.1 | `LANGCHAIN_TRACING_V2=false` jako domyślna wartość | Przy `true` bez `LANGCHAIN_API_KEY` LangChain próbuje połączyć się z LangSmith i loguje błędy przy każdym wywołaniu LLM |
 | 5.1 | Domyślny model zmieniony na `qwen3:30b-a3b` | Model `qwen3.6:14b` nie był pobrany lokalnie; `qwen3:30b-a3b` jest dostępny i lepszy jakościowo |
+| post-5.1 | **`identity` wydzielone jako osobny mikroserwis** (nie część `gateway`, jak w CLAUDE.md sekcja 3.1/3.2) | Rozdzielenie odpowiedzialności — auth/users/role/permissions/secrets to osobny bounded context; `gateway` pozostaje cienką warstwą routingu i JWT, łatwiejszą do skalowania i testowania niezależnie |
+| post-5.1 | `gateway` bez własnej bazy danych i domeny — czyste reverse proxy (`httpx.AsyncClient`) | Konsekwencja ekstrakcji `identity`; gateway nie potrzebuje już Postgres ani Alembic |
+| post-5.1 | `agent` dostaje własne HTTP API (`infrastructure/api/`) zamiast być czystym Celery-consumerem | Gateway musi mieć dokąd proxować `/analysis/*` — agent obsługuje teraz zarówno przyjmowanie zadań (FastAPI) jak i ich wykonanie (Celery worker w osobnym kontenerze `agent-worker`, ten sam obraz) |
+| post-5.1 | Model, tryb (`mode`), ton recenzji (`review_tone`) i język (`language`) przekazywane per-request zamiast tylko przez zmienne środowiskowe | Frontend pozwala użytkownikowi wybrać te parametry przy każdej analizie — env vars (`MODEL_BACKEND` itp.) pozostają jako fallback/domyślne wartości |
 
 ---
 
