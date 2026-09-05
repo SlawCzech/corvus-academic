@@ -1,3 +1,14 @@
+# Dev overrides — source mounted into containers, DEBUG=true turns on uvicorn
+# --reload in the entrypoints. Loaded only via `make dev` / `make dev-build`;
+# docker compose does NOT pick it up automatically, because the base file is
+# always passed with an explicit -f.
+#
+# What actually hot-reloads:
+#   app/src/**, agent/src/**   yes — directory mounts, picked up in a few seconds
+#   main.py                    NO  — single-file bind mount; the content reaches
+#                                    the container, but on macOS the mtime change
+#                                    does not, so uvicorn's StatReload never fires.
+#                                    Restart that container after editing main.py.
 services:
   frontend:
     build:

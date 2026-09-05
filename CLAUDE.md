@@ -33,13 +33,22 @@ Lokalna aplikacja webowa wspomagająca promotorów i recenzentów w analizie stu
 
 ## 3. Architektura systemu
 
+> ⚠ **Projekt jest w trakcie pivotu.** Scope zmienił się z analizy jednego
+> dokumentu na platformę mentoringową (studenci, notatki, predefiniowane akcje AI).
+> Faza 0 (konsolidacja 4 serwisów → 2) jest **zrobiona**; domena mentoringowa
+> jeszcze nie istnieje. Decyzje: [docs/adr/](docs/adr/) · plan i status faz:
+> [docs/specs/mentoring-platform-implementation-plan.md](docs/specs/mentoring-platform-implementation-plan.md).
+> Sekcja 9 poniżej (kolejność implementacji) jest **nieaktualna** — zastąpiona tym planem.
+
 ### 3.1 Bounded Contexts (DDD)
 
+Konteksty rozdzielone na poziomie pakietów i schematów Postgresa, nie sieci.
+
 ```
-document/     — parsowanie i ekstrakcja tekstu z PDF/DOCX
-analysis/     — agent LangGraph, węzły analizy, orchestracja
-review/       — generowanie recenzji, ocena, raport końcowy
-identity/     — autentykacja, użytkownicy, role, klucze API
+app/src/identity/    — autentykacja, użytkownicy, role/permissions, audyt, klucze API
+app/src/document/    — ekstrakcja tekstu z PDF/DOCX (bezstanowa)
+app/src/mentoring/   — studenci, notatki, akcje AI  [JESZCZE NIE ISTNIEJE — Faza 1]
+agent/src/           — analysis + review: graf LangGraph, węzły, recenzja
 ```
 
 ### 3.2 Microservices (docker-compose)
@@ -47,30 +56,33 @@ identity/     — autentykacja, użytkownicy, role, klucze API
 | Serwis | Port | Stack | Bounded Context |
 |---|---|---|---|
 | frontend | 3000 | Next.js, TypeScript | — |
-| gateway | 8000 | FastAPI, JWT | identity |
-| parser | 8001 | FastAPI, PyMuPDF | document |
-| agent | 8002 | LangGraph, Celery | analysis + review |
+| app | 8000 | FastAPI, Postgres | identity + document + mentoring |
+| agent | 8002 | FastAPI, LangGraph | analysis + review |
+| agent-worker | — | Celery | wykonuje graf (ten sam obraz co agent) |
 | ollama | 11434 | Ollama | — |
-| redis | 6379 | Redis Streams | — |
+| redis | 6379 | Redis | — |
 | postgres | 5432 | PostgreSQL + Alembic | — |
 | flower | 5555 | Celery Flower | — |
 | jenkins | 8080 | Jenkins | — |
 | sonarqube | 9000 | SonarQube CE | — |
+
+Jedyny podział sieciowy: szybkie synchroniczne CRUD (`app`) vs wolne
+asynchroniczne wywołania LLM (`agent`) — patrz ADR 0002.
 
 ### 3.3 Przepływ danych
 
 ```
 Użytkownik
   → frontend (upload PDF/DOCX)
-  → gateway (JWT auth, routing)
-  → parser (ekstrakcja tekstu)
-  → gateway (task_id zwrócony natychmiast)
-  → Celery worker (zadanie async)
-  → Redis Streams (broker)
-  → LangGraph agent (węzły sekwencyjne)
+  → app :8000
+      ├─ /auth/*, /users/*, /admin/*, /settings/*  — obsługiwane in-process
+      ├─ POST /extract — ekstrakcja in-process     [PRZEJŚCIOWE, znika w Fazie 3]
+      └─ /analysis/* → agent :8002                 [PRZEJŚCIOWE, znika w Fazie 3]
+  → Celery task (broker: Redis) → agent-worker
+  → LangGraph (węzły sekwencyjne)
       → [Struktura] → [Metodologia] → [Wymogi RAG] → [Recenzja]
   → model selector
-      → Ollama (lokalny) LUB Claude/OpenAI API (cloud)
+      → Ollama (lokalny, domyślny) LUB Claude/OpenAI przez klucz usera (BYOK)
   → Postgres (zapis raportu)
   → frontend (polling → wyświetlenie raportu)
 ```
@@ -104,21 +116,20 @@ corvus/
 │   ├── prettier.config.mjs
 │   └── tsconfig.json
 │
-├── gateway/
+├── app/                      # identity + document (+ mentoring w Fazie 1)
+│   ├── main.py               # montuje routery: identity, document, proxy, health
+│   ├── alembic_identity/     # lineage migracji schematu `identity`
+│   ├── scripts/seed_admin.py
 │   ├── src/
-│   │   ├── domain/           # encje, value objects, reguły
-│   │   ├── application/      # use cases, DTOs
-│   │   └── infrastructure/   # FastAPI routes, DB, JWT
-│   ├── tests/
-│   ├── pyproject.toml
-│   └── Dockerfile
-│
-├── parser/
-│   ├── src/
-│   │   ├── domain/
-│   │   ├── application/
-│   │   └── infrastructure/   # PyMuPDF, python-docx
-│   ├── tests/
+│   │   ├── identity/
+│   │   │   ├── domain/       # Role, Permission, User, UserRegistration
+│   │   │   ├── application/  # auth.py (JWT), user_service.py (bcrypt)
+│   │   │   └── infrastructure/  # router, models, repositories, secrets,
+│   │   │                          token_store, limiter
+│   │   ├── document/         # document.py, extractor.py, router.py [PRZEJŚCIOWY]
+│   │   ├── proxy/            # /analysis/* → agent + /health  [PRZEJŚCIOWY]
+│   │   └── shared/           # settings, database, logging, middleware
+│   ├── tests/{test_identity,test_document,test_proxy}/
 │   ├── pyproject.toml
 │   └── Dockerfile
 │
@@ -189,7 +200,7 @@ Zależności developerskie per serwis:
 - `pyright` (static type checker)
 - `pre-commit`
 - `structlog` (JSON logging)
-- `alembic` (migracje DB, tylko gateway)
+- `alembic` (migracje DB — `app` i `agent`, osobne lineage per schemat)
 
 ### 5.2 TypeScript (frontend)
 
@@ -375,7 +386,7 @@ infrastructure → application → domain
 ## 8. Bezpieczeństwo kluczy API
 
 ```python
-# gateway/src/infrastructure/secrets.py
+# app/src/identity/infrastructure/secrets.py
 from cryptography.fernet import Fernet
 
 class SecretService:
@@ -397,37 +408,23 @@ Zasady:
 
 ---
 
-## 9. Kolejność implementacji (sugerowana)
+## 9. Kolejność implementacji
 
-### Faza 1 — rdzeń AI (tydzień 1–2)
-- [ ] Agent LangGraph z jednym węzłem (Struktura)
-- [ ] Integracja z Claude API przez LangChain
-- [ ] LangSmith tracing (LANGCHAIN_TRACING_V2=true)
-- [ ] Testy jednostkowe węzła (pytest)
+> ⚠ **Pierwotny plan (Fazy 1–5) został zrealizowany i jest zamknięty** — historia
+> w [docs/sessions.md](docs/sessions.md). Od 2026-09-05 obowiązuje nowy plan pivotu.
 
-### Faza 2 — dokument i kolejkowanie (tydzień 3–4)
-- [ ] Serwis parser (PyMuPDF + python-docx)
-- [ ] Celery + Redis Streams
-- [ ] Pozostałe węzły LangGraph
-- [ ] Podmiana modelu: Ollama lokalnie
+Aktualny plan i status faz:
+**[docs/specs/mentoring-platform-implementation-plan.md](docs/specs/mentoring-platform-implementation-plan.md)**
 
-### Faza 3 — API i baza (tydzień 5–6)
-- [ ] Gateway FastAPI + JWT
-- [ ] Postgres + Alembic migracje
-- [ ] Secret vault dla kluczy API
-- [ ] Healthcheck endpoints
-
-### Faza 4 — frontend (tydzień 7–8)
-- [ ] Next.js upload + polling statusu
-- [ ] Panel administracyjny (wytyczne, model selector)
-- [ ] Flower UI integracja
-
-### Faza 5 — CI/CD i jakość (tydzień 9–10)
-- [ ] GitHub Actions (CI: testy + SonarQube)
-- [ ] Jenkins (CD: deploy)
-- [ ] Pre-commit hooks
-- [ ] Dependabot / Renovate Bot
-- [ ] README + dokumentacja API (FastAPI autodocs)
+| Faza | Zakres | Status |
+|---|---|---|
+| 0 | konsolidacja serwisów (gateway+identity+parser → app) | ✅ 2026-09-05 |
+| 1 | model danych mentoringu: Student, MeetingNote, ThesisDraft, AgentAction | ⬜ |
+| 2 | pierwsza akcja AI end-to-end (`propose_topic`) + naprawa trwałości statusu | ⬜ |
+| 3 | pozostałe akcje; usunięcie przejściowych `/extract` i proxy `/analysis/*` | ⬜ |
+| 4 | BYOK — klucz usera zamiast globalnego | ⬜ |
+| 5 | pgvector: RAG nad wytycznymi | ⬜ |
+| 6 | deploy + CI/CD (GitHub Actions, Jenkins, pre-commit) | ⬜ |
 
 ---
 
