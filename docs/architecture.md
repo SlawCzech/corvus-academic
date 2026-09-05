@@ -8,7 +8,7 @@
 
 ---
 
-## Stan: po Fazie 1 (szkielet mentoringu)
+## Stan: po Fazie 2 (pierwsza akcja AI end-to-end)
 
 Corvus przechodzi pivot z narzędzia do analizy jednego dokumentu na platformę
 mentoringową dla promotorów. Kontekst i uzasadnienie:
@@ -24,10 +24,16 @@ mentoringową dla promotorów. Kontekst i uzasadnienie:
 **Zrobione (Faza 1):** kontekst `mentoring` — schemat Postgresa z czterema tabelami
 (`students`, `thesis_drafts`, `meeting_notes`, `agent_actions`), własny lineage
 Alembica i endpointy `/students/*` (roster + notatki ze spotkań).
-**Jeszcze nie:** akcje AI (`agent_actions` i `thesis_drafts` są utworzone, ale
-jeszcze nikt do nich nie pisze) — Fazy 2–3. Dopóki nie powstaną, `app` wystawia
-*przejściowo* stary kontrakt: `POST /extract` oraz proxy `/analysis/*` → `agent`,
-żeby istniejący frontend działał bez zmian.
+**Zrobione (Faza 2):** pierwsza akcja AI przez całą pętlę — `propose_topic`:
+`app` składa kontekst, woła `agent POST /actions`, Celery liczy graf, wynik wraca
+przez polling, a akceptacja promotora ustawia `students.current_topic`. Przy okazji
+naprawiona trwałość statusu: worker zapisuje `running`/`completed`/`failed` do
+Postgresa (`analysis.agent_tasks`, dawniej `analyses`), zamiast czytać status z
+wygasającego backendu Celery w Redisie.
+**Jeszcze nie:** pozostałe cztery akcje i upload draftów (`thesis_drafts` wciąż
+puste) — Faza 3, oraz cały interfejs mentoringu we frontendzie. Dopóki to nie
+powstanie, `app` wystawia *przejściowo* stary kontrakt: `POST /extract` oraz proxy
+`/analysis/*` → `agent`, żeby istniejący frontend działał bez zmian.
 
 ---
 
@@ -105,23 +111,45 @@ app :8000
   │      widoczność: promotor widzi swoich, admin wszystkich
   │      (VIEW_ALL_STUDENTS); cudzy student to 404, nie 403
   │
+  ├──► /students/{id}/actions  — akcje AI
+  │      POST   → składa kontekst (mentoring/application/context.py),
+  │               zapisuje wiersz agent_actions (pending),
+  │               woła agent POST /actions, zapisuje task_id
+  │      GET    → polling: dopóki akcja nie jest terminalna, dociąga
+  │               status z agent GET /actions/{task_id}
+  │      PATCH .../accept → propose_topic ustawia current_topic
+  │
+  │      Kontekst składa WYŁĄCZNIE `app` — agent nigdy nie oddzwania po
+  │      dane, więc zadanie workera nie zależy od tego, czy `app` żyje.
+  │
   ├──► POST /extract  — ekstrakcja tekstu in-process (PyMuPDF / python-docx)
   │      [PRZEJŚCIOWE — w Fazie 3 zastąpione uploadem draftu studenta]
   │
   └──► /analysis/*  →  agent :8002 (HTTP API)
          [PRZEJŚCIOWE — w Fazie 3 zastąpione /students/{id}/actions]
-         zapis rekordu AnalysisModel w Postgres
-         Celery send_task(evaluation_id, text, metadata,
-                           model, mode, review_tone, language)
-         zwraca task_id natychmiast
+         │
+         ▼
+       agent :8002
+         zapis wiersza analysis.agent_tasks (status=pending) PRZED wysyłką —
+         task_id generuje wołający, więc worker nie wyprzedzi wiersza,
+         który ma zaktualizować
+         Celery send_task(...) → zwraca task_id natychmiast
          │
          ▼
        agent-worker (Celery worker)
+         zapisuje status do Postgresa: running → completed | failed
          │
          ▼
-       LangGraph StateGraph — zależny od `mode`:
-         mode="full"         [struktura] → [metodologia] → [wymogi RAG] → [recenzja]
-         mode="review_only"  → [recenzja] (bez węzłów pośrednich)
+       LangGraph — graf zależny od typu akcji (build_action_graph):
+         generate_review      [struktura] → [metodologia] → [wymogi] → [recenzja]
+                              (mode="review_only" → sama recenzja)
+         propose_topic        [propose_topic]
+         pozostałe trzy       — Faza 3; API odrzuca je 422, zamiast
+                                kolejkować pracę, która i tak by padła
+
+       Stan grafu (ActionState) jest wspólny dla wszystkich akcji: to, co
+       specyficzne dla akcji, siedzi w `context`, dzięki czemu nowa akcja to
+       nowy węzeł, a nie nowy schemat stanu.
          │
          ▼
        model selector (agent/src/infrastructure/llm_factory.py)
@@ -133,7 +161,9 @@ app :8000
        positive/diplomatic/reserved/negative) i językiem (pl/en)
          │
          ▼
-       Postgres  (zapis AnalysisModel: status, result)
+       Postgres  (analysis.agent_tasks: status, result, error)
+         result jest przycięty — tekst pracy i wytyczne to wejście,
+         nie wynik, i nie trafiają do JSONB ani do odpowiedzi HTTP
   ▼
 frontend (polling GET /api/status/{taskId} co 3s)
   wyświetla wynik gdy status == "done"
@@ -195,13 +225,18 @@ corvus/
 │   │   │       ├── token_store.py   # RefreshTokenStore (Redis, revocation)
 │   │   │       └── limiter.py       # rate limiting na /auth/login
 │   │   ├── mentoring/
-│   │   │   ├── domain/student.py    # Student, MeetingNote, StudentStatus,
-│   │   │   │                          ThesisType, ActionType, ActionStatus
+│   │   │   ├── domain/
+│   │   │   │   ├── student.py       # Student, MeetingNote, StudentStatus,
+│   │   │   │   │                      ThesisType
+│   │   │   │   └── action.py        # AgentAction, ActionType, ActionStatus
 │   │   │   ├── application/
-│   │   │   │   └── student_service.py  # Caller (kto pyta + czy widzi wszystko),
-│   │   │   │                             reguła własności, use case'y
+│   │   │   │   ├── student_service.py  # Caller (kto pyta + czy widzi wszystko),
+│   │   │   │   │                         reguła własności, use case'y
+│   │   │   │   ├── context.py       # co model widzi — jedna funkcja na akcję
+│   │   │   │   ├── agent_client.py  # HTTP do agenta (/actions)
+│   │   │   │   └── action_service.py   # trigger → polling → accept
 │   │   │   └── infrastructure/
-│   │   │       ├── router.py        # /students/*
+│   │   │       ├── router.py        # /students/*, /students/{id}/actions/*
 │   │   │       ├── models.py        # StudentModel, ThesisDraftModel,
 │   │   │       │                      MeetingNoteModel, AgentActionModel
 │   │   │       └── repositories.py
@@ -226,24 +261,31 @@ corvus/
 │   │   │   ├── evaluation.py    # ThesisEvaluation (Aggregate Root) — state machine
 │   │   │   ├── metadata.py      # ThesisMetadata (Value Object)
 │   │   │   └── review.py        # Review, Score
+│   │   ├── domain/action.py     # ActionType, TaskStatus (słownik akcji i statusów)
 │   │   ├── application/
-│   │   │   ├── state.py         # AnalysisState (TypedDict) — model/mode/tone/language
-│   │   │   ├── graph.py         # build_analysis_graph(mode="full"|"review_only")
+│   │   │   ├── state.py         # ActionState (TypedDict) — wspólny dla wszystkich
+│   │   │   │                      akcji; co specyficzne, siedzi w `context`
+│   │   │   ├── graph.py         # build_action_graph(action_type) +
+│   │   │   │                      build_analysis_graph(mode="full"|"review_only")
 │   │   │   ├── guidelines.py    # loader wytycznych uczelnianych/promotora
 │   │   │   ├── nodes/
 │   │   │   │   ├── structure.py
 │   │   │   │   ├── methodology.py
 │   │   │   │   ├── requirements.py
-│   │   │   │   └── review.py
+│   │   │   │   ├── review.py
+│   │   │   │   └── propose_topic.py
 │   │   │   ├── prompts/          # system prompty per węzeł + wytyczne
-│   │   │   └── tasks.py          # Celery task analyze_thesis
+│   │   │   └── tasks.py          # Celery: run_action (generyczny) +
+│   │   │                           analyze_thesis [PRZEJŚCIOWY adapter]
 │   │   └── infrastructure/
 │   │       ├── api/
-│   │       │   ├── router.py    # POST/GET /analysis, GET /analysis/{task_id}
+│   │       │   ├── router.py    # POST/GET /actions/{task_id}
+│   │       │   │                  + POST/GET /analysis [PRZEJŚCIOWE]
 │   │       │   └── auth.py      # lokalna weryfikacja JWT (bez wołania identity)
 │   │       ├── celery_app.py
 │   │       ├── llm_factory.py   # model selector
-│   │       ├── models.py        # SQLAlchemy — AnalysisModel
+│   │       ├── models.py        # SQLAlchemy — AgentTaskModel
+│   │       ├── task_status.py   # zapis statusu z workera (sync → asyncio.run)
 │   │       └── repositories.py
 │   ├── prompts/                  # pliki wytycznych (guidelines)
 │   ├── tests/

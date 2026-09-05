@@ -2,19 +2,32 @@
 
 import uuid
 from datetime import datetime
+from typing import Any
 
+import httpx
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.identity.domain.user import Permission, User
 from src.identity.infrastructure.router import get_current_user
+from src.mentoring.application.action_service import (
+    ActionNotFoundError,
+    ActionService,
+    UnsupportedActionError,
+)
+from src.mentoring.application.agent_client import (
+    AgentClient,
+    AgentUnavailableError,
+)
 from src.mentoring.application.student_service import (
     Caller,
     StudentNotFoundError,
     StudentService,
 )
+from src.mentoring.domain.action import ActionType, AgentAction
 from src.mentoring.domain.student import (
     MeetingNote,
     Student,
@@ -22,14 +35,17 @@ from src.mentoring.domain.student import (
     ThesisType,
 )
 from src.mentoring.infrastructure.repositories import (
+    AgentActionRepository,
     MeetingNoteRepository,
     StudentRepository,
 )
 from src.shared.database import get_db_session
+from src.shared.settings import settings
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/students", tags=["mentoring"])
+_bearer = HTTPBearer()
 
 
 # ---------- dependencies ----------
@@ -57,6 +73,27 @@ def get_student_service(
     session: AsyncSession = Depends(get_db_session),
 ) -> StudentService:
     return StudentService(StudentRepository(session), MeetingNoteRepository(session))
+
+
+def get_bearer_token(
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer),
+) -> str:
+    """The caller's raw token, forwarded to `agent` so its own auth still works."""
+    return credentials.credentials
+
+
+def get_agent_client(request: Request) -> AgentClient:
+    """Wrap the process-wide HTTP client kept in application state."""
+    client: httpx.AsyncClient = request.app.state.http_client
+    return AgentClient(client, settings.agent_url)
+
+
+def get_action_service(
+    session: AsyncSession = Depends(get_db_session),
+    students: StudentService = Depends(get_student_service),
+    agent: AgentClient = Depends(get_agent_client),
+) -> ActionService:
+    return ActionService(students, AgentActionRepository(session), agent)
 
 
 # ---------- schemas ----------
@@ -103,6 +140,53 @@ class MeetingNoteResponse(BaseModel):
     created_at: datetime
 
 
+class ActionTriggerRequest(BaseModel):
+    action_type: ActionType
+    detail: str | None = Field(default=None, max_length=4000)
+    model: str | None = None
+    language: str = "pl"
+
+
+class ActionAcceptRequest(BaseModel):
+    # Which of the proposed topics the promoter picked. Ignored by action
+    # types that have nothing to choose between.
+    topic_index: int = Field(default=0, ge=0)
+
+
+class ActionResponse(BaseModel):
+    id: uuid.UUID
+    student_id: uuid.UUID
+    promotor_id: uuid.UUID
+    action_type: str
+    status: str
+    task_id: str | None
+    detail: str | None
+    output: dict[str, Any] | None
+    error: str | None
+    accepted: bool
+    accepted_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+
+def _action_response(action: AgentAction) -> ActionResponse:
+    return ActionResponse(
+        id=action.id,
+        student_id=action.student_id,
+        promotor_id=action.promotor_id,
+        action_type=str(action.action_type),
+        status=str(action.status),
+        task_id=action.task_id,
+        detail=action.detail,
+        output=action.output,
+        error=action.error,
+        accepted=action.accepted,
+        accepted_at=action.accepted_at,
+        created_at=action.created_at,
+        updated_at=action.updated_at,
+    )
+
+
 def _student_response(student: Student) -> StudentResponse:
     return StudentResponse(
         id=student.id,
@@ -131,14 +215,14 @@ def _note_response(note: MeetingNote) -> MeetingNoteResponse:
     )
 
 
-def _not_found(exc: StudentNotFoundError) -> HTTPException:
-    """Map an invisible-or-missing student to 404.
+def _not_found(exc: Exception) -> HTTPException:
+    """Map an invisible-or-missing student (or one of its actions) to 404.
 
     Deliberately not 403: a promoter must not be able to probe whether some
     other promoter's student id exists.
     """
     return HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND, detail=f"Student not found: {exc}"
+        status_code=status.HTTP_404_NOT_FOUND, detail=f"Not found: {exc}"
     )
 
 
@@ -270,3 +354,105 @@ async def list_meeting_notes(
     except StudentNotFoundError as exc:
         raise _not_found(exc) from exc
     return [_note_response(n) for n in notes]
+
+
+# ---------- AI action endpoints ----------
+
+
+@router.post(
+    "/{student_id}/actions",
+    response_model=ActionResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def trigger_action(
+    student_id: uuid.UUID,
+    body: ActionTriggerRequest,
+    caller: Caller = Depends(get_caller),
+    token: str = Depends(get_bearer_token),
+    svc: ActionService = Depends(get_action_service),
+) -> ActionResponse:
+    """Run one AI action for a student and return the queued action record.
+
+    Returns immediately: the work happens in the agent's Celery worker, and
+    the caller polls the action's own endpoint for the outcome.
+    """
+    try:
+        action = await svc.trigger(
+            caller,
+            student_id,
+            action_type=body.action_type,
+            token=token,
+            detail=body.detail,
+            model=body.model,
+            language=body.language,
+        )
+    except StudentNotFoundError as exc:
+        raise _not_found(exc) from exc
+    except UnsupportedActionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
+        ) from exc
+    except AgentUnavailableError as exc:
+        # The attempt is recorded as failed; the promoter can retry.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The analysis service is unavailable",
+        ) from exc
+    return _action_response(action)
+
+
+@router.get("/{student_id}/actions", response_model=list[ActionResponse])
+async def list_actions(
+    student_id: uuid.UUID,
+    action_type: ActionType | None = Query(default=None, alias="type"),
+    caller: Caller = Depends(get_caller),
+    svc: ActionService = Depends(get_action_service),
+) -> list[ActionResponse]:
+    """Return a student's AI action history, newest first."""
+    try:
+        actions = await svc.list_actions(caller, student_id, action_type)
+    except StudentNotFoundError as exc:
+        raise _not_found(exc) from exc
+    return [_action_response(a) for a in actions]
+
+
+@router.get("/{student_id}/actions/{action_id}", response_model=ActionResponse)
+async def get_action(
+    student_id: uuid.UUID,
+    action_id: uuid.UUID,
+    caller: Caller = Depends(get_caller),
+    token: str = Depends(get_bearer_token),
+    svc: ActionService = Depends(get_action_service),
+) -> ActionResponse:
+    """Poll one action — refreshed from the agent while it is still running."""
+    try:
+        action = await svc.get_action(caller, student_id, action_id, token)
+    except (StudentNotFoundError, ActionNotFoundError) as exc:
+        raise _not_found(exc) from exc
+    return _action_response(action)
+
+
+@router.patch(
+    "/{student_id}/actions/{action_id}/accept", response_model=ActionResponse
+)
+async def accept_action(
+    student_id: uuid.UUID,
+    action_id: uuid.UUID,
+    body: ActionAcceptRequest,
+    caller: Caller = Depends(get_caller),
+    svc: ActionService = Depends(get_action_service),
+) -> ActionResponse:
+    """Accept an action's result — for a topic proposal, this sets the topic."""
+    try:
+        action = await svc.accept(
+            caller, student_id, action_id, topic_index=body.topic_index
+        )
+    except (StudentNotFoundError, ActionNotFoundError) as exc:
+        raise _not_found(exc) from exc
+    except ValueError as exc:
+        # Accepting twice, accepting something still running, or picking a
+        # topic index the model never proposed.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+    return _action_response(action)

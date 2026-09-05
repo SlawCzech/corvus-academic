@@ -1,0 +1,66 @@
+"""Durable task-status writes from the Celery worker.
+
+The worker is synchronous while the rest of the service speaks async
+SQLAlchemy, so each write opens its own short-lived engine under
+``asyncio.run``. That is cheap next to an LLM call measured in minutes, and
+it avoids sharing an engine across event loops that the worker creates and
+destroys per task.
+
+Failures here are logged, never raised: losing a status write must not fail
+(and then retry) an analysis that actually succeeded. The consequence is that
+a database outage leaves a stale row — see docs/technical-debt.md.
+"""
+
+import asyncio
+from typing import Any
+
+import structlog
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
+
+from src.infrastructure.repositories import AgentTaskRepository
+from src.infrastructure.settings import settings
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+
+async def _write(
+    task_id: str,
+    status: str,
+    result: dict[str, Any] | None,
+    error: str | None,
+) -> bool:
+    engine = create_async_engine(settings.database_url, poolclass=NullPool)
+    try:
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        async with factory() as session:
+            repo = AgentTaskRepository(session)
+            return await repo.update_status(
+                task_id, status, result=result, error=error
+            )
+    finally:
+        await engine.dispose()
+
+
+def record_task_status(
+    task_id: str | None,
+    status: str,
+    result: dict[str, Any] | None = None,
+    error: str | None = None,
+) -> None:
+    """Persist a task's status to Postgres, swallowing any failure."""
+    if not task_id:
+        logger.warning("task_status_skipped_no_task_id", status=status)
+        return
+    try:
+        found = asyncio.run(_write(task_id, status, result, error))
+    except Exception as exc:
+        logger.error(
+            "task_status_write_failed",
+            task_id=task_id,
+            status=status,
+            error=str(exc),
+        )
+        return
+    if not found:
+        logger.warning("task_status_row_missing", task_id=task_id, status=status)

@@ -18,8 +18,10 @@
   Naprawka: albo anotować odpowiedzi w testach, albo per-file suppression dla `tests/**`
   — ale świadomie, jako osobna zmiana, nie przy okazji refaktoru.
 
-- [ ] **`ruff` w `agent/` — 36 błędów** (stan zastany, `agent` nietknięty przez Fazę 0).
-  `app/` jest czysty. Do naprawy przy Fazie 2, która i tak wchodzi w `agent`.
+- [x] ~~**`ruff` w `agent/` — 36 błędów**~~ — naprawione w Fazie 2 (2026-09-05).
+  Oba serwisy są czyste. Pliki z promptami (`agent/src/application/prompts/*.py`,
+  `nodes/review.py`) mają świadomy per-file wyjątek na `E501` — łamanie linii w
+  literale zmienia prompt, nie formatowanie.
 
 - [ ] **Piny `fastapi==0.136.3` + `starlette==1.2.1` w `app/pyproject.toml`** — świeży
   lockfile podbijał je do 0.141 / 1.6, co wciągnęłoby nietestowany upgrade zależności
@@ -39,6 +41,17 @@
   kolejne znaczniki czasu (`accepted_at`, `updated_at`) — albo znormalizować odczyt
   w repozytoriach, albo testować czas na Postgresie.
 
+- [ ] **Zapis statusu z workera połyka błędy bazy** — `agent/src/infrastructure/task_status.py`
+  loguje i idzie dalej, żeby awaria zapisu nie powodowała retry analizy, która się udała
+  (kilka minut pracy LLM). Skutek: przy niedostępnej bazie wiersz zostaje nieświeży, a
+  jedynym śladem jest log `task_status_write_failed`. Wymaga alertu na ten event, tak samo
+  jak `token_store_check_failed_fail_open`.
+
+- [ ] **Zawieszony worker zostawia akcję w `running` na zawsze** — status jest zapisywany
+  przed i po wywołaniu grafu; jeśli proces zginie w środku (OOM, kill), nic tego nie
+  posprząta. Naprawka: timeout na akcję (`updated_at` starsze niż N minut → `failed`)
+  albo Celery `task_reject_on_worker_lost` + sprzątanie przy starcie.
+
 ---
 
 ## Pozostałości po konsolidacji (Faza 0 → do usunięcia w Fazie 3)
@@ -52,6 +65,13 @@
 
 - [ ] **Frontend nadal czyta `GATEWAY_URL` i `PARSER_URL`** — oba wskazują teraz na
   `app:8000`. Zwinąć do jednego `APP_URL` przy przepisywaniu route handlerów.
+
+- [ ] **Frontend nie wie nic o studentach ani akcjach AI** — cały interfejs mentoringu
+  (roster, notatki, `propose_topic`) istnieje wyłącznie w API. `useAnalysis` uogólnia się
+  na `useAction`, bo kontrakt 202-then-poll jest ten sam. Do zrobienia razem z Fazą 3.
+
+- [ ] **`agent_tasks.evaluation_id` i task `analyze_thesis`** — pozostałość kontraktu
+  sprzed mentoringu. Znikają razem z `POST /analysis` w Fazie 3.
 
 ---
 
@@ -67,7 +87,11 @@
 
 - [ ] **Brak password reset flow** — użytkownik nie może odzyskać zapomnianego hasła. Wymaga integracji SMTP i tokenu jednorazowego (np. krótkotrwały JWT wysyłany na e-mail).
 
-- [ ] **Brak weryfikacji czy worker Celery działa** — zadanie trafia do kolejki cicho; jeśli worker nie chodzi, status analizy pozostaje `"analyzing"` w nieskończoność. Naprawka: endpoint `GET /health/worker` sprawdzający `celery_app.control.inspect().ping()`.
+- [ ] **Brak weryfikacji czy worker Celery działa** — zadanie trafia do kolejki cicho; jeśli
+  worker nie chodzi, akcja zostaje w statusie `pending` w nieskończoność. Faza 2 załatwiła
+  część problemu (padnięcie brokera przy wysyłce daje teraz `failed` + 503), ale martwy
+  worker nadal jest niewidoczny. Naprawka: endpoint `GET /health/worker` sprawdzający
+  `celery_app.control.inspect().ping()`.
 
 - [ ] **Brak soft delete użytkowników** — `DELETE /users/{id}` usuwa rekord na twardo. Rozważyć pole `deleted_at` i filtrowanie w zapytaniach.
 

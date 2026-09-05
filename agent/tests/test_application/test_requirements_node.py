@@ -1,14 +1,15 @@
 """Tests for the check_requirements node."""
 
 import json
-from typing import Any, cast
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from langchain_core.messages import AIMessage
 
 from src.application.nodes.requirements import check_requirements
-from src.application.state import AnalysisState
+from src.application.state import ActionState
 from src.domain.analysis import Finding, FindingSeverity
+from tests.factories import make_state
 
 _MINOR_RESPONSE = json.dumps(
     [
@@ -45,11 +46,12 @@ _BACHELOR_GUIDELINES = (
 def _make_state(
     extra_findings: list[Finding] | None = None,
     guidelines: str = _BACHELOR_GUIDELINES,
-) -> AnalysisState:
-    return cast(
-        AnalysisState,
-        {
-            "evaluation_id": "550e8400-e29b-41d4-a716-446655440000",
+) -> ActionState:
+    return make_state(
+        findings=extra_findings or [],
+        context={
+            "text": "Rozdział 1: Wprowadzenie. Rozdział 2: Przegląd literatury.",
+            "guidelines": guidelines,
             "metadata": {
                 "author": "Anna Kowalska",
                 "title": "Test Thesis",
@@ -58,15 +60,6 @@ def _make_state(
                 "thesis_type": "bachelor",
                 "review_tone": "auto",
             },
-            "text": "Rozdział 1: Wprowadzenie. Rozdział 2: Przegląd literatury.",
-            "guidelines": guidelines,
-            "findings": extra_findings or [],
-            "scores": [],
-            "review": None,
-            "status": "analyzing",
-            "error": None,
-            "model": "qwen3:30b-a3b",
-            "mode": "full",
             "review_tone": "auto",
         },
     )
@@ -123,7 +116,9 @@ def test_node_returns_empty_findings_for_conforming_thesis() -> None:
 def test_node_sets_error_when_model_returns_invalid_json() -> None:
     """Node sets state['error'] and does not crash when LLM returns non-JSON."""
     mock_llm = MagicMock()
-    mock_llm.invoke.return_value = AIMessage(content="Przepraszam, nie mogę odpowiedzieć.")
+    mock_llm.invoke.return_value = AIMessage(
+        content="Przepraszam, nie mogę odpowiedzieć."
+    )
 
     with patch("src.application.nodes.requirements.get_llm", return_value=mock_llm):
         result = check_requirements(_make_state())

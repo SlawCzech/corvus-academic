@@ -1,4 +1,4 @@
-"""Tests for the analyze_thesis Celery task."""
+"""Tests for the Celery tasks — the generic runner and the legacy adapter."""
 
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -6,10 +6,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 from celery.exceptions import Retry
 
-from src.application.tasks import analyze_thesis
+from src.application.tasks import _result_payload, analyze_thesis, run_action
+from src.domain.action import ActionType, TaskStatus
 from src.infrastructure.celery_app import celery_app
+from tests.factories import ACTION_ID, STUDENT_ID
 
-_EVALUATION_ID = "550e8400-e29b-41d4-a716-446655440000"
 _TEXT = "Chapter 1: Introduction. Chapter 2: Methodology."
 _GUIDELINES = "## 4. CRITICAL: brak celu pracy."
 _METADATA: dict[str, Any] = {
@@ -28,68 +29,214 @@ def _eager_mode() -> None:  # pyright: ignore[reportUnusedFunction]
     celery_app.conf.update(task_always_eager=True, task_eager_propagates=True)
 
 
-def _graph_result() -> dict[str, Any]:
-    return {
-        "evaluation_id": _EVALUATION_ID,
-        "metadata": _METADATA,
-        "text": _TEXT,
-        "guidelines": _GUIDELINES,
+@pytest.fixture(autouse=True)
+def status_writes() -> Any:  # noqa: ANN401
+    """Keep status writes off the real database; assert on them instead."""
+    with patch("src.application.tasks.record_task_status") as mock:
+        yield mock
+
+
+def _final_state(**overrides: Any) -> dict[str, Any]:  # noqa: ANN401
+    state: dict[str, Any] = {
+        "action_id": ACTION_ID,
+        "action_type": ActionType.GENERATE_REVIEW,
+        "student_id": STUDENT_ID,
+        "context": {"text": _TEXT, "guidelines": _GUIDELINES},
         "findings": [],
         "scores": [],
-        "review": None,
+        "output": None,
         "status": "analyzed",
         "error": None,
     }
+    state.update(overrides)
+    return state
 
 
-def test_task_calls_graph_with_correct_state() -> None:
-    """Task builds and passes a valid AnalysisState to the graph."""
-    mock_graph = MagicMock()
-    mock_graph.invoke.return_value = _graph_result()
+def _mock_graph(state: dict[str, Any] | None = None) -> MagicMock:
+    graph = MagicMock()
+    graph.invoke.return_value = state if state is not None else _final_state()
+    return graph
 
-    with (
-        patch("src.application.tasks.build_analysis_graph", return_value=mock_graph),
-        patch("src.application.tasks.load_guidelines", return_value=_GUIDELINES),
-    ):
-        analyze_thesis.apply(args=(_EVALUATION_ID, _TEXT, _METADATA))
 
-    mock_graph.invoke.assert_called_once()
-    call_state: dict[str, Any] = mock_graph.invoke.call_args[0][0]
-    assert call_state["evaluation_id"] == _EVALUATION_ID
-    assert call_state["text"] == _TEXT
-    assert call_state["guidelines"] == _GUIDELINES
-    assert call_state["findings"] == []
-    assert call_state["status"] == "analyzing"
+# ---------- generic action runner ----------
+
+
+def test_run_action_builds_state_from_its_arguments() -> None:
+    graph = _mock_graph()
+    context = {"field_of_study": "Ekonomia", "detail": "coś o instytucjach"}
+
+    with patch(
+        "src.application.tasks.build_action_graph", return_value=graph
+    ) as builder:
+        run_action.apply(
+            args=(ACTION_ID, ActionType.PROPOSE_TOPIC, STUDENT_ID, context)
+        )
+
+    assert builder.call_args.args[0] == ActionType.PROPOSE_TOPIC
+    call_state: dict[str, Any] = graph.invoke.call_args[0][0]
+    assert call_state["action_id"] == ACTION_ID
+    assert call_state["student_id"] == STUDENT_ID
+    assert call_state["context"] == context
+    assert call_state["output"] is None
     assert call_state["error"] is None
 
 
-def test_task_returns_graph_result() -> None:
-    """Task returns the dict produced by the graph."""
-    expected = _graph_result()
-    mock_graph = MagicMock()
-    mock_graph.invoke.return_value = expected
+def test_run_action_returns_the_actions_output() -> None:
+    proposal = {"topics": [{"title": "Instytucje a wzrost"}], "recommended": 0}
+    graph = _mock_graph(
+        _final_state(action_type=ActionType.PROPOSE_TOPIC, output=proposal)
+    )
 
-    with (
-        patch("src.application.tasks.build_analysis_graph", return_value=mock_graph),
-        patch("src.application.tasks.load_guidelines", return_value=_GUIDELINES),
-    ):
-        result = analyze_thesis.apply(args=(_EVALUATION_ID, _TEXT, _METADATA))
+    with patch("src.application.tasks.build_action_graph", return_value=graph):
+        result = run_action.apply(
+            args=(ACTION_ID, ActionType.PROPOSE_TOPIC, STUDENT_ID, {})
+        )
 
-    assert result.get() == expected
+    payload: dict[str, Any] = result.get()
+    assert payload["output"] == proposal
+    assert payload["action_id"] == ACTION_ID
+    # The context is an input; it never travels back out.
+    assert "context" not in payload
 
 
-def test_task_retries_on_exception() -> None:
-    """Task signals retry when the graph raises an exception."""
-    with (
-        patch("src.application.tasks.load_guidelines", return_value=_GUIDELINES),
-        patch("src.application.tasks.build_analysis_graph") as mock_factory,
-    ):
-        mock_factory.side_effect = Exception("Graph failed")
+def test_run_action_records_running_then_completed(
+    status_writes: MagicMock,
+) -> None:
+    with patch("src.application.tasks.build_action_graph", return_value=_mock_graph()):
+        run_action.apply(args=(ACTION_ID, ActionType.GENERATE_REVIEW, STUDENT_ID, {}))
 
+    statuses = [call.args[1] for call in status_writes.call_args_list]
+    assert statuses == [TaskStatus.RUNNING, TaskStatus.COMPLETED]
+
+
+def test_node_error_is_recorded_as_a_failed_task(status_writes: MagicMock) -> None:
+    """A node that could not produce anything is a failure, not a done task."""
+    graph = _mock_graph(_final_state(error="Ollama unreachable"))
+
+    with patch("src.application.tasks.build_action_graph", return_value=graph):
+        run_action.apply(args=(ACTION_ID, ActionType.GENERATE_REVIEW, STUDENT_ID, {}))
+
+    last = status_writes.call_args_list[-1]
+    assert last.args[1] == TaskStatus.FAILED
+    assert last.kwargs["error"] == "Ollama unreachable"
+    # The partial payload is still stored — it says which node got how far.
+    assert last.kwargs["result"]["error"] == "Ollama unreachable"
+
+
+def test_run_action_retries_when_the_graph_raises() -> None:
+    with patch("src.application.tasks.build_action_graph") as builder:
+        builder.side_effect = Exception("Graph failed")
         with pytest.raises(Retry):
-            analyze_thesis.apply(
-                args=(_EVALUATION_ID, _TEXT, _METADATA),
+            run_action.apply(
+                args=(ACTION_ID, ActionType.GENERATE_REVIEW, STUDENT_ID, {}),
                 throw=True,
             )
 
-    mock_factory.assert_called_once()
+
+def test_last_attempt_records_failure(status_writes: MagicMock) -> None:
+    """When retries are exhausted the failure is persisted with its message."""
+    with patch("src.application.tasks.build_action_graph") as builder:
+        builder.side_effect = Exception("Graph failed")
+        with pytest.raises(Exception, match="Graph failed"):
+            run_action.apply(
+                args=(ACTION_ID, ActionType.GENERATE_REVIEW, STUDENT_ID, {}),
+                retries=3,
+                throw=True,
+            )
+
+    last = status_writes.call_args_list[-1]
+    assert last.args[1] == TaskStatus.FAILED
+    assert "Graph failed" in last.kwargs["error"]
+
+
+def test_intermediate_failure_stays_running(status_writes: MagicMock) -> None:
+    """A failure that will be retried must not be recorded as final."""
+    with patch("src.application.tasks.build_action_graph") as builder:
+        builder.side_effect = Exception("Graph failed")
+        with pytest.raises(Retry):
+            run_action.apply(
+                args=(ACTION_ID, ActionType.GENERATE_REVIEW, STUDENT_ID, {}),
+                throw=True,
+            )
+
+    statuses = [call.args[1] for call in status_writes.call_args_list]
+    assert statuses == [TaskStatus.RUNNING]
+
+
+# ---------- legacy analysis entry point ----------
+
+
+def test_legacy_task_assembles_the_review_context() -> None:
+    """The old arguments become the same context any action gets."""
+    graph = _mock_graph()
+
+    with (
+        patch("src.application.tasks.build_action_graph", return_value=graph),
+        patch("src.application.tasks.load_guidelines", return_value=_GUIDELINES),
+    ):
+        analyze_thesis.apply(args=(ACTION_ID, _TEXT, _METADATA))
+
+    call_state: dict[str, Any] = graph.invoke.call_args[0][0]
+    assert call_state["action_type"] == ActionType.GENERATE_REVIEW
+    assert call_state["context"]["text"] == _TEXT
+    assert call_state["context"]["guidelines"] == _GUIDELINES
+    assert call_state["context"]["metadata"] == _METADATA
+    assert call_state["findings"] == []
+
+
+def test_legacy_task_keeps_its_evaluation_id_in_the_payload() -> None:
+    """The old frontend contract calls this id evaluation_id."""
+    with (
+        patch("src.application.tasks.build_action_graph", return_value=_mock_graph()),
+        patch("src.application.tasks.load_guidelines", return_value=_GUIDELINES),
+    ):
+        result = analyze_thesis.apply(args=(ACTION_ID, _TEXT, _METADATA))
+
+    payload: dict[str, Any] = result.get()
+    assert payload["evaluation_id"] == ACTION_ID
+    assert payload["status"] == "analyzed"
+    # A 2 MB thesis has no business in the result row or the HTTP response.
+    assert "context" not in payload
+
+
+def test_legacy_task_retries_on_exception() -> None:
+    with (
+        patch("src.application.tasks.load_guidelines", return_value=_GUIDELINES),
+        patch("src.application.tasks.build_action_graph") as builder,
+    ):
+        builder.side_effect = Exception("Graph failed")
+        with pytest.raises(Retry):
+            analyze_thesis.apply(args=(ACTION_ID, _TEXT, _METADATA), throw=True)
+
+
+# ---------- payload shaping ----------
+
+
+def test_result_payload_promotes_review_fields() -> None:
+    """summary and recommendation are lifted so the frontend can read them."""
+    payload = _result_payload(
+        _final_state(
+            output={
+                "summary": "Praca spełnia wymogi.",
+                "recommendation": "Dopuścić do obrony",
+                "total_percentage": 80.0,
+            }
+        )
+    )
+
+    assert payload["summary"] == "Praca spełnia wymogi."
+    assert payload["recommendation"] == "Dopuścić do obrony"
+    assert payload["output"]["total_percentage"] == 80.0
+
+
+def test_result_payload_leaves_other_actions_output_alone() -> None:
+    """Only review-shaped output has fields worth promoting."""
+    payload = _result_payload(
+        _final_state(
+            action_type=ActionType.PROPOSE_TOPIC,
+            output={"topics": [], "recommended": 0},
+        )
+    )
+
+    assert "summary" not in payload
+    assert payload["output"] == {"topics": [], "recommended": 0}

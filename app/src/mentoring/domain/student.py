@@ -32,33 +32,6 @@ class StudentStatus(StrEnum):
     ARCHIVED = "archived"
 
 
-class ActionType(StrEnum):
-    """AI action that can be run against a student.
-
-    Unused until Phase 2 — declared now because ``mentoring.agent_actions``
-    stores these values and its migration lands with this phase.
-    """
-
-    PROPOSE_TOPIC = "propose_topic"
-    EVALUATE_METHODOLOGY = "evaluate_methodology"
-    CHECK_PROGRESS = "check_progress"
-    DRAFT_MEETING_NOTE = "draft_meeting_note"
-    GENERATE_REVIEW = "generate_review"
-
-
-class ActionStatus(StrEnum):
-    """Lifecycle of one AI action, persisted in Postgres.
-
-    Persisted deliberately rather than read back from Celery's Redis result
-    backend, which expires — see docs/technical-debt.md.
-    """
-
-    PENDING = "pending"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
-
-
 def _require_text(value: str, field_name: str) -> str:
     """Return the stripped value, or raise if it is blank."""
     stripped = value.strip()

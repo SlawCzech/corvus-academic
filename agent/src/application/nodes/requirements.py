@@ -10,7 +10,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from src.domain.analysis import Finding, FindingSeverity
 from src.infrastructure.llm_factory import get_llm
 
-from ..state import AnalysisState
+from ..state import ActionState
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -57,17 +57,18 @@ def _extract_json(text: str) -> str:
     return match.group(1) if match else text.strip()
 
 
-def check_requirements(state: AnalysisState) -> AnalysisState:
+def check_requirements(state: ActionState) -> ActionState:
     """Check thesis conformance against university guidelines from state."""
     try:
+        ctx = state["context"]
         llm = get_llm(state["model"])
         response = llm.invoke(
             [
                 SystemMessage(content=_get_system_prompt(state.get("language", "pl"))),  # type: ignore[attr-defined]
                 HumanMessage(
                     content=(
-                        f"University requirements:\n{state['guidelines']}\n\n"
-                        f"Thesis text:\n{state['text'][:12000]}"
+                        f"University requirements:\n{ctx.get('guidelines', '')}\n\n"
+                        f"Thesis text:\n{str(ctx.get('text', ''))[:12000]}"
                     )
                 ),
             ]
@@ -91,7 +92,7 @@ def check_requirements(state: AnalysisState) -> AnalysisState:
                 1 for f in new_findings if f.severity == FindingSeverity.CRITICAL
             ),
         )
-        result: AnalysisState = state.copy()
+        result: ActionState = state.copy()
         result["findings"] = state["findings"] + new_findings
         result["error"] = None
         return result

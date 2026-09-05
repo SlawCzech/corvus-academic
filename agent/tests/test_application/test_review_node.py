@@ -7,8 +7,9 @@ from unittest.mock import MagicMock, patch
 from langchain_core.messages import AIMessage
 
 from src.application.nodes.review import generate_review
-from src.application.state import AnalysisState, ThesisMetadataDict
+from src.application.state import ActionState, ThesisMetadataDict
 from src.domain.analysis import Finding, FindingSeverity
+from tests.factories import make_state
 
 _VALID_RESPONSE = json.dumps(
     {
@@ -55,7 +56,7 @@ def _make_state(
     with_critical: bool = False,
     with_major: bool = False,
     review_tone: str = "auto",
-) -> AnalysisState:
+) -> ActionState:
     findings: list[Finding] = []
     if with_critical:
         findings.append(
@@ -75,20 +76,12 @@ def _make_state(
                 suggestion="Rozbuduj bibliografię.",
             )
         )
-    return cast(
-        AnalysisState,
-        {
-            "evaluation_id": "550e8400-e29b-41d4-a716-446655440000",
-            "metadata": _make_metadata(review_tone),
+    return make_state(
+        findings=findings,
+        context={
             "text": "Rozdział 1: Wprowadzenie. Rozdział 2: Przegląd literatury.",
             "guidelines": "Praca musi spełniać wymagania uczelniane.",
-            "findings": findings,
-            "scores": [],
-            "review": None,
-            "status": "analyzing",
-            "error": None,
-            "model": "qwen3:30b-a3b",
-            "mode": "full",
+            "metadata": _make_metadata(review_tone),
             "review_tone": review_tone,
         },
     )
@@ -100,14 +93,14 @@ def _make_state(
 
 
 def test_generate_review_happy_path() -> None:
-    """Node produces a Review, non-empty scores, and sets status to 'analyzed'."""
+    """Node produces structured output, scores, and status 'analyzed'."""
     mock_llm = MagicMock()
     mock_llm.invoke.return_value = AIMessage(content=_VALID_RESPONSE)
 
     with patch("src.application.nodes.review.get_llm", return_value=mock_llm):
         result = generate_review(_make_state())
 
-    assert result["review"] is not None
+    assert result["output"] is not None
     assert len(result["scores"]) == 4
     assert result["status"] == "analyzed"
     assert result["error"] is None
@@ -122,7 +115,7 @@ def test_generate_review_rejected_when_critical_findings() -> None:
         result = generate_review(_make_state(with_critical=True))
 
     assert result["status"] == "rejected"
-    assert result["review"] is not None
+    assert result["output"] is not None
     assert result["error"] is None
 
 
@@ -134,10 +127,10 @@ def test_generate_review_score_percentage() -> None:
     with patch("src.application.nodes.review.get_llm", return_value=mock_llm):
         result = generate_review(_make_state())
 
-    review = result["review"]
-    assert review is not None
+    output = result["output"]
+    assert output is not None
     # 8+7+9+8 = 32 out of 40 max → 80.0%
-    assert review.total_percentage() == 80.0
+    assert output["total_percentage"] == 80.0
 
 
 def test_generate_review_recommendation_stored() -> None:
@@ -148,8 +141,8 @@ def test_generate_review_recommendation_stored() -> None:
     with patch("src.application.nodes.review.get_llm", return_value=mock_llm):
         result = generate_review(_make_state())
 
-    assert result["review"] is not None
-    assert result["review"].recommendation == "Dopuścić do obrony"
+    assert result["output"] is not None
+    assert result["output"]["recommendation"] == "Dopuścić do obrony"
 
 
 # ---------------------------------------------------------------------------
@@ -218,7 +211,7 @@ def test_diplomatic_tone_prompt_tells_llm_to_skip_notable_strength() -> None:
 
 
 def test_negative_tone_prompt_forbids_positive_opening() -> None:
-    """NEGATIVE tone instruction tells the LLM not to use the standard positive opening."""
+    """NEGATIVE tone tells the LLM not to use the standard positive opening."""
     mock_llm = MagicMock()
     captured_messages: list[Any] = []
 
@@ -254,7 +247,7 @@ def test_invalid_tone_falls_back_to_auto_without_crashing() -> None:
 
     # Node must not crash
     assert result["error"] is None
-    assert result["review"] is not None
+    assert result["output"] is not None
     # Fell back to AUTO
     system_content = str(captured_messages[0].content)
     assert "Tone instruction: AUTO" in system_content
@@ -280,7 +273,7 @@ def test_commendable_tone_prompt_includes_notable_strength_phrase() -> None:
 
 
 def test_commendable_tone_prompt_opening_differs_from_enthusiastic() -> None:
-    """COMMENDABLE opening uses 'dobry poziom', not 'wysoki poziom' like ENTHUSIASTIC."""
+    """COMMENDABLE opening uses 'dobry poziom', not ENTHUSIASTIC's 'wysoki poziom'."""
     mock_llm = MagicMock()
     captured_messages: list[Any] = []
 
@@ -346,8 +339,8 @@ def test_reserved_recommendation_is_stored_correctly() -> None:
     with patch("src.application.nodes.review.get_llm", return_value=mock_llm):
         result = generate_review(_make_state(with_major=True, review_tone="reserved"))
 
-    assert result["review"] is not None
-    assert result["review"].recommendation == "Dopuścić do obrony z zastrzeżeniami"
+    assert result["output"] is not None
+    assert result["output"]["recommendation"] == "Dopuścić do obrony z zastrzeżeniami"
 
 
 def test_auto_tone_prompt_includes_commendable_threshold() -> None:
@@ -389,7 +382,7 @@ def test_auto_tone_prompt_includes_reserved_threshold() -> None:
 
 
 def test_json_parse_error_sets_state_error() -> None:
-    """Non-JSON LLM response causes state['error'] to be set (no exception propagated)."""
+    """Non-JSON LLM response sets state['error'] (no exception propagated)."""
     mock_llm = MagicMock()
     mock_llm.invoke.return_value = AIMessage(content="Sorry, I cannot comply.")
 
@@ -397,4 +390,4 @@ def test_json_parse_error_sets_state_error() -> None:
         result = generate_review(_make_state())
 
     assert result["error"] is not None
-    assert result["review"] is None
+    assert result["output"] is None

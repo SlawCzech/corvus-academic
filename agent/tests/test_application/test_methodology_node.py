@@ -1,12 +1,13 @@
 """Tests for the analyze_methodology node."""
 
-from typing import Any, cast
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from langchain_core.messages import AIMessage
 
 from src.application.nodes.methodology import analyze_methodology
-from src.application.state import AnalysisState
+from src.application.state import ActionState
+from tests.factories import make_state
 
 _VALID_RESPONSE = (
     '[{"section": "Methodology", "description": "Research design not clearly stated",'
@@ -14,26 +15,18 @@ _VALID_RESPONSE = (
 )
 
 
-def _make_state() -> AnalysisState:
-    return cast(
-        AnalysisState,
-        {
-            "evaluation_id": "550e8400-e29b-41d4-a716-446655440000",
+def _make_state() -> ActionState:
+    return make_state(
+        context={
+            "text": "Chapter 3: Methodology. We used a qualitative approach.",
+            "guidelines": "The thesis must describe the research method in detail.",
             "metadata": {
                 "author": "Jan Kowalski",
                 "title": "Test Thesis",
                 "year": 2024,
                 "field_of_study": "Computer Science",
             },
-            "text": "Chapter 3: Methodology. We used a qualitative approach.",
-            "guidelines": "The thesis must describe the research method in detail.",
-            "model": "qwen3:30b-a3b",
-            "findings": [],
-            "scores": [],
-            "review": None,
-            "status": "analyzing",
-            "error": None,
-        },
+        }
     )
 
 

@@ -1,36 +1,33 @@
-"""Tests for the LangGraph analysis pipeline graph."""
+"""Tests for the LangGraph action graphs."""
 
 from collections.abc import Callable
 from typing import cast
 from unittest.mock import patch
 
-from src.application.graph import build_analysis_graph
-from src.application.state import AnalysisState
+import pytest
+
+from src.application.graph import build_action_graph, build_analysis_graph
+from src.application.state import ActionState
+from src.domain.action import ActionType
+from tests.factories import make_state
 
 
-def _make_state() -> AnalysisState:
-    return cast(
-        AnalysisState,
-        {
-            "evaluation_id": "550e8400-e29b-41d4-a716-446655440000",
+def _make_state() -> ActionState:
+    return make_state(
+        context={
+            "text": "Chapter 1: Introduction.",
+            "guidelines": "At least five chapters required.",
             "metadata": {
                 "author": "Jan Kowalski",
                 "title": "Test Thesis",
                 "year": 2024,
                 "field_of_study": "Computer Science",
             },
-            "text": "Chapter 1: Introduction.",
-            "guidelines": "At least five chapters required.",
-            "findings": [],
-            "scores": [],
-            "review": None,
-            "status": "uploaded",
-            "error": None,
-        },
+        }
     )
 
 
-def _passthrough(state: AnalysisState) -> AnalysisState:
+def _passthrough(state: ActionState) -> ActionState:
     """Typed stand-in for node mocks that must return state unchanged."""
     return state
 
@@ -62,8 +59,8 @@ def test_node_order() -> None:
     """Nodes execute in the correct sequential order."""
     call_log: list[str] = []
 
-    def make_side_effect(name: str) -> Callable[[AnalysisState], AnalysisState]:
-        def _fn(state: AnalysisState) -> AnalysisState:
+    def make_side_effect(name: str) -> Callable[[ActionState], ActionState]:
+        def _fn(state: ActionState) -> ActionState:
             call_log.append(name)
             return state
 
@@ -99,7 +96,7 @@ def test_node_order() -> None:
 
 
 def test_return_shape() -> None:
-    """Graph result contains all nine required AnalysisState keys."""
+    """Graph result carries the whole ActionState through."""
     with (
         patch("src.application.graph.analyze_structure", side_effect=_passthrough),
         patch("src.application.graph.analyze_methodology", side_effect=_passthrough),
@@ -111,13 +108,13 @@ def test_return_shape() -> None:
         result = graph.invoke(_make_state())  # pyright: ignore[reportUnknownMemberType]
 
     required_keys = {
-        "evaluation_id",
-        "metadata",
-        "text",
-        "guidelines",
+        "action_id",
+        "action_type",
+        "student_id",
+        "context",
         "findings",
         "scores",
-        "review",
+        "output",
         "status",
         "error",
     }
@@ -128,13 +125,13 @@ def test_no_short_circuit_on_error() -> None:
     """All downstream nodes still run even when analyze_structure sets an error."""
     call_log: list[str] = []
 
-    def structure_with_error(state: AnalysisState) -> AnalysisState:
+    def structure_with_error(state: ActionState) -> ActionState:
         result = dict(state)
         result["error"] = "boom"
-        return cast(AnalysisState, result)
+        return cast(ActionState, result)
 
-    def make_side_effect(name: str) -> Callable[[AnalysisState], AnalysisState]:
-        def _fn(state: AnalysisState) -> AnalysisState:
+    def make_side_effect(name: str) -> Callable[[ActionState], ActionState]:
+        def _fn(state: ActionState) -> ActionState:
             call_log.append(name)
             return state
 
@@ -164,3 +161,61 @@ def test_no_short_circuit_on_error() -> None:
 
     assert result["error"] == "boom"
     assert call_log == ["analyze_methodology", "check_requirements", "generate_review"]
+
+
+# ---------- action dispatch ----------
+
+
+def test_review_action_reuses_the_full_pipeline() -> None:
+    """generate_review already is the final action — no second graph for it."""
+    call_log: list[str] = []
+
+    def _log(name: str) -> Callable[[ActionState], ActionState]:
+        def _fn(state: ActionState) -> ActionState:
+            call_log.append(name)
+            return state
+
+        return _fn
+
+    with (
+        patch("src.application.graph.analyze_structure", side_effect=_log("structure")),
+        patch(
+            "src.application.graph.analyze_methodology", side_effect=_log("methodology")
+        ),
+        patch(
+            "src.application.graph.check_requirements", side_effect=_log("requirements")
+        ),
+        patch("src.application.graph.generate_review", side_effect=_log("review")),
+    ):
+        graph = build_action_graph(ActionType.GENERATE_REVIEW)
+        graph.invoke(_make_state())  # pyright: ignore[reportUnknownMemberType]
+
+    assert call_log == ["structure", "methodology", "requirements", "review"]
+
+
+def test_propose_topic_is_a_single_node_graph() -> None:
+    """The other four nodes have nothing to do with proposing a topic."""
+    call_log: list[str] = []
+
+    def _log(name: str) -> Callable[[ActionState], ActionState]:
+        def _fn(state: ActionState) -> ActionState:
+            call_log.append(name)
+            return state
+
+        return _fn
+
+    with (
+        patch("src.application.graph.analyze_structure", side_effect=_log("structure")),
+        patch("src.application.graph.generate_review", side_effect=_log("review")),
+        patch("src.application.graph.propose_topic", side_effect=_log("propose_topic")),
+    ):
+        graph = build_action_graph(ActionType.PROPOSE_TOPIC)
+        graph.invoke(_make_state(), )  # pyright: ignore[reportUnknownMemberType]
+
+    assert call_log == ["propose_topic"]
+
+
+def test_unimplemented_action_is_rejected() -> None:
+    """The three Phase 3 actions have no graph yet — say so loudly."""
+    with pytest.raises(ValueError, match="check_progress"):
+        build_action_graph(ActionType.CHECK_PROGRESS)

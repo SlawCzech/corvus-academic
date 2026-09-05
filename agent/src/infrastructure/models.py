@@ -7,7 +7,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import DateTime, String, Uuid
+from sqlalchemy import DateTime, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.types import JSON
@@ -19,27 +19,44 @@ class Base(DeclarativeBase):
     """Shared declarative base for all agent ORM models."""
 
 
-class AnalysisModel(Base):
-    """Persisted analysis task record.
+class AgentTaskModel(Base):
+    """One dispatched AI task and its outcome.
 
-    ``user_id`` is a plain UUID — no FK to identity.users (cross-service boundary).
+    ``status`` and ``result`` are written by the worker as the task runs, so
+    this row — not Celery's expiring Redis backend — is what the history is
+    read from.
+
+    ``user_id``, ``action_id`` and ``student_id`` are plain UUIDs with no FK:
+    they point at rows owned by `app` (identity and mentoring), across a
+    service boundary.
     """
 
-    __tablename__ = "analyses"
+    __tablename__ = "agent_tasks"
     __table_args__ = {"schema": _SCHEMA}
 
     id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    evaluation_id: Mapped[str] = mapped_column(String(255), nullable=False)
     task_id: Mapped[str | None] = mapped_column(
         String(255), nullable=True, index=True
     )
     user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    action_type: Mapped[str] = mapped_column(String(50), nullable=False)
     status: Mapped[str] = mapped_column(String(50), nullable=False)
+    # Correlation with mentoring.agent_actions / mentoring.students; null for
+    # the legacy /analysis flow, which predates the mentoring context.
+    action_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), nullable=True, index=True
+    )
+    student_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), nullable=True
+    )
+    # Legacy /analysis correlation id. Dropped in Phase 3 with that endpoint.
+    evaluation_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     result: Mapped[Any] = mapped_column(  # type: ignore[assignment]
         JSONB().with_variant(JSON(), "sqlite"), nullable=True, default=None
     )
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

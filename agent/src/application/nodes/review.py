@@ -15,7 +15,7 @@ from src.domain.evaluation import EvaluationStatus
 from src.domain.review import Review, Score
 from src.infrastructure.llm_factory import get_llm
 
-from ..state import AnalysisState
+from ..state import ActionState
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -311,10 +311,11 @@ must be adapted to their English equivalents in meaning and register.
 }
 
 
-def generate_review(state: AnalysisState) -> AnalysisState:
+def generate_review(state: ActionState) -> ActionState:
     """Generate final review with tone and language control."""
     try:
-        tone_value: str = state.get("review_tone", ReviewTone.AUTO)  # type: ignore[attr-defined]
+        ctx = state["context"]
+        tone_value = str(ctx.get("review_tone", ReviewTone.AUTO))
         try:
             tone = ReviewTone(tone_value)
         except ValueError:
@@ -334,7 +335,7 @@ def generate_review(state: AnalysisState) -> AnalysisState:
 
         # Truncate thesis text to avoid exceeding model context window.
         # The review node primarily relies on findings — full text is supplementary.
-        thesis_text: str = state["text"]
+        thesis_text = str(ctx.get("text", ""))
         max_text_chars = 6000
         truncated_text = (
             thesis_text[:max_text_chars] + "\n\n[...text truncated...]"
@@ -342,12 +343,13 @@ def generate_review(state: AnalysisState) -> AnalysisState:
             else thesis_text
         )
 
+        meta: dict[str, object] = ctx.get("metadata", {})
         user_message = (
-            f"Thesis title: {state['metadata'].get('title', 'Unknown')}\n"  # type: ignore[attr-defined]
-            f"Author: {state['metadata'].get('author', 'Unknown')}\n"  # type: ignore[attr-defined]
-            f"Type: {state['metadata'].get('thesis_type', 'bachelor')}\n"  # type: ignore[attr-defined]
-            f"Field: {state['metadata'].get('field_of_study', 'Unknown')}\n\n"  # type: ignore[attr-defined]
-            f"Guidelines:\n{state['guidelines']}\n\n"
+            f"Thesis title: {meta.get('title', 'Unknown')}\n"
+            f"Author: {meta.get('author', 'Unknown')}\n"
+            f"Type: {meta.get('thesis_type', 'bachelor')}\n"
+            f"Field: {meta.get('field_of_study', 'Unknown')}\n\n"
+            f"Guidelines:\n{ctx.get('guidelines', '')}\n\n"
             f"Accumulated findings:\n{findings_summary or 'None'}\n\n"
             f"Thesis text (first {max_text_chars} chars):\n{truncated_text}"
         )
@@ -367,25 +369,40 @@ def generate_review(state: AnalysisState) -> AnalysisState:
         scores: list[Score] = [
             Score(
                 criteria=str(
-                    s.get("criteria") or s.get("criterion") or s.get("name") or s.get("category") or "Unknown"  # type: ignore[attr-defined]
+                    s.get("criteria")
+                    or s.get("criterion")
+                    or s.get("name")
+                    or s.get("category")
+                    or "Unknown"
                 ),
-                points=int(str(s.get("points") or s.get("score") or s.get("value") or 0)),  # type: ignore[attr-defined]
-                max_points=int(str(s.get("max_points") or s.get("max") or s.get("maximum") or 10)),  # type: ignore[attr-defined]
+                points=int(
+                    str(s.get("points") or s.get("score") or s.get("value") or 0)
+                ),
+                max_points=int(
+                    str(s.get("max_points") or s.get("max") or s.get("maximum") or 10)
+                ),
             )
             for s in scores_data
         ]
 
-        evaluation_uuid = UUID(state["evaluation_id"])
+        action_uuid = UUID(state["action_id"])
         review = Review(
-            review_id=evaluation_uuid,
-            thesis_id=evaluation_uuid,
+            review_id=action_uuid,
+            thesis_id=action_uuid,
             scores=scores,
-            summary=str(data.get("review_text") or data.get("summary") or data.get("review") or ""),  # type: ignore[attr-defined]
-            recommendation=str(data.get("recommendation") or data.get("decision") or ""),  # type: ignore[attr-defined]
+            summary=str(
+                data.get("review_text")
+                or data.get("summary")
+                or data.get("review")
+                or ""
+            ),
+            recommendation=str(
+                data.get("recommendation") or data.get("decision") or ""
+            ),
         )
 
         analysis = ThesisAnalysis(
-            thesis_id=evaluation_uuid,
+            thesis_id=action_uuid,
             findings=state["findings"],
         )
         final_status = (
@@ -402,9 +419,15 @@ def generate_review(state: AnalysisState) -> AnalysisState:
             score=review.total_percentage(),
         )
 
-        result: AnalysisState = state.copy()
+        result: ActionState = state.copy()
         result["scores"] = scores
-        result["review"] = review
+        # The review *is* this action's structured output — same envelope every
+        # other action fills, so `app` stores them all the same way.
+        result["output"] = {
+            "summary": review.summary,
+            "recommendation": review.recommendation,
+            "total_percentage": review.total_percentage(),
+        }
         result["status"] = final_status.value
         result["error"] = None
         return result

@@ -10,17 +10,18 @@ from src.application.prompts import methodology as prompts
 from src.domain.analysis import Finding, FindingSeverity
 from src.infrastructure.llm_factory import get_llm
 
-from ..state import AnalysisState
+from ..state import ActionState
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
-def analyze_methodology(state: AnalysisState) -> AnalysisState:
+def analyze_methodology(state: ActionState) -> ActionState:
     """Analyze methodology and bibliography, extend state with methodology findings."""
     try:
+        ctx = state["context"]
         llm = get_llm(state["model"])
         max_chars = 12000
-        thesis_text = state["text"][:max_chars]
+        thesis_text = str(ctx.get("text", ""))[:max_chars]
         messages = [
             SystemMessage(  # type: ignore[attr-defined]
                 content=prompts.get_system_prompt(state.get("language", "pl"))
@@ -28,7 +29,7 @@ def analyze_methodology(state: AnalysisState) -> AnalysisState:
             HumanMessage(
                 content=(
                     f"Thesis text:\n{thesis_text}\n\n"
-                    f"Guidelines:\n{state['guidelines']}"
+                    f"Guidelines:\n{ctx.get('guidelines', '')}"
                 )
             ),
         ]
@@ -46,7 +47,7 @@ def analyze_methodology(state: AnalysisState) -> AnalysisState:
             for item in data
         ]
         logger.info("methodology_analysis_complete", finding_count=len(new_findings))
-        result: AnalysisState = state.copy()
+        result: ActionState = state.copy()
         result["findings"] = state["findings"] + new_findings
         result["error"] = None
         return result

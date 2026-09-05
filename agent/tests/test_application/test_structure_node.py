@@ -1,12 +1,13 @@
 """Tests for the analyze_structure node."""
 
-from typing import Any, cast
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from langchain_core.messages import AIMessage
 
 from src.application.nodes.structure import analyze_structure
-from src.application.state import AnalysisState
+from src.application.state import ActionState
+from tests.factories import make_state
 
 _VALID_RESPONSE = (
     '[{"section": "Introduction", "description": "Missing abstract",'
@@ -14,26 +15,18 @@ _VALID_RESPONSE = (
 )
 
 
-def _make_state() -> AnalysisState:
-    return cast(
-        AnalysisState,
-        {
-            "evaluation_id": "550e8400-e29b-41d4-a716-446655440000",
+def _make_state() -> ActionState:
+    return make_state(
+        context={
+            "text": "Chapter 1: Introduction. Chapter 2: Methodology.",
+            "guidelines": "The thesis must have at least five chapters.",
             "metadata": {
                 "author": "Jan Kowalski",
                 "title": "Test Thesis",
                 "year": 2024,
                 "field_of_study": "Computer Science",
             },
-            "text": "Chapter 1: Introduction. Chapter 2: Methodology.",
-            "guidelines": "The thesis must have at least five chapters.",
-            "model": "qwen3:30b-a3b",
-            "findings": [],
-            "scores": [],
-            "review": None,
-            "status": "uploaded",
-            "error": None,
-        },
+        }
     )
 
 

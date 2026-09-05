@@ -5,7 +5,11 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.mentoring.infrastructure.models import MeetingNoteModel, StudentModel
+from src.mentoring.infrastructure.models import (
+    AgentActionModel,
+    MeetingNoteModel,
+    StudentModel,
+)
 
 
 class StudentRepository:
@@ -74,4 +78,42 @@ class MeetingNoteRepository:
             .where(MeetingNoteModel.student_id == student_id)
             .order_by(MeetingNoteModel.occurred_at.desc())
         )
+        return list(result.scalars().all())
+
+
+class AgentActionRepository:
+    """Async store for the AI action log."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def save(self, model: AgentActionModel) -> None:
+        """Persist a new action and commit."""
+        self._session.add(model)
+        await self._session.commit()
+        await self._session.refresh(model)
+
+    async def update(self, model: AgentActionModel) -> None:
+        """Commit in-place changes to an already-persisted action."""
+        await self._session.commit()
+        await self._session.refresh(model)
+
+    async def find_by_id(self, action_id: uuid.UUID) -> AgentActionModel | None:
+        """Return the action with the given id, or None if not found."""
+        return await self._session.get(AgentActionModel, action_id)
+
+    async def find_by_student(
+        self,
+        student_id: uuid.UUID,
+        action_type: str | None = None,
+    ) -> list[AgentActionModel]:
+        """Return a student's actions, newest first, optionally by type."""
+        stmt = (
+            select(AgentActionModel)
+            .where(AgentActionModel.student_id == student_id)
+            .order_by(AgentActionModel.created_at.desc())
+        )
+        if action_type is not None:
+            stmt = stmt.where(AgentActionModel.action_type == action_type)
+        result = await self._session.execute(stmt)
         return list(result.scalars().all())

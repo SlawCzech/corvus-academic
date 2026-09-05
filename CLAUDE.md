@@ -35,8 +35,8 @@ Lokalna aplikacja webowa wspomagająca promotorów i recenzentów w analizie stu
 
 > ⚠ **Projekt jest w trakcie pivotu.** Scope zmienił się z analizy jednego
 > dokumentu na platformę mentoringową (studenci, notatki, predefiniowane akcje AI).
-> Faza 0 (konsolidacja 4 serwisów → 2) i Faza 1 (szkielet domeny mentoringowej)
-> są **zrobione**; akcje AI jeszcze nie istnieją. Decyzje: [docs/adr/](docs/adr/) · plan i status faz:
+> Fazy 0–2 są **zrobione**: konsolidacja serwisów, szkielet domeny mentoringowej
+> i pierwsza akcja AI (`propose_topic`) działająca end-to-end. Decyzje: [docs/adr/](docs/adr/) · plan i status faz:
 > [docs/specs/mentoring-platform-implementation-plan.md](docs/specs/mentoring-platform-implementation-plan.md).
 > Sekcja 9 poniżej (kolejność implementacji) jest **nieaktualna** — zastąpiona tym planem.
 
@@ -47,8 +47,8 @@ Konteksty rozdzielone na poziomie pakietów i schematów Postgresa, nie sieci.
 ```
 app/src/identity/    — autentykacja, użytkownicy, role/permissions, audyt, klucze API
 app/src/document/    — ekstrakcja tekstu z PDF/DOCX (bezstanowa)
-app/src/mentoring/   — studenci, notatki ze spotkań, drafty, log akcji AI
-                       (akcje AI dochodzą w Fazie 2)
+app/src/mentoring/   — studenci, notatki ze spotkań, drafty, akcje AI
+                       (propose_topic działa; reszta akcji w Fazie 3)
 agent/src/           — analysis + review: graf LangGraph, węzły, recenzja
 ```
 
@@ -78,11 +78,15 @@ Użytkownik
   → app :8000
       ├─ /auth/*, /users/*, /admin/*, /settings/*  — obsługiwane in-process
       ├─ /students/*   — roster + notatki ze spotkań, in-process
+      ├─ /students/{id}/actions — akcje AI: kontekst składany w `app`,
+      │                  wysyłka do agent POST /actions, polling, akceptacja
       ├─ POST /extract — ekstrakcja in-process     [PRZEJŚCIOWE, znika w Fazie 3]
       └─ /analysis/* → agent :8002                 [PRZEJŚCIOWE, znika w Fazie 3]
   → Celery task (broker: Redis) → agent-worker
-  → LangGraph (węzły sekwencyjne)
-      → [Struktura] → [Metodologia] → [Wymogi RAG] → [Recenzja]
+      status zapisywany do Postgresa: running → completed | failed
+  → LangGraph — graf zależny od typu akcji
+      → generate_review: [Struktura] → [Metodologia] → [Wymogi RAG] → [Recenzja]
+      → propose_topic:   [Propozycja tematu]
   → model selector
       → Ollama (lokalny, domyślny) LUB Claude/OpenAI przez klucz usera (BYOK)
   → Postgres (zapis raportu)
@@ -131,11 +135,12 @@ corvus/
 │   │   │   └── infrastructure/  # router, models, repositories, secrets,
 │   │   │                          token_store, limiter
 │   │   ├── mentoring/
-│   │   │   ├── domain/       # Student, MeetingNote, StudentStatus, ThesisType,
-│   │   │   │                   ActionType, ActionStatus
-│   │   │   ├── application/  # student_service.py (Caller, reguła własności)
-│   │   │   └── infrastructure/  # router (/students/*), models (4 tabele),
-│   │   │                          repositories
+│   │   │   ├── domain/       # student.py (Student, MeetingNote, ThesisType),
+│   │   │   │                   action.py (AgentAction, ActionType, ActionStatus)
+│   │   │   ├── application/  # student_service (Caller, reguła własności),
+│   │   │   │                   context, agent_client, action_service
+│   │   │   └── infrastructure/  # router (/students/*, .../actions),
+│   │   │                          models (4 tabele), repositories
 │   │   ├── document/         # document.py, extractor.py, router.py [PRZEJŚCIOWY]
 │   │   ├── proxy/            # /analysis/* → agent + /health  [PRZEJŚCIOWY]
 │   │   └── shared/           # settings, database, logging, middleware
@@ -149,9 +154,10 @@ corvus/
 │   │   │   ├── analysis.py   # encje: ThesisAnalysis, Finding
 │   │   │   └── review.py     # encje: Review, Score
 │   │   ├── application/
-│   │   │   ├── graph.py      # definicja grafu LangGraph
-│   │   │   ├── nodes/        # węzły: structure, methodology, requirements, review
-│   │   │   └── tasks.py      # Celery tasks
+│   │   │   ├── graph.py      # build_action_graph — graf per typ akcji
+│   │   │   ├── nodes/        # structure, methodology, requirements, review,
+│   │   │   │                   propose_topic
+│   │   │   └── tasks.py      # Celery: run_action + analyze_thesis [przejściowy]
 │   │   └── infrastructure/
 │   │       ├── llm_factory.py
 │   │       ├── vector_store.py  # RAG dla wytycznych
@@ -430,7 +436,7 @@ Aktualny plan i status faz:
 |---|---|---|
 | 0 | konsolidacja serwisów (gateway+identity+parser → app) | ✅ 2026-09-05 |
 | 1 | model danych mentoringu: Student, MeetingNote, ThesisDraft, AgentAction | ✅ 2026-09-05 |
-| 2 | pierwsza akcja AI end-to-end (`propose_topic`) + naprawa trwałości statusu | ⬜ |
+| 2 | pierwsza akcja AI end-to-end (`propose_topic`) + naprawa trwałości statusu | ✅ 2026-09-05 |
 | 3 | pozostałe akcje; usunięcie przejściowych `/extract` i proxy `/analysis/*` | ⬜ |
 | 4 | BYOK — klucz usera zamiast globalnego | ⬜ |
 | 5 | pgvector: RAG nad wytycznymi | ⬜ |

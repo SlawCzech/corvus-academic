@@ -1,6 +1,6 @@
 # Corvus pivot: AI-first student-mentoring platform — implementation plan
 
-> Status: approved 2026-09-05. Phases 0 and 1 are done; Phase 2 is next.
+> Status: approved 2026-09-05. Phases 0, 1 and 2 are done; Phase 3 is next.
 > Architecture decisions referenced here are recorded as ADRs in [docs/adr/](../adr/):
 > [0001](../adr/0001-ai-first-mentoring-platform-pivot.md) (scope pivot),
 > [0002](../adr/0002-consolidate-services-into-app-and-agent.md) (service consolidation),
@@ -156,7 +156,7 @@ Sequencing follows the user's "AI first, simple interface" preference: Phase 0 i
 |---|---|
 | 0 — service consolidation | ✅ done 2026-09-05 (81 tests, 88.3% cov, ruff clean) |
 | 1 — Student + MeetingNote backbone | ✅ done 2026-09-05 (150 tests, 90.4% cov, ruff clean) |
-| 2 — first AI action end-to-end (`propose_topic`) | ⬜ not started |
+| 2 — first AI action end-to-end (`propose_topic`) | ✅ done 2026-09-05 (310 tests, ruff clean) |
 | 3 — remaining actions | ⬜ not started |
 | 4 — BYOK wiring | ⬜ not started |
 | 5 — pgvector RAG for guidelines | ⬜ not started |
@@ -185,7 +185,22 @@ Deviations from the plan as written, all deliberate:
 5. **Application-layer unit tests added (`test_student_service.py`)**, not just domain/repository/router. Coverage in this repo does not trace async endpoint bodies executed inside `TestClient`'s worker thread — identity's `/auth/login` shows as uncovered for the same reason — so the ownership rule is tested directly as well as over HTTP. That is also how identity's application layer is tested.
 6. **Dockerfile, `docker-compose.override.yml` and `make migrate` updated** to carry the second Alembic lineage — the plan mentioned only `entrypoint.sh`.
 
-**Phase 2 — one full AI action end-to-end (proof slice): `propose_topic`.** Recommended first slice because it needs no document upload, no guidelines file, no accumulated findings — just a `Student` row and optional free text. Exercises the entire new pipeline shape (button → context assembly → HTTP call → Celery → LLM → structured output → poll → human review/accept → `Student.current_topic` update) before any other action reuses it. Also **fixes the status-persistence bug**: `agent`'s task must write `status`/`output` back to its own Postgres row (renamed `AnalysisModel`→`AgentTaskModel`, `+action_type` column) on completion, not rely solely on Celery's Redis result TTL. Files: `agent/src/application/state.py` (→`ActionState`), `nodes/propose_topic.py` + `prompts/propose_topic.py`, `graph.py::build_action_graph`, `tasks.py` (generalize + persist status), `infrastructure/api/router.py` (`POST/GET /actions`), `app/src/mentoring/application/{context,agent_client,action_service}.py`, `app/src/mentoring/infrastructure/router.py` (`POST /students/{id}/actions`, `PATCH .../accept`). Verification: node test mirroring `test_structure_node.py`'s 3-case style, graph test, router test, **a durability regression test** (clear Redis, confirm Postgres still has the right status), manual end-to-end run via `docker compose up`.
+**Phase 2 — one full AI action end-to-end (proof slice): `propose_topic`** — ✅ **done 2026-09-05**. The whole loop runs: button → context assembly in `app` → `POST /actions` → Celery → LangGraph → structured output → poll → accept → `Student.current_topic`. Built as planned, including the status-persistence fix.
+
+Verified against the running stack with the real model (qwen3:30b-a3b on the host's Ollama), not only in tests: a student with one meeting note and the promoter's instruction ("temat z komponentem ilościowym") produced three concrete Polish topics with rationale/scope/risks that visibly used both the note and the instruction; accepting index 1 set `students.current_topic` and stamped `current_topic_set_at`; a second accept returned 409. **The durability fix was then proved by deleting every `celery-task-meta-*` key from Redis — the action still reported `completed` with all three topics.** The legacy `POST /analysis` flow was re-run end-to-end afterwards to confirm the state refactor did not break it. Smoke data deleted; the one pre-existing legacy row was migrated in place (`PENDING` → `pending`, `action_type='generate_review'`) and left alone.
+
+Files: `agent/src/domain/action.py` (new — `ActionType`, `TaskStatus`), `agent/src/infrastructure/{models,repositories,task_status}.py`, `agent/alembic/versions/0002_agent_tasks.py`, `agent/src/application/{state,graph,tasks}.py`, `agent/src/application/nodes/propose_topic.py` + `prompts/propose_topic.py`, `agent/src/infrastructure/api/router.py`; `app/src/mentoring/domain/action.py` (new — `AgentAction`), `app/src/mentoring/application/{context,agent_client,action_service}.py`, `app/src/mentoring/infrastructure/{repositories,router}.py`.
+
+Decisions worth recording:
+
+1. **`analyses` → `agent_tasks`, and the worker writes its own status.** `status` was set once to `"PENDING"` and never updated; the live value came from Celery's Redis backend. Now the task writes `running` → `completed`/`failed` to Postgres and the API reads only from there. The row is also created *before* dispatch, under a caller-generated `task_id`, so a fast task can never outrun the row it must update. Status vocabulary is the mentoring one (`pending|running|completed|failed`); the legacy `/analysis` endpoints translate at the boundary to what the frontend already reads.
+2. **A node error is a failed task, not a done one with an empty result.** Nodes never raise — they record the problem in state and let the graph finish — so an error surviving to the end now marks the task `failed` with that message, instead of returning `done` and an empty review.
+3. **The result payload is trimmed before it is stored.** The task used to return the entire graph state, thesis text and guidelines included; that is now dropped, so a 2 MB thesis no longer travels into JSONB, Redis and the HTTP response.
+4. **`analyze_thesis` was kept as a thin adapter over the new machinery**, rather than being generalized away. It builds the same `ActionState` and runs the same graph, so there is one implementation, while the pre-mentoring upload flow keeps working untouched until Phase 3 deletes it.
+5. **The agent rejects action types it has no graph for (422) instead of queueing them**, and `app` rejects the ones it cannot assemble a context for. The three Phase 3 actions therefore fail fast at the API instead of failing in a worker.
+6. **Dispatch failures are recorded, not swallowed**: a broker or agent outage marks the action `failed` with the reason and returns 503, so a promoter who clicked and got nothing sees why. Conversely, polling never fails because the agent is restarting — the last known state is returned.
+7. **`ActionType`/`ActionStatus` moved out of `mentoring/domain/student.py` into `mentoring/domain/action.py`**, next to the new `AgentAction` entity, now that actions are real rather than a table waiting to be used.
+8. **Ruff in `agent` fixed on the way in** (36 errors → 0), since the phase touched most of that service anyway; prompt-text files get a scoped `E501` exemption because rewrapping a line there changes the prompt. Pyright in `agent/src` is down to the single pre-existing pydantic-settings pattern, and every new module in `app/src/mentoring` is pyright-clean.
 
 **Phase 3 — remaining actions**: `check_progress.py` + prompt, `draft_meeting_note.py` + prompt (new); `evaluate_methodology` reuses `methodology.py`; `generate_review` reuses `build_analysis_graph(mode="full")` unchanged. `POST /students/{id}/drafts` upload endpoint calls `app/src/document/extractor.py` in-process (the merge's concrete payoff — no more `/extract` HTTP hop). One context-assembly function per action type. Verification: per-action node tests + one full `app→agent→back` integration test per action (mirroring `agent/tests/test_application/test_tasks.py`'s eager-Celery setup); manual run of all 5 actions against a student with 2 draft versions.
 
