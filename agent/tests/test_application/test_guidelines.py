@@ -92,7 +92,33 @@ def test_every_chunk_keeps_its_heading() -> None:
 
     for chunk in chunks[1:]:
         assert chunk.text.startswith("## ")
-        assert chunk.section in chunk.text.splitlines()[0]
+        # Subsections carry their parent heading first, then their own.
+        parent = chunk.section.split(" / ")[0]
+        assert parent in chunk.text.splitlines()[0]
+
+
+def test_long_sections_are_split_by_subsection() -> None:
+    """§1 covers a dozen unrelated requirements; retrieving it whole retrieves
+    everything, and then the search means nothing."""
+    chunks = split_into_chunks(load_guidelines(ThesisType.BACHELOR))
+
+    structure = [c for c in chunks if c.section.startswith("1. Required Structure")]
+    assert len(structure) > 5
+    assert any("1.4 Introduction" in c.section for c in structure)
+    # Each subsection still says which section it belongs to.
+    intro = next(c for c in structure if "1.4 Introduction" in c.section)
+    assert intro.text.startswith("## 1. Required Structure")
+    assert "### 1.4 Introduction" in intro.text
+
+
+def test_the_severity_section_is_never_split() -> None:
+    """Half a rulebook retrieved is worse than none of it."""
+    chunks = split_into_chunks(load_guidelines(ThesisType.MASTER_ARTICLE))
+
+    pinned = [c for c in chunks if c.always_include]
+    assert len(pinned) == 1
+    assert "/" not in pinned[0].section
+    assert len(pinned[0].text) > 1000
 
 
 def test_severity_rules_are_always_included() -> None:

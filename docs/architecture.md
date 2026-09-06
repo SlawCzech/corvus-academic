@@ -39,10 +39,13 @@ w profilu, akcja jedzie na jego konto; bez klucza wszystko liczy się na
 lokalnym Ollamie. Klucz jest szyfrowany Fernetem, odszyfrowywany tylko w
 żądaniu, które go użyje, i nigdy nie trafia do stanu grafu ani do bazy akcji.
 **Zrobione (Faza 5):** wytyczne uczelniane nie są już wklejane w całości do
-promptu — leżą w `analysis.guideline_chunks` pocięte na sekcje, z embeddingami,
-i akcja dostaje te fragmenty, które dotyczą jej pracy (plus zawsze sekcję
-definiującą wagi błędów). Bez zaingestowanych wektorów albo bez modelu
-embeddingów wszystko działa jak wcześniej — cały plik.
+promptu — leżą w `analysis.guideline_chunks` pocięte na sekcje i podsekcje,
+z embeddingami, a akcja dostaje te fragmenty, które dotyczą jej pracy (plus
+zawsze sekcję definiującą wagi błędów). Model `nomic-embed-text` jest pobrany
+i wytyczne zaingestowane: 14 chunków dla pracy licencjackiej, 18 dla
+magisterskiej; zapytanie o formatowanie wyciąga inne sekcje niż o bibliografię.
+Bez zaingestowanych wektorów albo bez modelu embeddingów wszystko działa jak
+wcześniej — cały plik.
 **Jeszcze nie:** CI/CD (Faza 6).
 
 ---
@@ -171,9 +174,11 @@ app :8000
        Nieznany typ akcji → 422 przy żądaniu, zamiast zadania, które i tak by padło.
        Wytyczne uczelniane dokłada `agent` (dane statyczne, których jest
        właścicielem) dla akcji ocenianych względem wymogów — nie cały plik,
-       tylko sekcje wyszukane pod tę pracę (pgvector) plus sekcja definiująca
-       wagi błędów, zawsze. Brak ingestii albo brak modelu embeddingów →
-       fallback na cały dokument.
+       tylko sekcje wyszukane pod tę pracę (pgvector, `nomic-embed-text`,
+       768 wymiarów) plus sekcja definiująca wagi błędów, zawsze.
+       Embeddingi liczy `EMBEDDING_BASE_URL`, który nie musi być tym samym
+       serwerem co modele czatu — serwer czatu bywa bez embeddingów.
+       Brak ingestii albo brak modelu → fallback na cały dokument.
 
        Stan grafu (ActionState) jest wspólny dla wszystkich akcji: to, co
        specyficzne dla akcji, siedzi w `context`, dzięki czemu nowa akcja to

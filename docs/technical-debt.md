@@ -130,11 +130,14 @@
 
 ## RAG nad wytycznymi (Faza 5)
 
-- [ ] **Model embeddingów nie jest jeszcze uruchomiony** — endpoint zgodny z Ollamą na
-  hoście nie obsługuje embeddingów (`501 … start it with --embeddings`), a
-  `nomic-embed-text` nie jest pobrany. Wyszukiwanie działa (zweryfikowane na prawdziwej
-  bazie deterministycznymi wektorami), ale dopóki nie ma modelu, akcje dostają cały plik
-  wymogów. Włączenie: `ollama pull nomic-embed-text` + `make ingest-guidelines`.
+- [x] ~~**Model embeddingów nie jest jeszcze uruchomiony**~~ — `nomic-embed-text`
+  pobrany do kontenera `ollama` (2026-09-06), wytyczne zaingestowane (14 + 18 chunków,
+  768 wymiarów), retrieval działa na żywo. Serwer czatu tego użytkownika nie obsługuje
+  embeddingów, dlatego doszło osobne `EMBEDDING_BASE_URL`.
+
+- [ ] **Krótkie podsekcje szumią w wynikach** — chunki po 50-60 znaków (np. „1.1 Strona
+  tytułowa") potrafią trafić do top-k przy zapytaniu, z którym nie mają wiele wspólnego.
+  Do rozważenia: łączenie sąsiednich krótkich podsekcji albo próg minimalnej długości.
 
 - [ ] **Brak indeksu ANN** — kolumna `embedding` jest bezwymiarowa, więc nie da się na
   niej założyć HNSW/IVFFlat. Przy kilkunastu chunkach na typ pracy skan sekwencyjny jest

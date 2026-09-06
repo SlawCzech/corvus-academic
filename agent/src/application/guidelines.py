@@ -40,6 +40,13 @@ _GUIDELINES_FILES: dict[str, str] = {
 _ALWAYS_INCLUDE = re.compile(r"severity|klasyfikacja|scoring", re.IGNORECASE)
 
 _SECTION_RE = re.compile(r"^## ", re.MULTILINE)
+_SUBSECTION_RE = re.compile(r"^### ", re.MULTILINE)
+
+# A section longer than this is split into its own subsections, if it has any.
+# Sized against these documents: §1 "Required Structure" is 1.5-2.7 kB and
+# covers eight unrelated requirements, so retrieving it whole retrieves
+# everything and the search stops meaning anything.
+_MAX_CHUNK_CHARS = 900
 
 # How much of the thesis characterises it well enough to retrieve against.
 # The opening carries the topic, the research problem and the method, which is
@@ -102,11 +109,46 @@ def split_into_chunks(document: str) -> list[GuidelineChunk]:
         if not body:
             continue
         heading = body.splitlines()[0].strip()
+        pinned = bool(_ALWAYS_INCLUDE.search(heading))
+        chunks.extend(_section_chunks(heading, body, pinned))
+    return chunks
+
+
+def _section_chunks(
+    heading: str, body: str, pinned: bool
+) -> list[GuidelineChunk]:
+    """Split one `##` section, by its `###` subsections when it is long.
+
+    Pinned sections are never split: the severity rules are one rulebook, and
+    half of it retrieved is worse than none. Every subsection keeps its parent
+    heading, so a retrieved rule still says which section it belongs to.
+    """
+    whole = GuidelineChunk(section=heading, text=f"## {body}", always_include=pinned)
+    if pinned or len(body) <= _MAX_CHUNK_CHARS:
+        return [whole]
+
+    parts = _SUBSECTION_RE.split(body)
+    if len(parts) == 1:
+        return [whole]
+
+    intro = parts[0].strip()
+    chunks: list[GuidelineChunk] = []
+    if intro != heading:
+        chunks.append(
+            GuidelineChunk(section=heading, text=f"## {intro}", always_include=False)
+        )
+    for sub in parts[1:]:
+        sub_body = sub.strip()
+        if not sub_body:
+            continue
+        sub_heading = sub_body.splitlines()[0].strip()
         chunks.append(
             GuidelineChunk(
-                section=heading,
-                text=f"## {body}",
-                always_include=bool(_ALWAYS_INCLUDE.search(heading)),
+                section=f"{heading} / {sub_heading}",
+                # The parent heading travels with the subsection: a rule
+                # retrieved on its own must still be citable.
+                text=f"## {heading}\n### {sub_body}",
+                always_include=False,
             )
         )
     return chunks

@@ -20,10 +20,13 @@ def get_embedder() -> OllamaEmbeddings:
     requirements and over the student's thesis, which is exactly the material
     the local-first default exists to keep local. A user's own provider key
     pays for the review, not for indexing someone's unpublished thesis.
+
+    Served from `EMBEDDING_BASE_URL`, which is not necessarily where the chat
+    models live — a chat server may not implement embeddings at all.
     """
     return OllamaEmbeddings(
         model=settings.embedding_model,
-        base_url=settings.ollama_base_url,
+        base_url=settings.embedding_base_url,
     )
 
 
