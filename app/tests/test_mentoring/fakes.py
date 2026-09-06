@@ -8,6 +8,7 @@ import httpx
 from docx import Document as DocxDocument
 
 from src.mentoring.application.agent_client import (
+    BYOK,
     AgentActionStatus,
     AgentClient,
     AgentUnavailableError,
@@ -38,6 +39,7 @@ class FakeAgentClient(AgentClient):
         token: str,
         model: str | None = None,
         language: str = "pl",
+        byok: BYOK | None = None,
     ) -> str:
         if self.unavailable:
             raise AgentUnavailableError("connection refused")
@@ -50,6 +52,7 @@ class FakeAgentClient(AgentClient):
                 "token": token,
                 "model": model,
                 "language": language,
+                "byok": byok,
             }
         )
         return self.task_id

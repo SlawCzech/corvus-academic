@@ -46,13 +46,21 @@ class UserRepository:
             await self._session.commit()
 
     async def update_api_key(
-        self, user_id: uuid.UUID, encrypted: str | None
+        self,
+        user_id: uuid.UUID,
+        encrypted: str | None,
+        provider: str | None = None,
     ) -> None:
-        """Store the encrypted API key on the user record and commit."""
+        """Store (or clear) the user's encrypted API key and its provider.
+
+        Key and provider move together: a key with no provider is unusable,
+        and a provider with no key is a lie about what will run.
+        """
         user = await self._session.get(UserModel, user_id)
         if user is None:
             return
         user.api_key_encrypted = encrypted
+        user.api_key_provider = provider if encrypted is not None else None
         await self._session.commit()
 
     async def update_password(self, user_id: uuid.UUID, hashed: str) -> None:

@@ -19,7 +19,9 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.identity.application.api_keys import load_api_key
 from src.identity.domain.user import Permission, User
+from src.identity.infrastructure.repositories import UserRepository
 from src.identity.infrastructure.router import get_current_user
 from src.mentoring.application.action_service import (
     ActionNotFoundError,
@@ -27,6 +29,7 @@ from src.mentoring.application.action_service import (
     UnsupportedActionError,
 )
 from src.mentoring.application.agent_client import (
+    BYOK,
     AgentClient,
     AgentUnavailableError,
 )
@@ -92,6 +95,21 @@ def get_bearer_token(
 ) -> str:
     """The caller's raw token, forwarded to `agent` so its own auth still works."""
     return credentials.credentials
+
+
+async def get_byok(
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db_session),
+) -> BYOK | None:
+    """Decrypt the caller's own provider key, for this request only.
+
+    Resolved on the endpoint that dispatches work and nowhere else: listing
+    students has no business decrypting anybody's key.
+    """
+    api_key = await load_api_key(UserRepository(session), user.id)
+    if api_key is None:
+        return None
+    return BYOK(provider=api_key.provider, api_key=api_key.key)
 
 
 def get_agent_client(request: Request) -> AgentClient:
@@ -423,12 +441,15 @@ async def trigger_action(
     body: ActionTriggerRequest,
     caller: Caller = Depends(get_caller),
     token: str = Depends(get_bearer_token),
+    byok: BYOK | None = Depends(get_byok),
     svc: ActionService = Depends(get_action_service),
 ) -> ActionResponse:
     """Run one AI action for a student and return the queued action record.
 
     Returns immediately: the work happens in the agent's Celery worker, and
-    the caller polls the action's own endpoint for the outcome.
+    the caller polls the action's own endpoint for the outcome. When the
+    promoter has stored their own provider key, the run goes on their
+    account; otherwise it goes to the self-hosted model.
     """
     try:
         action = await svc.trigger(
@@ -439,6 +460,7 @@ async def trigger_action(
             detail=body.detail,
             model=body.model,
             language=body.language,
+            byok=byok,
         )
     except StudentNotFoundError as exc:
         raise _not_found(exc) from exc

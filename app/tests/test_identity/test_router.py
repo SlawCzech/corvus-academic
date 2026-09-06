@@ -183,7 +183,19 @@ def test_admin_login_events_forbidden_for_promotor(client: TestClient) -> None:
     assert resp.status_code == 403
 
 
-# ---------- api-key ----------
+# ---------- api-key (BYOK) ----------
+
+
+def test_promotor_can_set_their_own_key(client: TestClient) -> None:
+    """The key is the promoter's own and is billed to their account."""
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    resp = client.patch(
+        "/settings/api-key",
+        json={"api_key": "sk-openai-test-key", "provider": "openai"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {"configured": True, "provider": "openai"}
 
 
 def test_set_api_key_admin_success(client: TestClient) -> None:
@@ -194,17 +206,17 @@ def test_set_api_key_admin_success(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 200
-    assert resp.json() == {"configured": True}
+    assert resp.json() == {"configured": True, "provider": "claude"}
 
 
-def test_set_api_key_promotor_forbidden(client: TestClient) -> None:
+def test_unsupported_provider_is_rejected(client: TestClient) -> None:
     token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
     resp = client.patch(
         "/settings/api-key",
-        json={"api_key": "sk-openai-test", "provider": "openai"},
+        json={"api_key": "sk-something", "provider": "deepmind"},
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 422
 
 
 def test_response_never_contains_plain_key(client: TestClient) -> None:
@@ -226,10 +238,10 @@ def test_get_status_not_configured(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 200
-    assert resp.json() == {"configured": False}
+    assert resp.json() == {"configured": False, "provider": None}
 
 
-def test_get_status_configured_after_set(client: TestClient) -> None:
+def test_status_reports_the_provider(client: TestClient) -> None:
     token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
     client.patch(
         "/settings/api-key",
@@ -241,7 +253,29 @@ def test_get_status_configured_after_set(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 200
-    assert resp.json() == {"configured": True}
+    assert resp.json() == {"configured": True, "provider": "claude"}
+
+
+def test_key_can_be_removed(client: TestClient) -> None:
+    """Removing the key falls back to the self-hosted model, not to nothing."""
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    headers = {"Authorization": f"Bearer {token}"}
+    client.patch(
+        "/settings/api-key",
+        json={"api_key": "sk-openai-key", "provider": "openai"},
+        headers=headers,
+    )
+
+    resp = client.delete("/settings/api-key", headers=headers)
+
+    assert resp.status_code == 200
+    assert resp.json() == {"configured": False, "provider": None}
+    status = client.get("/settings/api-key/status", headers=headers).json()
+    assert status["configured"] is False
+
+
+def test_status_requires_auth(client: TestClient) -> None:
+    assert client.get("/settings/api-key/status").status_code == 401
 
 
 # ---------- invalid token ----------

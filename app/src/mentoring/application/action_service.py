@@ -14,6 +14,7 @@ from uuid import UUID
 import structlog
 
 from src.mentoring.application.agent_client import (
+    BYOK,
     AgentClient,
     AgentUnavailableError,
 )
@@ -96,8 +97,14 @@ class ActionService:
         detail: str | None = None,
         model: str | None = None,
         language: str = "pl",
+        byok: BYOK | None = None,
     ) -> AgentAction:
-        """Record and dispatch one action for a student the caller can see."""
+        """Record and dispatch one action for a student the caller can see.
+
+        `byok` is the caller's own provider key when they have set one. It is
+        forwarded and never written to the action row — the row is what the
+        promoter can read back later.
+        """
         student = await self._students.get(caller, student_id)
         context, input_ref = await self._assemble(caller, student, action_type, detail)
 
@@ -126,6 +133,7 @@ class ActionService:
                 token=token,
                 model=model,
                 language=language,
+                byok=byok,
             )
         except AgentUnavailableError as exc:
             # The attempt stays on the record — a promoter who clicked and got
@@ -149,6 +157,8 @@ class ActionService:
             action_type=str(action_type),
             task_id=task_id,
             student_id=str(student.id),
+            # Which account pays for this run; never the key itself.
+            byok_provider=byok.provider if byok else None,
         )
         return _to_domain(record)
 

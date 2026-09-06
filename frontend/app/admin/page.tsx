@@ -1,13 +1,9 @@
-import AdminApiKeySection from "@/components/AdminApiKeySection"
-
 export default function AdminPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
       <h1 className="mb-8 text-2xl font-bold text-gray-900">Admin Panel</h1>
 
       <div className="space-y-12">
-        <AdminApiKeySection />
-
         <section data-testid="guidelines-section">
           <h2 className="mb-4 text-lg font-semibold text-gray-900">
             Guidelines

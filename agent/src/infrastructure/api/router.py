@@ -16,7 +16,7 @@ from pydantic import BaseModel, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.graph import IMPLEMENTED_ACTIONS
-from src.domain.action import TaskStatus
+from src.domain.action import SUPPORTED_PROVIDERS, TaskStatus
 from src.infrastructure.api.auth import Role, TokenUser, verify_access_token
 from src.infrastructure.celery_app import celery_app
 from src.infrastructure.database import get_db_session
@@ -56,6 +56,26 @@ def get_task_repo(
 # ---------- schemas ----------
 
 
+class BYOKConfig(BaseModel):
+    """The caller's own provider key, decrypted by `app` for this one call.
+
+    It is never stored here: it goes to the worker as a task argument and
+    lives only as long as the graph run.
+    """
+
+    provider: str
+    api_key: str
+
+    @field_validator("provider")
+    @classmethod
+    def validate_provider(cls, v: str) -> str:
+        if v not in SUPPORTED_PROVIDERS:
+            raise ValueError(
+                f"provider must be one of {sorted(SUPPORTED_PROVIDERS)}, got {v!r}"
+            )
+        return v
+
+
 class ActionRequest(BaseModel):
     """One AI action, with its context already assembled by `app`."""
 
@@ -65,6 +85,7 @@ class ActionRequest(BaseModel):
     context: dict[str, Any] = {}
     model: str = "qwen3:30b-a3b"
     language: str = "pl"
+    byok: BYOKConfig | None = None
 
     @field_validator("action_type")
     @classmethod
@@ -128,6 +149,13 @@ async def submit_action(
     )
     await repo.save(record)
 
+    kwargs: dict[str, Any] = {"model": body.model, "language": body.language}
+    if body.byok is not None:
+        # Separate task arguments, never part of the context: the context is
+        # what ends up in the graph state and therefore in the stored result.
+        kwargs["provider"] = body.byok.provider
+        kwargs["api_key"] = body.byok.api_key
+
     try:
         celery_app.send_task(
             _ACTION_TASK,
@@ -137,7 +165,7 @@ async def submit_action(
                 str(body.student_id),
                 body.context,
             ],
-            kwargs={"model": body.model, "language": body.language},
+            kwargs=kwargs,
             task_id=task_id,
         )
     except Exception as exc:
@@ -155,6 +183,7 @@ async def submit_action(
         action_type=body.action_type,
         student_id=str(body.student_id),
         model=body.model,
+        byok_provider=body.byok.provider if body.byok else None,
     )
     return ActionTaskResponse(task_id=task_id)
 

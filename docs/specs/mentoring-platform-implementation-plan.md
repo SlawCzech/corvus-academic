@@ -1,6 +1,6 @@
 # Corvus pivot: AI-first student-mentoring platform — implementation plan
 
-> Status: approved 2026-09-05. Phases 0-3 are done; Phase 4 (BYOK) is next.
+> Status: approved 2026-09-05. Phases 0-4 are done; Phase 5 (pgvector RAG) is next.
 > Architecture decisions referenced here are recorded as ADRs in [docs/adr/](../adr/):
 > [0001](../adr/0001-ai-first-mentoring-platform-pivot.md) (scope pivot),
 > [0002](../adr/0002-consolidate-services-into-app-and-agent.md) (service consolidation),
@@ -158,7 +158,7 @@ Sequencing follows the user's "AI first, simple interface" preference: Phase 0 i
 | 1 — Student + MeetingNote backbone | ✅ done 2026-09-05 (150 tests, 90.4% cov, ruff clean) |
 | 2 — first AI action end-to-end (`propose_topic`) | ✅ done 2026-09-05 (310 tests, ruff clean) |
 | 3 — remaining actions + drafts + removing the transitional endpoints | ✅ done 2026-09-06 |
-| 4 — BYOK wiring | ⬜ not started |
+| 4 — BYOK wiring | ✅ done 2026-09-06 |
 | 5 — pgvector RAG for guidelines | ⬜ not started |
 | 6 — deploy/CI groundwork | ⬜ not started |
 
@@ -222,7 +222,18 @@ Decisions worth recording:
 8. **One JSON helper for every node** (`agent/src/application/json_output.py`): four copies of "strip the markdown fence, tolerate list content, parse" existed before the three new nodes would have made seven.
 9. **Frontend rewritten around students** — `/students` and `/students/[id]` (topic, versions, notes, actions with polling and accept), `useAnalysis` → `useAction`, `GATEWAY_URL`/`PARSER_URL` → one `APP_URL`, and one `lib/appProxy.ts` behind every route handler so a refusal's own explanation reaches the UI. The old `/analysis` pages were deleted with the endpoints they called; `AnalysisResult` survives as the renderer for the two findings-based actions.
 
-**Phase 4 — BYOK wiring** (§ above). Verification: `llm_factory` tests for the BYOK-present branch, the admin-only→any-user auth-change test, and a test asserting the key never appears in persisted JSON output.
+**Phase 4 — BYOK wiring** — ✅ **done 2026-09-06**. Built as the § above describes: the key stops being an inert admin field and becomes the thing that decides whose account an action runs on.
+
+Verified against the running stack, including the case that matters: a **promoter** (not an admin) stored a Claude key and triggered `propose_topic`; the run went to Anthropic and came back `failed` with *"API key is invalid"* — the deliberately fake key proves the call really left on that account rather than quietly falling back. Removing the key and re-running the same action completed on the self-hosted model with three topics. The stored column holds a Fernet token (`gAAAAAB…`, no plaintext), and neither `agent_actions.output`, `error` nor `input_ref` contains the key.
+
+Decisions worth recording:
+
+1. **The key lives in a ContextVar for the duration of one task, not in the graph state.** State is what `_result_payload` serialises and what LangGraph would checkpoint; a key placed there is a key one whitelist change away from being persisted. `use_credentials()` sets it around the graph run and resets it in a `finally`, so a prefork worker cannot hand one promoter's key to the next task. Nodes still call `get_llm()` and know nothing about any of it.
+2. **The key travels as its own Celery argument**, never inside `context` — same reasoning one level up: `context` becomes state.
+3. **`model` applies only to the self-hosted path.** It names an Ollama tag; handing `qwen3:30b-a3b` to Anthropic would just fail, so BYOK runs use a per-provider default (`claude-sonnet-4-20250514`, `gpt-4o`). Choosing between a provider's models is not wired — noted as debt.
+4. **A key that cannot be used is treated as absent, not as an error**: no provider stored (rows from before this phase), or an undecryptable token after a `FERNET_KEY` rotation. The action still runs, on the self-hosted model, and the reason is logged.
+5. **`PATCH /settings/api-key` is any authenticated user**, and gained `DELETE` — a key you cannot remove is a key you cannot rotate. The provider is validated against the same two-provider list the agent enforces.
+6. **The UI moved from the admin panel to the profile page**, which is what "bring your own key" means: it shows whether a key is stored and for which provider, never the key itself.
 
 **Phase 5 — pgvector RAG for guidelines**: embeddings table lives in `agent`'s own `analysis` schema (guidelines are static files `agent` already owns) — `guideline_chunks(id, thesis_type, chunk_text, embedding vector(N))`, ingestion script, `guidelines.py::retrieve_relevant_guidelines()` used by `check_requirements`/`generate_review` instead of loading the whole file.
 

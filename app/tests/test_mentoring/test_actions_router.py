@@ -369,3 +369,77 @@ def test_review_action_is_queued_once_a_draft_exists(
 
     assert body["status"] == "pending"
     assert agent.submitted[0]["action_type"] == "generate_review"
+
+
+# ---------- the promoter's own key ----------
+
+
+def _store_key(
+    client: TestClient, headers: dict[str, str], provider: str, key: str
+) -> None:
+    resp = client.patch(
+        "/settings/api-key",
+        json={"api_key": key, "provider": provider},
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+
+
+def test_a_stored_key_is_used_for_the_run(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    """The promoter's own key, decrypted for this request and forwarded."""
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+    _store_key(client, headers, "claude", "sk-ant-user-key")
+
+    _trigger(client, headers, student_id)
+
+    sent = agent.submitted[0]["byok"]
+    assert sent is not None
+    assert sent.provider == "claude"
+    assert sent.api_key == "sk-ant-user-key"
+
+
+def test_without_a_stored_key_the_run_stays_self_hosted(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+
+    _trigger(client, headers, student_id)
+
+    assert agent.submitted[0]["byok"] is None
+
+
+def test_one_promotors_key_is_not_used_for_another(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    """Keys are per user: whoever triggers the action pays for it."""
+    theirs = login(client, OTHER_PROMOTOR_EMAIL, OTHER_PROMOTOR_PASSWORD)
+    _store_key(client, theirs, "openai", "sk-openai-their-key")
+
+    mine = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, mine)
+    _trigger(client, mine, student_id)
+
+    assert agent.submitted[0]["byok"] is None
+
+
+def test_the_key_never_appears_in_the_action_response(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+    _store_key(client, headers, "claude", "sk-ant-user-key")
+
+    resp = client.post(
+        f"/students/{student_id}/actions",
+        json={"action_type": "propose_topic"},
+        headers=headers,
+    )
+    assert resp.status_code == 202
+    assert "sk-ant-user-key" not in resp.text
+
+    history = client.get(f"/students/{student_id}/actions", headers=headers)
+    assert "sk-ant-user-key" not in history.text

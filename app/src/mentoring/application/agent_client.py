@@ -22,6 +22,18 @@ class AgentUnavailableError(Exception):
 
 
 @dataclass(frozen=True)
+class BYOK:
+    """The caller's own provider key, sent for one action only.
+
+    Never persisted on this side of the wire and never logged: `app` decrypts
+    it per request, hands it over, and forgets it.
+    """
+
+    provider: str
+    api_key: str
+
+
+@dataclass(frozen=True)
 class AgentActionStatus:
     """What the agent reports about one dispatched action."""
 
@@ -46,6 +58,7 @@ class AgentClient:
         token: str,
         model: str | None = None,
         language: str = "pl",
+        byok: BYOK | None = None,
     ) -> str:
         """Queue an action and return the agent's task id."""
         payload: dict[str, Any] = {
@@ -57,6 +70,8 @@ class AgentClient:
         }
         if model is not None:
             payload["model"] = model
+        if byok is not None:
+            payload["byok"] = {"provider": byok.provider, "api_key": byok.api_key}
 
         data = await self._post("/actions", payload, token)
         return str(data["task_id"])

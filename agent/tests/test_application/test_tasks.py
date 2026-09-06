@@ -1,5 +1,6 @@
 """Tests for the run_action Celery task."""
 
+import json
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -9,6 +10,7 @@ from celery.exceptions import Retry
 from src.application.tasks import _result_payload, run_action
 from src.domain.action import ActionType, TaskStatus
 from src.infrastructure.celery_app import celery_app
+from src.infrastructure.llm_factory import current_credentials
 from tests.factories import ACTION_ID, STUDENT_ID
 
 _TEXT = "Chapter 1: Introduction. Chapter 2: Methodology."
@@ -238,3 +240,80 @@ def test_other_actions_are_not_given_guidelines() -> None:
     loader.assert_not_called()
     call_state: dict[str, Any] = graph.invoke.call_args[0][0]
     assert "guidelines" not in call_state["context"]
+
+
+# ---------- the user's own key ----------
+
+
+def test_credentials_are_in_effect_while_the_graph_runs() -> None:
+    """Nodes call get_llm() with no arguments, so the key travels out of band."""
+    seen: list[Any] = []
+
+    def _capture(state: dict[str, Any]) -> dict[str, Any]:
+        seen.append(current_credentials())
+        return _final_state()
+
+    graph = MagicMock()
+    graph.invoke.side_effect = _capture
+
+    with patch("src.application.tasks.build_action_graph", return_value=graph):
+        run_action.apply(
+            args=(ACTION_ID, ActionType.PROPOSE_TOPIC, STUDENT_ID, {}),
+            kwargs={"provider": "claude", "api_key": "sk-user-key"},
+        )
+
+    assert seen[0] is not None
+    assert seen[0].provider == "claude"
+    assert seen[0].api_key == "sk-user-key"
+    # …and only while it runs.
+    assert current_credentials() is None
+
+
+def test_the_key_never_enters_the_graph_state() -> None:
+    """State is what gets serialised into the stored result."""
+    graph = _mock_graph()
+
+    with patch("src.application.tasks.build_action_graph", return_value=graph):
+        run_action.apply(
+            args=(
+                ACTION_ID,
+                ActionType.PROPOSE_TOPIC,
+                STUDENT_ID,
+                {"detail": "coś"},
+            ),
+            kwargs={"provider": "claude", "api_key": "sk-user-key"},
+        )
+
+    state: dict[str, Any] = graph.invoke.call_args[0][0]
+    assert "sk-user-key" not in json.dumps(state, default=str)
+
+
+def test_the_key_never_reaches_the_stored_result(status_writes: MagicMock) -> None:
+    graph = _mock_graph()
+
+    with patch("src.application.tasks.build_action_graph", return_value=graph):
+        result = run_action.apply(
+            args=(ACTION_ID, ActionType.PROPOSE_TOPIC, STUDENT_ID, {}),
+            kwargs={"provider": "claude", "api_key": "sk-user-key"},
+        )
+
+    assert "sk-user-key" not in json.dumps(result.get(), default=str)
+    stored = status_writes.call_args_list[-1].kwargs["result"]
+    assert "sk-user-key" not in json.dumps(stored, default=str)
+
+
+def test_without_a_key_nothing_is_in_effect() -> None:
+    """Ollama is the fallback: no key, no credentials, no change of model."""
+    seen: list[Any] = []
+
+    def _capture(state: dict[str, Any]) -> dict[str, Any]:
+        seen.append(current_credentials())
+        return _final_state()
+
+    graph = MagicMock()
+    graph.invoke.side_effect = _capture
+
+    with patch("src.application.tasks.build_action_graph", return_value=graph):
+        run_action.apply(args=(ACTION_ID, ActionType.PROPOSE_TOPIC, STUDENT_ID, {}))
+
+    assert seen == [None]

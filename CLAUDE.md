@@ -35,8 +35,9 @@ Lokalna aplikacja webowa wspomagająca promotorów i recenzentów w analizie stu
 
 > ⚠ **Projekt jest w trakcie pivotu.** Scope zmienił się z analizy jednego
 > dokumentu na platformę mentoringową (studenci, notatki, predefiniowane akcje AI).
-> Fazy 0–3 są **zrobione**: konsolidacja serwisów, domena mentoringowa, sześć akcji
-> AI działających end-to-end i frontend oparty o studentów. Decyzje: [docs/adr/](docs/adr/) · plan i status faz:
+> Fazy 0–4 są **zrobione**: konsolidacja serwisów, domena mentoringowa, sześć akcji
+> AI, frontend oparty o studentów i BYOK (klucz promotora zamiast globalnego).
+> Decyzje: [docs/adr/](docs/adr/) · plan i status faz:
 > [docs/specs/mentoring-platform-implementation-plan.md](docs/specs/mentoring-platform-implementation-plan.md).
 > Sekcja 9 poniżej (kolejność implementacji) jest **nieaktualna** — zastąpiona tym planem.
 
@@ -91,7 +92,10 @@ Użytkownik
       → evaluate_methodology: [Metodologia]
       → draft_meeting_note:   [Szkic notatki]
   → model selector
-      → Ollama (lokalny, domyślny) LUB Claude/OpenAI przez klucz usera (BYOK)
+      → klucz promotora (BYOK), jeśli go zapisał — Claude albo OpenAI;
+        w przeciwnym razie Ollama (lokalny, domyślny)
+        klucz jedzie osobnym argumentem taska i żyje w ContextVar tylko na
+        czas przebiegu grafu — nigdy w stanie, który trafia do bazy
   → Postgres (zapis raportu)
   → frontend (polling → wyświetlenie raportu)
 ```
@@ -424,6 +428,8 @@ Zasady:
 - `.env` zawsze w `.gitignore`
 - Klucze produkcyjne wyłącznie w GitHub Secrets i Jenkins Credentials
 - Klucze API użytkowników w Postgres jako zaszyfrowany `text`, nigdy plain text
+- Klucz usera (BYOK) odszyfrowywany wyłącznie w żądaniu, które go zaraz użyje;
+  do agenta jedzie osobnym argumentem taska, nigdy w kontekście ani w stanie grafu
 - `FERNET_KEY` generowany raz: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
 
 ---
@@ -442,7 +448,7 @@ Aktualny plan i status faz:
 | 1 | model danych mentoringu: Student, MeetingNote, ThesisDraft, AgentAction | ✅ 2026-09-05 |
 | 2 | pierwsza akcja AI end-to-end (`propose_topic`) + naprawa trwałości statusu | ✅ 2026-09-05 |
 | 3 | pozostałe akcje (w tym `defence_questions`), upload wersji pracy, frontend mentoringowy; usunięcie przejściowych endpointów | ✅ 2026-09-06 |
-| 4 | BYOK — klucz usera zamiast globalnego | ⬜ |
+| 4 | BYOK — klucz usera zamiast globalnego | ✅ 2026-09-06 |
 | 5 | pgvector: RAG nad wytycznymi | ⬜ |
 | 6 | deploy + CI/CD (GitHub Actions, Jenkins, pre-commit) | ⬜ |
 

@@ -1,5 +1,6 @@
 """Integration tests for the agent HTTP API."""
 
+import json
 import os
 import uuid
 from collections.abc import AsyncGenerator, Generator
@@ -290,3 +291,59 @@ async def test_running_task_is_reported_as_running(
 
     assert resp.json()["status"] == "running"
     assert resp.json()["result"] is None
+
+
+# ---------- the caller's own key ----------
+
+
+def test_byok_travels_as_task_arguments_not_context(
+    client: TestClient, dispatch: MagicMock
+) -> None:
+    """The context ends up in the state, and the state ends up stored."""
+    body = {
+        **_ACTION_BODY,
+        "byok": {"provider": "claude", "api_key": "sk-user-key"},
+    }
+    resp = client.post("/actions", json=body, headers=_auth(PROMOTOR_ID, "promotor"))
+    assert resp.status_code == 202
+
+    call = dispatch.call_args.kwargs
+    assert call["kwargs"]["provider"] == "claude"
+    assert call["kwargs"]["api_key"] == "sk-user-key"
+    assert "sk-user-key" not in json.dumps(call["args"])
+
+
+def test_action_without_byok_sends_no_credentials(
+    client: TestClient, dispatch: MagicMock
+) -> None:
+    _submit(client, _auth(PROMOTOR_ID, "promotor"))
+
+    assert "api_key" not in dispatch.call_args.kwargs["kwargs"]
+
+
+def test_unsupported_provider_is_rejected(
+    client: TestClient, dispatch: MagicMock
+) -> None:
+    body = {**_ACTION_BODY, "byok": {"provider": "deepmind", "api_key": "k"}}
+    resp = client.post("/actions", json=body, headers=_auth(PROMOTOR_ID, "promotor"))
+
+    assert resp.status_code == 422
+    dispatch.assert_not_called()
+
+
+async def test_the_key_is_not_stored_on_the_task_row(
+    client: TestClient, db_session: AsyncSession, dispatch: MagicMock
+) -> None:
+    body = {
+        **_ACTION_BODY,
+        "byok": {"provider": "claude", "api_key": "sk-user-key"},
+    }
+    task_id = client.post(
+        "/actions", json=body, headers=_auth(PROMOTOR_ID, "promotor")
+    ).json()["task_id"]
+
+    stored = await AgentTaskRepository(db_session).find_by_task_id(task_id)
+    assert stored is not None
+    assert "sk-user-key" not in json.dumps(
+        {"result": stored.result, "error": stored.error}, default=str
+    )

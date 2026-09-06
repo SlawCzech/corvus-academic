@@ -1,5 +1,6 @@
 import { cookies } from "next/headers"
 import { decodeToken } from "@/lib/auth"
+import ApiKeySection from "@/components/ApiKeySection"
 import ChangePasswordForm from "@/components/ChangePasswordForm"
 
 export default async function ProfilePage() {
@@ -23,6 +24,13 @@ export default async function ProfilePage() {
             <dd className="text-gray-900 dark:text-gray-100">{payload?.role ?? "—"}</dd>
           </div>
         </dl>
+      </section>
+
+      <section className="mb-10">
+        <h2 className="mb-4 text-base font-semibold text-gray-900 dark:text-gray-100">
+          Własny klucz API
+        </h2>
+        <ApiKeySection />
       </section>
 
       <section>

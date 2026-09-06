@@ -12,6 +12,7 @@ from src.application.guidelines import load_guidelines
 from src.application.state import ActionState
 from src.domain.action import ActionType, TaskStatus
 from src.domain.analysis import ThesisType
+from src.infrastructure.llm_factory import ModelCredentials, use_credentials
 from src.infrastructure.task_status import record_task_status
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
@@ -145,13 +146,24 @@ def run_action(
     context: dict[str, Any],
     model: str = "qwen3:30b-a3b",
     language: str = "pl",
+    provider: str | None = None,
+    api_key: str | None = None,
 ) -> dict[str, Any]:
     """Run one AI action for one student.
 
     `context` arrives fully assembled from `app` — the agent never calls back
     for data mid-task, so a worker's job never depends on `app` being up.
+
+    The user's own provider key, when they brought one, arrives as its own
+    argument and is held only for the duration of the graph run. It is never
+    put into the state, which is what gets serialised into the stored result.
     """
     task_id: str | None = self.request.id
+    credentials = (
+        ModelCredentials(provider=provider, api_key=api_key)
+        if provider and api_key
+        else None
+    )
     logger.info(
         "run_action.started",
         action_id=action_id,
@@ -159,19 +171,22 @@ def run_action(
         student_id=student_id,
         task_id=task_id,
         model=model,
+        # The provider is worth knowing; the key is never logged.
+        byok_provider=credentials.provider if credentials else None,
     )
     try:
-        payload = _run_graph(
-            task_id,
-            _initial_state(
-                action_id,
-                action_type,
-                student_id,
-                _with_guidelines(action_type, context),
-                model,
-                language,
-            ),
-        )
+        with use_credentials(credentials):
+            payload = _run_graph(
+                task_id,
+                _initial_state(
+                    action_id,
+                    action_type,
+                    student_id,
+                    _with_guidelines(action_type, context),
+                    model,
+                    language,
+                ),
+            )
         logger.info("run_action.completed", action_id=action_id)
         return payload
     except Exception as exc:

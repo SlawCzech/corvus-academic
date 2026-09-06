@@ -6,9 +6,13 @@ from datetime import UTC, datetime
 import structlog
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.identity.application.api_keys import (
+    SUPPORTED_PROVIDERS,
+    get_api_key_status,
+)
 from src.identity.application.auth import (
     create_access_token,
     create_refresh_token,
@@ -126,12 +130,22 @@ class ChangePasswordRequest(BaseModel):
 
 
 class ApiKeyRequest(BaseModel):
-    api_key: str
+    api_key: str = Field(min_length=8)
     provider: str
+
+    @field_validator("provider")
+    @classmethod
+    def validate_provider(cls, v: str) -> str:
+        if v not in SUPPORTED_PROVIDERS:
+            raise ValueError(
+                f"provider must be one of {sorted(SUPPORTED_PROVIDERS)}, got {v!r}"
+            )
+        return v
 
 
 class ApiKeyStatusResponse(BaseModel):
     configured: bool
+    provider: str | None = None
 
 
 class LoginEventResponse(BaseModel):
@@ -332,25 +346,42 @@ async def change_password(
 @router.patch("/settings/api-key", response_model=ApiKeyStatusResponse)
 async def set_api_key(
     body: ApiKeyRequest,
-    user: User = Depends(require_admin),
-    repo: UserRepository = Depends(get_user_repo),
-) -> ApiKeyStatusResponse:
-    """Encrypt and persist an AI provider API key — ADMIN only."""
-    encrypted = get_secret_service().encrypt(body.api_key)
-    await repo.update_api_key(user.id, encrypted)
-    logger.info("api_key_stored", user_id=str(user.id), provider=body.provider)
-    return ApiKeyStatusResponse(configured=True)
-
-
-@router.get("/settings/api-key/status", response_model=ApiKeyStatusResponse)
-async def get_api_key_status(
     user: User = Depends(get_current_user),
     repo: UserRepository = Depends(get_user_repo),
 ) -> ApiKeyStatusResponse:
-    """Return whether the current user has an API key configured."""
-    db_user = await repo.find_by_id(user.id)
-    configured = db_user is not None and db_user.api_key_encrypted is not None
-    return ApiKeyStatusResponse(configured=configured)
+    """Store the caller's own provider key, encrypted.
+
+    Any user, not just an admin: the key is the promoter's own, it is billed
+    to their account, and it is used only for the actions they trigger.
+    """
+    encrypted = get_secret_service().encrypt(body.api_key)
+    await repo.update_api_key(user.id, encrypted, provider=body.provider)
+    # The provider is worth an audit line; the key is never logged.
+    logger.info("api_key_stored", user_id=str(user.id), provider=body.provider)
+    return ApiKeyStatusResponse(configured=True, provider=body.provider)
+
+
+@router.delete("/settings/api-key", response_model=ApiKeyStatusResponse)
+async def delete_api_key(
+    user: User = Depends(get_current_user),
+    repo: UserRepository = Depends(get_user_repo),
+) -> ApiKeyStatusResponse:
+    """Remove the caller's key — actions fall back to the self-hosted model."""
+    await repo.update_api_key(user.id, None)
+    logger.info("api_key_removed", user_id=str(user.id))
+    return ApiKeyStatusResponse(configured=False)
+
+
+@router.get("/settings/api-key/status", response_model=ApiKeyStatusResponse)
+async def read_api_key_status(
+    user: User = Depends(get_current_user),
+    repo: UserRepository = Depends(get_user_repo),
+) -> ApiKeyStatusResponse:
+    """Return whether the caller has a key configured, and for which provider."""
+    status_ = await get_api_key_status(repo, user.id)
+    return ApiKeyStatusResponse(
+        configured=status_.configured, provider=status_.provider
+    )
 
 
 # ---------- admin endpoints ----------

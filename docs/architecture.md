@@ -8,7 +8,7 @@
 
 ---
 
-## Stan: po Fazie 3 (pełny katalog akcji)
+## Stan: po Fazie 4 (BYOK)
 
 Corvus przechodzi pivot z narzędzia do analizy jednego dokumentu na platformę
 mentoringową dla promotorów. Kontekst i uzasadnienie:
@@ -34,7 +34,11 @@ wygasającego backendu Celery w Redisie.
 (`POST /students/{id}/drafts`, ekstrakcja in-process) i frontend mentoringowy
 (`/students`, `/students/[id]`). Przejściowe endpointy (`POST /extract`, proxy
 `/analysis/*`, `POST/GET /analysis` w agencie) **usunięte**.
-**Jeszcze nie:** BYOK (Faza 4), RAG nad wytycznymi w pgvector (Faza 5), CI/CD (Faza 6).
+**Zrobione (Faza 4):** BYOK — promotor zapisuje własny klucz (Claude/OpenAI)
+w profilu, akcja jedzie na jego konto; bez klucza wszystko liczy się na
+lokalnym Ollamie. Klucz jest szyfrowany Fernetem, odszyfrowywany tylko w
+żądaniu, które go użyje, i nigdy nie trafia do stanu grafu ani do bazy akcji.
+**Jeszcze nie:** RAG nad wytycznymi w pgvector (Faza 5), CI/CD (Faza 6).
 
 ---
 
@@ -145,6 +149,10 @@ app :8000
          ▼
        agent-worker (Celery worker)
          zapisuje status do Postgresa: running → completed | failed
+         │
+         ▼
+       model selector (llm_factory): klucz promotora (ContextVar, tylko na czas
+       tego przebiegu) → Claude/OpenAI; brak klucza → Ollama
          │
          ▼
        LangGraph — graf zależny od typu akcji (build_action_graph):

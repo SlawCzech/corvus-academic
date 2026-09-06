@@ -5,6 +5,7 @@ dispatch, that a promoter only ever sees their own students' actions, and
 that accepting a proposal is what changes the student.
 """
 
+import json
 import uuid
 from collections.abc import AsyncGenerator
 
@@ -15,7 +16,7 @@ from src.mentoring.application.action_service import (
     ActionNotFoundError,
     ActionService,
 )
-from src.mentoring.application.agent_client import AgentUnavailableError
+from src.mentoring.application.agent_client import BYOK, AgentUnavailableError
 from src.mentoring.application.context import MissingContextError
 from src.mentoring.application.draft_service import DraftService
 from src.mentoring.application.student_service import (
@@ -443,3 +444,54 @@ async def test_review_context_carries_the_student_as_metadata(env: _Fixture) -> 
     assert metadata["field_of_study"] == "Ekonomia"
     # Guidelines are agent-owned static data — `app` does not ship them.
     assert "guidelines" not in env.agent.submitted[0]["context"]
+
+
+# ---------- the promoter's own key ----------
+
+
+async def test_the_users_key_is_forwarded_to_the_agent(env: _Fixture) -> None:
+    student = await _student(env)
+
+    await env.actions.trigger(
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.PROPOSE_TOPIC,
+        token=TOKEN,
+        byok=BYOK(provider="claude", api_key="sk-user-key"),
+    )
+
+    sent = env.agent.submitted[0]["byok"]
+    assert sent is not None
+    assert sent.provider == "claude"
+
+
+async def test_without_a_key_nothing_is_forwarded(env: _Fixture) -> None:
+    """No key means the self-hosted model, which needs none."""
+    student = await _student(env)
+
+    await env.actions.trigger(
+        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+    )
+
+    assert env.agent.submitted[0]["byok"] is None
+
+
+async def test_the_key_is_not_written_to_the_action_row(env: _Fixture) -> None:
+    """The row is what the promoter reads back later; it must be clean."""
+    student = await _student(env)
+
+    action = await env.actions.trigger(
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.PROPOSE_TOPIC,
+        token=TOKEN,
+        detail="coś ilościowego",
+        byok=BYOK(provider="claude", api_key="sk-user-key"),
+    )
+
+    stored = (await env.actions.list_actions(PROMOTOR, student.id))[0]
+    assert stored.id == action.id
+    assert "sk-user-key" not in json.dumps(
+        {"detail": stored.detail, "output": stored.output, "error": stored.error},
+        default=str,
+    )

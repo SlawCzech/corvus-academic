@@ -105,6 +105,27 @@
 
 ---
 
+## BYOK (Faza 4)
+
+- [ ] **Klucz przechodzi przez brokera Redis w jawnej postaci** — jest argumentem
+  zadania Celery, więc leży w kolejce do momentu odebrania przez workera. Celery nie
+  zapisuje argumentów w result backendzie (`result_extended` wyłączone), więc ekspozycja
+  jest ulotna i wewnątrz sieci compose. Docelowo: przekazywać referencję zamiast klucza
+  i pozwolić workerowi odszyfrować go samodzielnie.
+
+- [ ] **Nie można wybrać modelu u dostawcy** — BYOK używa stałych domyślnych
+  (`claude-sonnet-4-20250514`, `gpt-4o`); parametr `model` dotyczy tylko Ollamy, bo to
+  tag lokalnego modelu. Do wystawienia razem z listą modeli per dostawca.
+
+- [ ] **Brak walidacji klucza przy zapisie** — zapisujemy, co przyszło; użytkownik
+  dowiaduje się o błędnym kluczu dopiero z nieudanej akcji (401 od dostawcy). Naprawka:
+  lekki „ping" do dostawcy przy `PATCH /settings/api-key`.
+
+- [ ] **Brak śladu kosztów** — nie zapisujemy, ile tokenów zużyła akcja ani na czyim
+  koncie. Przy BYOK to informacja, którą promotor chciałby widzieć.
+
+---
+
 ## Agent / Frontend
 
 - [ ] **Brak testów E2E frontendu** — komponenty mają testy jednostkowe (vitest), ale nikt
