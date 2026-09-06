@@ -1,6 +1,6 @@
 # Corvus pivot: AI-first student-mentoring platform — implementation plan
 
-> Status: approved 2026-09-05. Phases 0-5 are done; Phase 6 (deploy/CI) is next.
+> Status: approved 2026-09-05. All six phases are done.
 > Architecture decisions referenced here are recorded as ADRs in [docs/adr/](../adr/):
 > [0001](../adr/0001-ai-first-mentoring-platform-pivot.md) (scope pivot),
 > [0002](../adr/0002-consolidate-services-into-app-and-agent.md) (service consolidation),
@@ -160,7 +160,7 @@ Sequencing follows the user's "AI first, simple interface" preference: Phase 0 i
 | 3 — remaining actions + drafts + removing the transitional endpoints | ✅ done 2026-09-06 |
 | 4 — BYOK wiring | ✅ done 2026-09-06 |
 | 5 — pgvector RAG for guidelines | ✅ done 2026-09-06 |
-| 6 — deploy/CI groundwork | ⬜ not started |
+| 6 — deploy/CI groundwork | ✅ done 2026-09-06 |
 
 **Phase 0 — service consolidation** — ✅ **done 2026-09-05**. Deviations from the plan as written, all deliberate:
 
@@ -249,9 +249,18 @@ Decisions worth recording:
 
 Verification: the extension (`vector 0.8.0`) and the table are live on the existing volume, with the previous data intact. The search path — the `vector` column, `<=>`, pinning, model isolation, document ordering — was exercised against the real database with deterministic bag-of-words vectors: a formatting-heavy query retrieved §2 *Formal and Technical Requirements*, §4 *Severity* came back pinned in every query, and a different embedding model saw zero rows. **The host's Ollama-compatible endpoint does not serve embeddings** (`501 … start it with --embeddings`, and `nomic-embed-text` is not pulled), so the model-backed leg of retrieval is not yet exercised live; the fallback was, and logs `guideline_embedding_failed` before handing over the whole document. To turn retrieval on: `ollama pull nomic-embed-text` against an Ollama that serves embeddings, then `make ingest-guidelines`.
 
-**Phase 6 — deploy/CI groundwork**: revisit `docs/sessions.md` §5.2/5.3 (never implemented) for the new 2-Python-service topology — `.github/workflows/ci.yml` with `test-app`+`test-agent`+`test-frontend`+`sonarqube` jobs, `.pre-commit-config.yaml`, `infra/jenkins/Jenkinsfile` reduced from 4 to 2 Python stages. Cloud/secret-manager choice deliberately left open here, not pre-committed.
+**Phase 6 — deploy/CI groundwork** — ✅ **done 2026-09-06**. `.github/workflows/ci.yml`, `.pre-commit-config.yaml`, `infra/jenkins/Jenkinsfile` and `infra/sonarqube/sonar-project.properties` all exist for the first time; `docs/sessions.md` §5.2/5.3 described them for months and none of it had been written.
 
-**Frontend** (not designed in detail — existing patterns extend directly): `GATEWAY_URL`/`PARSER_URL` → single `APP_URL`; new route handlers mirroring existing ones 1:1 (`app/api/students/...`, following `app/api/status/[taskId]/route.ts`'s polling shape); `useAnalysis.ts` generalizes to `useAction(actionId)`. Note: `frontend/AGENTS.md` warns this Next.js version has non-standard APIs vs. training data — read `node_modules/next/dist/docs/` before writing route handlers.
+Decisions worth recording:
+
+1. **The type gate was made real before it was enforced.** `pyright --strict` had never passed on this codebase (736 errors in the old `identity`, 160 in `app` after consolidation). The last four errors in production code — an untyped `call_next` in `app`'s middleware, and pydantic-settings' env-populated constructor in both services — were fixed here, so **`pyright src` is now clean in both services** and CI checks it on every PR. The ~250 remaining errors all sit in test files (`TestClient`/`httpx` unknowns) and stay documented debt rather than a suppressed gate.
+2. **A fifth job: migrations against an empty database.** Every phase so far upgraded a database that already existed; nothing had ever built the schema from zero, which is exactly what a first deploy does. The job runs all three lineages on `pgvector/pgvector:pg16` — the plain postgres image would pass CI and then fail on deploy at `CREATE EXTENSION vector`. Verified locally on a throwaway container: three schemas, eleven tables, from nothing.
+3. **Jenkins builds, migrates, then deploys** — migrations run before the new containers serve traffic, and the production `.env` comes from a Jenkins credential, is written for the build and deleted in `post { always }`. Images are built on the host rather than pulled: there is no registry yet, and choosing one was explicitly left open by this plan.
+4. **Sonar is skipped, not failed, without a token.** The server is self-hosted; a fork or a fresh clone has no `SONAR_TOKEN`, and a red X on every such build teaches people to ignore red X's.
+5. **Pre-commit deliberately runs neither `pytest` nor `pyright`.** The app suite takes ~55 s by design (bcrypt), and a type-check needs each service's whole venv. Hooks that slow get bypassed with `--no-verify`, and then nothing runs at all; both belong in CI, which is where they now are. The hooks are `ruff --fix`, eslint, and file hygiene including `detect-private-key`.
+6. **`ruff format` is still not enabled.** It would reformat ~30 existing files in one pass; that is worth doing as its own change, not folded into the commit that introduces CI. Noted as debt, same as the `fastapi`/`starlette` pins.
+
+Verification: `uvx pre-commit run --all-files` passes on the whole repository; every command the workflow runs was executed locally (both services `uv sync --frozen`, `ruff`, `pyright src`, `pytest`; the frontend's lint, typecheck and tests); and the migration chain was applied to an empty pgvector database exactly as the `migrations` job does it.
 
 ---
 

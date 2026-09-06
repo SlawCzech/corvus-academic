@@ -1,0 +1,173 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A push that supersedes an in-flight run makes the older one pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: app (identity · document · mentoring)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: app/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Lint
+        run: uv run ruff check .
+
+      # `src` only: the test suite still carries ~250 reportUnknownMemberType
+      # errors from TestClient/httpx, tracked in docs/technical-debt.md. The
+      # production code is clean and stays that way.
+      - name: Type-check
+        run: uv run pyright src
+
+      - name: Test
+        run: uv run pytest -q
+        env:
+          JWT_SECRET: ci-secret-key-that-is-long-enough-32ch
+          FERNET_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          DATABASE_URL: postgresql+asyncpg://user:pass@localhost:5432/thesis_reviewer
+          ADMIN_PASSWORD: ci-admin-password-123
+          AGENT_URL: http://agent:8002
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-app
+          path: app/coverage.xml
+
+  agent:
+    name: agent (analysis · review)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: agent
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: agent/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Type-check
+        run: uv run pyright src
+
+      - name: Test
+        run: uv run pytest -q
+        env:
+          DATABASE_URL: postgresql+asyncpg://user:pass@localhost:5432/thesis_reviewer
+          JWT_SECRET: ci-secret-key-that-is-long-enough-32ch
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-agent
+          path: agent/coverage.xml
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+
+  migrations:
+    name: migrations apply to an empty database
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        # Same image the stack runs: pgvector is required by the agent's
+        # 0004 migration, and a plain postgres image would pass CI and fail
+        # on deploy.
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: pass
+          POSTGRES_DB: thesis_reviewer
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U user -d thesis_reviewer"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgresql+asyncpg://user:pass@localhost:5432/thesis_reviewer
+      JWT_SECRET: ci-secret-key-that-is-long-enough-32ch
+      FERNET_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      ADMIN_PASSWORD: ci-admin-password-123
+      AGENT_URL: http://agent:8002
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: identity + mentoring lineages
+        working-directory: app
+        run: |
+          uv sync --frozen
+          uv run alembic -c alembic_identity.ini upgrade head
+          uv run alembic -c alembic_mentoring.ini upgrade head
+
+      - name: analysis lineage
+        working-directory: agent
+        run: |
+          uv sync --frozen
+          uv run alembic upgrade head
+
+  sonarqube:
+    needs: [app, agent, frontend]
+    runs-on: ubuntu-latest
+    # Job-level so the step's `if` can see it: GitHub evaluates `if` before a
+    # step's own `env` block exists.
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          path: coverage
+
+      # Skipped rather than failed when no server is configured: SonarQube is
+      # self-hosted here, and a fork or a fresh clone has no token.
+      - name: Scan
+        if: env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@v4

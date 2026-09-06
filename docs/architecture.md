@@ -500,26 +500,45 @@ python -c "import secrets; print(secrets.token_hex(32))"
 
 ## CI/CD pipeline
 
-> Status: **nieukończone** — Faza 6 planu. Poniżej docelowy kształt,
-> zaktualizowany o topologię 2-serwisową.
+Testy, lint i typy sprawdza GitHub Actions przy każdym PR i pushu na `main`.
+Jenkins tylko wdraża to, co już przeszło.
 
 ```
-git push
+git push / PR
   │
   ▼
-GitHub Actions (ci.yml) — przy każdym PR
-  ├── test-app       (pytest + ruff + pyright)
-  ├── test-agent     (pytest + ruff + pyright)
-  ├── test-frontend  (vitest + tsc + eslint)
-  └── sonarqube      (skan po przejściu testów)
+GitHub Actions (.github/workflows/ci.yml)
+  ├── app         uv sync --frozen · ruff · pyright src · pytest
+  ├── agent       uv sync --frozen · ruff · pyright src · pytest
+  ├── frontend    npm ci · eslint · tsc --noEmit · vitest
+  ├── migrations  wszystkie trzy lineage'y na pustej bazie
+  │               (obraz pgvector/pgvector:pg16 — migracja 0004 go wymaga)
+  └── sonarqube   po przejściu trzech pierwszych; pomijany, gdy nie ma
+                  SONAR_TOKEN (serwer jest self-hosted)
   │
   ▼ (merge do main)
   │
-Jenkins (Jenkinsfile)
-  ├── Pull images z GHCR
-  ├── docker-compose up -d
-  └── Healthcheck wszystkich serwisów
+Jenkins (infra/jenkins/Jenkinsfile)
+  ├── Checkout + .env z Jenkins credentials
+  ├── docker compose build
+  ├── Migracje (identity, mentoring, analysis) PRZED startem kontenerów
+  ├── docker compose up -d --remove-orphans
+  └── Healthcheck /health (raportuje też stan agenta), do 150 s
 ```
+
+`pyright` w CI sprawdza **`src`**, nie testy: w testach zostaje ok. 250 błędów
+`reportUnknownMemberType` na `TestClient`/`httpx` (patrz
+[technical-debt.md](technical-debt.md)). Kod produkcyjny obu serwisów jest
+czysty w trybie strict i CI tego pilnuje.
+
+Lokalnie te same reguły w skróconej formie:
+
+```bash
+uvx pre-commit install    # ruff --fix, eslint, higiena plików, detect-private-key
+```
+
+Hooki celowo nie uruchamiają `pytest` ani `pyright` — 55 s na commit to hook,
+który ludzie wyłączają przez `--no-verify`. Od tego jest CI.
 
 ---
 

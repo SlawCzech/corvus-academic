@@ -1,0 +1,40 @@
+# Hooks that run in under a second on the files you touched.
+#
+# Deliberately *not* here: pytest, and pyright. The app suite takes ~55 s
+# (bcrypt, by design) and a type-check needs each service's whole venv — hooks
+# that slow are hooks people disable with --no-verify, and then nothing runs.
+# Both are gates in .github/workflows/ci.yml instead, where they belong.
+#
+# Install once:  uvx pre-commit install
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-yaml
+        # Jenkinsfile-style templating is not YAML; compose and workflows are.
+        files: ^(infra|\.github)/.*\.ya?ml$
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=512]
+      - id: detect-private-key
+      - id: check-case-conflict
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.14
+    hooks:
+      # Each service carries its own pyproject; ruff resolves the config from
+      # the file's own directory, so one hook covers both.
+      - id: ruff-check
+        args: [--fix]
+      # `ruff format` is not enabled: it would reformat ~30 existing files in
+      # one go. Worth doing — as its own change, not folded into every commit.
+
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint (frontend)
+        entry: bash -c 'cd frontend && npx eslint . --max-warnings 0'
+        language: system
+        files: ^frontend/.*\.(ts|tsx|mjs)$
+        pass_filenames: false

@@ -35,9 +35,9 @@ Lokalna aplikacja webowa wspomagająca promotorów i recenzentów w analizie stu
 
 > ⚠ **Projekt jest w trakcie pivotu.** Scope zmienił się z analizy jednego
 > dokumentu na platformę mentoringową (studenci, notatki, predefiniowane akcje AI).
-> Fazy 0–5 są **zrobione**: konsolidacja serwisów, domena mentoringowa, sześć akcji
-> AI, frontend oparty o studentów, BYOK i RAG nad wytycznymi (pgvector).
-> Decyzje: [docs/adr/](docs/adr/) · plan i status faz:
+> **Wszystkie sześć faz pivotu jest zrobionych**: konsolidacja serwisów, domena
+> mentoringowa, sześć akcji AI, frontend oparty o studentów, BYOK, RAG nad
+> wytycznymi (pgvector) i CI/CD. Decyzje: [docs/adr/](docs/adr/) · plan i status faz:
 > [docs/specs/mentoring-platform-implementation-plan.md](docs/specs/mentoring-platform-implementation-plan.md).
 > Sekcja 9 poniżej (kolejność implementacji) jest **nieaktualna** — zastąpiona tym planem.
 
@@ -276,71 +276,32 @@ repos:
 
 ## 6. CI/CD pipeline
 
-### 6.1 GitHub Actions — CI (pull request)
+Pliki są w repo — poniżej tylko co gdzie leży i dlaczego tak:
 
-```yaml
-# .github/workflows/ci.yml
-name: CI
-on: [pull_request]
-jobs:
-  test-python:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
-      - run: uv run pytest --cov-report=xml
-      - run: uv run ruff check .
-      - run: uv run pyright
+| Plik | Co robi |
+|---|---|
+| [.github/workflows/ci.yml](.github/workflows/ci.yml) | PR i push na `main`: `app`, `agent`, `frontend`, `migrations`, `sonarqube` |
+| [.pre-commit-config.yaml](.pre-commit-config.yaml) | `ruff --fix`, eslint, higiena plików, `detect-private-key` |
+| [infra/jenkins/Jenkinsfile](infra/jenkins/Jenkinsfile) | build → migracje → `compose up -d` → healthcheck |
+| [infra/sonarqube/sonar-project.properties](infra/sonarqube/sonar-project.properties) | trzy pakiety, jeden projekt |
 
-  test-typescript:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-      - run: npm ci && npm run typecheck && npm test
+Zasady, które warto znać przed zmianą któregokolwiek z nich:
 
-  sonarqube:
-    needs: [test-python, test-typescript]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: SonarSource/sonarqube-scan-action@v2
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-```
+- **`pyright` w CI sprawdza `src`, nie `tests`.** Kod produkcyjny obu serwisów jest
+  czysty w trybie strict i CI tego pilnuje; w testach zostaje ok. 250 błędów
+  `reportUnknownMemberType` na `TestClient`/`httpx` — [dług](docs/technical-debt.md),
+  nie wyciszona bramka.
+- **Job `migrations` stawia schemat od zera** na obrazie `pgvector/pgvector:pg16`.
+  Zwykły `postgres` przeszedłby CI i wywrócił się przy deployu na
+  `CREATE EXTENSION vector`.
+- **Migracje w Jenkinsie idą przed `up -d`**, a produkcyjny `.env` pochodzi z
+  Jenkins credentials i jest kasowany w `post { always }`.
+- **Sonar jest pomijany, gdy nie ma `SONAR_TOKEN`** — czerwony krzyżyk na każdym
+  buildzie forka uczy ludzi ignorować czerwone krzyżyki.
+- **Hooki nie odpalają `pytest` ani `pyright`** — 55 s na commit to hook wyłączany
+  przez `--no-verify`. Od tego jest CI.
 
-### 6.2 Jenkinsfile — CD (deploy)
-
-```groovy
-// infra/jenkins/Jenkinsfile
-pipeline {
-    agent any
-    environment {
-        GHCR_TOKEN = credentials('github-token')
-        ENV_FILE   = credentials('env-production')
-    }
-    stages {
-        stage('Pull images') {
-            steps {
-                sh 'echo $GHCR_TOKEN | docker login ghcr.io -u USERNAME --password-stdin'
-                sh 'docker-compose -f infra/docker-compose.yml pull'
-            }
-        }
-        stage('Deploy') {
-            steps {
-                sh 'docker-compose -f infra/docker-compose.yml up -d --remove-orphans'
-            }
-        }
-        stage('Healthcheck') {
-            steps {
-                sh 'sleep 10 && curl -f http://localhost:8000/health'
-            }
-        }
-    }
-    post {
-        failure { mail to: 'admin@example.com', subject: 'Deploy failed' }
-    }
-}
-```
+Instalacja hooków: `uvx pre-commit install`.
 
 ---
 
@@ -452,7 +413,7 @@ Aktualny plan i status faz:
 | 3 | pozostałe akcje (w tym `defence_questions`), upload wersji pracy, frontend mentoringowy; usunięcie przejściowych endpointów | ✅ 2026-09-06 |
 | 4 | BYOK — klucz usera zamiast globalnego | ✅ 2026-09-06 |
 | 5 | pgvector: RAG nad wytycznymi | ✅ 2026-09-06 |
-| 6 | deploy + CI/CD (GitHub Actions, Jenkins, pre-commit) | ⬜ |
+| 6 | deploy + CI/CD (GitHub Actions, Jenkins, pre-commit) | ✅ 2026-09-06 |
 
 ---
 

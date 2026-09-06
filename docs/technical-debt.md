@@ -7,16 +7,18 @@
 
 ## Jakość kodu — stan faktyczny (zweryfikowany 2026-09-05)
 
-- [ ] **`pyright --strict` NIE przechodzi i nigdy nie przechodził** — wbrew temu, co
-  deklaruje `docs/sessions.md` ("ruff and pyright clean" przy sesjach 1.x–5.1).
-  Zmierzone na kodzie sprzed konsolidacji (git worktree na HEAD): `identity` **736
-  błędów**, `parser` **88**. Po konsolidacji `app` miał **160** (spadek wynika z usunięcia
-  duplikatów i martwego kodu, nie z naprawy), po Fazie 1 ma **264**. Prawie wszystkie to
-  `reportUnknownMemberType` na `TestClient`/`httpx` w testach — same **97** z nowych
-  104 siedzi w `tests/test_mentoring/test_router.py`; `src/mentoring/` jest czyste
-  (0 błędów w trybie strict).
-  Naprawka: albo anotować odpowiedzi w testach, albo per-file suppression dla `tests/**`
-  — ale świadomie, jako osobna zmiana, nie przy okazji refaktoru.
+- [~] **`pyright --strict` — kod produkcyjny czysty, testy nie.** Historycznie nie
+  przechodził nigdy (przed konsolidacją: `identity` **736** błędów, `parser` **88**;
+  po konsolidacji `app` **160**). Od Fazy 6 **`pyright src` zwraca 0 błędów w obu
+  serwisach** i pilnuje tego CI. Zostaje ok. **250 błędów w `tests/**`** — prawie
+  wyłącznie `reportUnknownMemberType` na `TestClient`/`httpx`.
+  Naprawka: anotować odpowiedzi w testach albo per-file suppression dla `tests/**`
+  — świadomie, jako osobna zmiana.
+
+- [ ] **`ruff format` nie jest włączony** — przeformatowałby ~30 istniejących plików
+  w obu serwisach. Warto to zrobić, ale jako osobną zmianę, nie przy okazji CI
+  (ten sam powód co przy pinach `fastapi`/`starlette`). Wtedy dołożyć hook
+  `ruff-format` do `.pre-commit-config.yaml` i krok do CI.
 
 - [x] ~~**`ruff` w `agent/` — 36 błędów**~~ — naprawione w Fazie 2 (2026-09-05).
   Oba serwisy są czyste. Pliki z promptami (`agent/src/application/prompts/*.py`,
@@ -165,6 +167,24 @@
 - [ ] **`review_tone` niedostępny w akcjach mentoringowych** — `generate_review` jest
   zawsze uruchamiany z tonem `auto`, mimo że graf i prompty obsługują siedem tonów
   (spec: `docs/specs/review-tone-spec.md`). Do wystawienia w UI.
+
+---
+
+## CI/CD (Faza 6)
+
+- [ ] **Brak rejestru obrazów** — Jenkins buduje obrazy na hoście docelowym zamiast
+  ciągnąć je z GHCR. Świadomie odłożone (plan zostawiał wybór otwarty), ale to znaczy,
+  że deploy = build, a rollback nie ma do czego wrócić poza `git checkout`.
+
+- [ ] **Brak deploymentu innego niż lokalny compose** — nie ma środowiska staging,
+  nie ma HTTPS/reverse proxy, `ENVIRONMENT=production` wpływa tylko na flagę
+  `Secure` w ciasteczkach.
+
+- [ ] **SonarQube nieskonfigurowany** — `sonar-project.properties` istnieje, ale nikt
+  nie postawił serwera ani nie ustawił `SONAR_TOKEN`; job w CI się pomija.
+
+- [ ] **Brak testów E2E w CI** — pipeline sprawdza jednostki i migracje, nikt nie
+  uruchamia prawdziwej akcji przez `docker compose` (wymagałoby modelu w runnerze).
 
 ---
 

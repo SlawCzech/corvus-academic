@@ -59,4 +59,6 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
-settings = Settings()
+# Every required field is read from the environment at startup; pyright cannot
+# see that, and a missing one is meant to fail loudly right here.
+settings = Settings()  # pyright: ignore[reportCallIssue]
