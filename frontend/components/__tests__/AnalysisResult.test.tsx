@@ -1,10 +1,9 @@
 import { render, screen } from "@testing-library/react"
 import { describe, it, expect } from "vitest"
 import AnalysisResultView from "../AnalysisResult"
-import type { AnalysisResult } from "@/lib/api.types"
+import type { ActionResult } from "@/lib/api.types"
 
-const baseResult: AnalysisResult = {
-  evaluation_id: "e1",
+const baseResult: ActionResult = {
   findings: [],
   scores: [],
   summary: null,
@@ -20,7 +19,7 @@ describe("AnalysisResultView", () => {
   })
 
   it("renders summary and recommendation when present", () => {
-    const result: AnalysisResult = {
+    const result: ActionResult = {
       ...baseResult,
       summary: "The thesis is well-structured.",
       recommendation: "Accept with minor revisions.",
@@ -35,7 +34,7 @@ describe("AnalysisResultView", () => {
   })
 
   it("renders findings grouped by severity", () => {
-    const result: AnalysisResult = {
+    const result: ActionResult = {
       ...baseResult,
       findings: [
         {
@@ -69,7 +68,7 @@ describe("AnalysisResultView", () => {
   })
 
   it("hides severity groups that have no findings", () => {
-    const result: AnalysisResult = {
+    const result: ActionResult = {
       ...baseResult,
       findings: [
         {
@@ -88,7 +87,7 @@ describe("AnalysisResultView", () => {
   })
 
   it("renders scores as progress bars with correct percentages", () => {
-    const result: AnalysisResult = {
+    const result: ActionResult = {
       ...baseResult,
       scores: [
         { criteria: "Structure", points: 8, max_points: 10 },
@@ -104,7 +103,7 @@ describe("AnalysisResultView", () => {
   })
 
   it("handles zero max_points gracefully", () => {
-    const result: AnalysisResult = {
+    const result: ActionResult = {
       ...baseResult,
       scores: [{ criteria: "N/A", points: 0, max_points: 0 }],
     }

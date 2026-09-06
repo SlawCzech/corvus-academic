@@ -1,11 +1,9 @@
 """LangGraph node: analyze thesis chapter structure and coherence."""
 
-import json
-from collections.abc import Sequence
-
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from src.application.json_output import parse_json_array
 from src.application.prompts import structure as prompts
 from src.domain.analysis import Finding, FindingSeverity
 from src.infrastructure.llm_factory import get_llm
@@ -34,11 +32,7 @@ def analyze_structure(state: ActionState) -> ActionState:
             ),
         ]
         response = llm.invoke(messages)
-        # BaseChatModel.invoke() returns BaseMessage; .content is str | list[…|dict]
-        # where the dict value types are Unknown in LangChain's type stubs.
-        raw: str | Sequence[object] = response.content  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
-        content: str = raw if isinstance(raw, str) else json.dumps(raw)
-        data: list[dict[str, str]] = json.loads(content)
+        data = parse_json_array(response.content)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
         new_findings: list[Finding] = [
             Finding(
                 section=item["section"],

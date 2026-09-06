@@ -1,4 +1,4 @@
-"""Integration tests for agent HTTP API endpoints."""
+"""Integration tests for the agent HTTP API."""
 
 import os
 import uuid
@@ -28,6 +28,7 @@ _JWT_SECRET = "test-secret-key-that-is-long-enough-32ch"
 
 ADMIN_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 PROMOTOR_ID = uuid.UUID("00000000-0000-0000-0000-000000000002")
+OTHER_ID = uuid.UUID("00000000-0000-0000-0000-0000000000ff")
 
 
 def _make_token(user_id: uuid.UUID, role: str) -> str:
@@ -91,15 +92,16 @@ def dispatch() -> Generator[MagicMock, None, None]:
         yield send
 
 
-_ANALYSIS_BODY: dict[str, Any] = {
-    "evaluation_id": "550e8400-e29b-41d4-a716-446655440000",
-    "text": "Chapter 1: Introduction.",
-    "thesis_type": "bachelor",
+_ACTION_BODY: dict[str, Any] = {
+    "action_id": "aaaaaaaa-0000-0000-0000-000000000001",
+    "action_type": "propose_topic",
+    "student_id": "bbbbbbbb-0000-0000-0000-000000000002",
+    "context": {"field_of_study": "Ekonomia", "detail": "coś ilościowego"},
 }
 
 
 def _submit(client: TestClient, headers: dict[str, str]) -> str:
-    resp = client.post("/analysis", json=_ANALYSIS_BODY, headers=headers)
+    resp = client.post("/actions", json=_ACTION_BODY, headers=headers)
     assert resp.status_code == 202, resp.text
     return str(resp.json()["task_id"])
 
@@ -114,23 +116,28 @@ def test_health(client: TestClient) -> None:
 
 
 def test_submit_requires_auth(client: TestClient) -> None:
-    assert client.post("/analysis", json=_ANALYSIS_BODY).status_code == 401
-
-
-def test_list_requires_auth(client: TestClient) -> None:
-    assert client.get("/analysis").status_code == 401
+    assert client.post("/actions", json=_ACTION_BODY).status_code == 401
 
 
 def test_status_requires_auth(client: TestClient) -> None:
-    assert client.get(f"/analysis/{uuid.uuid4()}").status_code == 401
+    assert client.get(f"/actions/{uuid.uuid4()}").status_code == 401
 
 
 def test_invalid_token_rejected(client: TestClient) -> None:
-    resp = client.get("/analysis", headers={"Authorization": "Bearer nonsense"})
+    resp = client.get(
+        f"/actions/{uuid.uuid4()}", headers={"Authorization": "Bearer nonsense"}
+    )
     assert resp.status_code == 401
 
 
-# ---------- submit ----------
+def test_legacy_analysis_endpoints_are_gone(client: TestClient) -> None:
+    """`POST /analysis` belonged to the pre-mentoring upload flow."""
+    headers = _auth(PROMOTOR_ID, "promotor")
+    assert client.post("/analysis", json={}, headers=headers).status_code == 404
+    assert client.get("/analysis", headers=headers).status_code == 404
+
+
+# ---------- dispatch ----------
 
 
 def test_submit_dispatches_under_the_persisted_task_id(
@@ -143,67 +150,60 @@ def test_submit_dispatches_under_the_persisted_task_id(
     assert dispatch.call_args.kwargs["task_id"] == task_id
 
 
-def test_submitted_task_starts_pending(
+def test_submit_action_sends_its_context(
     client: TestClient, dispatch: MagicMock
 ) -> None:
-    task_id = _submit(client, _auth(PROMOTOR_ID, "promotor"))
+    """The context is assembled by `app` and travels with the task."""
+    _submit(client, _auth(PROMOTOR_ID, "promotor"))
 
-    resp = client.get(f"/analysis/{task_id}", headers=_auth(PROMOTOR_ID, "promotor"))
-    assert resp.status_code == 200
-    assert resp.json() == {"status": "pending", "result": None}
+    sent = dispatch.call_args.kwargs["args"]
+    assert sent[0] == _ACTION_BODY["action_id"]
+    assert sent[1] == "propose_topic"
+    assert sent[2] == _ACTION_BODY["student_id"]
+    assert sent[3] == _ACTION_BODY["context"]
 
 
-def test_dispatch_failure_marks_the_task_failed(
+def test_unknown_action_type_is_rejected(
+    client: TestClient, dispatch: MagicMock
+) -> None:
+    """An action with no graph must not be queued as work that can only fail."""
+    body = {**_ACTION_BODY, "action_type": "write_the_whole_thesis"}
+    resp = client.post("/actions", json=body, headers=_auth(PROMOTOR_ID, "promotor"))
+
+    assert resp.status_code == 422
+    dispatch.assert_not_called()
+
+
+def test_dispatch_failure_marks_the_action_failed(
     client: TestClient, dispatch: MagicMock
 ) -> None:
     """A broker outage used to leave the row stuck at PENDING for good."""
     dispatch.side_effect = OSError("broker down")
 
     resp = client.post(
-        "/analysis", json=_ANALYSIS_BODY, headers=_auth(PROMOTOR_ID, "promotor")
+        "/actions", json=_ACTION_BODY, headers=_auth(PROMOTOR_ID, "promotor")
     )
     assert resp.status_code == 503
 
-    history = client.get("/analysis", headers=_auth(PROMOTOR_ID, "promotor")).json()
-    assert [h["status"] for h in history] == ["error"]
+
+# ---------- polling ----------
 
 
-# ---------- history ----------
-
-
-def test_list_analyses_empty(client: TestClient) -> None:
-    resp = client.get("/analysis", headers=_auth(PROMOTOR_ID, "promotor"))
-    assert resp.status_code == 200
-    assert resp.json() == []
-
-
-def test_list_analyses_after_submit(
-    client: TestClient, dispatch: MagicMock
-) -> None:
+def test_action_starts_pending(client: TestClient, dispatch: MagicMock) -> None:
     task_id = _submit(client, _auth(PROMOTOR_ID, "promotor"))
 
-    body = client.get("/analysis", headers=_auth(PROMOTOR_ID, "promotor")).json()
-    assert len(body) == 1
-    assert body[0]["task_id"] == task_id
-    assert body[0]["evaluation_id"] == _ANALYSIS_BODY["evaluation_id"]
-    assert body[0]["status"] == "pending"
-
-
-def test_history_is_scoped_to_the_caller(
-    client: TestClient, dispatch: MagicMock
-) -> None:
-    _submit(client, _auth(PROMOTOR_ID, "promotor"))
-
-    other = uuid.UUID("00000000-0000-0000-0000-0000000000ff")
-    assert client.get("/analysis", headers=_auth(other, "promotor")).json() == []
-
-
-# ---------- status ----------
+    body = client.get(
+        f"/actions/{task_id}", headers=_auth(PROMOTOR_ID, "promotor")
+    ).json()
+    assert body["status"] == "pending"
+    assert body["action_type"] == "propose_topic"
+    assert body["action_id"] == _ACTION_BODY["action_id"]
+    assert body["result"] is None
 
 
 def test_unknown_task_is_404(client: TestClient) -> None:
     resp = client.get(
-        f"/analysis/{uuid.uuid4()}", headers=_auth(PROMOTOR_ID, "promotor")
+        f"/actions/{uuid.uuid4()}", headers=_auth(PROMOTOR_ID, "promotor")
     )
     assert resp.status_code == 404
 
@@ -211,19 +211,18 @@ def test_unknown_task_is_404(client: TestClient) -> None:
 def test_non_owner_gets_404(client: TestClient, dispatch: MagicMock) -> None:
     task_id = _submit(client, _auth(PROMOTOR_ID, "promotor"))
 
-    other = uuid.UUID("00000000-0000-0000-0000-0000000000ff")
-    resp = client.get(f"/analysis/{task_id}", headers=_auth(other, "promotor"))
+    resp = client.get(f"/actions/{task_id}", headers=_auth(OTHER_ID, "promotor"))
     assert resp.status_code == 404
 
 
 def test_admin_sees_any_task(client: TestClient, dispatch: MagicMock) -> None:
     task_id = _submit(client, _auth(PROMOTOR_ID, "promotor"))
 
-    resp = client.get(f"/analysis/{task_id}", headers=_auth(ADMIN_ID, "admin"))
+    resp = client.get(f"/actions/{task_id}", headers=_auth(ADMIN_ID, "admin"))
     assert resp.status_code == 200
 
 
-# ---------- durability: the point of the whole change ----------
+# ---------- durability: the point of the status change ----------
 
 
 async def _store(
@@ -241,9 +240,10 @@ async def _store(
             id=uuid.uuid4(),
             task_id=task_id,
             user_id=PROMOTOR_ID,
-            action_type=ActionType.GENERATE_REVIEW,
+            action_type=ActionType.PROPOSE_TOPIC,
             status=status,
-            evaluation_id="550e8400-e29b-41d4-a716-446655440000",
+            action_id=uuid.UUID(_ACTION_BODY["action_id"]),
+            student_id=uuid.UUID(_ACTION_BODY["student_id"]),
             result=result,
             error=error,
             created_at=now,
@@ -257,14 +257,15 @@ async def test_completed_result_survives_without_celery(
 ) -> None:
     """Status and result come from Postgres — Redis may have long expired."""
     task_id = str(uuid.uuid4())
-    payload = {"findings": [], "scores": [], "summary": "Praca spełnia wymogi."}
+    payload = {"output": {"topics": [{"title": "Instytucje a wzrost"}]}}
     await _store(db_session, task_id, TaskStatus.COMPLETED, result=payload)
 
-    resp = client.get(f"/analysis/{task_id}", headers=_auth(PROMOTOR_ID, "promotor"))
+    resp = client.get(f"/actions/{task_id}", headers=_auth(PROMOTOR_ID, "promotor"))
 
     assert resp.status_code == 200
-    assert resp.json()["status"] == "done"
-    assert resp.json()["result"]["summary"] == "Praca spełnia wymogi."
+    body = resp.json()
+    assert body["status"] == "completed"
+    assert body["result"]["output"]["topics"][0]["title"] == "Instytucje a wzrost"
 
 
 async def test_failed_task_reports_its_error(
@@ -273,124 +274,19 @@ async def test_failed_task_reports_its_error(
     task_id = str(uuid.uuid4())
     await _store(db_session, task_id, TaskStatus.FAILED, error="Ollama unreachable")
 
-    resp = client.get(f"/analysis/{task_id}", headers=_auth(PROMOTOR_ID, "promotor"))
+    resp = client.get(f"/actions/{task_id}", headers=_auth(PROMOTOR_ID, "promotor"))
 
-    assert resp.status_code == 200
-    assert resp.json()["status"] == "error"
-    assert resp.json()["result"] == {"error": "Ollama unreachable"}
+    assert resp.json()["status"] == "failed"
+    assert resp.json()["error"] == "Ollama unreachable"
 
 
-async def test_running_task_is_reported_as_processing(
+async def test_running_task_is_reported_as_running(
     client: TestClient, db_session: AsyncSession, dispatch: MagicMock
 ) -> None:
     task_id = str(uuid.uuid4())
     await _store(db_session, task_id, TaskStatus.RUNNING)
 
-    resp = client.get(f"/analysis/{task_id}", headers=_auth(PROMOTOR_ID, "promotor"))
-
-    assert resp.json() == {"status": "processing", "result": None}
-
-
-# ---------- actions ----------
-
-
-_ACTION_BODY: dict[str, Any] = {
-    "action_id": "aaaaaaaa-0000-0000-0000-000000000001",
-    "action_type": "propose_topic",
-    "student_id": "bbbbbbbb-0000-0000-0000-000000000002",
-    "context": {"field_of_study": "Ekonomia", "detail": "coś ilościowego"},
-}
-
-
-def _submit_action(client: TestClient, headers: dict[str, str]) -> str:
-    resp = client.post("/actions", json=_ACTION_BODY, headers=headers)
-    assert resp.status_code == 202, resp.text
-    return str(resp.json()["task_id"])
-
-
-def test_submit_action_requires_auth(client: TestClient) -> None:
-    assert client.post("/actions", json=_ACTION_BODY).status_code == 401
-
-
-def test_submit_action_dispatches_with_its_context(
-    client: TestClient, dispatch: MagicMock
-) -> None:
-    """The context is assembled by `app` and travels with the task."""
-    task_id = _submit_action(client, _auth(PROMOTOR_ID, "promotor"))
-
-    sent = dispatch.call_args.kwargs["args"]
-    assert dispatch.call_args.kwargs["task_id"] == task_id
-    assert sent[0] == _ACTION_BODY["action_id"]
-    assert sent[1] == "propose_topic"
-    assert sent[2] == _ACTION_BODY["student_id"]
-    assert sent[3] == _ACTION_BODY["context"]
-
-
-def test_unimplemented_action_type_is_rejected(
-    client: TestClient, dispatch: MagicMock
-) -> None:
-    """Phase 3 actions must not be queued as work that can only fail."""
-    body = {**_ACTION_BODY, "action_type": "check_progress"}
-    resp = client.post("/actions", json=body, headers=_auth(PROMOTOR_ID, "promotor"))
-
-    assert resp.status_code == 422
-    dispatch.assert_not_called()
-
-
-def test_action_starts_pending(client: TestClient, dispatch: MagicMock) -> None:
-    task_id = _submit_action(client, _auth(PROMOTOR_ID, "promotor"))
-
-    resp = client.get(f"/actions/{task_id}", headers=_auth(PROMOTOR_ID, "promotor"))
-    body = resp.json()
-    assert body["status"] == "pending"
-    assert body["action_type"] == "propose_topic"
-    assert body["action_id"] == _ACTION_BODY["action_id"]
-    assert body["result"] is None
-
-
-def test_action_of_another_promotor_is_404(
-    client: TestClient, dispatch: MagicMock
-) -> None:
-    task_id = _submit_action(client, _auth(PROMOTOR_ID, "promotor"))
-
-    other = uuid.UUID("00000000-0000-0000-0000-0000000000ff")
-    resp = client.get(f"/actions/{task_id}", headers=_auth(other, "promotor"))
-    assert resp.status_code == 404
-
-
-def test_unknown_action_is_404(client: TestClient) -> None:
-    resp = client.get(
-        f"/actions/{uuid.uuid4()}", headers=_auth(PROMOTOR_ID, "promotor")
-    )
-    assert resp.status_code == 404
-
-
-async def test_completed_action_returns_its_payload(
-    client: TestClient, db_session: AsyncSession, dispatch: MagicMock
-) -> None:
-    """Same durability as the legacy endpoint: the row is the source of truth."""
-    task_id = str(uuid.uuid4())
-    payload = {"output": {"topics": [{"title": "Instytucje a wzrost"}]}}
-    repo = AgentTaskRepository(db_session)
-    now = datetime.now(UTC)
-    await repo.save(
-        AgentTaskModel(
-            id=uuid.uuid4(),
-            task_id=task_id,
-            user_id=PROMOTOR_ID,
-            action_type=ActionType.PROPOSE_TOPIC,
-            status=TaskStatus.COMPLETED,
-            action_id=uuid.UUID(_ACTION_BODY["action_id"]),
-            student_id=uuid.UUID(_ACTION_BODY["student_id"]),
-            result=payload,
-            created_at=now,
-            updated_at=now,
-        )
-    )
-
     resp = client.get(f"/actions/{task_id}", headers=_auth(PROMOTOR_ID, "promotor"))
 
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["status"] == "completed"
-    assert body["result"]["output"]["topics"][0]["title"] == "Instytucje a wzrost"
+    assert resp.json()["status"] == "running"
+    assert resp.json()["result"] is None

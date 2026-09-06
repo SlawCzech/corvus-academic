@@ -35,7 +35,7 @@ export default function LoginForm() {
       setServerError("Invalid email or password.")
       return
     }
-    router.push("/analysis")
+    router.push("/students")
   }
 
   return (

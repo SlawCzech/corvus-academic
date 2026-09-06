@@ -1,4 +1,4 @@
-"""Celery tasks — one generic action runner, plus the legacy analysis entry."""
+"""Celery task: run one AI action for one student."""
 
 import dataclasses
 from typing import Any, cast
@@ -28,6 +28,22 @@ _RESULT_KEYS = (
     "status",
     "error",
 )
+
+
+# Actions judged against university requirements. The guideline text is
+# `agent`-owned static data (files today, pgvector in Phase 5), so it is loaded
+# here rather than shipped over the wire by `app`.
+_ACTIONS_NEEDING_GUIDELINES = frozenset(
+    {ActionType.GENERATE_REVIEW, ActionType.EVALUATE_METHODOLOGY}
+)
+
+
+def _with_guidelines(action_type: str, context: dict[str, Any]) -> dict[str, Any]:
+    """Add the university requirements to the context, if the action needs them."""
+    if action_type not in _ACTIONS_NEEDING_GUIDELINES or "guidelines" in context:
+        return context
+    thesis_type = str(context.get("thesis_type", ThesisType.BACHELOR))
+    return {**context, "guidelines": load_guidelines(thesis_type)}
 
 
 def _to_json(obj: Any) -> Any:  # noqa: ANN401
@@ -148,73 +164,17 @@ def run_action(
         payload = _run_graph(
             task_id,
             _initial_state(
-                action_id, action_type, student_id, context, model, language
+                action_id,
+                action_type,
+                student_id,
+                _with_guidelines(action_type, context),
+                model,
+                language,
             ),
         )
         logger.info("run_action.completed", action_id=action_id)
         return payload
     except Exception as exc:
         logger.error("run_action.failed", action_id=action_id, error=str(exc))
-        _record_final_failure(self, task_id, exc)
-        raise self.retry(exc=exc)  # noqa: B904
-
-
-@shared_task(bind=True, max_retries=3, default_retry_delay=60)
-def analyze_thesis(
-    self: Task,  # type: ignore[type-arg]
-    evaluation_id: str,
-    text: str,
-    metadata: dict[str, Any],
-    model: str = "qwen3:30b-a3b",
-    mode: str = "full",
-    review_tone: str = "auto",
-    language: str = "pl",
-) -> dict[str, Any]:
-    """Run the full thesis review pipeline — the pre-mentoring entry point.
-
-    TRANSITIONAL: kept so the existing upload-a-thesis flow keeps working
-    until Phase 3 replaces it with `generate_review` on a student. It is a
-    thin adapter over `run_action`'s machinery: same state, same graph, same
-    status persistence, only the arguments are the old ones.
-    """
-    task_id: str | None = self.request.id
-    thesis_type: str = str(metadata.get("thesis_type", ThesisType.BACHELOR))
-    logger.info(
-        "analyze_thesis.started",
-        evaluation_id=evaluation_id,
-        task_id=task_id,
-        model=model,
-        mode=mode,
-        review_tone=review_tone,
-        language=language,
-        thesis_type=thesis_type,
-    )
-    try:
-        context: dict[str, Any] = {
-            "text": text,
-            "guidelines": load_guidelines(thesis_type),
-            "metadata": metadata,
-            "review_tone": review_tone,
-        }
-        payload = _run_graph(
-            task_id,
-            _initial_state(
-                evaluation_id,
-                ActionType.GENERATE_REVIEW,
-                "",
-                context,
-                model,
-                language,
-            ),
-            mode=mode,
-        )
-        # The legacy contract calls this id evaluation_id.
-        payload["evaluation_id"] = evaluation_id
-        logger.info("analyze_thesis.completed", evaluation_id=evaluation_id)
-        return payload
-    except Exception as exc:
-        logger.error(
-            "analyze_thesis.failed", evaluation_id=evaluation_id, error=str(exc)
-        )
         _record_final_failure(self, task_id, exc)
         raise self.retry(exc=exc)  # noqa: B904

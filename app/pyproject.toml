@@ -56,7 +56,6 @@ select = ["E", "F", "I", "N", "UP", "ANN", "S", "B"]
 "tests/**/*.py" = ["S101", "S105", "S106"]
 "src/identity/infrastructure/router.py" = ["B008"]
 "src/mentoring/infrastructure/router.py" = ["B008"]
-"src/document/router.py" = ["B008"]
 "main.py" = ["B008"]
 
 [tool.pyright]

@@ -1,7 +1,7 @@
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
-const GATEWAY_URL = process.env.GATEWAY_URL ?? "http://localhost:8000"
+import { APP_URL } from "@/lib/appProxy"
 
 export async function PATCH(request: Request): Promise<Response> {
   const token = (await cookies()).get("access_token")?.value
@@ -12,7 +12,7 @@ export async function PATCH(request: Request): Promise<Response> {
     current_password: string
     new_password: string
   }
-  const res = await fetch(`${GATEWAY_URL}/users/me/password`, {
+  const res = await fetch(`${APP_URL}/users/me/password`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",

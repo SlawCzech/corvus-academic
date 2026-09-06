@@ -43,16 +43,13 @@ class AgentTaskModel(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
     action_type: Mapped[str] = mapped_column(String(50), nullable=False)
     status: Mapped[str] = mapped_column(String(50), nullable=False)
-    # Correlation with mentoring.agent_actions / mentoring.students; null for
-    # the legacy /analysis flow, which predates the mentoring context.
+    # Correlation with mentoring.agent_actions / mentoring.students.
     action_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True), nullable=True, index=True
     )
     student_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True), nullable=True
     )
-    # Legacy /analysis correlation id. Dropped in Phase 3 with that endpoint.
-    evaluation_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     result: Mapped[Any] = mapped_column(  # type: ignore[assignment]
         JSONB().with_variant(JSON(), "sqlite"), nullable=True, default=None
     )

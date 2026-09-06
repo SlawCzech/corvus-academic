@@ -54,24 +54,17 @@
 
 ---
 
-## Pozostałości po konsolidacji (Faza 0 → do usunięcia w Fazie 3)
+## Pozostałości po konsolidacji — ✅ usunięte w Fazie 3 (2026-09-06)
 
-- [ ] **`app/src/proxy/`** — przejściowe proxy `/analysis/*` → `agent`, żeby istniejący
-  flow frontendu nie padł zanim powstaną endpointy mentoringowe. Znika razem z
-  `/students/{id}/actions`.
-
-- [ ] **`app/src/document/router.py` (`POST /extract`)** — z tego samego powodu.
-  Docelowo ekstrakcja jest wołana in-process przez upload draftu, bez endpointu HTTP.
-
-- [ ] **Frontend nadal czyta `GATEWAY_URL` i `PARSER_URL`** — oba wskazują teraz na
-  `app:8000`. Zwinąć do jednego `APP_URL` przy przepisywaniu route handlerów.
-
-- [ ] **Frontend nie wie nic o studentach ani akcjach AI** — cały interfejs mentoringu
-  (roster, notatki, `propose_topic`) istnieje wyłącznie w API. `useAnalysis` uogólnia się
-  na `useAction`, bo kontrakt 202-then-poll jest ten sam. Do zrobienia razem z Fazą 3.
-
-- [ ] **`agent_tasks.evaluation_id` i task `analyze_thesis`** — pozostałość kontraktu
-  sprzed mentoringu. Znikają razem z `POST /analysis` w Fazie 3.
+- [x] ~~`app/src/proxy/`~~ — proxy `/analysis/*` usunięte; `/health` przeniesiony do
+  `app/src/shared/health.py`.
+- [x] ~~`app/src/document/router.py` (`POST /extract`)~~ — ekstrakcja wołana in-process
+  przez `POST /students/{id}/drafts`.
+- [x] ~~`GATEWAY_URL` + `PARSER_URL` we frontendzie~~ — jedno `APP_URL`.
+- [x] ~~Frontend nie wie nic o studentach~~ — `/students` i `/students/[id]` z akcjami,
+  wersjami pracy i notatkami.
+- [x] ~~`agent_tasks.evaluation_id` i task `analyze_thesis`~~ — usunięte razem z
+  `POST /analysis` (migracja `0003_drop_legacy`).
 
 ---
 
@@ -106,13 +99,25 @@
 - [x] ~~**Email validation regex zbyt prosta**~~ — naprawione: `UserRegistration` używa
   biblioteki `email-validator` (commit `097798c`).
 
-- [ ] **Brak rate limitingu na `GET /analysis`** — polling statusu zadania nie jest ograniczony. Może być nadużywany przez frontend przy agresywnym pollingu.
+- [ ] **Brak rate limitingu na polling akcji** — `GET /students/{id}/actions/{action_id}`
+  odpytuje `agent` przy każdym wywołaniu, dopóki akcja nie jest terminalna. Frontend pyta
+  co 3 s; nic nie broni się przed szybszym klientem.
 
 ---
 
-## Agent / Parser / Frontend
+## Agent / Frontend
 
-> Serwisy w trakcie implementacji — dług będzie uzupełniany w miarę postępu.
+- [ ] **Brak testów E2E frontendu** — komponenty mają testy jednostkowe (vitest), ale nikt
+  nie klika przez ścieżkę „dodaj studenta → wgraj pracę → uruchom akcję → zaakceptuj".
+  Do rozważenia Playwright przy Fazie 6.
+
+- [ ] **Frontend nie pokazuje historii wyników akcji** — lista akcji na stronie studenta
+  pokazuje typ i status, ale kliknięcie w zakończoną akcję nie otwiera jej wyniku;
+  wynik widać tylko dla akcji uruchomionej w bieżącej sesji.
+
+- [ ] **`review_tone` niedostępny w akcjach mentoringowych** — `generate_review` jest
+  zawsze uruchamiany z tonem `auto`, mimo że graf i prompty obsługują siedem tonów
+  (spec: `docs/specs/review-tone-spec.md`). Do wystawienia w UI.
 
 ---
 

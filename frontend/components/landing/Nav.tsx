@@ -32,10 +32,10 @@ export default function Nav({ role, isLoggedIn }: NavProps) {
         {isLoggedIn && (
           <>
             <Link
-              href="/analysis/history"
+              href="/students"
               className="flex h-8 items-center px-3.5 text-[13px] font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
-              Historia
+              Studenci
             </Link>
             <Link
               href="/profile"

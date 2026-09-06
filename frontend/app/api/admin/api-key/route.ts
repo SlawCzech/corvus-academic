@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 
-const GATEWAY_URL = process.env.GATEWAY_URL ?? "http://localhost:8000"
+import { APP_URL } from "@/lib/appProxy"
 
 export async function PATCH(request: Request): Promise<Response> {
   const cookieStore = await cookies()
@@ -10,7 +10,7 @@ export async function PATCH(request: Request): Promise<Response> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
   const body = (await request.json()) as { api_key: string; provider: string }
-  const gatewayRes = await fetch(`${GATEWAY_URL}/settings/api-key`, {
+  const gatewayRes = await fetch(`${APP_URL}/settings/api-key`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",

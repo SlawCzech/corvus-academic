@@ -2,11 +2,12 @@
 
 `app` merges what used to be three separate services:
   - identity  — auth, users, roles/permissions, audit log, API-key vault
-  - parser    — PDF/DOCX text extraction (now an in-process module)
-  - gateway   — reverse proxy (only the `/analysis/*` → agent hop survives)
+  - parser    — PDF/DOCX text extraction (now an in-process module, called
+                when a thesis version is uploaded)
+  - gateway   — reverse proxy (gone: `app` calls `agent` explicitly now)
 
 plus `mentoring`, the bounded context the pivot is built on: students,
-meeting notes, and (from Phase 2) the AI action log.
+meeting notes, thesis versions and the AI action log.
 
 `agent` remains a separate service: LLM work is slow and asynchronous.
 """
@@ -18,11 +19,9 @@ import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.document.router import router as document_router
 from src.identity.infrastructure.router import router as identity_router
 from src.mentoring.infrastructure.router import router as mentoring_router
-from src.proxy.health import health_router
-from src.proxy.router import router as proxy_router
+from src.shared.health import health_router
 from src.shared.logging import configure_logging
 from src.shared.middleware import request_id_middleware
 from src.shared.settings import settings
@@ -52,6 +51,4 @@ app.middleware("http")(request_id_middleware)
 
 app.include_router(identity_router)
 app.include_router(mentoring_router)
-app.include_router(document_router)
-app.include_router(proxy_router)
 app.include_router(health_router)

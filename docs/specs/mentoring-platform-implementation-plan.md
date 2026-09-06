@@ -1,6 +1,6 @@
 # Corvus pivot: AI-first student-mentoring platform — implementation plan
 
-> Status: approved 2026-09-05. Phases 0, 1 and 2 are done; Phase 3 is next.
+> Status: approved 2026-09-05. Phases 0-3 are done; Phase 4 (BYOK) is next.
 > Architecture decisions referenced here are recorded as ADRs in [docs/adr/](../adr/):
 > [0001](../adr/0001-ai-first-mentoring-platform-pivot.md) (scope pivot),
 > [0002](../adr/0002-consolidate-services-into-app-and-agent.md) (service consolidation),
@@ -157,7 +157,7 @@ Sequencing follows the user's "AI first, simple interface" preference: Phase 0 i
 | 0 — service consolidation | ✅ done 2026-09-05 (81 tests, 88.3% cov, ruff clean) |
 | 1 — Student + MeetingNote backbone | ✅ done 2026-09-05 (150 tests, 90.4% cov, ruff clean) |
 | 2 — first AI action end-to-end (`propose_topic`) | ✅ done 2026-09-05 (310 tests, ruff clean) |
-| 3 — remaining actions | ⬜ not started |
+| 3 — remaining actions + drafts + removing the transitional endpoints | ✅ done 2026-09-06 |
 | 4 — BYOK wiring | ⬜ not started |
 | 5 — pgvector RAG for guidelines | ⬜ not started |
 | 6 — deploy/CI groundwork | ⬜ not started |
@@ -202,7 +202,25 @@ Decisions worth recording:
 7. **`ActionType`/`ActionStatus` moved out of `mentoring/domain/student.py` into `mentoring/domain/action.py`**, next to the new `AgentAction` entity, now that actions are real rather than a table waiting to be used.
 8. **Ruff in `agent` fixed on the way in** (36 errors → 0), since the phase touched most of that service anyway; prompt-text files get a scoped `E501` exemption because rewrapping a line there changes the prompt. Pyright in `agent/src` is down to the single pre-existing pydantic-settings pattern, and every new module in `app/src/mentoring` is pyright-clean.
 
-**Phase 3 — remaining actions**: `check_progress.py` + prompt, `draft_meeting_note.py` + prompt (new); `evaluate_methodology` reuses `methodology.py`; `generate_review` reuses `build_analysis_graph(mode="full")` unchanged. `POST /students/{id}/drafts` upload endpoint calls `app/src/document/extractor.py` in-process (the merge's concrete payoff — no more `/extract` HTTP hop). One context-assembly function per action type. Verification: per-action node tests + one full `app→agent→back` integration test per action (mirroring `agent/tests/test_application/test_tasks.py`'s eager-Celery setup); manual run of all 5 actions against a student with 2 draft versions.
+**Phase 3 — the rest of the catalog, thesis versions, and the end of the transitional endpoints** — ✅ **done 2026-09-06**. The action catalog is complete, students have uploaded thesis versions, and nothing pre-mentoring is left in the code.
+
+**A sixth action was added on the user's request: `defence_questions`** — three questions a defence committee would ask, one each on the research problem, the method, and the conclusions, drawn from the uploaded thesis. It is the only action aimed at the defence rather than at improving the draft, and it needs no acceptance: the promoter reads it and takes it to the defence.
+
+Actions now: `propose_topic`, `evaluate_methodology`, `check_progress`, `draft_meeting_note`, `defence_questions`, `generate_review`.
+
+Verified against the running stack with the real model, not only in tests: a DOCX thesis (regression on institutions and growth) was uploaded and parsed in-process; `defence_questions` returned three questions that visibly used the work — sample selection, and the interpretation of significance given a short 2004-2022 series; `check_progress` on a student with one version returned 409 with a message saying why; `draft_meeting_note` turned "omówiliśmy rozdział 2, student poprawi dobór próby, termin 20.03" into a clean note, and accepting it created a real `meeting_notes` row carrying `source_action_id`. The frontend was rebuilt as a production image and serves the new routes. Smoke data deleted afterwards.
+
+Decisions worth recording:
+
+1. **The graph dispatcher covers every `ActionType`, and `IMPLEMENTED_ACTIONS` is now `frozenset(ActionType)`.** Five of the six are one-node graphs; only `generate_review` runs the four-node pipeline. Adding an action is a node plus a prompt plus a context builder — no new state schema, no new task, no new endpoint.
+2. **Guidelines are loaded by `agent`, not shipped by `app`.** The requirements document is static data the agent owns (files today, pgvector in Phase 5), so `tasks.py` injects it for the two actions judged against requirements. `app` sends `thesis_type` and nothing more.
+3. **"Not enough data" is a 409, not a 422 or a queued job that fails.** `MissingContextError` covers defence questions without a thesis, a progress check with one version, and a note-drafting action with nothing to write up; the message says what is missing.
+4. **Accepting is per action.** A topic proposal sets `current_topic`; an accepted note becomes a `meeting_notes` row with `source_action_id` set, so an AI-drafted note stays distinguishable from a typed one forever. The other four are read-only advice and accepting them only records that the promoter read them.
+5. **Context assembly fetches only what its action needs** — `check_progress` reads exactly two draft rows, `propose_topic` reads none — and records provenance as IDs (`draft_ids`, `note_ids`) in `input_ref`, never the text.
+6. **The extracted text never travels back out.** A draft response carries version, filename, page count, character count and a 400-character preview; the thesis itself stays in the row.
+7. **Transitional code is gone as planned**: `POST /extract`, the `/analysis/*` proxy and `src/proxy/` in `app`; `POST/GET /analysis`, the `analyze_thesis` task and the `evaluation_id` column (migration `0003_drop_legacy`) in `agent`. `app`'s health endpoint moved to `src/shared/health.py`, since "proxy" no longer describes anything.
+8. **One JSON helper for every node** (`agent/src/application/json_output.py`): four copies of "strip the markdown fence, tolerate list content, parse" existed before the three new nodes would have made seven.
+9. **Frontend rewritten around students** — `/students` and `/students/[id]` (topic, versions, notes, actions with polling and accept), `useAnalysis` → `useAction`, `GATEWAY_URL`/`PARSER_URL` → one `APP_URL`, and one `lib/appProxy.ts` behind every route handler so a refusal's own explanation reaches the UI. The old `/analysis` pages were deleted with the endpoints they called; `AnalysisResult` survives as the renderer for the two findings-based actions.
 
 **Phase 4 — BYOK wiring** (§ above). Verification: `llm_factory` tests for the BYOK-present branch, the admin-only→any-user auth-change test, and a test asserting the key never appears in persisted JSON output.
 

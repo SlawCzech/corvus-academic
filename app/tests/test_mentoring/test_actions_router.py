@@ -16,7 +16,13 @@ from tests.test_mentoring.conftest import (
     PROMOTOR_PASSWORD,
     login,
 )
-from tests.test_mentoring.fakes import FakeAgentClient, topic_payload
+from tests.test_mentoring.fakes import (
+    FakeAgentClient,
+    docx_bytes,
+    note_payload,
+    question_payload,
+    topic_payload,
+)
 
 _STUDENT: dict[str, Any] = {
     "full_name": "Jan Kowalski",
@@ -118,10 +124,10 @@ def test_unknown_action_type_is_rejected(
     assert resp.status_code == 422
 
 
-def test_action_awaiting_phase_three_is_rejected(
+def test_action_without_the_data_it_needs_is_409(
     client: TestClient, agent: FakeAgentClient
 ) -> None:
-    """A valid action type with no context assembly yet must not be queued."""
+    """A progress check on a student who uploaded nothing is a state conflict."""
     headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
     student_id = _new_student(client, headers)
 
@@ -130,7 +136,7 @@ def test_action_awaiting_phase_three_is_rejected(
         json={"action_type": "check_progress"},
         headers=headers,
     )
-    assert resp.status_code == 422
+    assert resp.status_code == 409
     assert agent.submitted == []
 
 
@@ -260,3 +266,106 @@ def test_accepting_a_topic_nobody_proposed_is_409(
 
     student = client.get(f"/students/{student_id}", headers=headers).json()
     assert student["current_topic"] is None
+
+
+# ---------- the rest of the catalog ----------
+
+
+_DOCX_TYPE = (
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+)
+
+
+def _upload(client: TestClient, headers: dict[str, str], student_id: str) -> None:
+    resp = client.post(
+        f"/students/{student_id}/drafts",
+        files={"file": ("praca.docx", docx_bytes("Rozdział 1: Wstęp."), _DOCX_TYPE)},
+        headers=headers,
+    )
+    assert resp.status_code == 201, resp.text
+
+
+def test_defence_questions_run_against_the_uploaded_thesis(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+    _upload(client, headers, student_id)
+
+    action = _trigger(client, headers, student_id, action_type="defence_questions")
+    agent.completes_with(
+        question_payload(
+            "Dlaczego wybrano tę metodę?",
+            "Jak sformułowano problem badawczy?",
+            "Jakie są ograniczenia wniosków?",
+        )
+    )
+    resp = client.get(
+        f"/students/{student_id}/actions/{action['id']}", headers=headers
+    )
+
+    body = resp.json()
+    assert body["status"] == "completed"
+    questions = body["output"]["output"]["questions"]
+    assert len(questions) == 3
+    assert questions[0]["question"] == "Dlaczego wybrano tę metodę?"
+    assert "Rozdział 1" in agent.submitted[0]["context"]["text"]
+
+
+def test_defence_questions_without_a_thesis_are_409(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+
+    resp = client.post(
+        f"/students/{student_id}/actions",
+        json={"action_type": "defence_questions"},
+        headers=headers,
+    )
+
+    assert resp.status_code == 409
+    assert agent.submitted == []
+
+
+def test_accepting_a_drafted_note_creates_the_note(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+    action = _trigger(
+        client,
+        headers,
+        student_id,
+        action_type="draft_meeting_note",
+        detail="rozdział 2, dobór próby, termin 15.03",
+    )
+    agent.completes_with(note_payload("Omówiliśmy zakres rozdziału 2."))
+    client.get(f"/students/{student_id}/actions/{action['id']}", headers=headers)
+
+    resp = client.patch(
+        f"/students/{student_id}/actions/{action['id']}/accept",
+        json={},
+        headers=headers,
+    )
+    assert resp.status_code == 200
+
+    notes = client.get(
+        f"/students/{student_id}/meeting-notes", headers=headers
+    ).json()
+    assert len(notes) == 1
+    assert notes[0]["content"] == "Omówiliśmy zakres rozdziału 2."
+    assert notes[0]["source_action_id"] == action["id"]
+
+
+def test_review_action_is_queued_once_a_draft_exists(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+    _upload(client, headers, student_id)
+
+    body = _trigger(client, headers, student_id, action_type="generate_review")
+
+    assert body["status"] == "pending"
+    assert agent.submitted[0]["action_type"] == "generate_review"

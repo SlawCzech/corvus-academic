@@ -17,15 +17,27 @@ from src.mentoring.application.agent_client import (
     AgentClient,
     AgentUnavailableError,
 )
-from src.mentoring.application.context import assemble_propose_topic_context
+from src.mentoring.application.context import (
+    assemble_check_progress_context,
+    assemble_defence_questions_context,
+    assemble_draft_meeting_note_context,
+    assemble_evaluate_methodology_context,
+    assemble_generate_review_context,
+    assemble_propose_topic_context,
+)
+from src.mentoring.application.draft_service import to_domain as draft_to_domain
 from src.mentoring.application.student_service import (
     Caller,
     StudentService,
 )
 from src.mentoring.domain.action import ActionStatus, ActionType, AgentAction
-from src.mentoring.domain.student import MeetingNote, Student
+from src.mentoring.domain.draft import ThesisDraft
+from src.mentoring.domain.student import Student
 from src.mentoring.infrastructure.models import AgentActionModel
-from src.mentoring.infrastructure.repositories import AgentActionRepository
+from src.mentoring.infrastructure.repositories import (
+    AgentActionRepository,
+    ThesisDraftRepository,
+)
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -35,7 +47,7 @@ class ActionNotFoundError(Exception):
 
 
 class UnsupportedActionError(Exception):
-    """Raised for an action type `app` cannot assemble a context for yet."""
+    """Raised for an action type `app` cannot assemble a context for."""
 
 
 def _to_domain(model: AgentActionModel) -> AgentAction:
@@ -58,24 +70,6 @@ def _to_domain(model: AgentActionModel) -> AgentAction:
     )
 
 
-def _build_context(
-    action_type: ActionType,
-    student: Student,
-    notes: list[MeetingNote],
-    detail: str | None,
-) -> dict[str, Any]:
-    """Assemble the context for one action type.
-
-    Each new action type adds a case here and a function in `context.py` —
-    the rest of this service does not change.
-    """
-    if action_type is ActionType.PROPOSE_TOPIC:
-        return assemble_propose_topic_context(student, notes, detail)
-    raise UnsupportedActionError(
-        f"No context assembly for action type: {action_type}"
-    )
-
-
 class ActionService:
     """Triggers AI actions, tracks them, and applies accepted results."""
 
@@ -83,10 +77,12 @@ class ActionService:
         self,
         students: StudentService,
         actions: AgentActionRepository,
+        drafts: ThesisDraftRepository,
         agent: AgentClient,
     ) -> None:
         self._students = students
         self._actions = actions
+        self._drafts = drafts
         self._agent = agent
 
     # ---------- trigger ----------
@@ -103,8 +99,7 @@ class ActionService:
     ) -> AgentAction:
         """Record and dispatch one action for a student the caller can see."""
         student = await self._students.get(caller, student_id)
-        notes = await self._students.list_meeting_notes(caller, student_id)
-        context = _build_context(action_type, student, notes, detail)
+        context, input_ref = await self._assemble(caller, student, action_type, detail)
 
         now = datetime.now(UTC)
         record = AgentActionModel(
@@ -116,10 +111,7 @@ class ActionService:
             detail=detail,
             # IDs only: the context itself is reproducible from these rows,
             # and the prompt can be large.
-            input_ref={
-                "student_id": str(student.id),
-                "note_ids": [str(n.id) for n in notes],
-            },
+            input_ref=input_ref,
             created_at=now,
             updated_at=now,
         )
@@ -210,9 +202,7 @@ class ActionService:
         # Validate everything before writing anything: an out-of-range index
         # must not leave a half-accepted action behind.
         action.accept()
-        if action.action_type is ActionType.PROPOSE_TOPIC:
-            title = action.topic_title(topic_index)
-            await self._students.update(caller, student_id, current_topic=title)
+        await self._apply_effect(caller, action, student_id, topic_index)
 
         record.accepted = action.accepted
         record.accepted_at = action.accepted_at
@@ -226,6 +216,108 @@ class ActionService:
         return _to_domain(record)
 
     # ---------- internals ----------
+
+    async def _assemble(
+        self,
+        caller: Caller,
+        student: Student,
+        action_type: ActionType,
+        detail: str | None,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Gather what this action needs, and the provenance of what was used.
+
+        Each action fetches only its own inputs — a progress check reads two
+        draft rows, a topic proposal reads none. The returned ``input_ref``
+        holds IDs only: the context is reproducible from those rows, and a
+        thesis is far too large to log twice.
+        """
+        base_ref: dict[str, Any] = {"student_id": str(student.id)}
+
+        match action_type:
+            case ActionType.PROPOSE_TOPIC:
+                notes = await self._students.list_meeting_notes(caller, student.id)
+                return (
+                    assemble_propose_topic_context(student, notes, detail),
+                    base_ref | {"note_ids": [str(n.id) for n in notes]},
+                )
+            case ActionType.DRAFT_MEETING_NOTE:
+                notes = await self._students.list_meeting_notes(caller, student.id)
+                return (
+                    assemble_draft_meeting_note_context(student, notes, detail),
+                    base_ref | {"note_ids": [str(n.id) for n in notes]},
+                )
+            case ActionType.EVALUATE_METHODOLOGY:
+                latest = await self._latest_drafts(student.id, 1)
+                return (
+                    assemble_evaluate_methodology_context(
+                        student, latest[0] if latest else None, detail
+                    ),
+                    base_ref | self._draft_ref(latest[:1]),
+                )
+            case ActionType.DEFENCE_QUESTIONS:
+                latest = await self._latest_drafts(student.id, 1)
+                return (
+                    assemble_defence_questions_context(
+                        student, latest[0] if latest else None, detail
+                    ),
+                    base_ref | self._draft_ref(latest[:1]),
+                )
+            case ActionType.GENERATE_REVIEW:
+                latest = await self._latest_drafts(student.id, 1)
+                return (
+                    assemble_generate_review_context(
+                        student, latest[0] if latest else None, detail
+                    ),
+                    base_ref | self._draft_ref(latest[:1]),
+                )
+            case ActionType.CHECK_PROGRESS:
+                latest = await self._latest_drafts(student.id, 2)
+                return (
+                    assemble_check_progress_context(student, latest, detail),
+                    base_ref | self._draft_ref(latest),
+                )
+            case _:  # pragma: no cover — every ActionType is handled above
+                raise UnsupportedActionError(
+                    f"No context assembly for action type: {action_type}"
+                )
+
+    async def _latest_drafts(
+        self, student_id: UUID, limit: int
+    ) -> list[ThesisDraft]:
+        models = await self._drafts.find_latest(student_id, limit=limit)
+        return [draft_to_domain(m) for m in models]
+
+    @staticmethod
+    def _draft_ref(drafts: list[ThesisDraft]) -> dict[str, Any]:
+        return {
+            "draft_ids": [str(d.id) for d in drafts],
+            "draft_versions": [d.version_number for d in drafts],
+        }
+
+    async def _apply_effect(
+        self,
+        caller: Caller,
+        action: AgentAction,
+        student_id: UUID,
+        topic_index: int,
+    ) -> None:
+        """Write what the promoter accepted back into the student's record.
+
+        Only two actions change anything: a topic proposal settles the topic,
+        and a drafted note becomes a real meeting note — carrying
+        ``source_action_id``, so an AI-drafted note stays distinguishable
+        from one the promoter wrote. The rest are read-only advice.
+        """
+        if action.action_type is ActionType.PROPOSE_TOPIC:
+            title = action.topic_title(topic_index)
+            await self._students.update(caller, student_id, current_topic=title)
+        elif action.action_type is ActionType.DRAFT_MEETING_NOTE:
+            await self._students.add_meeting_note(
+                caller,
+                student_id,
+                content=action.drafted_note(),
+                source_action_id=action.id,
+            )
 
     async def _require_record(
         self, caller: Caller, student_id: UUID, action_id: UUID

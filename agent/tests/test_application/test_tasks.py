@@ -1,4 +1,4 @@
-"""Tests for the Celery tasks — the generic runner and the legacy adapter."""
+"""Tests for the run_action Celery task."""
 
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from celery.exceptions import Retry
 
-from src.application.tasks import _result_payload, analyze_thesis, run_action
+from src.application.tasks import _result_payload, run_action
 from src.domain.action import ActionType, TaskStatus
 from src.infrastructure.celery_app import celery_app
 from tests.factories import ACTION_ID, STUDENT_ID
@@ -163,52 +163,6 @@ def test_intermediate_failure_stays_running(status_writes: MagicMock) -> None:
     assert statuses == [TaskStatus.RUNNING]
 
 
-# ---------- legacy analysis entry point ----------
-
-
-def test_legacy_task_assembles_the_review_context() -> None:
-    """The old arguments become the same context any action gets."""
-    graph = _mock_graph()
-
-    with (
-        patch("src.application.tasks.build_action_graph", return_value=graph),
-        patch("src.application.tasks.load_guidelines", return_value=_GUIDELINES),
-    ):
-        analyze_thesis.apply(args=(ACTION_ID, _TEXT, _METADATA))
-
-    call_state: dict[str, Any] = graph.invoke.call_args[0][0]
-    assert call_state["action_type"] == ActionType.GENERATE_REVIEW
-    assert call_state["context"]["text"] == _TEXT
-    assert call_state["context"]["guidelines"] == _GUIDELINES
-    assert call_state["context"]["metadata"] == _METADATA
-    assert call_state["findings"] == []
-
-
-def test_legacy_task_keeps_its_evaluation_id_in_the_payload() -> None:
-    """The old frontend contract calls this id evaluation_id."""
-    with (
-        patch("src.application.tasks.build_action_graph", return_value=_mock_graph()),
-        patch("src.application.tasks.load_guidelines", return_value=_GUIDELINES),
-    ):
-        result = analyze_thesis.apply(args=(ACTION_ID, _TEXT, _METADATA))
-
-    payload: dict[str, Any] = result.get()
-    assert payload["evaluation_id"] == ACTION_ID
-    assert payload["status"] == "analyzed"
-    # A 2 MB thesis has no business in the result row or the HTTP response.
-    assert "context" not in payload
-
-
-def test_legacy_task_retries_on_exception() -> None:
-    with (
-        patch("src.application.tasks.load_guidelines", return_value=_GUIDELINES),
-        patch("src.application.tasks.build_action_graph") as builder,
-    ):
-        builder.side_effect = Exception("Graph failed")
-        with pytest.raises(Retry):
-            analyze_thesis.apply(args=(ACTION_ID, _TEXT, _METADATA), throw=True)
-
-
 # ---------- payload shaping ----------
 
 
@@ -240,3 +194,47 @@ def test_result_payload_leaves_other_actions_output_alone() -> None:
 
     assert "summary" not in payload
     assert payload["output"] == {"topics": [], "recommended": 0}
+
+
+# ---------- guidelines ----------
+
+
+def test_review_actions_get_the_university_requirements() -> None:
+    """Guideline text is agent-owned static data, not something `app` ships."""
+    graph = _mock_graph()
+
+    with (
+        patch("src.application.tasks.build_action_graph", return_value=graph),
+        patch(
+            "src.application.tasks.load_guidelines", return_value=_GUIDELINES
+        ) as loader,
+    ):
+        run_action.apply(
+            args=(
+                ACTION_ID,
+                ActionType.EVALUATE_METHODOLOGY,
+                STUDENT_ID,
+                {"text": _TEXT, "thesis_type": "master_article"},
+            )
+        )
+
+    loader.assert_called_once_with("master_article")
+    call_state: dict[str, Any] = graph.invoke.call_args[0][0]
+    assert call_state["context"]["guidelines"] == _GUIDELINES
+
+
+def test_other_actions_are_not_given_guidelines() -> None:
+    """Proposing a topic has nothing to check against the requirements."""
+    graph = _mock_graph()
+
+    with (
+        patch("src.application.tasks.build_action_graph", return_value=graph),
+        patch("src.application.tasks.load_guidelines") as loader,
+    ):
+        run_action.apply(
+            args=(ACTION_ID, ActionType.PROPOSE_TOPIC, STUDENT_ID, {"detail": "x"})
+        )
+
+    loader.assert_not_called()
+    call_state: dict[str, Any] = graph.invoke.call_args[0][0]
+    assert "guidelines" not in call_state["context"]

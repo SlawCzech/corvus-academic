@@ -6,7 +6,15 @@ from typing import Any
 
 import httpx
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+    status,
+)
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,12 +30,15 @@ from src.mentoring.application.agent_client import (
     AgentClient,
     AgentUnavailableError,
 )
+from src.mentoring.application.context import MissingContextError
+from src.mentoring.application.draft_service import DraftService
 from src.mentoring.application.student_service import (
     Caller,
     StudentNotFoundError,
     StudentService,
 )
 from src.mentoring.domain.action import ActionType, AgentAction
+from src.mentoring.domain.draft import ThesisDraft
 from src.mentoring.domain.student import (
     MeetingNote,
     Student,
@@ -38,6 +49,7 @@ from src.mentoring.infrastructure.repositories import (
     AgentActionRepository,
     MeetingNoteRepository,
     StudentRepository,
+    ThesisDraftRepository,
 )
 from src.shared.database import get_db_session
 from src.shared.settings import settings
@@ -93,7 +105,19 @@ def get_action_service(
     students: StudentService = Depends(get_student_service),
     agent: AgentClient = Depends(get_agent_client),
 ) -> ActionService:
-    return ActionService(students, AgentActionRepository(session), agent)
+    return ActionService(
+        students,
+        AgentActionRepository(session),
+        ThesisDraftRepository(session),
+        agent,
+    )
+
+
+def get_draft_service(
+    session: AsyncSession = Depends(get_db_session),
+    students: StudentService = Depends(get_student_service),
+) -> DraftService:
+    return DraftService(students, ThesisDraftRepository(session))
 
 
 # ---------- schemas ----------
@@ -151,6 +175,36 @@ class ActionAcceptRequest(BaseModel):
     # Which of the proposed topics the promoter picked. Ignored by action
     # types that have nothing to choose between.
     topic_index: int = Field(default=0, ge=0)
+
+
+class DraftResponse(BaseModel):
+    """A stored version. The extracted text is never sent back wholesale."""
+
+    id: uuid.UUID
+    student_id: uuid.UUID
+    version_number: int
+    filename: str
+    pages: int
+    format: str
+    char_count: int
+    preview: str
+    uploaded_by: uuid.UUID
+    created_at: datetime
+
+
+def _draft_response(draft: ThesisDraft) -> DraftResponse:
+    return DraftResponse(
+        id=draft.id,
+        student_id=draft.student_id,
+        version_number=draft.version_number,
+        filename=draft.filename,
+        pages=draft.pages,
+        format=draft.format,
+        char_count=draft.char_count,
+        preview=draft.preview,
+        uploaded_by=draft.uploaded_by,
+        created_at=draft.created_at,
+    )
 
 
 class ActionResponse(BaseModel):
@@ -392,6 +446,12 @@ async def trigger_action(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc
+    except MissingContextError as exc:
+        # The student's record does not hold what this action needs yet —
+        # no draft uploaded, only one version, no rough notes to write up.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     except AgentUnavailableError as exc:
         # The attempt is recorded as failed; the promoter can retry.
         raise HTTPException(
@@ -456,3 +516,62 @@ async def accept_action(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
     return _action_response(action)
+
+
+# ---------- thesis draft endpoints ----------
+
+
+@router.post(
+    "/{student_id}/drafts",
+    response_model=DraftResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_draft(
+    student_id: uuid.UUID,
+    file: UploadFile,
+    caller: Caller = Depends(get_caller),
+    svc: DraftService = Depends(get_draft_service),
+) -> DraftResponse:
+    """Upload the next version of a student's thesis.
+
+    The PDF/DOCX is parsed in-process — the payoff of folding the old parser
+    service into `app` — and stored as version N+1 for that student.
+    """
+    data = await file.read()
+    try:
+        draft = await svc.upload(
+            caller,
+            student_id,
+            filename=file.filename or "",
+            data=data,
+            content_type=file.content_type or "",
+        )
+    except StudentNotFoundError as exc:
+        raise _not_found(exc) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
+        ) from exc
+    except Exception as exc:
+        logger.error(
+            "draft_extraction_failed", student_id=str(student_id), error=str(exc)
+        )
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=f"Could not read the document: {exc}",
+        ) from exc
+    return _draft_response(draft)
+
+
+@router.get("/{student_id}/drafts", response_model=list[DraftResponse])
+async def list_drafts(
+    student_id: uuid.UUID,
+    caller: Caller = Depends(get_caller),
+    svc: DraftService = Depends(get_draft_service),
+) -> list[DraftResponse]:
+    """Return a student's uploaded versions, newest first."""
+    try:
+        drafts = await svc.list_drafts(caller, student_id)
+    except StudentNotFoundError as exc:
+        raise _not_found(exc) from exc
+    return [_draft_response(d) for d in drafts]

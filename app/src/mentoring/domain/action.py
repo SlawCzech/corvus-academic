@@ -19,6 +19,7 @@ class ActionType(StrEnum):
     EVALUATE_METHODOLOGY = "evaluate_methodology"
     CHECK_PROGRESS = "check_progress"
     DRAFT_MEETING_NOTE = "draft_meeting_note"
+    DEFENCE_QUESTIONS = "defence_questions"
     GENERATE_REVIEW = "generate_review"
 
 
@@ -76,11 +77,7 @@ class AgentAction:
         ``output``; everything else in it (findings, scores) belongs to the
         review actions.
         """
-        payload = self.output or {}
-        structured = payload.get("output")
-        if not isinstance(structured, dict):
-            return []
-        topics = cast(dict[str, Any], structured).get("topics")
+        topics = self.structured_output().get("topics")
         if not isinstance(topics, list):
             return []
         return [t for t in cast(list[Any], topics) if isinstance(t, dict)]
@@ -100,6 +97,23 @@ class AgentAction:
         if not title:
             raise ValueError(f"Proposed topic {index} has no title")
         return title
+
+    def structured_output(self) -> dict[str, Any]:
+        """The action's own result, unwrapped from the agent's payload."""
+        payload = self.output or {}
+        structured = payload.get("output")
+        return cast(dict[str, Any], structured) if isinstance(structured, dict) else {}
+
+    def drafted_note(self) -> str:
+        """Return the note text a `draft_meeting_note` action produced.
+
+        Raises ValueError when there is nothing to save — accepting must not
+        create an empty meeting note.
+        """
+        content = str(self.structured_output().get("content", "")).strip()
+        if not content:
+            raise ValueError("This action produced no note to save")
+        return content
 
     def accept(self, at: datetime | None = None) -> None:
         """Mark the action accepted by the promoter."""

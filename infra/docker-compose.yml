@@ -6,12 +6,9 @@ services:
     ports:
       - "3000:3000"
     environment:
-      # Both point at `app` — it now serves identity routes, /extract and the
-      # transitional /analysis proxy. The frontend still reads two separate
-      # variables; they collapse into one APP_URL in Phase 3.
-      - GATEWAY_URL=http://app:8000
-      - PARSER_URL=http://app:8000
-      - NEXT_PUBLIC_GATEWAY_URL=http://localhost:8000
+      # One service, one variable: the frontend talks only to `app`, which
+      # serves identity, students, drafts and actions.
+      - APP_URL=http://app:8000
     depends_on:
       app:
         condition: service_healthy

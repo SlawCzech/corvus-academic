@@ -215,7 +215,13 @@ def test_propose_topic_is_a_single_node_graph() -> None:
     assert call_log == ["propose_topic"]
 
 
-def test_unimplemented_action_is_rejected() -> None:
-    """The three Phase 3 actions have no graph yet — say so loudly."""
-    with pytest.raises(ValueError, match="check_progress"):
-        build_action_graph(ActionType.CHECK_PROGRESS)
+def test_every_action_type_has_a_graph() -> None:
+    """The catalog and the dispatcher must not drift apart."""
+    for action_type in ActionType:
+        assert build_action_graph(action_type) is not None
+
+
+def test_unknown_action_is_rejected() -> None:
+    """Anything outside the catalog is a programming error, said loudly."""
+    with pytest.raises(ValueError, match="write_the_whole_thesis"):
+        build_action_graph("write_the_whole_thesis")

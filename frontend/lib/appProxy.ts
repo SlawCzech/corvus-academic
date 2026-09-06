@@ -1,0 +1,53 @@
+import { cookies } from "next/headers"
+import { NextResponse } from "next/server"
+
+/**
+ * Base URL of the `app` service.
+ *
+ * One variable, not the old GATEWAY_URL/PARSER_URL pair: since the Phase 0
+ * consolidation both pointed at the same service.
+ */
+export const APP_URL = process.env.APP_URL ?? "http://localhost:8000"
+
+interface ProxyInit {
+  method?: string
+  /** Serialised as a JSON request body. */
+  json?: unknown
+  /** Passed through as-is — used for multipart uploads. */
+  body?: BodyInit
+}
+
+/**
+ * Forward a request to `app` with the caller's access token.
+ *
+ * The upstream status and body are passed back untouched, so the UI can show
+ * why something was refused (a 409 explains what the student's record is
+ * missing) instead of a generic failure.
+ */
+export async function proxy(path: string, init: ProxyInit = {}): Promise<Response> {
+  const token = (await cookies()).get("access_token")?.value
+  if (!token) {
+    return NextResponse.json({ detail: "Unauthorized" }, { status: 401 })
+  }
+
+  const headers: Record<string, string> = { Authorization: `Bearer ${token}` }
+  let body = init.body
+  if (init.json !== undefined) {
+    headers["Content-Type"] = "application/json"
+    body = JSON.stringify(init.json)
+  }
+
+  const upstream = await fetch(`${APP_URL}${path}`, {
+    method: init.method ?? "GET",
+    headers,
+    body,
+    cache: "no-store",
+  })
+
+  const text = await upstream.text()
+  if (!text) return new NextResponse(null, { status: upstream.status })
+  return new NextResponse(text, {
+    status: upstream.status,
+    headers: { "Content-Type": "application/json" },
+  })
+}

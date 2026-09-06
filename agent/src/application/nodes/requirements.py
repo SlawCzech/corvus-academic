@@ -1,20 +1,15 @@
 """LangGraph node: check conformance with university guidelines."""
 
-import json
-import re
-from collections.abc import Sequence
-
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from src.application.json_output import parse_json_array
 from src.domain.analysis import Finding, FindingSeverity
 from src.infrastructure.llm_factory import get_llm
 
 from ..state import ActionState
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-
-_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
 
 _SYSTEM_PROMPT_BASE = """You are checking a thesis against university requirements.
 
@@ -52,11 +47,6 @@ def _get_system_prompt(language: str = "pl") -> str:
     )
 
 
-def _extract_json(text: str) -> str:
-    match = _FENCE_RE.search(text)
-    return match.group(1) if match else text.strip()
-
-
 def check_requirements(state: ActionState) -> ActionState:
     """Check thesis conformance against university guidelines from state."""
     try:
@@ -73,9 +63,7 @@ def check_requirements(state: ActionState) -> ActionState:
                 ),
             ]
         )
-        raw: str | Sequence[object] = response.content  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
-        content: str = raw if isinstance(raw, str) else json.dumps(raw)
-        data: list[dict[str, str]] = json.loads(_extract_json(content))
+        data = parse_json_array(response.content)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
         new_findings: list[Finding] = [
             Finding(
                 section=item["section"],

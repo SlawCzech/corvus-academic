@@ -8,7 +8,7 @@
 
 ---
 
-## Stan: po Fazie 2 (pierwsza akcja AI end-to-end)
+## Stan: po Fazie 3 (pełny katalog akcji)
 
 Corvus przechodzi pivot z narzędzia do analizy jednego dokumentu na platformę
 mentoringową dla promotorów. Kontekst i uzasadnienie:
@@ -30,10 +30,11 @@ przez polling, a akceptacja promotora ustawia `students.current_topic`. Przy oka
 naprawiona trwałość statusu: worker zapisuje `running`/`completed`/`failed` do
 Postgresa (`analysis.agent_tasks`, dawniej `analyses`), zamiast czytać status z
 wygasającego backendu Celery w Redisie.
-**Jeszcze nie:** pozostałe cztery akcje i upload draftów (`thesis_drafts` wciąż
-puste) — Faza 3, oraz cały interfejs mentoringu we frontendzie. Dopóki to nie
-powstanie, `app` wystawia *przejściowo* stary kontrakt: `POST /extract` oraz proxy
-`/analysis/*` → `agent`, żeby istniejący frontend działał bez zmian.
+**Zrobione (Faza 3):** pełny katalog sześciu akcji, upload wersji pracy
+(`POST /students/{id}/drafts`, ekstrakcja in-process) i frontend mentoringowy
+(`/students`, `/students/[id]`). Przejściowe endpointy (`POST /extract`, proxy
+`/analysis/*`, `POST/GET /analysis` w agencie) **usunięte**.
+**Jeszcze nie:** BYOK (Faza 4), RAG nad wytycznymi w pgvector (Faza 5), CI/CD (Faza 6).
 
 ---
 
@@ -70,8 +71,8 @@ Referencje między kontekstami to gołe UUID bez kluczy obcych.
 | Serwis | Port | Stack | Opis |
 |---|---|---|---|
 | frontend | 3000 | Next.js, TypeScript | interfejs webowy |
-| app | 8000 | FastAPI, Postgres | auth/użytkownicy/role/audyt + ekstrakcja + proxy do agenta |
-| agent | 8002 | FastAPI | HTTP API — przyjmowanie zadań analizy, status, historia |
+| app | 8000 | FastAPI, Postgres | auth/użytkownicy/role/audyt + studenci, wersje pracy, akcje AI |
+| agent | 8002 | FastAPI | HTTP API — przyjmowanie akcji i ich status |
 | agent-worker | — | Celery | worker wykonujący graf LangGraph (ten sam obraz co `agent`) |
 | ollama | 11434 | Ollama | lokalne modele LLM |
 | redis | 6379 | Redis | broker Celery + blacklist refresh tokenów |
@@ -96,8 +97,8 @@ kontra wolne, asynchroniczne wywołania LLM (`agent`) — patrz ADR 0002.
 Użytkownik (przeglądarka)
   │
   ▼
-frontend :3000  (Next.js route handlers jako proxy do app)
-  │  POST /api/analyze  (multipart: plik)
+frontend :3000  (Next.js route handlers jako proxy do app, jedno APP_URL)
+  │  /students, /students/[id] — roster, wersje pracy, notatki, akcje AI
   ▼
 app :8000
   │
@@ -111,22 +112,28 @@ app :8000
   │      widoczność: promotor widzi swoich, admin wszystkich
   │      (VIEW_ALL_STUDENTS); cudzy student to 404, nie 403
   │
+  ├──► /students/{id}/drafts  — wersje pracy
+  │      POST   → ekstrakcja in-process (PyMuPDF / python-docx),
+  │               zapis jako wersja N+1; odpowiedź bez tekstu pracy
+  │      GET    → lista wersji (metadane + 400 znaków podglądu)
+  │
   ├──► /students/{id}/actions  — akcje AI
   │      POST   → składa kontekst (mentoring/application/context.py),
   │               zapisuje wiersz agent_actions (pending),
   │               woła agent POST /actions, zapisuje task_id
+  │               409, jeśli rekord studenta nie ma jeszcze tego, czego
+  │               akcja wymaga (np. pytania na obronę bez wgranej pracy)
   │      GET    → polling: dopóki akcja nie jest terminalna, dociąga
   │               status z agent GET /actions/{task_id}
-  │      PATCH .../accept → propose_topic ustawia current_topic
+  │      PATCH .../accept → propose_topic ustawia current_topic,
+  │               draft_meeting_note zapisuje notatkę z source_action_id
   │
   │      Kontekst składa WYŁĄCZNIE `app` — agent nigdy nie oddzwania po
   │      dane, więc zadanie workera nie zależy od tego, czy `app` żyje.
+  │      Każda akcja pobiera tylko to, czego potrzebuje: check_progress
+  │      dwa ostatnie drafty, propose_topic żadnego.
   │
-  ├──► POST /extract  — ekstrakcja tekstu in-process (PyMuPDF / python-docx)
-  │      [PRZEJŚCIOWE — w Fazie 3 zastąpione uploadem draftu studenta]
-  │
-  └──► /analysis/*  →  agent :8002 (HTTP API)
-         [PRZEJŚCIOWE — w Fazie 3 zastąpione /students/{id}/actions]
+  └──► agent :8002 (HTTP API) — POST /actions, GET /actions/{task_id}
          │
          ▼
        agent :8002
@@ -144,8 +151,13 @@ app :8000
          generate_review      [struktura] → [metodologia] → [wymogi] → [recenzja]
                               (mode="review_only" → sama recenzja)
          propose_topic        [propose_topic]
-         pozostałe trzy       — Faza 3; API odrzuca je 422, zamiast
-                                kolejkować pracę, która i tak by padła
+         defence_questions    [defence_questions]     — 3 pytania na obronę
+         check_progress       [check_progress]        — porównanie 2 wersji
+         evaluate_methodology [analyze_methodology]   — ten sam węzeł, osobno
+         draft_meeting_note   [draft_meeting_note]
+       Nieznany typ akcji → 422 przy żądaniu, zamiast zadania, które i tak by padło.
+       Wytyczne uczelniane dokłada `agent` (dane statyczne, których jest
+       właścicielem) dla akcji ocenianych względem wymogów.
 
        Stan grafu (ActionState) jest wspólny dla wszystkich akcji: to, co
        specyficzne dla akcji, siedzi w `context`, dzięki czemu nowa akcja to
@@ -165,8 +177,8 @@ app :8000
          result jest przycięty — tekst pracy i wytyczne to wejście,
          nie wynik, i nie trafiają do JSONB ani do odpowiedzi HTTP
   ▼
-frontend (polling GET /api/status/{taskId} co 3s)
-  wyświetla wynik gdy status == "done"
+frontend (polling GET /api/students/{id}/actions/{actionId} co 3s)
+  wyświetla wynik i — gdzie to ma sens — przycisk akceptacji
 ```
 
 ---
@@ -180,30 +192,29 @@ corvus/
 │   ├── app/
 │   │   ├── page.tsx            # landing page
 │   │   ├── login/               # logowanie
-│   │   ├── analysis/            # upload + wynik + historia
-│   │   │   └── history/
+│   │   ├── students/            # lista studentów + karta studenta
+│   │   │   └── [id]/             # temat, wersje pracy, notatki, akcje AI
 │   │   ├── admin/                # panel admina
 │   │   │   ├── users/            # zarządzanie użytkownikami
 │   │   │   └── login-events/     # audyt logowań
 │   │   ├── profile/               # profil użytkownika, zmiana hasła
 │   │   └── api/                    # route handlers — proxy do app
 │   │       ├── auth/{login,logout,refresh}/
-│   │       ├── analyze/            # upload → app /extract
-│   │       ├── analysis/           # → app → agent
-│   │       ├── status/[taskId]/
+│   │       ├── students/           # + [id]/{drafts,meeting-notes,actions}
 │   │       ├── users/
 │   │       └── admin/
 │   ├── components/
-│   ├── lib/
-│   ├── hooks/
-│   ├── middleware.ts            # ochrona /admin i /analysis (cookie JWT)
+│   │   └── students/            # StudentForm, StudentDetail, ActionPanel,
+│   │                              ActionResultView
+│   ├── lib/                      # api.client, api.types, appProxy (APP_URL)
+│   ├── hooks/useAction.ts        # trigger + polling jednej akcji
+│   ├── middleware.ts            # ochrona /admin i /students (cookie JWT)
 │   ├── vitest.config.ts
 │   ├── eslint.config.mjs
 │   └── tsconfig.json            # strict: true
 │
 ├── app/                        # FastAPI, Postgres — identity + document + mentoring
-│   ├── main.py                  # montuje routery: identity, mentoring, document,
-│   │                              proxy, health
+│   ├── main.py                  # montuje routery: identity, mentoring, health
 │   ├── alembic_identity.ini
 │   ├── alembic_identity/        # lineage migracji dla schematu `identity`
 │   ├── alembic_mentoring.ini
@@ -229,28 +240,29 @@ corvus/
 │   │   │   │   ├── student.py       # Student, MeetingNote, StudentStatus,
 │   │   │   │   │                      ThesisType
 │   │   │   │   └── action.py        # AgentAction, ActionType, ActionStatus
+│   │   │   ├── domain/draft.py     # ThesisDraft (wersje pracy)
 │   │   │   ├── application/
 │   │   │   │   ├── student_service.py  # Caller (kto pyta + czy widzi wszystko),
 │   │   │   │   │                         reguła własności, use case'y
+│   │   │   │   ├── draft_service.py # upload → ekstrakcja → wersja N+1
 │   │   │   │   ├── context.py       # co model widzi — jedna funkcja na akcję
 │   │   │   │   ├── agent_client.py  # HTTP do agenta (/actions)
 │   │   │   │   └── action_service.py   # trigger → polling → accept
 │   │   │   └── infrastructure/
-│   │   │       ├── router.py        # /students/*, /students/{id}/actions/*
+│   │   │       ├── router.py        # /students/*, .../drafts, .../actions
 │   │   │       ├── models.py        # StudentModel, ThesisDraftModel,
 │   │   │       │                      MeetingNoteModel, AgentActionModel
 │   │   │       └── repositories.py
 │   │   ├── document/
 │   │   │   ├── document.py          # Document dataclass
-│   │   │   ├── extractor.py         # extract_pdf, extract_docx
-│   │   │   └── router.py            # POST /extract [PRZEJŚCIOWE — patrz Faza 3]
-│   │   ├── proxy/                    # [PRZEJŚCIOWE] /analysis/* → agent + /health
+│   │   │   └── extractor.py         # extract, detect_format, extract_pdf/docx
 │   │   └── shared/
 │   │       ├── settings.py           # scalona konfiguracja (identity + gateway)
 │   │       ├── database.py           # jeden async engine + session factory
+│   │       ├── health.py             # GET /health (status agenta)
 │   │       ├── logging.py            # structlog JSON
 │   │       └── middleware.py         # request_id
-│   ├── tests/{test_identity,test_mentoring,test_document,test_proxy}/
+│   ├── tests/{test_identity,test_mentoring,test_document,test_shared}/
 │   └── pyproject.toml
 │
 ├── agent/                      # FastAPI (HTTP API) + Celery + LangGraph
@@ -268,19 +280,21 @@ corvus/
 │   │   │   ├── graph.py         # build_action_graph(action_type) +
 │   │   │   │                      build_analysis_graph(mode="full"|"review_only")
 │   │   │   ├── guidelines.py    # loader wytycznych uczelnianych/promotora
+│   │   │   ├── json_output.py   # wspólne parsowanie odpowiedzi modelu
 │   │   │   ├── nodes/
 │   │   │   │   ├── structure.py
 │   │   │   │   ├── methodology.py
 │   │   │   │   ├── requirements.py
 │   │   │   │   ├── review.py
-│   │   │   │   └── propose_topic.py
+│   │   │   │   ├── propose_topic.py
+│   │   │   │   ├── defence_questions.py
+│   │   │   │   ├── check_progress.py
+│   │   │   │   └── draft_meeting_note.py
 │   │   │   ├── prompts/          # system prompty per węzeł + wytyczne
-│   │   │   └── tasks.py          # Celery: run_action (generyczny) +
-│   │   │                           analyze_thesis [PRZEJŚCIOWY adapter]
+│   │   │   └── tasks.py          # Celery: run_action
 │   │   └── infrastructure/
 │   │       ├── api/
-│   │       │   ├── router.py    # POST/GET /actions/{task_id}
-│   │       │   │                  + POST/GET /analysis [PRZEJŚCIOWE]
+│   │       │   ├── router.py    # POST /actions, GET /actions/{task_id}
 │   │       │   └── auth.py      # lokalna weryfikacja JWT (bez wołania identity)
 │   │       ├── celery_app.py
 │   │       ├── llm_factory.py   # model selector
@@ -326,9 +340,9 @@ Warstwa `domain/` nie importuje nic z FastAPI, LangChain,
 SQLAlchemy ani żadnego frameworka. Zawiera wyłącznie
 czystą logikę biznesową jako dataclasses i enums.
 
-`app/src/proxy/` i `app/src/document/` są wyjątkami świadomymi: nie mają
-warstwy `domain/`, bo nie mają własnej logiki biznesowej — pierwszy to czysty
-adapter HTTP → HTTP, drugi to cienka warstwa nad PyMuPDF/python-docx.
+`app/src/document/` jest wyjątkiem świadomym: nie ma warstwy `domain/`, bo nie
+ma własnej logiki biznesowej — to cienka warstwa nad PyMuPDF/python-docx,
+wołana in-process przy uploadzie wersji pracy.
 
 ### Przykład — warstwa domain (identity)
 
@@ -363,18 +377,32 @@ class User:
         return permission in _ROLE_PERMISSIONS.get(self.role, frozenset())
 ```
 
-### Przykład — przejściowe proxy do agenta
+### Przykład — składanie kontekstu akcji
 
 ```python
-# app/src/proxy/router.py
-@router.api_route("/analysis/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
-async def proxy_agent_analysis(path: str, request: Request) -> Response:
-    return await _proxy(request, settings.agent_url, f"/analysis/{path}")
+# app/src/mentoring/application/context.py
+def assemble_check_progress_context(
+    student: Student,
+    latest_drafts: Sequence[ThesisDraft],
+    detail: str | None = None,
+) -> dict[str, Any]:
+    if len(latest_drafts) < 2:
+        raise MissingContextError("Progress needs two uploaded versions to compare")
+    current, previous = latest_drafts[0], latest_drafts[1]
+    return {
+        "current_text": current.text,
+        "current_version": current.version_number,
+        "previous_text": previous.text,
+        "previous_version": previous.version_number,
+        "current_topic": student.current_topic,
+        "detail": detail,
+    }
 ```
 
-`_proxy()` przekazuje body, headers (w tym `Authorization` i `Cookie`)
-i query params, obsługuje `httpx.ConnectError` (503) i timeout (504),
-i loguje każde przekierowanie przez `structlog` z `request_id`.
+Jedna funkcja na typ akcji, czysta i testowalna bez bazy. To także szew, w
+którym przyszły agent czatowy podniesie te same funkcje jako narzędzia.
+Kontekst składa wyłącznie `app`; `agent` dokłada tylko wytyczne uczelniane,
+bo to jego własne dane statyczne.
 
 ### Przykład — model selector
 

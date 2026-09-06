@@ -1,6 +1,6 @@
 "use client"
 
-import type { AnalysisResult, Finding, FindingSeverity, Score } from "@/lib/api.types"
+import type { ActionResult, Finding, FindingSeverity, Score } from "@/lib/api.types"
 
 const SEVERITY_ORDER: FindingSeverity[] = ["critical", "major", "minor"]
 
@@ -75,13 +75,19 @@ function ScoreBar({ score }: { score: Score }) {
 }
 
 interface AnalysisResultProps {
-  result: AnalysisResult
+  result: ActionResult
 }
 
 export default function AnalysisResultView({ result }: AnalysisResultProps) {
+  const findings: Finding[] = result.findings ?? []
+  const scores: Score[] = result.scores ?? []
+  const summary = result.summary ?? result.output?.summary ?? null
+  const recommendation =
+    result.recommendation ?? result.output?.recommendation ?? null
+
   const grouped = SEVERITY_ORDER.reduce<Record<FindingSeverity, Finding[]>>(
     (acc, sev) => {
-      acc[sev] = result.findings.filter((f) => f.severity === sev)
+      acc[sev] = findings.filter((f) => f.severity === sev)
       return acc
     },
     { critical: [], major: [], minor: [] },
@@ -89,27 +95,27 @@ export default function AnalysisResultView({ result }: AnalysisResultProps) {
 
   return (
     <div data-testid="analysis-result">
-      {result.summary && (
+      {summary && (
         <section className="mb-6">
           <h2 className="mb-1 text-base font-semibold text-gray-800">Summary</h2>
           <p data-testid="summary" className="text-sm text-gray-700">
-            {result.summary}
+            {summary}
           </p>
         </section>
       )}
 
-      {result.recommendation && (
+      {recommendation && (
         <section className="mb-6">
           <h2 className="mb-1 text-base font-semibold text-gray-800">
             Recommendation
           </h2>
           <p data-testid="recommendation" className="text-sm text-gray-700">
-            {result.recommendation}
+            {recommendation}
           </p>
         </section>
       )}
 
-      {result.findings.length > 0 && (
+      {findings.length > 0 && (
         <section className="mb-6">
           <h2 className="mb-3 text-base font-semibold text-gray-800">Findings</h2>
           {SEVERITY_ORDER.map((sev) => (
@@ -118,10 +124,10 @@ export default function AnalysisResultView({ result }: AnalysisResultProps) {
         </section>
       )}
 
-      {result.scores.length > 0 && (
+      {scores.length > 0 && (
         <section>
           <h2 className="mb-3 text-base font-semibold text-gray-800">Scores</h2>
-          {result.scores.map((s, i) => (
+          {scores.map((s, i) => (
             <ScoreBar key={i} score={s} />
           ))}
         </section>

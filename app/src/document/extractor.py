@@ -10,7 +10,6 @@ from src.document.document import Document
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
-
 def extract_pdf(file: bytes) -> Document:
     """Extract text and page count from a PDF file."""
     pdf = fitz.open(stream=file, filetype="pdf")  # pyright: ignore[reportUnknownMemberType]
@@ -40,3 +39,34 @@ def extract_docx(file: bytes) -> Document:
     pages = len(sections)
     logger.info("docx_extracted", sections=pages, chars=len(text))
     return Document(text=text, pages=pages, format="docx")
+
+
+_CONTENT_TYPE_MAP: dict[str, str] = {
+    "application/pdf": "pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+}
+
+_EXTENSION_MAP: dict[str, str] = {
+    ".pdf": "pdf",
+    ".docx": "docx",
+}
+
+
+def detect_format(filename: str, content_type: str = "") -> str | None:
+    """Return 'pdf' or 'docx' based on file extension or content type."""
+    if "." in filename:
+        ext = "." + filename.rsplit(".", 1)[-1].lower()
+        if ext in _EXTENSION_MAP:
+            return _EXTENSION_MAP[ext]
+    return _CONTENT_TYPE_MAP.get(content_type)
+
+
+def extract(data: bytes, filename: str, content_type: str = "") -> Document:
+    """Extract text from an uploaded file, choosing the parser by format.
+
+    Raises ValueError for anything that is not a PDF or a DOCX.
+    """
+    fmt = detect_format(filename, content_type)
+    if fmt is None:
+        raise ValueError(f"Unsupported format: {filename!r} ({content_type})")
+    return extract_pdf(data) if fmt == "pdf" else extract_docx(data)

@@ -30,14 +30,6 @@ class AgentTaskRepository:
         )
         return result.scalar_one_or_none()
 
-    async def find_by_user(self, user_id: uuid.UUID) -> list[AgentTaskModel]:
-        result = await self._session.execute(
-            select(AgentTaskModel)
-            .where(AgentTaskModel.user_id == user_id)
-            .order_by(AgentTaskModel.created_at.desc())
-        )
-        return list(result.scalars().all())
-
     async def find_by_user_and_task_id(
         self, user_id: uuid.UUID, task_id: str
     ) -> AgentTaskModel | None:

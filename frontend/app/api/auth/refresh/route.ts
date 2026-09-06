@@ -1,7 +1,7 @@
 import { cookies } from "next/headers"
 import { NextResponse, type NextRequest } from "next/server"
 
-const GATEWAY_URL = process.env.GATEWAY_URL ?? "http://localhost:8000"
+import { APP_URL } from "@/lib/appProxy"
 
 export async function POST(request: NextRequest): Promise<Response> {
   const cookieStore = await cookies()
@@ -11,7 +11,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     return NextResponse.json({ error: "No refresh token" }, { status: 401 })
   }
 
-  const gatewayRes = await fetch(`${GATEWAY_URL}/auth/refresh`, {
+  const gatewayRes = await fetch(`${APP_URL}/auth/refresh`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ refresh_token: refreshToken }),
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   const data = (await gatewayRes.json()) as { access_token: string }
-  const redirect = request.nextUrl.searchParams.get("redirect") ?? "/analysis"
+  const redirect = request.nextUrl.searchParams.get("redirect") ?? "/students"
   const response = NextResponse.redirect(new URL(redirect, request.url))
   response.cookies.set("access_token", data.access_token, {
     httpOnly: true,

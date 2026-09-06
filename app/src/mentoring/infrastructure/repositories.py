@@ -2,13 +2,14 @@
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.mentoring.infrastructure.models import (
     AgentActionModel,
     MeetingNoteModel,
     StudentModel,
+    ThesisDraftModel,
 )
 
 
@@ -117,3 +118,51 @@ class AgentActionRepository:
             stmt = stmt.where(AgentActionModel.action_type == action_type)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
+
+
+class ThesisDraftRepository:
+    """Async store for uploaded thesis versions."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def save(self, model: ThesisDraftModel) -> None:
+        """Persist a draft version and commit."""
+        self._session.add(model)
+        await self._session.commit()
+        await self._session.refresh(model)
+
+    async def find_by_student(self, student_id: uuid.UUID) -> list[ThesisDraftModel]:
+        """Return a student's versions, newest first."""
+        result = await self._session.execute(
+            select(ThesisDraftModel)
+            .where(ThesisDraftModel.student_id == student_id)
+            .order_by(ThesisDraftModel.version_number.desc())
+        )
+        return list(result.scalars().all())
+
+    async def find_latest(
+        self, student_id: uuid.UUID, limit: int = 1
+    ) -> list[ThesisDraftModel]:
+        """Return the newest versions, newest first — at most `limit` of them.
+
+        `check_progress` asks for two; nothing needs the whole history, and a
+        thesis text is large enough that loading it all would be wasteful.
+        """
+        result = await self._session.execute(
+            select(ThesisDraftModel)
+            .where(ThesisDraftModel.student_id == student_id)
+            .order_by(ThesisDraftModel.version_number.desc())
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+
+    async def next_version_number(self, student_id: uuid.UUID) -> int:
+        """Return the version number the next upload should get."""
+        result = await self._session.execute(
+            select(func.max(ThesisDraftModel.version_number)).where(
+                ThesisDraftModel.student_id == student_id
+            )
+        )
+        current: int | None = result.scalar_one_or_none()
+        return (current or 0) + 1

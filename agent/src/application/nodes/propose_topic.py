@@ -5,28 +5,19 @@ uploaded document and no guidelines file — a student record and whatever the
 supervisor typed is enough.
 """
 
-import json
-import re
 from collections.abc import Sequence
 from typing import Any
 
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from src.application.json_output import as_list, parse_json_object
 from src.application.prompts import propose_topic as prompts
 from src.infrastructure.llm_factory import get_llm
 
 from ..state import ActionState
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-
-_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
-
-
-def _extract_json(text: str) -> str:
-    """Strip a markdown code fence if the model wrapped its JSON in one."""
-    match = _FENCE_RE.search(text)
-    return match.group(1) if match else text.strip()
 
 
 def _user_message(ctx: dict[str, Any]) -> str:
@@ -62,11 +53,11 @@ def propose_topic(state: ActionState) -> ActionState:
                 HumanMessage(content=_user_message(ctx)),
             ]
         )
-        raw: str | Sequence[object] = response.content  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
-        content: str = raw if isinstance(raw, str) else json.dumps(raw)
-        data: dict[str, Any] = json.loads(_extract_json(content))
+        data = parse_json_object(response.content)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
 
-        topics: list[dict[str, Any]] = list(data.get("topics") or [])
+        topics: list[dict[str, Any]] = [
+            t for t in as_list(data.get("topics")) if isinstance(t, dict)
+        ]
         if not topics:
             raise ValueError("model returned no topics")
 

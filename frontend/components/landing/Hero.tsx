@@ -26,7 +26,7 @@ export default function Hero() {
           Zaloguj się i zacznij
         </Link>
         <Link
-          href="/analysis"
+          href="/students"
           className="flex h-9 items-center px-[18px] text-[14px] border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-50 transition-colors"
         >
           Zobacz przykład

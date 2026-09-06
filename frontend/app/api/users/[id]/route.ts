@@ -1,7 +1,7 @@
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
-const GATEWAY_URL = process.env.GATEWAY_URL ?? "http://localhost:8000"
+import { APP_URL } from "@/lib/appProxy"
 
 export async function DELETE(
   _request: Request,
@@ -12,7 +12,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
   const { id } = await params
-  const res = await fetch(`${GATEWAY_URL}/users/${id}`, {
+  const res = await fetch(`${APP_URL}/users/${id}`, {
     method: "DELETE",
     headers: { Authorization: `Bearer ${token}` },
   })

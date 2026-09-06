@@ -2,7 +2,7 @@
 
 import uuid
 from collections.abc import AsyncGenerator
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -56,16 +56,6 @@ async def test_save_and_find_by_task_id(repo: AgentTaskRepository) -> None:
 
 async def test_find_by_task_id_missing(repo: AgentTaskRepository) -> None:
     assert await repo.find_by_task_id("nope") is None
-
-
-async def test_find_by_user_is_newest_first(repo: AgentTaskRepository) -> None:
-    await repo.save(_task("older", created_at=_NOW))
-    await repo.save(_task("newer", created_at=_NOW + timedelta(hours=1)))
-    other = uuid.UUID("00000000-0000-0000-0000-0000000000ff")
-    await repo.save(_task("someone-else", user_id=other))
-
-    found = await repo.find_by_user(USER_ID)
-    assert [t.task_id for t in found] == ["newer", "older"]
 
 
 async def test_find_by_user_and_task_id_scopes_by_owner(

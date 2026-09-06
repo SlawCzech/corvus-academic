@@ -35,8 +35,8 @@ Lokalna aplikacja webowa wspomagająca promotorów i recenzentów w analizie stu
 
 > ⚠ **Projekt jest w trakcie pivotu.** Scope zmienił się z analizy jednego
 > dokumentu na platformę mentoringową (studenci, notatki, predefiniowane akcje AI).
-> Fazy 0–2 są **zrobione**: konsolidacja serwisów, szkielet domeny mentoringowej
-> i pierwsza akcja AI (`propose_topic`) działająca end-to-end. Decyzje: [docs/adr/](docs/adr/) · plan i status faz:
+> Fazy 0–3 są **zrobione**: konsolidacja serwisów, domena mentoringowa, sześć akcji
+> AI działających end-to-end i frontend oparty o studentów. Decyzje: [docs/adr/](docs/adr/) · plan i status faz:
 > [docs/specs/mentoring-platform-implementation-plan.md](docs/specs/mentoring-platform-implementation-plan.md).
 > Sekcja 9 poniżej (kolejność implementacji) jest **nieaktualna** — zastąpiona tym planem.
 
@@ -47,8 +47,7 @@ Konteksty rozdzielone na poziomie pakietów i schematów Postgresa, nie sieci.
 ```
 app/src/identity/    — autentykacja, użytkownicy, role/permissions, audyt, klucze API
 app/src/document/    — ekstrakcja tekstu z PDF/DOCX (bezstanowa)
-app/src/mentoring/   — studenci, notatki ze spotkań, drafty, akcje AI
-                       (propose_topic działa; reszta akcji w Fazie 3)
+app/src/mentoring/   — studenci, notatki ze spotkań, wersje pracy, akcje AI
 agent/src/           — analysis + review: graf LangGraph, węzły, recenzja
 ```
 
@@ -80,13 +79,17 @@ Użytkownik
       ├─ /students/*   — roster + notatki ze spotkań, in-process
       ├─ /students/{id}/actions — akcje AI: kontekst składany w `app`,
       │                  wysyłka do agent POST /actions, polling, akceptacja
-      ├─ POST /extract — ekstrakcja in-process     [PRZEJŚCIOWE, znika w Fazie 3]
-      └─ /analysis/* → agent :8002                 [PRZEJŚCIOWE, znika w Fazie 3]
+      └─ /students/{id}/drafts — upload wersji pracy, ekstrakcja in-process
+  → agent :8002 (POST /actions, GET /actions/{task_id})
   → Celery task (broker: Redis) → agent-worker
       status zapisywany do Postgresa: running → completed | failed
   → LangGraph — graf zależny od typu akcji
-      → generate_review: [Struktura] → [Metodologia] → [Wymogi RAG] → [Recenzja]
-      → propose_topic:   [Propozycja tematu]
+      → generate_review:      [Struktura] → [Metodologia] → [Wymogi] → [Recenzja]
+      → propose_topic:        [Propozycja tematu]
+      → defence_questions:    [Pytania na obronę]
+      → check_progress:       [Porównanie dwóch wersji]
+      → evaluate_methodology: [Metodologia]
+      → draft_meeting_note:   [Szkic notatki]
   → model selector
       → Ollama (lokalny, domyślny) LUB Claude/OpenAI przez klucz usera (BYOK)
   → Postgres (zapis raportu)
@@ -123,8 +126,7 @@ corvus/
 │   └── tsconfig.json
 │
 ├── app/                      # identity + document + mentoring
-│   ├── main.py               # montuje routery: identity, mentoring, document,
-│   │                           proxy, health
+│   ├── main.py               # montuje routery: identity, mentoring, health
 │   ├── alembic_identity/     # lineage migracji schematu `identity`
 │   ├── alembic_mentoring/    # lineage migracji schematu `mentoring`
 │   ├── scripts/seed_admin.py
@@ -135,16 +137,15 @@ corvus/
 │   │   │   └── infrastructure/  # router, models, repositories, secrets,
 │   │   │                          token_store, limiter
 │   │   ├── mentoring/
-│   │   │   ├── domain/       # student.py (Student, MeetingNote, ThesisType),
-│   │   │   │                   action.py (AgentAction, ActionType, ActionStatus)
+│   │   │   ├── domain/       # student.py, draft.py, action.py
 │   │   │   ├── application/  # student_service (Caller, reguła własności),
-│   │   │   │                   context, agent_client, action_service
-│   │   │   └── infrastructure/  # router (/students/*, .../actions),
+│   │   │   │                   draft_service, context, agent_client,
+│   │   │   │                   action_service
+│   │   │   └── infrastructure/  # router (/students/*, .../drafts, .../actions),
 │   │   │                          models (4 tabele), repositories
-│   │   ├── document/         # document.py, extractor.py, router.py [PRZEJŚCIOWY]
-│   │   ├── proxy/            # /analysis/* → agent + /health  [PRZEJŚCIOWY]
-│   │   └── shared/           # settings, database, logging, middleware
-│   ├── tests/{test_identity,test_mentoring,test_document,test_proxy}/
+│   │   ├── document/         # document.py, extractor.py (wołane in-process)
+│   │   └── shared/           # settings, database, health, logging, middleware
+│   ├── tests/{test_identity,test_mentoring,test_document,test_shared}/
 │   ├── pyproject.toml
 │   └── Dockerfile
 │
@@ -156,8 +157,9 @@ corvus/
 │   │   ├── application/
 │   │   │   ├── graph.py      # build_action_graph — graf per typ akcji
 │   │   │   ├── nodes/        # structure, methodology, requirements, review,
-│   │   │   │                   propose_topic
-│   │   │   └── tasks.py      # Celery: run_action + analyze_thesis [przejściowy]
+│   │   │   │                   propose_topic, defence_questions,
+│   │   │   │                   check_progress, draft_meeting_note
+│   │   │   └── tasks.py      # Celery: run_action
 │   │   └── infrastructure/
 │   │       ├── llm_factory.py
 │   │       ├── vector_store.py  # RAG dla wytycznych
@@ -375,20 +377,22 @@ class ThesisAnalysis:
 
 ```python
 # agent/src/application/tasks.py
-from celery import shared_task
-from .graph import build_analysis_graph
-
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
-def analyze_thesis(self, thesis_id: str, text: str, guidelines: str) -> dict:
+def run_action(self, action_id, action_type, student_id, context,
+               model="qwen3:30b-a3b", language="pl") -> dict[str, Any]:
+    task_id = self.request.id
     try:
-        graph  = build_analysis_graph()
-        result = graph.invoke({"thesis_id": thesis_id,
-                               "text": text,
-                               "guidelines": guidelines})
-        return result
+        return _run_graph(task_id, _initial_state(
+            action_id, action_type, student_id,
+            _with_guidelines(action_type, context), model, language,
+        ))
     except Exception as exc:
+        _record_final_failure(self, task_id, exc)
         raise self.retry(exc=exc)
 ```
+
+`_run_graph` zapisuje status do Postgresa przed i po wywołaniu grafu — wynik
+akcji nie może zależeć od TTL backendu Celery w Redisie.
 
 ### Reguła: zależności idą tylko do wewnątrz
 
@@ -437,7 +441,7 @@ Aktualny plan i status faz:
 | 0 | konsolidacja serwisów (gateway+identity+parser → app) | ✅ 2026-09-05 |
 | 1 | model danych mentoringu: Student, MeetingNote, ThesisDraft, AgentAction | ✅ 2026-09-05 |
 | 2 | pierwsza akcja AI end-to-end (`propose_topic`) + naprawa trwałości statusu | ✅ 2026-09-05 |
-| 3 | pozostałe akcje; usunięcie przejściowych `/extract` i proxy `/analysis/*` | ⬜ |
+| 3 | pozostałe akcje (w tym `defence_questions`), upload wersji pracy, frontend mentoringowy; usunięcie przejściowych endpointów | ✅ 2026-09-06 |
 | 4 | BYOK — klucz usera zamiast globalnego | ⬜ |
 | 5 | pgvector: RAG nad wytycznymi | ⬜ |
 | 6 | deploy + CI/CD (GitHub Actions, Jenkins, pre-commit) | ⬜ |

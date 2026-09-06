@@ -12,6 +12,9 @@ from langgraph.graph.state import CompiledStateGraph
 
 from src.domain.action import ActionType
 
+from .nodes.check_progress import check_progress
+from .nodes.defence_questions import defence_questions
+from .nodes.draft_meeting_note import draft_meeting_note
 from .nodes.methodology import analyze_methodology
 from .nodes.propose_topic import propose_topic
 from .nodes.requirements import check_requirements
@@ -21,12 +24,9 @@ from .state import ActionState
 
 CompiledActionGraph = CompiledStateGraph[ActionState, None, Any, Any]
 
-# The actions that actually have a graph today. The other three land in
-# Phase 3; until then the API rejects them instead of queueing work that can
-# only fail in the worker.
-IMPLEMENTED_ACTIONS: frozenset[str] = frozenset(
-    {ActionType.GENERATE_REVIEW, ActionType.PROPOSE_TOPIC}
-)
+# Every action the agent can run. The API checks against this before queueing
+# anything, so an unknown action type fails at the request, not in a worker.
+IMPLEMENTED_ACTIONS: frozenset[str] = frozenset(ActionType)
 
 
 def build_analysis_graph(mode: str = "full") -> CompiledActionGraph:
@@ -71,14 +71,30 @@ def build_action_graph(
 ) -> CompiledActionGraph:
     """Return the compiled graph that runs the given action.
 
-    `generate_review` delegates to the existing four-node pipeline unchanged —
-    it already *is* the final action. The rest are one-node graphs; the
-    remaining three land in Phase 3.
+    `generate_review` delegates to the four-node pipeline unchanged — it
+    already *is* the final action. Every other action is one node: that is the
+    point of the shared state, and it is why adding an action means adding a
+    node and a prompt rather than a pipeline.
     """
     match action_type:
         case ActionType.GENERATE_REVIEW:
             return build_analysis_graph(mode=mode)
         case ActionType.PROPOSE_TOPIC:
             return _build_single_node_graph("propose_topic", propose_topic)
+        case ActionType.EVALUATE_METHODOLOGY:
+            # The same node the full review runs, on its own.
+            return _build_single_node_graph(
+                "analyze_methodology", analyze_methodology
+            )
+        case ActionType.CHECK_PROGRESS:
+            return _build_single_node_graph("check_progress", check_progress)
+        case ActionType.DRAFT_MEETING_NOTE:
+            return _build_single_node_graph(
+                "draft_meeting_note", draft_meeting_note
+            )
+        case ActionType.DEFENCE_QUESTIONS:
+            return _build_single_node_graph(
+                "defence_questions", defence_questions
+            )
         case _:
             raise ValueError(f"No graph for action type: {action_type!r}")

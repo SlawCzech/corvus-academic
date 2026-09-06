@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import json
-import re
-from collections.abc import Sequence
 from uuid import UUID
 
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from src.application.json_output import parse_json_object
 from src.domain.analysis import ReviewTone, ThesisAnalysis
 from src.domain.evaluation import EvaluationStatus
 from src.domain.review import Review, Score
@@ -18,15 +16,6 @@ from src.infrastructure.llm_factory import get_llm
 from ..state import ActionState
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-
-_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
-
-
-def _extract_json(text: str) -> str:
-    """Strip markdown code fences if present, otherwise return text as-is."""
-    match = _FENCE_RE.search(text)
-    return match.group(1) if match else text.strip()
-
 
 # ---------------------------------------------------------------------------
 # Base system prompt
@@ -361,9 +350,7 @@ def generate_review(state: ActionState) -> ActionState:
                 HumanMessage(content=user_message),
             ]
         )
-        raw: str | Sequence[object] = response.content  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
-        content: str = raw if isinstance(raw, str) else json.dumps(raw)
-        data: dict[str, object] = json.loads(_extract_json(content))
+        data: dict[str, object] = parse_json_object(response.content)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
 
         scores_data: list[dict[str, object]] = data["scores"]  # type: ignore[assignment]
         scores: list[Score] = [

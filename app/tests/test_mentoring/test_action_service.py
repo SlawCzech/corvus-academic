@@ -14,9 +14,10 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from src.mentoring.application.action_service import (
     ActionNotFoundError,
     ActionService,
-    UnsupportedActionError,
 )
 from src.mentoring.application.agent_client import AgentUnavailableError
+from src.mentoring.application.context import MissingContextError
+from src.mentoring.application.draft_service import DraftService
 from src.mentoring.application.student_service import (
     Caller,
     StudentNotFoundError,
@@ -29,8 +30,14 @@ from src.mentoring.infrastructure.repositories import (
     AgentActionRepository,
     MeetingNoteRepository,
     StudentRepository,
+    ThesisDraftRepository,
 )
-from tests.test_mentoring.fakes import FakeAgentClient, topic_payload
+from tests.test_mentoring.fakes import (
+    FakeAgentClient,
+    docx_bytes,
+    note_payload,
+    topic_payload,
+)
 
 _SQLITE_URL = "sqlite+aiosqlite:///:memory:"
 _SCHEMA_TRANSLATE = {"schema_translate_map": {"mentoring": None}}
@@ -44,10 +51,15 @@ class _Fixture:
     """The three collaborators a test needs, wired to one SQLite session."""
 
     def __init__(
-        self, students: StudentService, actions: ActionService, agent: FakeAgentClient
+        self,
+        students: StudentService,
+        actions: ActionService,
+        drafts: DraftService,
+        agent: FakeAgentClient,
     ) -> None:
         self.students = students
         self.actions = actions
+        self.drafts = drafts
         self.agent = agent
 
 
@@ -62,9 +74,11 @@ async def env() -> AsyncGenerator[_Fixture, None]:
             StudentRepository(session), MeetingNoteRepository(session)
         )
         agent = FakeAgentClient()
+        drafts = ThesisDraftRepository(session)
         yield _Fixture(
             students,
-            ActionService(students, AgentActionRepository(session), agent),
+            ActionService(students, AgentActionRepository(session), drafts, agent),
+            DraftService(students, drafts),
             agent,
         )
     await engine.dispose()
@@ -134,15 +148,33 @@ async def test_trigger_on_another_promotors_student_is_not_found(
     assert env.agent.submitted == []
 
 
-async def test_action_without_context_assembly_is_rejected(env: _Fixture) -> None:
-    """Phase 3 action types must not reach the agent as unqueueable work."""
+async def test_action_needing_a_draft_is_refused_without_one(
+    env: _Fixture,
+) -> None:
+    """Asking about a thesis nobody uploaded is a state problem, not a job."""
     student = await _student(env)
 
-    with pytest.raises(UnsupportedActionError):
+    with pytest.raises(MissingContextError):
+        await env.actions.trigger(
+            PROMOTOR,
+            student.id,
+            action_type=ActionType.DEFENCE_QUESTIONS,
+            token=TOKEN,
+        )
+    assert await env.actions.list_actions(PROMOTOR, student.id) == []
+    assert env.agent.submitted == []
+
+
+async def test_progress_check_needs_two_versions(env: _Fixture) -> None:
+    student = await _student(env)
+    await env.drafts.upload(
+        PROMOTOR, student.id, filename="praca.docx", data=docx_bytes()
+    )
+
+    with pytest.raises(MissingContextError, match="two uploaded versions"):
         await env.actions.trigger(
             PROMOTOR, student.id, action_type=ActionType.CHECK_PROGRESS, token=TOKEN
         )
-    assert await env.actions.list_actions(PROMOTOR, student.id) == []
 
 
 async def test_failed_dispatch_stays_in_the_history(env: _Fixture) -> None:
@@ -311,3 +343,103 @@ async def test_unknown_topic_index_changes_nothing(env: _Fixture) -> None:
     assert (await env.students.get(PROMOTOR, student.id)).current_topic is None
     actions = await env.actions.list_actions(PROMOTOR, student.id)
     assert actions[0].accepted is False
+
+
+async def test_accepting_a_drafted_note_saves_it_with_its_provenance(
+    env: _Fixture,
+) -> None:
+    """An AI-drafted note becomes a real note that still says where it came from."""
+    student = await _student(env)
+    await env.students.add_meeting_note(PROMOTOR, student.id, content="Poprzednie")
+    action = await env.actions.trigger(
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.DRAFT_MEETING_NOTE,
+        token=TOKEN,
+        detail="rozdział 2, dobór próby, termin 15.03",
+    )
+    env.agent.completes_with(note_payload("Omówiliśmy zakres rozdziału 2."))
+    await env.actions.get_action(PROMOTOR, student.id, action.id, TOKEN)
+
+    await env.actions.accept(PROMOTOR, student.id, action.id)
+
+    notes = await env.students.list_meeting_notes(PROMOTOR, student.id)
+    drafted = [n for n in notes if n.is_ai_drafted]
+    assert len(drafted) == 1
+    assert drafted[0].content == "Omówiliśmy zakres rozdziału 2."
+    assert drafted[0].source_action_id == action.id
+
+
+async def test_meeting_note_action_needs_rough_notes(env: _Fixture) -> None:
+    """The action writes up what the promoter jotted down; it invents nothing."""
+    student = await _student(env)
+
+    with pytest.raises(MissingContextError, match="Rough notes"):
+        await env.actions.trigger(
+            PROMOTOR,
+            student.id,
+            action_type=ActionType.DRAFT_MEETING_NOTE,
+            token=TOKEN,
+        )
+
+
+async def test_defence_questions_use_the_latest_version(env: _Fixture) -> None:
+    """Only the newest draft is sent — the committee asks about what was handed in."""
+    student = await _student(env)
+    await env.drafts.upload(
+        PROMOTOR, student.id, filename="v1.docx", data=docx_bytes("Wersja pierwsza")
+    )
+    await env.drafts.upload(
+        PROMOTOR, student.id, filename="v2.docx", data=docx_bytes("Wersja druga")
+    )
+
+    await env.actions.trigger(
+        PROMOTOR, student.id, action_type=ActionType.DEFENCE_QUESTIONS, token=TOKEN
+    )
+
+    context = env.agent.submitted[0]["context"]
+    assert "Wersja druga" in context["text"]
+    assert "Wersja pierwsza" not in context["text"]
+    assert context["version_number"] == 2
+
+
+async def test_progress_check_sends_both_versions(env: _Fixture) -> None:
+    student = await _student(env)
+    await env.drafts.upload(
+        PROMOTOR, student.id, filename="v1.docx", data=docx_bytes("Wersja pierwsza")
+    )
+    await env.drafts.upload(
+        PROMOTOR, student.id, filename="v2.docx", data=docx_bytes("Wersja druga")
+    )
+
+    action = await env.actions.trigger(
+        PROMOTOR, student.id, action_type=ActionType.CHECK_PROGRESS, token=TOKEN
+    )
+
+    context = env.agent.submitted[0]["context"]
+    assert "Wersja druga" in context["current_text"]
+    assert "Wersja pierwsza" in context["previous_text"]
+    assert (context["current_version"], context["previous_version"]) == (2, 1)
+    # Provenance: which rows fed the prompt, by id — never the text itself.
+    stored = (await env.actions.list_actions(PROMOTOR, student.id))[0]
+    assert stored.id == action.id
+
+
+async def test_review_context_carries_the_student_as_metadata(env: _Fixture) -> None:
+    """The review nodes expect author/title/field, which live on the student."""
+    student = await _student(env)
+    await env.students.update(PROMOTOR, student.id, current_topic="Instytucje a wzrost")
+    await env.drafts.upload(
+        PROMOTOR, student.id, filename="praca.docx", data=docx_bytes("Treść pracy")
+    )
+
+    await env.actions.trigger(
+        PROMOTOR, student.id, action_type=ActionType.GENERATE_REVIEW, token=TOKEN
+    )
+
+    metadata = env.agent.submitted[0]["context"]["metadata"]
+    assert metadata["author"] == "Jan Kowalski"
+    assert metadata["title"] == "Instytucje a wzrost"
+    assert metadata["field_of_study"] == "Ekonomia"
+    # Guidelines are agent-owned static data — `app` does not ship them.
+    assert "guidelines" not in env.agent.submitted[0]["context"]

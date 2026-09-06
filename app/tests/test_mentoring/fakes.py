@@ -1,9 +1,11 @@
 """Test doubles for the mentoring tests."""
 
+import io
 from typing import Any
 from uuid import UUID
 
 import httpx
+from docx import Document as DocxDocument
 
 from src.mentoring.application.agent_client import (
     AgentActionStatus,
@@ -81,5 +83,53 @@ def topic_payload(*titles: str, recommended: int = 0) -> dict[str, Any]:
             "recommended": recommended,
         },
         "status": "proposed",
+        "error": None,
+    }
+
+
+def docx_bytes(*paragraphs: str) -> bytes:
+    """Build a minimal DOCX in memory, so an upload test uploads a real file."""
+    doc = DocxDocument()  # pyright: ignore[reportCallIssue]
+    for text in paragraphs or ("Rozdział 1: Wprowadzenie.",):
+        doc.add_paragraph(text)  # pyright: ignore[reportUnknownMemberType]
+    buf = io.BytesIO()
+    doc.save(buf)  # pyright: ignore[reportUnknownMemberType]
+    return buf.getvalue()
+
+
+def question_payload(*questions: str) -> dict[str, Any]:
+    """Build an agent payload shaped like a finished defence_questions action."""
+    return {
+        "action_type": "defence_questions",
+        "findings": [],
+        "scores": [],
+        "output": {
+            "questions": [
+                {
+                    "question": q,
+                    "rationale": "sprawdza rozumienie pracy",
+                    "section": "Rozdział 2",
+                    "focus": "method",
+                }
+                for q in questions
+            ]
+        },
+        "status": "questions_ready",
+        "error": None,
+    }
+
+
+def note_payload(content: str) -> dict[str, Any]:
+    """Build an agent payload shaped like a finished draft_meeting_note action."""
+    return {
+        "action_type": "draft_meeting_note",
+        "findings": [],
+        "scores": [],
+        "output": {
+            "content": content,
+            "topics_discussed": ["Zakres rozdziału 2"],
+            "agreed_actions": ["Projekt badawczy do 15 marca"],
+        },
+        "status": "drafted",
         "error": None,
     }

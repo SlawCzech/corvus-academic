@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
 
-const GATEWAY_URL = process.env.GATEWAY_URL ?? "http://localhost:8000"
+import { APP_URL } from "@/lib/appProxy"
 
 export async function POST(request: Request): Promise<Response> {
   const body = (await request.json()) as { email?: string; password?: string }
-  const gatewayRes = await fetch(`${GATEWAY_URL}/auth/login`, {
+  const gatewayRes = await fetch(`${APP_URL}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
