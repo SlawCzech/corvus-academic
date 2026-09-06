@@ -12,6 +12,12 @@ class Settings(BaseSettings):
     model_backend: str = "ollama"
     ollama_model: str = "qwen3:30b-a3b"
     ollama_base_url: str = "http://ollama:11434"
+
+    # Guideline retrieval. The embedding model is stored alongside every
+    # chunk, so changing it here only means re-running the ingestion script —
+    # rows produced by another model are ignored, never mixed in.
+    embedding_model: str = "nomic-embed-text"
+    rag_top_k: int = 4
     anthropic_api_key: str = ""
     langchain_tracing_v2: bool = False
     langchain_project: str = "corvus"

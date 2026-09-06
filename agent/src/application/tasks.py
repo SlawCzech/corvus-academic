@@ -8,7 +8,7 @@ import structlog
 from celery import Task, shared_task
 
 from src.application.graph import build_action_graph
-from src.application.guidelines import load_guidelines
+from src.application.guidelines import retrieve_relevant_guidelines
 from src.application.state import ActionState
 from src.domain.action import ActionType, TaskStatus
 from src.domain.analysis import ThesisType
@@ -40,11 +40,18 @@ _ACTIONS_NEEDING_GUIDELINES = frozenset(
 
 
 def _with_guidelines(action_type: str, context: dict[str, Any]) -> dict[str, Any]:
-    """Add the university requirements to the context, if the action needs them."""
+    """Add the university requirements to the context, if the action needs them.
+
+    Retrieved against the thesis rather than pasted whole: the sections that
+    bear on this work, plus the rules that define how to judge it.
+    """
     if action_type not in _ACTIONS_NEEDING_GUIDELINES or "guidelines" in context:
         return context
     thesis_type = str(context.get("thesis_type", ThesisType.BACHELOR))
-    return {**context, "guidelines": load_guidelines(thesis_type)}
+    guidelines = retrieve_relevant_guidelines(
+        thesis_type, str(context.get("text", ""))
+    )
+    return {**context, "guidelines": guidelines}
 
 
 def _to_json(obj: Any) -> Any:  # noqa: ANN401

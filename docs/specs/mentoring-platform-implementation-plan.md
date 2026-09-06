@@ -1,6 +1,6 @@
 # Corvus pivot: AI-first student-mentoring platform — implementation plan
 
-> Status: approved 2026-09-05. Phases 0-4 are done; Phase 5 (pgvector RAG) is next.
+> Status: approved 2026-09-05. Phases 0-5 are done; Phase 6 (deploy/CI) is next.
 > Architecture decisions referenced here are recorded as ADRs in [docs/adr/](../adr/):
 > [0001](../adr/0001-ai-first-mentoring-platform-pivot.md) (scope pivot),
 > [0002](../adr/0002-consolidate-services-into-app-and-agent.md) (service consolidation),
@@ -159,7 +159,7 @@ Sequencing follows the user's "AI first, simple interface" preference: Phase 0 i
 | 2 — first AI action end-to-end (`propose_topic`) | ✅ done 2026-09-05 (310 tests, ruff clean) |
 | 3 — remaining actions + drafts + removing the transitional endpoints | ✅ done 2026-09-06 |
 | 4 — BYOK wiring | ✅ done 2026-09-06 |
-| 5 — pgvector RAG for guidelines | ⬜ not started |
+| 5 — pgvector RAG for guidelines | ✅ done 2026-09-06 |
 | 6 — deploy/CI groundwork | ⬜ not started |
 
 **Phase 0 — service consolidation** — ✅ **done 2026-09-05**. Deviations from the plan as written, all deliberate:
@@ -235,7 +235,19 @@ Decisions worth recording:
 5. **`PATCH /settings/api-key` is any authenticated user**, and gained `DELETE` — a key you cannot remove is a key you cannot rotate. The provider is validated against the same two-provider list the agent enforces.
 6. **The UI moved from the admin panel to the profile page**, which is what "bring your own key" means: it shows whether a key is stored and for which provider, never the key itself.
 
-**Phase 5 — pgvector RAG for guidelines**: embeddings table lives in `agent`'s own `analysis` schema (guidelines are static files `agent` already owns) — `guideline_chunks(id, thesis_type, chunk_text, embedding vector(N))`, ingestion script, `guidelines.py::retrieve_relevant_guidelines()` used by `check_requirements`/`generate_review` instead of loading the whole file.
+**Phase 5 — pgvector RAG for guidelines** — ✅ **done 2026-09-06**. The requirements documents stop being pasted whole into every prompt: they are split into their own numbered sections, embedded, and retrieved against the thesis in front of the model. Files stay the source of truth on disk; `analysis.guideline_chunks` holds the retrievable copy.
+
+Decisions worth recording:
+
+1. **Postgres 16 keeps its Alpine base; pgvector is compiled against it** (`infra/postgres/Dockerfile`). Switching to the official Debian `pgvector/pgvector:pg16` image would have pointed a glibc build at a musl-built data directory — a collation-provider change under a live volume, which is how text indexes quietly go wrong. Alpine's own `postgresql-pgvector` package builds against PG 18 and drops `vector.so` in a path this server never reads.
+2. **The embedding column has no fixed dimension.** The embedding model is a setting; pinning 768 into the schema would make swapping models a migration. Every row records the model and width that produced it, and retrieval filters on the model in use, so vectors from two models can coexist and never mix. At tens of chunks per thesis type an exact scan beats an approximate index anyway — add HNSW, and a fixed dimension with it, when the corpus stops being small.
+3. **Chunks follow the document's own `##` sections, not a character count.** These are numbered rules; a rule cut in half retrieves as nonsense and cannot be cited back.
+4. **Some sections are always included.** A normative document loses its meaning if retrieval drops the part that defines the judgement: pull three sections about structure, leave out §4 *Severity Classification*, and every finding becomes a guess at what "critical" means here. Sections matching severity/classification/scoring are pinned at ingestion and returned whatever the distances say; the rest are the nearest `RAG_TOP_K`. Results come back in document order, so the prompt reads like the document rather than like a ranking.
+5. **Retrieval degrades to the file, never to nothing.** No ingestion run, no embedding model pulled, an unreachable Ollama, a database blip — all end with the whole requirements document, which is exactly what every action had before this phase. Nothing about this phase can fail an action.
+6. **Embeddings are self-hosted only**, deliberately: they run over the university's requirements *and* over the student's unpublished thesis, which is the material the local-first default exists to keep local. A user's own key pays for the review, not for indexing a thesis.
+7. **Ingestion is an idempotent script** (`agent/scripts/ingest_guidelines.py`, `make ingest-guidelines`), not a startup hook: re-running it replaces one model's chunks for one thesis type and leaves other models' rows alone.
+
+Verification: the extension (`vector 0.8.0`) and the table are live on the existing volume, with the previous data intact. The search path — the `vector` column, `<=>`, pinning, model isolation, document ordering — was exercised against the real database with deterministic bag-of-words vectors: a formatting-heavy query retrieved §2 *Formal and Technical Requirements*, §4 *Severity* came back pinned in every query, and a different embedding model saw zero rows. **The host's Ollama-compatible endpoint does not serve embeddings** (`501 … start it with --embeddings`, and `nomic-embed-text` is not pulled), so the model-backed leg of retrieval is not yet exercised live; the fallback was, and logs `guideline_embedding_failed` before handing over the whole document. To turn retrieval on: `ollama pull nomic-embed-text` against an Ollama that serves embeddings, then `make ingest-guidelines`.
 
 **Phase 6 — deploy/CI groundwork**: revisit `docs/sessions.md` §5.2/5.3 (never implemented) for the new 2-Python-service topology — `.github/workflows/ci.yml` with `test-app`+`test-agent`+`test-frontend`+`sonarqube` jobs, `.pre-commit-config.yaml`, `infra/jenkins/Jenkinsfile` reduced from 4 to 2 Python stages. Cloud/secret-manager choice deliberately left open here, not pre-committed.
 

@@ -103,7 +103,11 @@ services:
     restart: unless-stopped
 
   postgres:
-    image: postgres:16-alpine
+    # Postgres 16 + pgvector, built from infra/postgres/Dockerfile — the
+    # guideline embeddings live in the same database as everything else.
+    build:
+      context: ./postgres
+      dockerfile: Dockerfile
     ports:
       - "5432:5432"
     environment:

@@ -126,7 +126,33 @@
 
 ---
 
+## RAG nad wytycznymi (Faza 5)
+
+- [ ] **Model embeddingów nie jest jeszcze uruchomiony** — endpoint zgodny z Ollamą na
+  hoście nie obsługuje embeddingów (`501 … start it with --embeddings`), a
+  `nomic-embed-text` nie jest pobrany. Wyszukiwanie działa (zweryfikowane na prawdziwej
+  bazie deterministycznymi wektorami), ale dopóki nie ma modelu, akcje dostają cały plik
+  wymogów. Włączenie: `ollama pull nomic-embed-text` + `make ingest-guidelines`.
+
+- [ ] **Brak indeksu ANN** — kolumna `embedding` jest bezwymiarowa, więc nie da się na
+  niej założyć HNSW/IVFFlat. Przy kilkunastu chunkach na typ pracy skan sekwencyjny jest
+  szybszy i dokładniejszy; przy większym korpusie trzeba ustalić wymiar i dołożyć indeks.
+
+- [ ] **Zapytanie to pierwsze 2000 znaków pracy** — przybliżenie: nasz „query" to
+  początek dokumentu (temat, problem, metoda). Lepsze byłoby zapytanie per sekcja
+  wymogów albo streszczenie pracy.
+
+- [ ] **Ingestia nie jest wersjonowana** — zmiana pliku wymogów wymaga ręcznego
+  `make ingest-guidelines`; nic nie wykrywa, że wektory są starsze niż plik.
+
+---
+
 ## Agent / Frontend
+
+- [ ] **`agent-worker` zawsze raportuje `unhealthy`** — dziedziczy HEALTHCHECK z obrazu
+  agenta, który sprawdza HTTP na :8002, a worker nie wystawia HTTP. Kosmetyka, ale myli
+  przy `docker compose ps`. Naprawka: własny healthcheck (`celery inspect ping`) albo
+  `healthcheck: disable: true` w compose.
 
 - [ ] **Brak testów E2E frontendu** — komponenty mają testy jednostkowe (vitest), ale nikt
   nie klika przez ścieżkę „dodaj studenta → wgraj pracę → uruchom akcję → zaakceptuj".

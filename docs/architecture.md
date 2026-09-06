@@ -8,7 +8,7 @@
 
 ---
 
-## Stan: po Fazie 4 (BYOK)
+## Stan: po Fazie 5 (RAG nad wytycznymi)
 
 Corvus przechodzi pivot z narzędzia do analizy jednego dokumentu na platformę
 mentoringową dla promotorów. Kontekst i uzasadnienie:
@@ -38,7 +38,12 @@ wygasającego backendu Celery w Redisie.
 w profilu, akcja jedzie na jego konto; bez klucza wszystko liczy się na
 lokalnym Ollamie. Klucz jest szyfrowany Fernetem, odszyfrowywany tylko w
 żądaniu, które go użyje, i nigdy nie trafia do stanu grafu ani do bazy akcji.
-**Jeszcze nie:** RAG nad wytycznymi w pgvector (Faza 5), CI/CD (Faza 6).
+**Zrobione (Faza 5):** wytyczne uczelniane nie są już wklejane w całości do
+promptu — leżą w `analysis.guideline_chunks` pocięte na sekcje, z embeddingami,
+i akcja dostaje te fragmenty, które dotyczą jej pracy (plus zawsze sekcję
+definiującą wagi błędów). Bez zaingestowanych wektorów albo bez modelu
+embeddingów wszystko działa jak wcześniej — cały plik.
+**Jeszcze nie:** CI/CD (Faza 6).
 
 ---
 
@@ -80,7 +85,7 @@ Referencje między kontekstami to gołe UUID bez kluczy obcych.
 | agent-worker | — | Celery | worker wykonujący graf LangGraph (ten sam obraz co `agent`) |
 | ollama | 11434 | Ollama | lokalne modele LLM |
 | redis | 6379 | Redis | broker Celery + blacklist refresh tokenów |
-| postgres | 5432 | PostgreSQL 16 | dane identity + analiz |
+| postgres | 5432 | PostgreSQL 16 + pgvector | schematy identity, mentoring, analysis (w tym embeddingi wytycznych) |
 | flower | 5555 | Celery Flower | monitoring kolejki |
 | jenkins | 8080 | Jenkins LTS | CI/CD pipeline (jeszcze nieskonfigurowany — Faza 6) |
 | sonarqube | 9000 | SonarQube CE | analiza jakości kodu (jeszcze nieskonfigurowany — Faza 6) |
@@ -165,7 +170,10 @@ app :8000
          draft_meeting_note   [draft_meeting_note]
        Nieznany typ akcji → 422 przy żądaniu, zamiast zadania, które i tak by padło.
        Wytyczne uczelniane dokłada `agent` (dane statyczne, których jest
-       właścicielem) dla akcji ocenianych względem wymogów.
+       właścicielem) dla akcji ocenianych względem wymogów — nie cały plik,
+       tylko sekcje wyszukane pod tę pracę (pgvector) plus sekcja definiująca
+       wagi błędów, zawsze. Brak ingestii albo brak modelu embeddingów →
+       fallback na cały dokument.
 
        Stan grafu (ActionState) jest wspólny dla wszystkich akcji: to, co
        specyficzne dla akcji, siedzi w `context`, dzięki czemu nowa akcja to

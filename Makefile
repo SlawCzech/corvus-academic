@@ -3,7 +3,7 @@ COMPOSE = docker compose -f infra/docker-compose.yml
 # sets DEBUG=true, which the entrypoints turn into uvicorn --reload.
 COMPOSE_DEV = $(COMPOSE) -f infra/docker-compose.override.yml
 
-.PHONY: help up build down down-volumes logs ps restart migrate \
+.PHONY: help up build down down-volumes logs ps restart migrate ingest-guidelines \
         dev dev-build \
         front-up front-down front-restart front-logs front-dev \
         shell-app shell-agent
@@ -38,6 +38,9 @@ restart:  ## Restart every service
 migrate:  ## Run database migrations (both app lineages: identity + mentoring)
 	$(COMPOSE) run --rm app alembic -c alembic_identity.ini upgrade head
 	$(COMPOSE) run --rm app alembic -c alembic_mentoring.ini upgrade head
+
+ingest-guidelines:  ## Embed the university requirements into the vector store
+	$(COMPOSE) run --rm agent python scripts/ingest_guidelines.py
 
 # ---------- dev stack (hot reload) ----------
 # Edits to app/src, agent/src and frontend/ take effect without a rebuild.

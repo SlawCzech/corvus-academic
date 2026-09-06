@@ -35,8 +35,8 @@ Lokalna aplikacja webowa wspomagająca promotorów i recenzentów w analizie stu
 
 > ⚠ **Projekt jest w trakcie pivotu.** Scope zmienił się z analizy jednego
 > dokumentu na platformę mentoringową (studenci, notatki, predefiniowane akcje AI).
-> Fazy 0–4 są **zrobione**: konsolidacja serwisów, domena mentoringowa, sześć akcji
-> AI, frontend oparty o studentów i BYOK (klucz promotora zamiast globalnego).
+> Fazy 0–5 są **zrobione**: konsolidacja serwisów, domena mentoringowa, sześć akcji
+> AI, frontend oparty o studentów, BYOK i RAG nad wytycznymi (pgvector).
 > Decyzje: [docs/adr/](docs/adr/) · plan i status faz:
 > [docs/specs/mentoring-platform-implementation-plan.md](docs/specs/mentoring-platform-implementation-plan.md).
 > Sekcja 9 poniżej (kolejność implementacji) jest **nieaktualna** — zastąpiona tym planem.
@@ -62,7 +62,7 @@ agent/src/           — analysis + review: graf LangGraph, węzły, recenzja
 | agent-worker | — | Celery | wykonuje graf (ten sam obraz co agent) |
 | ollama | 11434 | Ollama | — |
 | redis | 6379 | Redis | — |
-| postgres | 5432 | PostgreSQL + Alembic | — |
+| postgres | 5432 | PostgreSQL 16 + pgvector + Alembic | — |
 | flower | 5555 | Celery Flower | — |
 | jenkins | 8080 | Jenkins | — |
 | sonarqube | 9000 | SonarQube CE | — |
@@ -165,8 +165,10 @@ corvus/
 │   │   │   │                   check_progress, draft_meeting_note
 │   │   │   └── tasks.py      # Celery: run_action
 │   │   └── infrastructure/
-│   │       ├── llm_factory.py
-│   │       ├── vector_store.py  # RAG dla wytycznych
+│   │       ├── llm_factory.py   # BYOK (ContextVar) → Claude/OpenAI, inaczej Ollama
+│   │       ├── embeddings.py    # model embeddingów (lokalny, zawsze)
+│   │       ├── guideline_store.py  # wyszukiwanie chunków (pgvector)
+│   │       ├── task_status.py
 │   │       └── repositories.py
 │   ├── tests/
 │   ├── pyproject.toml
@@ -449,7 +451,7 @@ Aktualny plan i status faz:
 | 2 | pierwsza akcja AI end-to-end (`propose_topic`) + naprawa trwałości statusu | ✅ 2026-09-05 |
 | 3 | pozostałe akcje (w tym `defence_questions`), upload wersji pracy, frontend mentoringowy; usunięcie przejściowych endpointów | ✅ 2026-09-06 |
 | 4 | BYOK — klucz usera zamiast globalnego | ✅ 2026-09-06 |
-| 5 | pgvector: RAG nad wytycznymi | ⬜ |
+| 5 | pgvector: RAG nad wytycznymi | ✅ 2026-09-06 |
 | 6 | deploy + CI/CD (GitHub Actions, Jenkins, pre-commit) | ⬜ |
 
 ---

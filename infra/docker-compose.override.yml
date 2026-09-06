@@ -35,6 +35,7 @@ services:
   agent:
     volumes:
       - ../agent/src:/app/src
+      - ../agent/scripts:/app/scripts
       - ../agent/main.py:/app/main.py
       - ../agent/alembic:/app/alembic
     environment:
