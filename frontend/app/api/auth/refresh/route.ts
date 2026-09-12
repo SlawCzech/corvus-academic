@@ -2,6 +2,7 @@ import { cookies } from "next/headers"
 import { NextResponse, type NextRequest } from "next/server"
 
 import { APP_URL } from "@/lib/appProxy"
+import { ACCESS_COOKIE_MAX_AGE } from "@/lib/auth"
 
 export async function POST(request: NextRequest): Promise<Response> {
   const cookieStore = await cookies()
@@ -25,14 +26,20 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   const data = (await gatewayRes.json()) as { access_token: string }
-  const redirect = request.nextUrl.searchParams.get("redirect") ?? "/students"
-  const response = NextResponse.redirect(new URL(redirect, request.url))
+
+  // The middleware sends a browser here mid-navigation and wants it sent
+  // onwards; the API client calls the same route from a fetch and wants an
+  // answer, not a redirect to a page it would have to parse as HTML.
+  const redirect = request.nextUrl.searchParams.get("redirect")
+  const response = redirect
+    ? NextResponse.redirect(new URL(redirect, request.url))
+    : NextResponse.json({ ok: true })
   response.cookies.set("access_token", data.access_token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 15,
+    maxAge: ACCESS_COOKIE_MAX_AGE,
   })
   return response
 }

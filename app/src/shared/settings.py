@@ -25,7 +25,13 @@ class Settings(BaseSettings):
     fernet_key: str = Field(...)  # noqa: S105
 
     jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 15
+    # Twelve hours, because of what this tool does between clicks: one review
+    # is four sequential LLM calls and takes ten minutes on a local model, and
+    # a promoter runs a few of them over an afternoon with the tab open. A
+    # fifteen-minute token expired mid-session, and every call the page made
+    # afterwards came back 401. Override per environment with
+    # ACCESS_TOKEN_EXPIRE_MINUTES.
+    access_token_expire_minutes: int = 720
     refresh_token_expire_days: int = 30
 
     redis_url: str = "redis://localhost:6379/0"

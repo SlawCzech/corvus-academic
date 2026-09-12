@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { APP_URL } from "@/lib/appProxy"
+import { ACCESS_COOKIE_MAX_AGE, REFRESH_COOKIE_MAX_AGE } from "@/lib/auth"
 
 export async function POST(request: Request): Promise<Response> {
   const body = (await request.json()) as { email?: string; password?: string }
@@ -22,7 +23,7 @@ export async function POST(request: Request): Promise<Response> {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 8, // 8h — tymczasowo do czasu implementacji refresh token flow
+    maxAge: ACCESS_COOKIE_MAX_AGE,
   })
   if (data.refresh_token) {
     response.cookies.set("refresh_token", data.refresh_token, {
@@ -30,7 +31,7 @@ export async function POST(request: Request): Promise<Response> {
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24 * 30,
+      maxAge: REFRESH_COOKIE_MAX_AGE,
     })
   }
   return response
