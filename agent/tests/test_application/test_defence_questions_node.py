@@ -109,7 +109,11 @@ def test_empty_question_list_is_an_error() -> None:
 
 
 def test_long_thesis_is_truncated_not_refused() -> None:
-    """A full thesis exceeds the context window; the node must still run."""
+    """A full thesis exceeds the context window; the node must still run.
+
+    And it must say so: a slice presented as the whole work is what produced
+    questions about chapters the model never saw.
+    """
     captured: list[Any] = []
 
     def _capture(messages: list[Any]) -> AIMessage:
@@ -125,7 +129,7 @@ def test_long_thesis_is_truncated_not_refused() -> None:
         result = defence_questions(_make_state(text="x" * 40000))
 
     assert result["error"] is None
-    assert "text truncated" in str(captured[1].content)
+    assert "the remainder is NOT shown" in str(captured[1].content)
 
 
 def test_supervisor_instructions_reach_the_prompt() -> None:

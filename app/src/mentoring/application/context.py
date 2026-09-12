@@ -13,6 +13,7 @@ being up, and no node needs a database.
 from collections.abc import Sequence
 from typing import Any
 
+from src.document.outline import outline_payload
 from src.mentoring.domain.draft import ThesisDraft
 from src.mentoring.domain.student import MeetingNote, Student
 
@@ -28,6 +29,19 @@ class MissingContextError(Exception):
     without a thesis, or for a progress check with only one version, is a
     state problem, not a model problem.
     """
+
+
+def _document_map(draft: ThesisDraft) -> dict[str, Any]:
+    """What the whole document contains, for actions that see only part of it.
+
+    Every node works from an excerpt — a thesis does not fit in a local
+    model's context, and the excerpt starts at the beginning, where the later
+    chapters are not. Without this map a model asked "is there a methodology
+    chapter?" answers from what it was shown, and reports a chapter that
+    exists on page 18 as never written. Computed here, over the full text,
+    with no model involved.
+    """
+    return outline_payload(draft.text)
 
 
 def _thesis_metadata(student: Student) -> dict[str, Any]:
@@ -73,6 +87,7 @@ def assemble_evaluate_methodology_context(
         )
     return {
         "text": latest_draft.text,
+        "document_map": _document_map(latest_draft),
         "thesis_type": str(student.thesis_type),
         "current_topic": student.current_topic,
         "version_number": latest_draft.version_number,
@@ -134,6 +149,7 @@ def assemble_defence_questions_context(
         )
     return {
         "text": latest_draft.text,
+        "document_map": _document_map(latest_draft),
         "current_topic": student.current_topic,
         "field_of_study": student.field_of_study,
         "thesis_type": str(student.thesis_type),
@@ -157,6 +173,7 @@ def assemble_generate_review_context(
         raise MissingContextError("There is no thesis to review yet")
     return {
         "text": latest_draft.text,
+        "document_map": _document_map(latest_draft),
         "metadata": _thesis_metadata(student),
         "thesis_type": str(student.thesis_type),
         "review_tone": review_tone,

@@ -7,6 +7,7 @@ from uuid import UUID
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from src.application.excerpt import render_document_block
 from src.application.json_output import parse_json_object
 from src.domain.analysis import ReviewTone, ThesisAnalysis
 from src.domain.evaluation import EvaluationStatus
@@ -17,6 +18,9 @@ from ..state import ActionState
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
+# The review node reads least of the four — it writes from findings.
+_HEAD_CHARS = 8000
+
 # ---------------------------------------------------------------------------
 # Base system prompt
 # ---------------------------------------------------------------------------
@@ -24,6 +28,13 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 _BASE_SYSTEM_PROMPT = """You are an academic thesis reviewer at a Polish \
 university of economics. Generate a formal thesis review in Polish based \
 on the thesis text, findings, and guidelines provided.
+
+## What you were given
+
+The thesis text may be an excerpt, accompanied by a document map computed
+from the complete thesis. A section the map lists EXISTS — never write that
+it is missing, and never judge the work incomplete because the excerpt ends
+where it does. Base the review on the findings and on what you can see.
 
 ## Style rules
 
@@ -322,14 +333,12 @@ def generate_review(state: ActionState) -> ActionState:
             for f in state["findings"]
         )
 
-        # Truncate thesis text to avoid exceeding model context window.
-        # The review node primarily relies on findings — full text is supplementary.
-        thesis_text = str(ctx.get("text", ""))
-        max_text_chars = 6000
-        truncated_text = (
-            thesis_text[:max_text_chars] + "\n\n[...text truncated...]"
-            if len(thesis_text) > max_text_chars
-            else thesis_text
+        # This node writes from the findings the earlier nodes produced; the
+        # text is supplementary, so it reads the least of the four. What it
+        # must not do is infer absence from the part it was not given, hence
+        # the same map-and-rules block every other node gets.
+        document = render_document_block(
+            ctx, head_chars=_HEAD_CHARS, include_bibliography=False
         )
 
         meta: dict[str, object] = ctx.get("metadata", {})
@@ -340,7 +349,7 @@ def generate_review(state: ActionState) -> ActionState:
             f"Field: {meta.get('field_of_study', 'Unknown')}\n\n"
             f"Guidelines:\n{ctx.get('guidelines', '')}\n\n"
             f"Accumulated findings:\n{findings_summary or 'None'}\n\n"
-            f"Thesis text (first {max_text_chars} chars):\n{truncated_text}"
+            f"{document}"
         )
 
         llm = get_llm(state["model"])

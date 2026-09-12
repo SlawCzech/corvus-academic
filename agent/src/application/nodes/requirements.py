@@ -3,6 +3,7 @@
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from src.application.excerpt import render_document_block
 from src.application.json_output import parse_json_array
 from src.domain.analysis import Finding, FindingSeverity
 from src.infrastructure.llm_factory import get_llm
@@ -10,6 +11,10 @@ from src.infrastructure.llm_factory import get_llm
 from ..state import ActionState
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+
+# How much of the thesis this node reads. The map that travels with the
+# excerpt covers what falls outside it — see `excerpt.render_document_block`.
+_HEAD_CHARS = 30000
 
 _SYSTEM_PROMPT_BASE = """You are checking a thesis against university requirements.
 
@@ -33,6 +38,11 @@ Return ONLY a JSON array of findings:
 
 If no violations found, return an empty array: []
 Return raw JSON only — no markdown, no explanation.
+
+The thesis text may be an excerpt. The document map that comes with it was
+computed from the complete thesis: a section it lists EXISTS. Never raise a
+finding that a section is missing when the map lists it, and never treat the
+end of the excerpt as the end of the thesis.
 {lang_instruction}"""
 
 _LANG_INSTRUCTIONS = {
@@ -58,7 +68,7 @@ def check_requirements(state: ActionState) -> ActionState:
                 HumanMessage(
                     content=(
                         f"University requirements:\n{ctx.get('guidelines', '')}\n\n"
-                        f"Thesis text:\n{str(ctx.get('text', ''))[:12000]}"
+                        f"{render_document_block(ctx, head_chars=_HEAD_CHARS)}"
                     )
                 ),
             ]

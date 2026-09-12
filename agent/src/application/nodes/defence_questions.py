@@ -9,6 +9,7 @@ from typing import Any
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from src.application.excerpt import render_document_block
 from src.application.json_output import as_list, parse_json_object
 from src.application.prompts import defence_questions as prompts
 from src.infrastructure.llm_factory import get_llm
@@ -18,18 +19,14 @@ from ..state import ActionState
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 # The committee reads the whole work, but the model gets a slice — enough for
-# it to ask about the argument rather than about the appendices.
+# it to ask about the argument rather than about the appendices. The map that
+# travels with the slice names the chapters it does not reach, so a question
+# can still be aimed at the results or the conclusions.
 _MAX_TEXT_CHARS = 14000
 _EXPECTED_QUESTIONS = 3
 
 
 def _user_message(ctx: dict[str, Any]) -> str:
-    text = str(ctx.get("text", ""))
-    truncated = (
-        text[:_MAX_TEXT_CHARS] + "\n\n[...text truncated...]"
-        if len(text) > _MAX_TEXT_CHARS
-        else text
-    )
     lines = [
         f"Thesis topic: {ctx.get('current_topic') or 'not settled yet'}",
         f"Field of study: {ctx.get('field_of_study') or 'unspecified'}",
@@ -37,7 +34,7 @@ def _user_message(ctx: dict[str, Any]) -> str:
     ]
     if ctx.get("detail"):
         lines.append(f"Supervisor's instructions: {ctx['detail']}")
-    lines.append(f"Thesis text:\n{truncated}")
+    lines.append(render_document_block(ctx, head_chars=_MAX_TEXT_CHARS))
     return "\n\n".join(lines)
 
 

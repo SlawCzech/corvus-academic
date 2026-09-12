@@ -144,3 +144,40 @@ def test_node_passes_guidelines_from_state_to_model_prompt() -> None:
 
     human_content = str(captured_messages[1].content)
     assert custom_guidelines in human_content
+
+
+def test_the_prompt_carries_the_map_of_what_the_excerpt_omits() -> None:
+    """A chapter past the excerpt must reach the model as present, not absent.
+
+    This is the regression that produced a review declaring four written
+    chapters missing: the node saw a prefix of the thesis and judged the rest
+    by its absence.
+    """
+    mock_llm = MagicMock()
+    mock_llm.invoke.return_value = AIMessage(content="[]")
+    state = make_state(
+        context={
+            "text": "Wstęp. " * 5000,
+            "guidelines": "The thesis must contain a methodology chapter.",
+            "document_map": {
+                "total_chars": 35000,
+                "bibliography_entries": 41,
+                "sections": [
+                    {
+                        "title": "Metodyka badań",
+                        "canonical": "methodology",
+                        "start": 30000,
+                        "char_count": 5000,
+                    }
+                ],
+            },
+        }
+    )
+
+    with patch("src.application.nodes.requirements.get_llm", return_value=mock_llm):
+        check_requirements(state)
+
+    prompt = mock_llm.invoke.call_args[0][0][1].content
+    assert "Metodyka badań" in prompt
+    assert "Bibliography entries counted: 41" in prompt
+    assert "NEVER report a section as missing" in prompt

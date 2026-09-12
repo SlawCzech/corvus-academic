@@ -3,7 +3,11 @@
 import uuid
 from datetime import UTC, datetime
 
-from src.mentoring.application.context import assemble_propose_topic_context
+from src.mentoring.application.context import (
+    assemble_generate_review_context,
+    assemble_propose_topic_context,
+)
+from src.mentoring.domain.draft import ThesisDraft
 from src.mentoring.domain.student import MeetingNote, Student, ThesisType
 
 
@@ -54,3 +58,55 @@ def test_only_the_last_few_notes_are_sent() -> None:
 def test_context_without_notes_is_still_valid() -> None:
     context = assemble_propose_topic_context(_student())
     assert context["recent_notes"] == []
+
+
+def _draft(text: str) -> ThesisDraft:
+    return ThesisDraft(
+        id=uuid.uuid4(),
+        student_id=uuid.uuid4(),
+        version_number=1,
+        filename="praca.pdf",
+        text=text,
+        pages=40,
+        format="pdf",
+        uploaded_by=uuid.uuid4(),
+    )
+
+
+_LONG_THESIS = "\n".join(
+    [
+        "Wstęp",
+        "Wprowadzenie do tematu. " * 500,
+        "Metodyka badań",
+        "Zastosowano podejście ilościowe. " * 500,
+        "Bibliografia:",
+        "1. Adamczyk, J. (2004). Internet na usługach marketingu. Rzeszów: OW.",
+    ]
+)
+
+
+def test_review_context_maps_the_document_the_agent_will_only_see_part_of() -> None:
+    """The agent reads an excerpt; without this map it judges the rest absent."""
+    context = assemble_generate_review_context(_student(), _draft(_LONG_THESIS))
+
+    document_map = context["document_map"]
+    assert document_map["total_chars"] == len(_LONG_THESIS)
+    assert "methodology" in [s["canonical"] for s in document_map["sections"]]
+
+
+def test_the_map_locates_a_chapter_past_any_excerpt() -> None:
+    context = assemble_generate_review_context(_student(), _draft(_LONG_THESIS))
+
+    methodology = next(
+        s
+        for s in context["document_map"]["sections"]
+        if s["canonical"] == "methodology"
+    )
+    assert methodology["start"] > 10000
+    assert methodology["char_count"] > 0
+
+
+def test_sources_are_counted_in_app_not_guessed_by_the_model() -> None:
+    context = assemble_generate_review_context(_student(), _draft(_LONG_THESIS))
+
+    assert context["document_map"]["bibliography_entries"] == 1

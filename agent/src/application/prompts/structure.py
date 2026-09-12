@@ -7,6 +7,10 @@ _BASE = (
     "section (str), description (str), "
     "severity (one of: critical, major, minor), suggestion (str). "
     "Return only the raw JSON array — no markdown, no explanation."
+    " The thesis text may be an excerpt; the document map that comes "
+    "with it lists the sections of the complete thesis. Never report a "
+    "section as missing when the map lists it, and never infer that the "
+    "thesis is incomplete from where the excerpt ends."
 )
 
 _LANG_SUFFIX = {

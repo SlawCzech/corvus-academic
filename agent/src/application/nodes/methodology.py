@@ -3,6 +3,7 @@
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from src.application.excerpt import render_document_block
 from src.application.json_output import parse_json_array
 from src.application.prompts import methodology as prompts
 from src.domain.analysis import Finding, FindingSeverity
@@ -12,23 +13,23 @@ from ..state import ActionState
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
+# How much of the thesis this node reads. The map that travels with the
+# excerpt covers what falls outside it — see `excerpt.render_document_block`.
+_HEAD_CHARS = 30000
+
 
 def analyze_methodology(state: ActionState) -> ActionState:
     """Analyze methodology and bibliography, extend state with methodology findings."""
     try:
         ctx = state["context"]
         llm = get_llm(state["model"])
-        max_chars = 12000
-        thesis_text = str(ctx.get("text", ""))[:max_chars]
+        document = render_document_block(ctx, head_chars=_HEAD_CHARS)
         messages = [
             SystemMessage(  # type: ignore[attr-defined]
                 content=prompts.get_system_prompt(state.get("language", "pl"))
             ),
             HumanMessage(
-                content=(
-                    f"Thesis text:\n{thesis_text}\n\n"
-                    f"Guidelines:\n{ctx.get('guidelines', '')}"
-                )
+                content=(f"{document}\n\nGuidelines:\n{ctx.get('guidelines', '')}")
             ),
         ]
         response = llm.invoke(messages)
