@@ -4,6 +4,7 @@ import { useState } from "react"
 import useSWR from "swr"
 import FileUpload from "@/components/FileUpload"
 import ActionPanel from "@/components/students/ActionPanel"
+import ActionResultView from "@/components/students/ActionResultView"
 import { createMeetingNote, fetcher, uploadDraft } from "@/lib/api.client"
 import type { AgentAction, MeetingNote, Student, ThesisDraft } from "@/lib/api.types"
 
@@ -48,6 +49,7 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
   )
   const { data: actions } = useSWR<AgentAction[]>(actionsKey, fetcher)
 
+  const [openActionId, setOpenActionId] = useState<string | null>(null)
   const [noteText, setNoteText] = useState("")
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -187,21 +189,54 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
           <p className="text-[13px] text-gray-500">Nic jeszcze nie uruchomiono.</p>
         ) : (
           <ul className="space-y-1 text-[13px]">
-            {(actions ?? []).map((action) => (
-              <li
-                key={action.id}
-                className="flex justify-between text-gray-600 dark:text-gray-400"
-              >
-                <span>
-                  {ACTION_LABELS[action.action_type] ?? action.action_type}
-                  {action.accepted ? " · zaakceptowana" : ""}
-                </span>
-                <span className="text-gray-400">
-                  {STATUS_LABELS[action.status] ?? action.status} ·{" "}
-                  {formatDate(action.created_at)}
-                </span>
-              </li>
-            ))}
+            {(actions ?? []).map((action) => {
+              // Every finished action carries its whole result in `output`,
+              // stored when it completed. Reading an old review is opening the
+              // row, not running the model again.
+              const readable = action.output !== null || action.error !== null
+              const open = openActionId === action.id
+              return (
+                <li key={action.id}>
+                  <button
+                    type="button"
+                    disabled={!readable}
+                    aria-expanded={open}
+                    onClick={() => setOpenActionId(open ? null : action.id)}
+                    className={`flex w-full justify-between py-1 text-left text-gray-600 dark:text-gray-400 ${
+                      readable
+                        ? "hover:text-gray-900 dark:hover:text-gray-100"
+                        : "cursor-default"
+                    }`}
+                  >
+                    <span>
+                      {readable && (
+                        <span className="mr-1 inline-block w-3 text-gray-400">
+                          {open ? "−" : "+"}
+                        </span>
+                      )}
+                      {ACTION_LABELS[action.action_type] ?? action.action_type}
+                      {action.accepted ? " · zaakceptowana" : ""}
+                    </span>
+                    <span className="text-gray-400">
+                      {STATUS_LABELS[action.status] ?? action.status} ·{" "}
+                      {formatDate(action.created_at)}
+                    </span>
+                  </button>
+                  {open && (
+                    <div
+                      data-testid="history-result"
+                      className="mb-3 rounded-lg border border-gray-200 dark:border-gray-800 p-3"
+                    >
+                      <ActionResultView
+                        action={action}
+                        selected={0}
+                        onSelect={() => {}}
+                      />
+                    </div>
+                  )}
+                </li>
+              )
+            })}
           </ul>
         )}
       </section>
