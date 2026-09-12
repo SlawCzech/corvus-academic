@@ -36,6 +36,12 @@ services:
     restart: unless-stopped
 
   agent:
+    # Named explicitly so `agent-worker` can run the same artifact. Without the
+    # name, compose derives one per service and builds ../agent twice: the API
+    # and the worker then run different code, and a rebuild of one silently
+    # leaves the other on a week-old image — which is exactly how a fixed node
+    # kept producing the old output.
+    image: corvus-agent
     build:
       context: ../agent
       dockerfile: Dockerfile
@@ -57,9 +63,9 @@ services:
     restart: unless-stopped
 
   agent-worker:
-    build:
-      context: ../agent
-      dockerfile: Dockerfile
+    # The same image as `agent`, built once by that service — the worker is the
+    # same code with a different command.
+    image: corvus-agent
     command: celery -A src.infrastructure.celery_app worker --loglevel=info
     env_file:
       - ../.env
@@ -68,6 +74,15 @@ services:
         condition: service_healthy
       ollama:
         condition: service_started
+    # The image's own HEALTHCHECK asks the HTTP API on :8002, which a Celery
+    # worker does not serve — inherited unchanged, it reports every healthy
+    # worker as unhealthy. Ask Celery instead, over the broker it is listening on.
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A src.infrastructure.celery_app inspect ping -d celery@$$HOSTNAME"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
     restart: unless-stopped
 
   flower:
