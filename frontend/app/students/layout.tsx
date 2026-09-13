@@ -6,9 +6,9 @@ export default function StudentsLayout({
   children: React.ReactNode
 }) {
   return (
-    <>
+    <div className="flex min-h-screen">
       <AuthNav />
-      {children}
-    </>
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
   )
 }

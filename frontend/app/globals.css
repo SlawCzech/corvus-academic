@@ -3,15 +3,99 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fbfaf8;
+  --foreground: #1c2333;
+  --surface: #ffffff;
+  --surface-alt: #f5f1ea;
+  --line: #e6e1d6;
+  --muted: #8a8f9a;
+  --muted-strong: #4a5468;
+  --navy: #17263a;
+  --navy-soft: #2a3d57;
+  --accent: #b45309;
+  --accent-hover: #92400e;
+  --accent-soft: #f6e9de;
+
+  --success-bg: #eaf3ea;
+  --success-border: #bcd9bc;
+  --success-text: #2f5f34;
+  --info-bg: #e8eef5;
+  --info-border: #b9c9dc;
+  --info-text: #2b4a6b;
+  --critical-bg: #fdecec;
+  --critical-border: #f0b8b8;
+  --critical-text: #a12020;
+  --major-bg: #fdf0e0;
+  --major-border: #f0c98a;
+  --major-text: #92590a;
+  --minor-bg: #fdf8e3;
+  --minor-border: #e8dc9a;
+  --minor-text: #7a6a1a;
+}
+
+.dark {
+  --background: #10161f;
+  --foreground: #e7e2d6;
+  --surface: #16202c;
+  --surface-alt: #1b2530;
+  --line: #2a3442;
+  --muted: #8b93a0;
+  --muted-strong: #b7bfcb;
+  --accent: #d97a3d;
+  --accent-hover: #e59152;
+  --accent-soft: rgba(180, 83, 9, 0.18);
+
+  --success-bg: rgba(47, 95, 52, 0.18);
+  --success-border: #2f5f34;
+  --success-text: #8fd39a;
+  --info-bg: rgba(43, 74, 107, 0.22);
+  --info-border: #3b5a7a;
+  --info-text: #9db8d6;
+  --critical-bg: rgba(161, 32, 32, 0.18);
+  --critical-border: #a12020;
+  --critical-text: #f1a3a3;
+  --major-bg: rgba(146, 89, 10, 0.18);
+  --major-border: #92590a;
+  --major-text: #f0c98a;
+  --minor-bg: rgba(122, 106, 26, 0.18);
+  --minor-border: #7a6a1a;
+  --minor-text: #e8dc9a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-line: var(--line);
+  --color-muted: var(--muted);
+  --color-muted-strong: var(--muted-strong);
+  /* Structural brand color — fixed across light/dark, used for the sidebar
+     and other permanent chrome, not the theme-following content surfaces. */
+  --color-navy: var(--navy);
+  --color-navy-soft: var(--navy-soft);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-success-bg: var(--success-bg);
+  --color-success-border: var(--success-border);
+  --color-success-text: var(--success-text);
+  --color-info-bg: var(--info-bg);
+  --color-info-border: var(--info-border);
+  --color-info-text: var(--info-text);
+  --color-critical-bg: var(--critical-bg);
+  --color-critical-border: var(--critical-border);
+  --color-critical-text: var(--critical-text);
+  --color-major-bg: var(--major-bg);
+  --color-major-border: var(--major-border);
+  --color-major-text: var(--major-text);
+  --color-minor-bg: var(--minor-bg);
+  --color-minor-border: var(--minor-border);
+  --color-minor-text: var(--minor-text);
+
+  --font-sans: var(--font-public-sans);
+  --font-serif: var(--font-source-serif);
 }
 
 html {
@@ -21,5 +105,8 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
 }
