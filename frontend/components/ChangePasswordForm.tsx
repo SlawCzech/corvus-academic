@@ -51,62 +51,62 @@ export default function ChangePasswordForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-sm">
       {success && (
-        <p className="rounded bg-green-50 p-3 text-sm text-green-700 dark:bg-green-950 dark:text-green-300">
+        <p className="rounded-lg bg-success-bg p-3 text-[13.5px] text-success-text">
           Hasło zostało zmienione.
         </p>
       )}
       {serverError && (
-        <p className="rounded bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+        <p className="rounded-lg bg-critical-bg p-3 text-[13.5px] text-critical-text">
           {serverError}
         </p>
       )}
 
       <div>
-        <label className="block mb-1 text-[13px] font-medium text-gray-700 dark:text-gray-300">
+        <label className="block mb-1 text-[13px] font-medium text-muted-strong">
           Aktualne hasło
         </label>
         <input
           type="password"
           {...register("current_password")}
-          className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-100"
+          className="w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[14px] text-foreground focus:border-accent focus:outline-none"
         />
         {errors.current_password && (
-          <p className="mt-1 text-[12px] text-red-600">{errors.current_password.message}</p>
+          <p className="mt-1 text-[12px] text-critical-text">{errors.current_password.message}</p>
         )}
       </div>
 
       <div>
-        <label className="block mb-1 text-[13px] font-medium text-gray-700 dark:text-gray-300">
+        <label className="block mb-1 text-[13px] font-medium text-muted-strong">
           Nowe hasło
         </label>
         <input
           type="password"
           {...register("new_password")}
-          className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-100"
+          className="w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[14px] text-foreground focus:border-accent focus:outline-none"
         />
         {errors.new_password && (
-          <p className="mt-1 text-[12px] text-red-600">{errors.new_password.message}</p>
+          <p className="mt-1 text-[12px] text-critical-text">{errors.new_password.message}</p>
         )}
       </div>
 
       <div>
-        <label className="block mb-1 text-[13px] font-medium text-gray-700 dark:text-gray-300">
+        <label className="block mb-1 text-[13px] font-medium text-muted-strong">
           Potwierdź nowe hasło
         </label>
         <input
           type="password"
           {...register("confirm_password")}
-          className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-gray-100"
+          className="w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[14px] text-foreground focus:border-accent focus:outline-none"
         />
         {errors.confirm_password && (
-          <p className="mt-1 text-[12px] text-red-600">{errors.confirm_password.message}</p>
+          <p className="mt-1 text-[12px] text-critical-text">{errors.confirm_password.message}</p>
         )}
       </div>
 
       <button
         type="submit"
         disabled={isSubmitting}
-        className="flex h-8 items-center px-4 text-[13px] font-medium rounded-md bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-700 dark:hover:bg-gray-100 transition-colors disabled:opacity-50"
+        className="flex h-9 items-center px-4 text-[13px] font-semibold rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
       >
         {isSubmitting ? "Zapisywanie…" : "Zmień hasło"}
       </button>

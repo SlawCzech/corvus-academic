@@ -48,7 +48,7 @@ export default function LoginForm() {
       <div>
         <label
           htmlFor="email"
-          className="block text-sm font-medium text-gray-700"
+          className="block text-[13px] font-medium text-muted-strong"
         >
           Email
         </label>
@@ -57,7 +57,7 @@ export default function LoginForm() {
           type="email"
           autoComplete="email"
           data-testid="email-input"
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          className="mt-1.5 block h-[42px] w-full rounded-lg border border-line bg-surface px-3.5 text-[14px] text-foreground focus:border-accent focus:outline-none"
           {...register("email")}
         />
         {errors.email && (
@@ -65,7 +65,7 @@ export default function LoginForm() {
             id="email-error"
             role="alert"
             data-testid="email-error"
-            className="mt-1 text-sm text-red-600"
+            className="mt-1.5 text-[12.5px] text-critical-text"
           >
             {errors.email.message}
           </p>
@@ -75,7 +75,7 @@ export default function LoginForm() {
       <div>
         <label
           htmlFor="password"
-          className="block text-sm font-medium text-gray-700"
+          className="block text-[13px] font-medium text-muted-strong"
         >
           Password
         </label>
@@ -84,7 +84,7 @@ export default function LoginForm() {
           type="password"
           autoComplete="current-password"
           data-testid="password-input"
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          className="mt-1.5 block h-[42px] w-full rounded-lg border border-line bg-surface px-3.5 text-[14px] text-foreground focus:border-accent focus:outline-none"
           {...register("password")}
         />
         {errors.password && (
@@ -92,7 +92,7 @@ export default function LoginForm() {
             id="password-error"
             role="alert"
             data-testid="password-error"
-            className="mt-1 text-sm text-red-600"
+            className="mt-1.5 text-[12.5px] text-critical-text"
           >
             {errors.password.message}
           </p>
@@ -103,7 +103,7 @@ export default function LoginForm() {
         <p
           role="alert"
           data-testid="server-error"
-          className="rounded bg-red-50 px-3 py-2 text-sm text-red-700"
+          className="rounded-lg bg-critical-bg px-3.5 py-2.5 text-[13px] text-critical-text"
         >
           {serverError}
         </p>
@@ -113,7 +113,7 @@ export default function LoginForm() {
         type="submit"
         disabled={isSubmitting}
         data-testid="submit-button"
-        className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        className="h-11 w-full rounded-lg bg-accent text-[14px] font-semibold text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
       >
         {isSubmitting ? "Signing in…" : "Sign in"}
       </button>

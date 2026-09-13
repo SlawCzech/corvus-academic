@@ -51,6 +51,16 @@ function renderDetail(): void {
   )
 }
 
+/**
+ * The history list lives behind the student's "Historia" sub-nav section
+ * now — it is not the page's default view (that's "Akcje AI"), so every
+ * test that wants to see it has to switch there first.
+ */
+async function openHistorySection(): Promise<void> {
+  const historyLink = await screen.findByRole("button", { name: "Historia" })
+  await userEvent.click(historyLink)
+}
+
 describe("StudentDetail — action history", () => {
   beforeEach(() => {
     vi.stubGlobal(
@@ -72,6 +82,7 @@ describe("StudentDetail — action history", () => {
 
   it("opens a past review from the history and shows what it said", async () => {
     renderDetail()
+    await openHistorySection()
     const entry = await screen.findByRole("button", { name: /Recenzja/ })
 
     expect(screen.queryByTestId("history-result")).not.toBeInTheDocument()
@@ -91,6 +102,7 @@ describe("StudentDetail — action history", () => {
 
   it("closes it again on a second click", async () => {
     renderDetail()
+    await openHistorySection()
     const entry = await screen.findByRole("button", { name: /Recenzja/ })
 
     await userEvent.click(entry)
@@ -124,6 +136,7 @@ describe("StudentDetail — action history", () => {
       ),
     )
     renderDetail()
+    await openHistorySection()
 
     const entry = await screen.findByRole("button", { name: /Recenzja/ })
     expect(entry).toBeDisabled()

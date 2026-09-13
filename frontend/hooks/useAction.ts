@@ -6,6 +6,7 @@ import {
   acceptAction,
   fetchAction,
   triggerAction,
+  type ActionOptions,
 } from "@/lib/api.client"
 import type { ActionType, AgentAction } from "@/lib/api.types"
 
@@ -25,7 +26,7 @@ export interface UseActionReturn {
   /** True between clicking and the agent finishing. */
   running: boolean
   error: string | null
-  run: (actionType: ActionType, detail?: string) => Promise<void>
+  run: (actionType: ActionType, detail?: string, options?: ActionOptions) => Promise<void>
   accept: (topicIndex?: number) => Promise<void>
   watch: (actionId: string) => void
   dismiss: () => void
@@ -60,11 +61,11 @@ export function useAction(studentId: string): UseActionReturn {
   )
 
   const run = useCallback(
-    async (actionType: ActionType, detail?: string) => {
+    async (actionType: ActionType, detail?: string, options?: ActionOptions) => {
       setError(null)
       setActionId(null)
       try {
-        const started = await triggerAction(studentId, actionType, detail)
+        const started = await triggerAction(studentId, actionType, detail, options)
         setActionId(started.id)
         void mutate(`/api/students/${studentId}/actions`)
       } catch (err) {

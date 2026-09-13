@@ -66,26 +66,26 @@ export default function FileUpload({ onFileSelect, disabled }: FileUploadProps) 
         className={[
           "flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-10 text-center cursor-pointer transition-colors",
           isDragActive
-            ? "border-blue-500 bg-blue-50"
-            : "border-gray-300 hover:border-blue-400",
+            ? "border-accent bg-accent-soft"
+            : "border-line hover:border-accent",
           disabled ? "pointer-events-none opacity-50" : "",
         ].join(" ")}
       >
         <input {...getInputProps()} data-testid="file-input" />
-        <p className="text-lg font-medium text-gray-700">
+        <p className="text-[15px] font-medium text-foreground">
           {isDragActive ? "Drop the file here…" : "Drag & drop your thesis"}
         </p>
-        <p className="mt-1 text-sm text-gray-500">PDF or DOCX, max 50 MB</p>
+        <p className="mt-1 text-[13px] text-muted">PDF or DOCX, max 50 MB</p>
       </div>
 
       {selectedFile && (
-        <p data-testid="selected-file" className="mt-3 text-sm text-gray-700">
+        <p data-testid="selected-file" className="mt-3 text-[13px] text-muted-strong">
           {selectedFile.name} &mdash; {formatBytes(selectedFile.size)}
         </p>
       )}
 
       {rejectionError && (
-        <p data-testid="rejection-error" className="mt-3 text-sm text-red-600">
+        <p data-testid="rejection-error" className="mt-3 text-[13px] text-critical-text">
           {rejectionError}
         </p>
       )}

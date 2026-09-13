@@ -5,6 +5,7 @@ import useSWR from "swr"
 import FileUpload from "@/components/FileUpload"
 import ActionPanel from "@/components/students/ActionPanel"
 import ActionResultView from "@/components/students/ActionResultView"
+import StudentSubNav, { type Section } from "@/components/students/StudentSubNav"
 import { createMeetingNote, fetcher, uploadDraft } from "@/lib/api.client"
 import type { AgentAction, MeetingNote, Student, ThesisDraft } from "@/lib/api.types"
 
@@ -49,6 +50,7 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
   )
   const { data: actions } = useSWR<AgentAction[]>(actionsKey, fetcher)
 
+  const [section, setSection] = useState<Section>("actions")
   const [openActionId, setOpenActionId] = useState<string | null>(null)
   const [noteText, setNoteText] = useState("")
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -56,15 +58,15 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
 
   if (error) {
     return (
-      <main className="mx-auto max-w-3xl px-4 py-10">
-        <p className="text-[13px] text-red-600">Nie znaleziono studenta.</p>
+      <main className="px-12 py-10">
+        <p className="text-[13px] text-critical-text">Nie znaleziono studenta.</p>
       </main>
     )
   }
   if (!student) {
     return (
-      <main className="mx-auto max-w-3xl px-4 py-10">
-        <p className="text-[13px] text-gray-500">Wczytywanie…</p>
+      <main className="px-12 py-10">
+        <p className="text-[13px] text-muted">Wczytywanie…</p>
       </main>
     )
   }
@@ -90,156 +92,223 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
     void mutateNotes()
   }
 
+  const hasReview = (actions ?? []).some(
+    (a) => a.action_type === "generate_review" && a.status === "completed",
+  )
+  const latestDraft = drafts?.[0]
+
   return (
-    <main className="mx-auto max-w-3xl px-4 py-10">
-      <header className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">
-          {student.full_name}
-        </h1>
-        <p className="mt-1 text-[13px] text-gray-500">
-          {student.field_of_study}
-          {student.index_number ? ` · nr ${student.index_number}` : ""}
-        </p>
-        <p className="mt-3 text-[14px] text-gray-900 dark:text-gray-100">
-          {student.current_topic ? (
-            <>
-              <span className="text-gray-400">Temat: </span>
-              {student.current_topic}
-            </>
-          ) : (
-            <span className="italic text-gray-400">Temat nieustalony</span>
-          )}
-        </p>
-      </header>
+    <div className="flex min-h-screen">
+      <StudentSubNav student={student} section={section} onSectionChange={setSection} />
 
-      <ActionPanel student={student} />
+      <main className="min-w-0 flex-1 px-10 py-10">
+        {section === "overview" && (
+          <div>
+            <h1 className="mb-6 text-[24px] font-semibold text-foreground">Przegląd</h1>
 
-      <section className="mb-10">
-        <h2 className="mb-3 text-[15px] font-semibold text-gray-900 dark:text-gray-100">
-          Wersje pracy
-        </h2>
-        <FileUpload onFileSelect={(file) => void handleUpload(file)} disabled={uploading} />
-        {uploadError && (
-          <p data-testid="upload-error" className="mt-2 text-[13px] text-red-600">
-            {uploadError}
-          </p>
-        )}
-        {drafts && drafts.length > 0 && (
-          <ul className="mt-4 space-y-1 text-[13px]">
-            {drafts.map((draft) => (
-              <li key={draft.id} className="flex justify-between text-gray-600 dark:text-gray-400">
-                <span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    v{draft.version_number}
-                  </span>{" "}
-                  {draft.filename}
-                </span>
-                <span className="text-gray-400">
-                  {draft.char_count.toLocaleString("pl-PL")} znaków ·{" "}
-                  {formatDate(draft.created_at)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+            {latestDraft && !hasReview && (
+              <div className="mb-5 flex items-center justify-between rounded-xl border border-major-border bg-major-bg p-5">
+                <div>
+                  <span className="mb-0.5 block text-[13px] font-semibold text-major-text">
+                    Sugerowany następny krok
+                  </span>
+                  <span className="text-[13px] text-muted-strong">
+                    Wersja {latestDraft.version_number} pracy czeka na recenzję.
+                  </span>
+                </div>
+                <button
+                  onClick={() => setSection("actions")}
+                  className="h-9 shrink-0 rounded-lg bg-accent px-4 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"
+                >
+                  Napisz recenzję
+                </button>
+              </div>
+            )}
 
-      <section className="mb-10">
-        <h2 className="mb-3 text-[15px] font-semibold text-gray-900 dark:text-gray-100">
-          Notatki ze spotkań
-        </h2>
-        <form onSubmit={addNote} className="mb-4">
-          <textarea
-            value={noteText}
-            onChange={(e) => setNoteText(e.target.value)}
-            rows={3}
-            placeholder="Co ustaliliście na spotkaniu?"
-            className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-[14px] text-gray-900 dark:text-gray-100 focus:border-gray-900 dark:focus:border-gray-300 focus:outline-none"
-          />
-          <button
-            type="submit"
-            className="mt-2 h-8 rounded-md border border-gray-300 dark:border-gray-700 px-4 text-[13px] text-gray-900 dark:text-gray-100"
-          >
-            Zapisz notatkę
-          </button>
-        </form>
-        <ul className="space-y-3">
-          {(notes ?? []).map((note) => (
-            <li
-              key={note.id}
-              className="rounded-lg border border-gray-200 dark:border-gray-800 p-3"
-            >
-              <p className="text-[13px] text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                {note.content}
-              </p>
-              <p className="mt-2 text-[12px] text-gray-400">
-                {formatDate(note.occurred_at)}
-                {note.source_action_id ? " · szkic AI zaakceptowany" : ""}
-              </p>
-            </li>
-          ))}
-        </ul>
-      </section>
+            <div className="grid grid-cols-2 gap-5">
+              <div className="rounded-xl border border-line bg-surface p-5">
+                <h3 className="mb-3 text-[11.5px] font-semibold uppercase tracking-wide text-muted">
+                  Temat pracy
+                </h3>
+                {student.current_topic ? (
+                  <>
+                    <p className="text-[15px] leading-relaxed text-foreground">
+                      {student.current_topic}
+                    </p>
+                    {student.current_topic_set_at && (
+                      <p className="mt-2.5 text-[12.5px] text-muted">
+                        Ustalony {formatDate(student.current_topic_set_at)}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-[13.5px] italic text-muted">Temat nieustalony</p>
+                )}
+              </div>
 
-      <section>
-        <h2 className="mb-3 text-[15px] font-semibold text-gray-900 dark:text-gray-100">
-          Historia akcji
-        </h2>
-        {(actions ?? []).length === 0 ? (
-          <p className="text-[13px] text-gray-500">Nic jeszcze nie uruchomiono.</p>
-        ) : (
-          <ul className="space-y-1 text-[13px]">
-            {(actions ?? []).map((action) => {
-              // Every finished action carries its whole result in `output`,
-              // stored when it completed. Reading an old review is opening the
-              // row, not running the model again.
-              const readable = action.output !== null || action.error !== null
-              const open = openActionId === action.id
-              return (
-                <li key={action.id}>
-                  <button
-                    type="button"
-                    disabled={!readable}
-                    aria-expanded={open}
-                    onClick={() => setOpenActionId(open ? null : action.id)}
-                    className={`flex w-full justify-between py-1 text-left text-gray-600 dark:text-gray-400 ${
-                      readable
-                        ? "hover:text-gray-900 dark:hover:text-gray-100"
-                        : "cursor-default"
+              <div className="rounded-xl border border-line bg-surface p-5">
+                <h3 className="mb-3 text-[11.5px] font-semibold uppercase tracking-wide text-muted">
+                  Postęp
+                </h3>
+                <div className="flex flex-col gap-2.5 text-[13.5px]">
+                  <div className="flex items-center gap-2.5 text-foreground">
+                    <span className="h-[7px] w-[7px] rounded-full bg-success-text" />
+                    {(drafts ?? []).length} wersje pracy przesłane
+                  </div>
+                  <div className="flex items-center gap-2.5 text-foreground">
+                    <span className="h-[7px] w-[7px] rounded-full bg-success-text" />
+                    {(notes ?? []).length} notatek ze spotkań
+                  </div>
+                  <div
+                    className={`flex items-center gap-2.5 ${
+                      hasReview ? "text-foreground" : "text-accent"
                     }`}
                   >
-                    <span>
-                      {readable && (
-                        <span className="mr-1 inline-block w-3 text-gray-400">
-                          {open ? "−" : "+"}
-                        </span>
-                      )}
-                      {ACTION_LABELS[action.action_type] ?? action.action_type}
-                      {action.accepted ? " · zaakceptowana" : ""}
-                    </span>
-                    <span className="text-gray-400">
-                      {STATUS_LABELS[action.status] ?? action.status} ·{" "}
-                      {formatDate(action.created_at)}
-                    </span>
-                  </button>
-                  {open && (
-                    <div
-                      data-testid="history-result"
-                      className="mb-3 rounded-lg border border-gray-200 dark:border-gray-800 p-3"
-                    >
-                      <ActionResultView
-                        action={action}
-                        selected={0}
-                        onSelect={() => {}}
-                      />
-                    </div>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
+                    <span
+                      className={`h-[7px] w-[7px] rounded-full ${
+                        hasReview ? "bg-success-text" : "bg-accent"
+                      }`}
+                    />
+                    {hasReview ? "Recenzja napisana" : "Recenzja jeszcze nie napisana"}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
-      </section>
-    </main>
+
+        {section === "actions" && (
+          <div>
+            <h1 className="mb-5 text-[24px] font-semibold text-foreground">Akcje AI</h1>
+            <ActionPanel student={student} />
+          </div>
+        )}
+
+        {section === "drafts" && (
+          <div>
+            <h1 className="mb-5 text-[24px] font-semibold text-foreground">Wersje pracy</h1>
+            <div className="mb-5">
+              <FileUpload onFileSelect={(file) => void handleUpload(file)} disabled={uploading} />
+            </div>
+            {uploadError && (
+              <p data-testid="upload-error" className="mb-4 text-[13px] text-critical-text">
+                {uploadError}
+              </p>
+            )}
+            <div className="rounded-xl border border-line bg-surface p-2">
+              {(drafts ?? []).length === 0 && (
+                <p className="p-4 text-[13.5px] text-muted">Brak przesłanych wersji.</p>
+              )}
+              {(drafts ?? []).map((draft) => (
+                <div
+                  key={draft.id}
+                  className="flex justify-between border-b border-line/60 px-4 py-3 text-[13.5px] last:border-none"
+                >
+                  <span className="text-foreground">
+                    <span className="font-semibold">v{draft.version_number}</span>{" "}
+                    {draft.filename}
+                  </span>
+                  <span className="text-muted">
+                    {draft.char_count.toLocaleString("pl-PL")} znaków ·{" "}
+                    {formatDate(draft.created_at)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {section === "notes" && (
+          <div>
+            <h1 className="mb-5 text-[24px] font-semibold text-foreground">
+              Notatki ze spotkań
+            </h1>
+            <form onSubmit={addNote} className="mb-5 rounded-xl border border-line bg-surface p-5">
+              <textarea
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                rows={3}
+                placeholder="Co ustaliliście na spotkaniu?"
+                className="w-full rounded-lg border border-line bg-surface px-3.5 py-2 text-[14px] text-foreground focus:border-accent focus:outline-none"
+              />
+              <button
+                type="submit"
+                className="mt-3 h-9 rounded-lg border border-line px-4 text-[13px] font-medium text-foreground hover:bg-surface-alt transition-colors"
+              >
+                Zapisz notatkę
+              </button>
+            </form>
+            <div className="flex flex-col gap-3">
+              {(notes ?? []).map((note) => (
+                <div key={note.id} className="rounded-xl border border-line bg-surface p-4">
+                  <p className="whitespace-pre-wrap text-[13.5px] text-foreground">
+                    {note.content}
+                  </p>
+                  <p className="mt-2.5 text-[12px] text-muted">
+                    {formatDate(note.occurred_at)}
+                    {note.source_action_id ? " · szkic AI zaakceptowany" : ""}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {section === "history" && (
+          <div>
+            <h1 className="mb-5 text-[24px] font-semibold text-foreground">Historia akcji</h1>
+            {(actions ?? []).length === 0 ? (
+              <p className="text-[13.5px] text-muted">Nic jeszcze nie uruchomiono.</p>
+            ) : (
+              <div className="rounded-xl border border-line bg-surface">
+                {(actions ?? []).map((action, i) => {
+                  const readable = action.output !== null || action.error !== null
+                  const open = openActionId === action.id
+                  return (
+                    <div key={action.id}>
+                      <button
+                        type="button"
+                        disabled={!readable}
+                        aria-expanded={open}
+                        onClick={() => setOpenActionId(open ? null : action.id)}
+                        className={`flex w-full items-center justify-between px-4 py-3 text-left text-[13.5px] ${
+                          i > 0 ? "border-t border-line/60" : ""
+                        } ${
+                          readable
+                            ? "text-foreground hover:bg-surface-alt"
+                            : "cursor-default text-muted"
+                        }`}
+                      >
+                        <span>
+                          {readable && (
+                            <span className="mr-1.5 inline-block w-3 text-muted">
+                              {open ? "−" : "+"}
+                            </span>
+                          )}
+                          {ACTION_LABELS[action.action_type] ?? action.action_type}
+                          {action.accepted ? " · zaakceptowana" : ""}
+                        </span>
+                        <span className="text-muted">
+                          {STATUS_LABELS[action.status] ?? action.status} ·{" "}
+                          {formatDate(action.created_at)}
+                        </span>
+                      </button>
+                      {open && (
+                        <div
+                          data-testid="history-result"
+                          className="border-t border-line/60 bg-surface-alt/40 p-4"
+                        >
+                          <ActionResultView action={action} selected={0} onSelect={() => {}} />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </main>
+    </div>
   )
 }

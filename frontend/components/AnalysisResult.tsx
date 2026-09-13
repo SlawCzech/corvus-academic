@@ -5,15 +5,15 @@ import type { ActionResult, Finding, FindingSeverity, Score } from "@/lib/api.ty
 const SEVERITY_ORDER: FindingSeverity[] = ["critical", "major", "minor"]
 
 const SEVERITY_LABELS: Record<FindingSeverity, string> = {
-  critical: "Critical",
-  major: "Major",
-  minor: "Minor",
+  critical: "Krytyczne",
+  major: "Poważne",
+  minor: "Drobne",
 }
 
 const SEVERITY_COLORS: Record<FindingSeverity, string> = {
-  critical: "bg-red-100 border-red-300 text-red-800",
-  major: "bg-orange-100 border-orange-300 text-orange-800",
-  minor: "bg-yellow-100 border-yellow-300 text-yellow-800",
+  critical: "bg-critical-bg border-critical-border text-critical-text",
+  major: "bg-major-bg border-major-border text-major-text",
+  minor: "bg-minor-bg border-minor-border text-minor-text",
 }
 
 function FindingGroup({
@@ -26,7 +26,7 @@ function FindingGroup({
   if (findings.length === 0) return null
   return (
     <div data-testid={`finding-group-${severity}`} className="mb-4">
-      <h3 className={`mb-2 inline-block rounded px-2 py-0.5 text-sm font-semibold border ${SEVERITY_COLORS[severity]}`}>
+      <h3 className={`mb-2 inline-block rounded-md border px-2 py-0.5 text-[12px] font-semibold ${SEVERITY_COLORS[severity]}`}>
         {SEVERITY_LABELS[severity]} ({findings.length})
       </h3>
       <ul className="space-y-2">
@@ -34,12 +34,12 @@ function FindingGroup({
           <li
             key={i}
             data-testid="finding-item"
-            className="rounded border border-gray-200 p-3 text-sm"
+            className="rounded-lg border border-line p-3 text-[13px]"
           >
-            <p className="font-medium text-gray-800">{f.section}</p>
-            <p className="mt-0.5 text-gray-600">{f.description}</p>
+            <p className="font-semibold text-foreground">{f.section}</p>
+            <p className="mt-0.5 text-muted-strong">{f.description}</p>
             {f.suggestion && (
-              <p className="mt-1 text-gray-500 italic">→ {f.suggestion}</p>
+              <p className="mt-1 italic text-muted">→ {f.suggestion}</p>
             )}
           </li>
         ))}
@@ -54,19 +54,19 @@ function ScoreBar({ score }: { score: Score }) {
     : 0
   return (
     <div data-testid="score-item" className="mb-3">
-      <div className="flex justify-between text-sm text-gray-700 mb-1">
+      <div className="mb-1 flex justify-between text-[13px] text-muted-strong">
         <span>{score.criteria}</span>
         <span>
           {score.points}/{score.max_points} ({pct}%)
         </span>
       </div>
-      <div className="h-2 w-full rounded bg-gray-200">
+      <div className="h-[5px] w-full rounded-full bg-surface-alt">
         <div
           role="progressbar"
           aria-valuenow={pct}
           aria-valuemin={0}
           aria-valuemax={100}
-          className="h-2 rounded bg-blue-500 transition-all"
+          className="h-[5px] rounded-full bg-accent transition-all"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -93,12 +93,40 @@ export default function AnalysisResultView({ result }: AnalysisResultProps) {
     { critical: [], major: [], minor: [] },
   )
 
+  const totalPoints = scores.reduce((sum, s) => sum + s.points, 0)
+  const totalMax = scores.reduce((sum, s) => sum + s.max_points, 0)
+  const totalPct = totalMax > 0 ? Math.round((totalPoints / totalMax) * 100) : 0
+
   return (
     <div data-testid="analysis-result">
+      {scores.length > 0 && (
+        <section data-testid="total-score" className="mb-6">
+          <span className="block text-[11.5px] uppercase tracking-wide text-muted">
+            Wynik łączny
+          </span>
+          <div className="mt-1 flex items-baseline gap-3">
+            <span className="font-serif text-[36px] font-semibold text-foreground">
+              {totalPct}%
+            </span>
+            <span className="text-[13px] text-muted-strong">
+              {totalPoints} / {totalMax} pkt
+            </span>
+          </div>
+          <div className="mt-2.5 h-2 w-full rounded-full bg-surface-alt">
+            <div
+              className="h-2 rounded-full bg-accent"
+              style={{ width: `${totalPct}%` }}
+            />
+          </div>
+        </section>
+      )}
+
       {summary && (
         <section className="mb-6">
-          <h2 className="mb-1 text-base font-semibold text-gray-800">Summary</h2>
-          <p data-testid="summary" className="text-sm text-gray-700">
+          <h2 className="mb-1 text-[11.5px] font-semibold uppercase tracking-wide text-muted">
+            Podsumowanie
+          </h2>
+          <p data-testid="summary" className="text-[13.5px] text-muted-strong">
             {summary}
           </p>
         </section>
@@ -106,10 +134,10 @@ export default function AnalysisResultView({ result }: AnalysisResultProps) {
 
       {recommendation && (
         <section className="mb-6">
-          <h2 className="mb-1 text-base font-semibold text-gray-800">
-            Recommendation
+          <h2 className="mb-1 text-[11.5px] font-semibold uppercase tracking-wide text-muted">
+            Rekomendacja
           </h2>
-          <p data-testid="recommendation" className="text-sm text-gray-700">
+          <p data-testid="recommendation" className="text-[13.5px] text-muted-strong">
             {recommendation}
           </p>
         </section>
@@ -117,7 +145,7 @@ export default function AnalysisResultView({ result }: AnalysisResultProps) {
 
       {findings.length > 0 && (
         <section className="mb-6">
-          <h2 className="mb-3 text-base font-semibold text-gray-800">Findings</h2>
+          <h2 className="mb-3 text-[14px] font-semibold text-foreground">Uwagi</h2>
           {SEVERITY_ORDER.map((sev) => (
             <FindingGroup key={sev} severity={sev} findings={grouped[sev]} />
           ))}
@@ -126,7 +154,9 @@ export default function AnalysisResultView({ result }: AnalysisResultProps) {
 
       {scores.length > 0 && (
         <section>
-          <h2 className="mb-3 text-base font-semibold text-gray-800">Scores</h2>
+          <h2 className="mb-3 text-[11.5px] font-semibold uppercase tracking-wide text-muted">
+            Kryteria oceny
+          </h2>
           {scores.map((s, i) => (
             <ScoreBar key={i} score={s} />
           ))}

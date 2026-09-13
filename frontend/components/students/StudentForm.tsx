@@ -10,11 +10,15 @@ const THESIS_TYPES: { value: ThesisType; label: string }[] = [
 ]
 
 const inputClass =
-  "w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white " +
-  "dark:bg-gray-900 px-3 py-1.5 text-[14px] text-gray-900 dark:text-gray-100 " +
-  "focus:border-gray-900 dark:focus:border-gray-300 focus:outline-none"
+  "w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[14px] " +
+  "text-foreground focus:border-accent focus:outline-none"
 
-export default function StudentForm({ onCreated }: { onCreated: () => void }) {
+interface StudentFormProps {
+  onCreated: () => void
+  onCancel?: () => void
+}
+
+export default function StudentForm({ onCreated, onCancel }: StudentFormProps) {
   const [fullName, setFullName] = useState("")
   const [fieldOfStudy, setFieldOfStudy] = useState("")
   const [indexNumber, setIndexNumber] = useState("")
@@ -48,14 +52,14 @@ export default function StudentForm({ onCreated }: { onCreated: () => void }) {
     <form
       onSubmit={submit}
       data-testid="student-form"
-      className="mb-8 rounded-lg border border-gray-200 dark:border-gray-800 p-4"
+      className="mb-6 rounded-xl border border-line bg-surface p-5"
     >
-      <h2 className="mb-3 text-[14px] font-medium text-gray-900 dark:text-gray-100">
+      <h2 className="mb-3 text-[14px] font-semibold text-foreground">
         Dodaj studenta
       </h2>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
-          <span className="mb-1 block text-[12px] text-gray-500">Imię i nazwisko</span>
+          <span className="mb-1 block text-[12px] text-muted">Imię i nazwisko</span>
           <input
             required
             value={fullName}
@@ -64,7 +68,7 @@ export default function StudentForm({ onCreated }: { onCreated: () => void }) {
           />
         </label>
         <label className="block">
-          <span className="mb-1 block text-[12px] text-gray-500">Kierunek</span>
+          <span className="mb-1 block text-[12px] text-muted">Kierunek</span>
           <input
             required
             value={fieldOfStudy}
@@ -73,7 +77,7 @@ export default function StudentForm({ onCreated }: { onCreated: () => void }) {
           />
         </label>
         <label className="block">
-          <span className="mb-1 block text-[12px] text-gray-500">
+          <span className="mb-1 block text-[12px] text-muted">
             Nr indeksu (opcjonalnie)
           </span>
           <input
@@ -83,7 +87,7 @@ export default function StudentForm({ onCreated }: { onCreated: () => void }) {
           />
         </label>
         <label className="block">
-          <span className="mb-1 block text-[12px] text-gray-500">Typ pracy</span>
+          <span className="mb-1 block text-[12px] text-muted">Typ pracy</span>
           <select
             value={thesisType}
             onChange={(e) => setThesisType(e.target.value as ThesisType)}
@@ -99,18 +103,29 @@ export default function StudentForm({ onCreated }: { onCreated: () => void }) {
       </div>
 
       {error && (
-        <p data-testid="student-form-error" className="mt-3 text-[13px] text-red-600">
+        <p data-testid="student-form-error" className="mt-3 text-[13px] text-critical-text">
           {error}
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={saving}
-        className="mt-4 h-8 rounded-md bg-gray-900 dark:bg-white px-4 text-[13px] font-medium text-white dark:text-gray-900 disabled:opacity-50"
-      >
-        {saving ? "Zapisywanie…" : "Dodaj"}
-      </button>
+      <div className="mt-4 flex gap-2">
+        <button
+          type="submit"
+          disabled={saving}
+          className="h-9 rounded-lg bg-accent px-4 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
+        >
+          {saving ? "Zapisywanie…" : "Dodaj"}
+        </button>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="h-9 rounded-lg border border-line px-4 text-[13px] font-medium text-foreground hover:bg-surface-alt transition-colors"
+          >
+            Anuluj
+          </button>
+        )}
+      </div>
     </form>
   )
 }

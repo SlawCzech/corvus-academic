@@ -56,32 +56,32 @@ export default function ApiKeySection() {
 
   return (
     <section data-testid="api-key-section">
-      <p className="mb-4 text-[13px] text-gray-500">
+      <p className="mb-4 text-[13px] text-muted">
         Bez własnego klucza akcje AI liczą się na modelu uruchomionym lokalnie.
         Klucz jest przechowywany zaszyfrowany i nigdy nie wraca w odpowiedzi.
       </p>
 
       <p data-testid="api-key-status" className="mb-4 text-[13px]">
         {status?.configured ? (
-          <span className="text-gray-900 dark:text-gray-100">
+          <span className="text-foreground">
             Klucz zapisany
             {status.provider
               ? ` — ${PROVIDER_LABELS[status.provider] ?? status.provider}`
               : ""}
           </span>
         ) : (
-          <span className="text-gray-500">Brak klucza — model lokalny</span>
+          <span className="text-muted">Brak klucza — model lokalny</span>
         )}
       </p>
 
       <div className="space-y-3">
         <label className="block">
-          <span className="mb-1 block text-[12px] text-gray-500">Dostawca</span>
+          <span className="mb-1 block text-[12px] text-muted">Dostawca</span>
           <select
             value={provider}
             onChange={(e) => setProvider(e.target.value as Provider)}
             data-testid="provider-select"
-            className="rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-[14px] text-gray-900 dark:text-gray-100"
+            className="rounded-lg border border-line bg-surface px-3 py-1.5 text-[14px] text-foreground"
           >
             <option value="claude">Claude (Anthropic)</option>
             <option value="openai">OpenAI</option>
@@ -89,7 +89,7 @@ export default function ApiKeySection() {
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-[12px] text-gray-500">Klucz API</span>
+          <span className="mb-1 block text-[12px] text-muted">Klucz API</span>
           <span className="flex gap-2">
             <input
               type={showKey ? "text" : "password"}
@@ -97,14 +97,14 @@ export default function ApiKeySection() {
               onChange={(e) => setApiKey(e.target.value)}
               data-testid="api-key-input"
               placeholder="sk-…"
-              className="flex-1 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 font-mono text-[13px] text-gray-900 dark:text-gray-100 focus:border-gray-900 dark:focus:border-gray-300 focus:outline-none"
+              className="flex-1 rounded-lg border border-line bg-surface px-3 py-1.5 font-mono text-[13px] text-foreground focus:border-accent focus:outline-none"
             />
             <button
               type="button"
               onClick={() => setShowKey((v) => !v)}
               data-testid="toggle-visibility"
               aria-label={showKey ? "Ukryj klucz" : "Pokaż klucz"}
-              className="rounded-md border border-gray-300 dark:border-gray-700 px-3 text-[13px] text-gray-600 dark:text-gray-400"
+              className="rounded-lg border border-line px-3 text-[13px] text-muted-strong hover:bg-surface-alt transition-colors"
             >
               {showKey ? "Ukryj" : "Pokaż"}
             </button>
@@ -118,7 +118,7 @@ export default function ApiKeySection() {
           onClick={() => void save()}
           disabled={saveStatus === "saving" || !apiKey.trim()}
           data-testid="save-api-key"
-          className="h-8 rounded-md bg-gray-900 dark:bg-white px-4 text-[13px] font-medium text-white dark:text-gray-900 disabled:opacity-40"
+          className="h-9 rounded-lg bg-accent px-4 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors disabled:opacity-40"
         >
           {saveStatus === "saving" ? "Zapisywanie…" : "Zapisz klucz"}
         </button>
@@ -128,19 +128,19 @@ export default function ApiKeySection() {
             type="button"
             onClick={() => void remove()}
             data-testid="remove-api-key"
-            className="h-8 rounded-md border border-gray-300 dark:border-gray-700 px-4 text-[13px] text-gray-700 dark:text-gray-300"
+            className="h-9 rounded-lg border border-line px-4 text-[13px] text-muted-strong hover:bg-surface-alt transition-colors"
           >
             Usuń klucz
           </button>
         )}
 
         {saveStatus === "saved" && (
-          <span data-testid="save-ok" className="text-[13px] text-gray-500">
+          <span data-testid="save-ok" className="text-[13px] text-muted">
             Zapisano
           </span>
         )}
         {saveStatus === "error" && (
-          <span data-testid="save-error" className="text-[13px] text-red-600">
+          <span data-testid="save-error" className="text-[13px] text-critical-text">
             Nie udało się zapisać klucza
           </span>
         )}

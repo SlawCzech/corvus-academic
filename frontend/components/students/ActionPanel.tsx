@@ -1,8 +1,10 @@
 "use client"
 
 import { useState } from "react"
+import { IconChevronDown } from "@tabler/icons-react"
 import ActionResultView from "@/components/students/ActionResultView"
 import { useAction } from "@/hooks/useAction"
+import { useAiDefaults, type AiDefaults } from "@/lib/aiDefaults"
 import type { ActionType, Student } from "@/lib/api.types"
 
 interface ActionSpec {
@@ -63,29 +65,68 @@ const STATUS_LABELS: Record<string, string> = {
   failed: "Błąd",
 }
 
+const TONE_OPTIONS: { value: string; label: string }[] = [
+  { value: "auto", label: "Automatyczny" },
+  { value: "enthusiastic", label: "Entuzjastyczny" },
+  { value: "commendable", label: "Pochlebny" },
+  { value: "positive", label: "Pozytywny" },
+  { value: "diplomatic", label: "Dyplomatyczny" },
+  { value: "reserved", label: "Powściągliwy" },
+  { value: "negative", label: "Negatywny" },
+]
+
+const optionInputClass =
+  "w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[13.5px] " +
+  "text-foreground focus:border-accent focus:outline-none"
+
 export default function ActionPanel({ student }: { student: Student }) {
+  const defaults = useAiDefaults()
+  // Remounts once the real (possibly non-fallback) defaults are known, so the
+  // panel's local option state starts from them without an effect.
+  return (
+    <ActionPanelInner
+      key={`${defaults.model}:${defaults.language}:${defaults.reviewTone}`}
+      student={student}
+      defaults={defaults}
+    />
+  )
+}
+
+function ActionPanelInner({
+  student,
+  defaults,
+}: {
+  student: Student
+  defaults: AiDefaults
+}) {
   const { action, running, error, run, accept, dismiss } = useAction(student.id)
   const [selectedType, setSelectedType] = useState<ActionType | null>(null)
   const [detail, setDetail] = useState("")
   const [topicIndex, setTopicIndex] = useState(0)
 
+  const [optionsOpen, setOptionsOpen] = useState(false)
+  const [model, setModel] = useState(defaults.model)
+  const [language, setLanguage] = useState(defaults.language)
+  const [reviewTone, setReviewTone] = useState(defaults.reviewTone)
+
   const spec = ACTIONS.find((a) => a.type === selectedType) ?? null
   const shown = action && action.action_type === selectedType ? action : null
   const canAccept =
     shown?.status === "completed" && !shown.accepted && spec?.acceptable
+  const showTone = selectedType === "generate_review"
 
   async function start(): Promise<void> {
     if (!selectedType) return
     setTopicIndex(0)
-    await run(selectedType, detail.trim() || undefined)
+    await run(selectedType, detail.trim() || undefined, {
+      model: model.trim() || undefined,
+      language,
+      reviewTone,
+    })
   }
 
   return (
-    <section className="mb-10">
-      <h2 className="mb-3 text-[15px] font-semibold text-gray-900 dark:text-gray-100">
-        Akcje AI
-      </h2>
-
+    <section>
       <div className="flex flex-wrap gap-2">
         {ACTIONS.map((a) => (
           <button
@@ -97,10 +138,10 @@ export default function ActionPanel({ student }: { student: Student }) {
               setDetail("")
               dismiss()
             }}
-            className={`h-8 rounded-md border px-3 text-[13px] transition-colors ${
+            className={`h-9 rounded-lg border px-3.5 text-[13px] font-medium transition-colors ${
               selectedType === a.type
-                ? "border-gray-900 dark:border-gray-300 text-gray-900 dark:text-gray-100"
-                : "border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                ? "border-accent bg-accent-soft text-accent-hover"
+                : "border-line text-muted-strong hover:text-foreground"
             }`}
           >
             {a.label}
@@ -109,21 +150,79 @@ export default function ActionPanel({ student }: { student: Student }) {
       </div>
 
       {spec && (
-        <div className="mt-4 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
-          <p className="text-[13px] text-gray-500">{spec.hint}</p>
+        <div className="mt-4 rounded-xl border border-line bg-surface p-5">
+          <p className="text-[13.5px] text-muted-strong">{spec.hint}</p>
 
           {spec.detailLabel && (
-            <label className="mt-3 block">
-              <span className="mb-1 block text-[12px] text-gray-500">
+            <label className="mt-3.5 block">
+              <span className="mb-1 block text-[12px] text-muted">
                 {spec.detailLabel}
               </span>
               <textarea
                 value={detail}
                 onChange={(e) => setDetail(e.target.value)}
                 rows={3}
-                className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-[14px] text-gray-900 dark:text-gray-100 focus:border-gray-900 dark:focus:border-gray-300 focus:outline-none"
+                className="w-full rounded-lg border border-line bg-surface px-3.5 py-2 text-[14px] text-foreground focus:border-accent focus:outline-none"
               />
             </label>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setOptionsOpen((v) => !v)}
+            className="mt-3.5 flex items-center gap-1 text-[12.5px] text-muted hover:text-foreground"
+          >
+            Opcje: model, język, ton
+            <IconChevronDown
+              size={13}
+              stroke={2.25}
+              className={`transition-transform ${optionsOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+
+          {optionsOpen && (
+            <div className="mt-3 flex gap-3 rounded-lg bg-surface-alt p-3.5">
+              <label className="block flex-1">
+                <span className="mb-1 block text-[11.5px] text-muted">
+                  Model (Ollama, opcjonalnie)
+                </span>
+                <input
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  placeholder="np. qwen3:30b-a3b"
+                  className={optionInputClass}
+                />
+              </label>
+              <label className="block flex-1">
+                <span className="mb-1 block text-[11.5px] text-muted">Język</span>
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  className={optionInputClass}
+                >
+                  <option value="pl">Polski</option>
+                  <option value="en">English</option>
+                </select>
+              </label>
+              {showTone && (
+                <label className="block flex-1">
+                  <span className="mb-1 block text-[11.5px] text-muted">
+                    Ton recenzji
+                  </span>
+                  <select
+                    value={reviewTone}
+                    onChange={(e) => setReviewTone(e.target.value)}
+                    className={optionInputClass}
+                  >
+                    {TONE_OPTIONS.map((t) => (
+                      <option key={t.value} value={t.value}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+            </div>
           )}
 
           <button
@@ -131,16 +230,16 @@ export default function ActionPanel({ student }: { student: Student }) {
             onClick={() => void start()}
             disabled={running}
             data-testid="run-action"
-            className="mt-3 h-8 rounded-md bg-gray-900 dark:bg-white px-4 text-[13px] font-medium text-white dark:text-gray-900 disabled:opacity-50"
+            className="mt-4 h-9 rounded-lg bg-accent px-4 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
           >
             {running ? "Pracuje…" : "Uruchom"}
           </button>
 
           {shown && (
-            <div className="mt-4 border-t border-gray-100 dark:border-gray-900 pt-4">
+            <div className="mt-5 border-t border-line/60 pt-5">
               <p
                 data-testid="action-status"
-                className="mb-3 text-[12px] uppercase tracking-wide text-gray-400"
+                className="mb-3.5 text-[11.5px] uppercase tracking-wide text-muted"
               >
                 {STATUS_LABELS[shown.status] ?? shown.status}
               </p>
@@ -156,22 +255,20 @@ export default function ActionPanel({ student }: { student: Student }) {
                   type="button"
                   onClick={() => void accept(topicIndex)}
                   data-testid="accept-action"
-                  className="mt-4 h-8 rounded-md border border-gray-900 dark:border-gray-300 px-4 text-[13px] font-medium text-gray-900 dark:text-gray-100"
+                  className="mt-4 h-9 rounded-lg border border-accent px-4 text-[13px] font-semibold text-accent-hover hover:bg-accent-soft transition-colors"
                 >
                   {spec.acceptLabel ?? "Zaakceptuj"}
                 </button>
               )}
 
               {shown.accepted && (
-                <p className="mt-3 text-[13px] text-gray-500">
-                  Zaakceptowano.
-                </p>
+                <p className="mt-3 text-[13px] text-muted">Zaakceptowano.</p>
               )}
             </div>
           )}
 
           {error && (
-            <p data-testid="action-panel-error" className="mt-3 text-[13px] text-red-600">
+            <p data-testid="action-panel-error" className="mt-3 text-[13px] text-critical-text">
               {error}
             </p>
           )}

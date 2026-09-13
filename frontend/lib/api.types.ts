@@ -118,6 +118,27 @@ export interface ActionResult {
   error?: string | null
 }
 
+export interface AccessRequest {
+  id: string
+  email: string
+  created_at: string
+}
+
+export interface RecentActivity {
+  student_id: string
+  student_name: string
+  action_type: ActionType
+  status: ActionStatus
+  updated_at: string
+}
+
+export interface DashboardSummary {
+  active_students: number
+  without_topic: number
+  actions_in_progress: number
+  recent_activity: RecentActivity[]
+}
+
 export interface AgentAction {
   id: string
   student_id: string

@@ -131,15 +131,30 @@ export async function uploadDraft(
 
 // ---------- AI actions ----------
 
+export interface ActionOptions {
+  /** Ollama model tag override; empty/undefined lets the server pick its default. */
+  model?: string
+  language?: string
+  /** Only read by generate_review; ignored by every other action type. */
+  reviewTone?: string
+}
+
 export async function triggerAction(
   studentId: string,
   actionType: ActionType,
   detail?: string,
+  options?: ActionOptions,
 ): Promise<AgentAction> {
   const res = await request(`/api/students/${studentId}/actions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action_type: actionType, detail: detail || null }),
+    body: JSON.stringify({
+      action_type: actionType,
+      detail: detail || null,
+      model: options?.model || null,
+      language: options?.language || "pl",
+      review_tone: options?.reviewTone || "auto",
+    }),
   })
   if (!res.ok) return fail(res, "Nie udało się uruchomić akcji")
   return res.json() as Promise<AgentAction>
@@ -170,4 +185,13 @@ export async function acceptAction(
   )
   if (!res.ok) return fail(res, "Nie udało się zaakceptować wyniku")
   return res.json() as Promise<AgentAction>
+}
+
+// ---------- access requests ----------
+
+export async function dismissAccessRequest(id: string): Promise<void> {
+  const res = await request(`/api/admin/access-requests/${id}`, {
+    method: "DELETE",
+  })
+  if (!res.ok) await fail(res, "Nie udało się odrzucić prośby")
 }
