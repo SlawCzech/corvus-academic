@@ -7,7 +7,7 @@ history of what the AI did for a student has to outlive that.
 
 import uuid
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import Annotated, Any, cast
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -34,7 +34,7 @@ _ACTION_TASK = "src.application.tasks.run_action"
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(_bearer),
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(_bearer)],
 ) -> TokenUser:
     """Verify Bearer token locally and return embedded user claims."""
     try:
@@ -48,9 +48,15 @@ def get_current_user(
 
 
 def get_task_repo(
-    session: AsyncSession = Depends(get_db_session),
+    session: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> AgentTaskRepository:
     return AgentTaskRepository(session)
+
+
+# ---------- Annotated aliases — what every endpoint actually types ----------
+
+CurrentUserDep = Annotated[TokenUser, Depends(get_current_user)]
+TaskRepoDep = Annotated[AgentTaskRepository, Depends(get_task_repo)]
 
 
 # ---------- schemas ----------
@@ -126,8 +132,8 @@ class ActionStatusResponse(BaseModel):
 )
 async def submit_action(
     body: ActionRequest,
-    user: TokenUser = Depends(get_current_user),
-    repo: AgentTaskRepository = Depends(get_task_repo),
+    user: CurrentUserDep,
+    repo: TaskRepoDep,
 ) -> ActionTaskResponse:
     """Queue one AI action for one student.
 
@@ -191,8 +197,8 @@ async def submit_action(
 @router.get("/actions/{task_id}", response_model=ActionStatusResponse)
 async def get_action_status(
     task_id: str,
-    user: TokenUser = Depends(get_current_user),
-    repo: AgentTaskRepository = Depends(get_task_repo),
+    user: CurrentUserDep,
+    repo: TaskRepoDep,
 ) -> ActionStatusResponse:
     """Poll one action — ADMIN sees any, others only their own."""
     record = (

@@ -50,7 +50,6 @@ select = ["E", "F", "I", "N", "UP", "ANN", "S", "B"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101", "S105", "S106"]
-"src/infrastructure/api/router.py" = ["B008"]
 # Prompt text: these files are mostly literals sent to the LLM, and rewrapping
 # a line there changes the prompt rather than the formatting.
 "src/application/prompts/*.py" = ["E501"]

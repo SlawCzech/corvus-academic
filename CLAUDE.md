@@ -163,6 +163,8 @@ corvus/
 │   │   │   └── review.py     # encje: Review, Score
 │   │   ├── application/
 │   │   │   ├── graph.py      # build_action_graph — graf per typ akcji
+│   │   │   ├── excerpt.py    # fragment + mapa całości + reguły dla węzłów
+│   │   │   │                   czytających tekst pracy (patrz `document/outline.py`)
 │   │   │   ├── nodes/        # structure, methodology, requirements, review,
 │   │   │   │                   propose_topic, defence_questions,
 │   │   │   │                   check_progress, draft_meeting_note
@@ -171,6 +173,7 @@ corvus/
 │   │       ├── llm_factory.py   # BYOK (ContextVar) → Claude/OpenAI, inaczej Ollama
 │   │       ├── embeddings.py    # model embeddingów (lokalny, zawsze)
 │   │       ├── guideline_store.py  # wyszukiwanie chunków (pgvector)
+│   │       ├── logging.py       # configure_logging — wołane z main.py i celery_app.py
 │   │       ├── task_status.py
 │   │       └── repositories.py
 │   ├── tests/
