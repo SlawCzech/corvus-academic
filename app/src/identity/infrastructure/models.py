@@ -69,3 +69,24 @@ class LoginEventModel(Base):
         nullable=False,
         default=lambda: datetime.now(UTC),
     )
+
+
+class AccessRequestModel(Base):
+    """A visitor's request for an account, pending admin action.
+
+    Not a signup: no password, no role. An admin reads the email here and
+    creates the real account through the existing user-management flow.
+    """
+
+    __tablename__ = "access_requests"
+    __table_args__ = {"schema": _SCHEMA}
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+    )

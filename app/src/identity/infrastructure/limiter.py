@@ -6,5 +6,7 @@ from pyrate_limiter import Limiter as PyrateLimiter
 
 _login_limiter = PyrateLimiter(Rate(5, Duration.MINUTE))
 _analysis_limiter = PyrateLimiter(Rate(10, Duration.MINUTE))
+_access_request_limiter = PyrateLimiter(Rate(3, Duration.MINUTE))
 
 login_rate_limit = RateLimiter(limiter=_login_limiter)
+access_request_rate_limit = RateLimiter(limiter=_access_request_limiter)

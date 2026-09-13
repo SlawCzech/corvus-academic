@@ -8,11 +8,11 @@ schemas.py`` uses, and for the same reason.
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from src.identity.application.api_keys import SUPPORTED_PROVIDERS
 from src.identity.domain.user import Role, User
-from src.identity.infrastructure.models import LoginEventModel
+from src.identity.infrastructure.models import AccessRequestModel, LoginEventModel
 
 # ---------- auth ----------
 
@@ -111,3 +111,20 @@ def login_event_response(event: LoginEventModel) -> LoginEventResponse:
         user_agent=event.user_agent,
         created_at=event.created_at,
     )
+
+
+# ---------- access requests ----------
+
+
+class AccessRequestCreate(BaseModel):
+    email: EmailStr
+
+
+class AccessRequestResponse(BaseModel):
+    id: uuid.UUID
+    email: str
+    created_at: datetime
+
+
+def access_request_response(req: AccessRequestModel) -> AccessRequestResponse:
+    return AccessRequestResponse(id=req.id, email=req.email, created_at=req.created_at)

@@ -16,6 +16,9 @@ were deleted rather than given real auth.
 
 from fastapi import APIRouter
 
+from src.identity.infrastructure.access_requests_router import (
+    router as access_requests_router,
+)
 from src.identity.infrastructure.admin_router import router as admin_router
 from src.identity.infrastructure.auth_router import router as auth_router
 from src.identity.infrastructure.settings_router import router as settings_router
@@ -26,3 +29,4 @@ router.include_router(auth_router)
 router.include_router(users_router)
 router.include_router(settings_router)
 router.include_router(admin_router)
+router.include_router(access_requests_router)

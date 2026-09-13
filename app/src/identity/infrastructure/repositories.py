@@ -5,7 +5,11 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.identity.infrastructure.models import LoginEventModel, UserModel
+from src.identity.infrastructure.models import (
+    AccessRequestModel,
+    LoginEventModel,
+    UserModel,
+)
 
 
 class UserRepository:
@@ -105,3 +109,31 @@ class LoginEventRepository:
             stmt = stmt.where(LoginEventModel.success == success)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
+
+
+class AccessRequestRepository:
+    """Async CRUD for pending access requests."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def save(self, model: AccessRequestModel) -> None:
+        """Persist a new access request."""
+        self._session.add(model)
+        await self._session.commit()
+
+    async def find_all(self) -> list[AccessRequestModel]:
+        """Return all pending requests, newest first."""
+        result = await self._session.execute(
+            select(AccessRequestModel).order_by(AccessRequestModel.created_at.desc())
+        )
+        return list(result.scalars().all())
+
+    async def delete(self, request_id: uuid.UUID) -> bool:
+        """Remove one request. Returns False if it was already gone."""
+        model = await self._session.get(AccessRequestModel, request_id)
+        if model is None:
+            return False
+        await self._session.delete(model)
+        await self._session.commit()
+        return True
