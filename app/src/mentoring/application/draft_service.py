@@ -35,6 +35,21 @@ def to_domain(model: ThesisDraftModel) -> ThesisDraft:
     )
 
 
+def to_orm(draft: ThesisDraft) -> ThesisDraftModel:
+    """The inverse of ``to_domain`` — a fresh row for a new version."""
+    return ThesisDraftModel(
+        id=draft.id,
+        student_id=draft.student_id,
+        version_number=draft.version_number,
+        filename=draft.filename,
+        text=draft.text,
+        pages=draft.pages,
+        format=draft.format,
+        uploaded_by=draft.uploaded_by,
+        created_at=draft.created_at,
+    )
+
+
 class DraftService:
     """Turns an uploaded file into the next numbered version of a thesis."""
 
@@ -70,17 +85,7 @@ class DraftService:
             uploaded_by=caller.user_id,
             created_at=datetime.now(UTC),
         )
-        model = ThesisDraftModel(
-            id=draft.id,
-            student_id=draft.student_id,
-            version_number=draft.version_number,
-            filename=draft.filename,
-            text=draft.text,
-            pages=draft.pages,
-            format=draft.format,
-            uploaded_by=draft.uploaded_by,
-            created_at=draft.created_at,
-        )
+        model = to_orm(draft)
         await self._drafts.save(model)
         logger.info(
             "draft_uploaded",

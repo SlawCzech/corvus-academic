@@ -48,6 +48,28 @@ def _to_domain(model: StudentModel) -> Student:
     )
 
 
+def _to_orm(student: Student) -> StudentModel:
+    """The inverse of ``_to_domain`` — a fresh row for a new student.
+
+    Kept next to it for the same reason: the two are one fact read from
+    opposite ends, and a field added to one that is forgotten in the other
+    is exactly the bug this pairing makes easy to spot.
+    """
+    return StudentModel(
+        id=student.id,
+        promotor_id=student.promotor_id,
+        full_name=student.full_name,
+        index_number=student.index_number,
+        field_of_study=student.field_of_study,
+        thesis_type=str(student.thesis_type),
+        current_topic=student.current_topic,
+        current_topic_set_at=student.current_topic_set_at,
+        status=str(student.status),
+        created_at=student.created_at,
+        updated_at=student.updated_at,
+    )
+
+
 def _note_to_domain(model: MeetingNoteModel) -> MeetingNote:
     return MeetingNote(
         id=model.id,
@@ -57,6 +79,19 @@ def _note_to_domain(model: MeetingNoteModel) -> MeetingNote:
         content=model.content,
         source_action_id=model.source_action_id,
         created_at=model.created_at,
+    )
+
+
+def _note_to_orm(note: MeetingNote) -> MeetingNoteModel:
+    """The inverse of ``_note_to_domain`` — a fresh row for a new note."""
+    return MeetingNoteModel(
+        id=note.id,
+        student_id=note.student_id,
+        promotor_id=note.promotor_id,
+        occurred_at=note.occurred_at,
+        content=note.content,
+        source_action_id=note.source_action_id,
+        created_at=note.created_at,
     )
 
 
@@ -94,17 +129,7 @@ class StudentService:
             thesis_type=thesis_type,
             index_number=index_number,
         )
-        model = StudentModel(
-            id=student.id,
-            promotor_id=student.promotor_id,
-            full_name=student.full_name,
-            index_number=student.index_number,
-            field_of_study=student.field_of_study,
-            thesis_type=str(student.thesis_type),
-            status=str(student.status),
-            created_at=student.created_at,
-            updated_at=student.updated_at,
-        )
+        model = _to_orm(student)
         await self._students.save(model)
         return _to_domain(model)
 
@@ -176,15 +201,7 @@ class StudentService:
             content=content,
             source_action_id=source_action_id,
         )
-        model = MeetingNoteModel(
-            id=note.id,
-            student_id=note.student_id,
-            promotor_id=note.promotor_id,
-            occurred_at=note.occurred_at,
-            content=note.content,
-            source_action_id=note.source_action_id,
-            created_at=note.created_at,
-        )
+        model = _note_to_orm(note)
         await self._notes.save(model)
         return _note_to_domain(model)
 
