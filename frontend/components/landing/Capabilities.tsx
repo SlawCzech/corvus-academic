@@ -1,73 +1,87 @@
 import {
-  IconLayoutList,
-  IconMicroscope,
-  IconChecklist,
-  IconFileDescription,
+  IconBulb,
+  IconMessageQuestion,
+  IconTrendingUp,
+  IconFlask,
+  IconNotes,
+  IconFileCheck,
 } from "@tabler/icons-react"
 import type { FC } from "react"
 
 interface Capability {
-  Icon: FC<{ size?: number; className?: string; "aria-hidden"?: boolean }>
+  Icon: FC<{ size?: number; stroke?: number; className?: string; "aria-hidden"?: boolean }>
   title: string
   description: string
 }
 
 const CAPABILITIES: Capability[] = [
   {
-    Icon: IconLayoutList,
-    title: "Struktura i spójność",
+    Icon: IconBulb,
+    title: "Propozycja tematu",
     description:
-      "Weryfikuje obecność i kompletność wymaganych rozdziałów: wstęp z hipotezami, przegląd literatury, metodologia, wyniki, wnioski.",
+      "Trzy konkretne propozycje na podstawie kierunku studiów i notatek z pierwszych spotkań.",
   },
   {
-    Icon: IconMicroscope,
-    title: "Metodologia i bibliografia",
+    Icon: IconMessageQuestion,
+    title: "Pytania na obronę",
     description:
-      "Ocenia poprawność metod badawczych, jakość i liczbę źródeł, obecność źródeł obcojęzycznych, poprawność cytowań APA.",
+      "Wygenerowane z ostatniej wersji pracy, gotowe do przekazania studentowi przed obroną.",
   },
   {
-    Icon: IconChecklist,
-    title: "Zgodność z wymogami",
+    Icon: IconTrendingUp,
+    title: "Sprawdzenie postępu",
     description:
-      "Sprawdza pracę pod kątem wytycznych uczelnianych. Osobne profile dla licencjatu i magistra (artykuł naukowy).",
+      "Porównanie dwóch ostatnich wersji — co się zmieniło i czy to krok naprzód.",
   },
   {
-    Icon: IconFileDescription,
+    Icon: IconFlask,
+    title: "Ocena metodologii",
+    description:
+      "Uwagi do doboru metody badawczej, próby i wykorzystanej bibliografii.",
+  },
+  {
+    Icon: IconNotes,
+    title: "Szkic notatki",
+    description:
+      "Twoje skrócone punkty ze spotkania — rozwinięte w czytelną notatkę do akt.",
+  },
+  {
+    Icon: IconFileCheck,
     title: "Szkic recenzji",
     description:
-      "Generuje recenzję z oceną punktową każdego kryterium i rekomendacją: dopuścić do obrony lub zwrócić do poprawy.",
+      "Pełna recenzja ostatniej wersji z punktacją per kryterium i rekomendacją końcową.",
   },
 ]
 
 export default function Capabilities() {
   return (
-    <div className="max-w-[580px] mx-auto px-8 mb-12">
-      <div className="border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
-        {CAPABILITIES.map(({ Icon, title, description }, index) => (
+    <section id="mozliwosci" className="mx-auto max-w-[1280px] px-16 pb-24">
+      <h2 className="text-center text-[30px] font-semibold text-foreground">
+        Sześć akcji, jedna decyzja na końcu
+      </h2>
+      <p className="mx-auto mt-3 max-w-[560px] text-center text-[15px] text-muted-strong">
+        Model proponuje, promotor akceptuje albo poprawia. Nic nie trafia do
+        akt studenta bez Twojej zgody.
+      </p>
+
+      <div className="mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {CAPABILITIES.map(({ Icon, title, description }) => (
           <div
             key={title}
-            className={`flex gap-3.5 px-5 py-4 bg-white dark:bg-gray-950 ${
-              index < CAPABILITIES.length - 1
-                ? "border-b border-gray-100 dark:border-gray-800"
-                : ""
-            }`}
+            className="rounded-xl border border-line bg-surface p-6 shadow-[0_1px_2px_rgba(28,35,51,0.04)]"
           >
-            <Icon
-              size={16}
-              aria-hidden
-              className="text-gray-400 dark:text-gray-500 mt-0.5 shrink-0"
-            />
-            <div>
-              <p className="text-[14px] font-medium text-gray-900 dark:text-gray-50 mb-0.5">
-                {title}
-              </p>
-              <p className="text-[13px] leading-[1.55] text-gray-500 dark:text-gray-400">
-                {description}
-              </p>
+            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[10px] bg-accent-soft text-accent">
+              <Icon size={20} stroke={1.75} aria-hidden />
             </div>
+            <p className="mb-1.5 text-[16px] font-semibold text-foreground">
+              {title}
+            </p>
+            <p className="text-[13.5px] leading-[1.55] text-muted-strong">
+              {description}
+            </p>
           </div>
         ))}
       </div>
-    </div>
+    </section>
   )
 }

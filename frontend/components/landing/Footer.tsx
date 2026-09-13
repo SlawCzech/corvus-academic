@@ -1,17 +1,15 @@
-const LINKS = ["Dokumentacja", "GitHub"] as const
+const LINKS = ["Możliwości", "Prywatność i model"] as const
 
 export default function Footer() {
   return (
-    <footer className="border-t border-gray-200 dark:border-gray-800 px-8 py-4 flex justify-between items-center">
-      <span className="text-[12px] text-gray-400 dark:text-gray-500">
-        © 2026 Corvus
-      </span>
-      <div className="flex gap-4">
+    <footer className="mx-auto flex max-w-[1280px] items-center justify-between border-t border-line px-16 py-8">
+      <span className="text-[13px] text-muted">© 2026 Corvus</span>
+      <div className="flex gap-7">
         {LINKS.map((link) => (
           <a
             key={link}
-            href="#"
-            className="text-[12px] text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            href={`#${link === "Możliwości" ? "mozliwosci" : "prywatnosc"}`}
+            className="text-[13px] text-muted-strong hover:text-accent transition-colors"
           >
             {link}
           </a>
