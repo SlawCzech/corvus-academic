@@ -135,6 +135,40 @@ async def test_trigger_sends_the_assembled_context(env: _Fixture) -> None:
     assert context["recent_notes"] == ["Student chce pracować na danych GUS"]
 
 
+async def test_trigger_passes_review_tone_to_the_review_context(
+    env: _Fixture,
+) -> None:
+    """`review_tone` only means anything to generate_review's own context."""
+    student = await _student(env)
+    await env.drafts.upload(
+        PROMOTOR, student.id, filename="praca.docx", data=docx_bytes()
+    )
+
+    await env.actions.trigger(
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.GENERATE_REVIEW,
+        token=TOKEN,
+        review_tone="enthusiastic",
+    )
+
+    context = env.agent.submitted[0]["context"]
+    assert context["review_tone"] == "enthusiastic"
+
+
+async def test_trigger_defaults_review_tone_to_auto(env: _Fixture) -> None:
+    student = await _student(env)
+    await env.drafts.upload(
+        PROMOTOR, student.id, filename="praca.docx", data=docx_bytes()
+    )
+
+    await env.actions.trigger(
+        PROMOTOR, student.id, action_type=ActionType.GENERATE_REVIEW, token=TOKEN
+    )
+
+    assert env.agent.submitted[0]["context"]["review_tone"] == "auto"
+
+
 async def test_trigger_on_another_promotors_student_is_not_found(
     env: _Fixture,
 ) -> None:

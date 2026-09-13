@@ -11,6 +11,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from src.mentoring.application.dashboard_service import DashboardSummary
 from src.mentoring.domain.action import ActionType, AgentAction
 from src.mentoring.domain.draft import ThesisDraft
 from src.mentoring.domain.student import (
@@ -103,6 +104,9 @@ class ActionTriggerRequest(BaseModel):
     detail: str | None = Field(default=None, max_length=4000)
     model: str | None = None
     language: str = "pl"
+    # Only read by generate_review; ignored by every other action type. An
+    # unrecognized value falls back to "auto" on the agent side.
+    review_tone: str = "auto"
 
 
 class ActionAcceptRequest(BaseModel):
@@ -175,4 +179,40 @@ def draft_response(draft: ThesisDraft) -> DraftResponse:
         preview=draft.preview,
         uploaded_by=draft.uploaded_by,
         created_at=draft.created_at,
+    )
+
+
+# ---------- dashboard ----------
+
+
+class RecentActivityResponse(BaseModel):
+    student_id: uuid.UUID
+    student_name: str
+    action_type: str
+    status: str
+    updated_at: datetime
+
+
+class DashboardSummaryResponse(BaseModel):
+    active_students: int
+    without_topic: int
+    actions_in_progress: int
+    recent_activity: list[RecentActivityResponse]
+
+
+def dashboard_summary_response(summary: DashboardSummary) -> DashboardSummaryResponse:
+    return DashboardSummaryResponse(
+        active_students=summary.active_students,
+        without_topic=summary.without_topic,
+        actions_in_progress=summary.actions_in_progress,
+        recent_activity=[
+            RecentActivityResponse(
+                student_id=a.student_id,
+                student_name=a.student_name,
+                action_type=a.action_type,
+                status=a.status,
+                updated_at=a.updated_at,
+            )
+            for a in summary.recent_activity
+        ],
     )

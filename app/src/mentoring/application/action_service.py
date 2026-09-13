@@ -93,6 +93,7 @@ class ActionService:
         detail: str | None = None,
         model: str | None = None,
         language: str = "pl",
+        review_tone: str = "auto",
         byok: BYOK | None = None,
     ) -> AgentAction:
         """Record and dispatch one action for a student the caller can see.
@@ -102,7 +103,9 @@ class ActionService:
         promoter can read back later.
         """
         student = await self._students.get(caller, student_id)
-        context, input_ref = await self._assemble(caller, student, action_type, detail)
+        context, input_ref = await self._assemble(
+            caller, student, action_type, detail, review_tone
+        )
 
         now = datetime.now(UTC)
         record = AgentActionModel(
@@ -229,6 +232,7 @@ class ActionService:
         student: Student,
         action_type: ActionType,
         detail: str | None,
+        review_tone: str = "auto",
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         """Gather what this action needs, and the provenance of what was used.
 
@@ -272,7 +276,7 @@ class ActionService:
                 latest = await self._latest_drafts(student.id, 1)
                 return (
                     assemble_generate_review_context(
-                        student, latest[0] if latest else None, detail
+                        student, latest[0] if latest else None, detail, review_tone
                     ),
                     base_ref | self._draft_ref(latest[:1]),
                 )

@@ -119,6 +119,24 @@ class AgentActionRepository:
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
+    async def find_recent_by_promotor(
+        self,
+        promotor_id: uuid.UUID | None,
+        limit: int = 30,
+    ) -> list[AgentActionModel]:
+        """Return the most recently updated actions across a promoter's students.
+
+        ``promotor_id=None`` means every promoter's actions — only a caller
+        with ``VIEW_ALL_STUDENTS`` ever passes that, mirroring
+        ``StudentRepository.find_all``.
+        """
+        stmt = select(AgentActionModel).order_by(AgentActionModel.updated_at.desc())
+        if promotor_id is not None:
+            stmt = stmt.where(AgentActionModel.promotor_id == promotor_id)
+        stmt = stmt.limit(limit)
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
 
 class ThesisDraftRepository:
     """Async store for uploaded thesis versions."""

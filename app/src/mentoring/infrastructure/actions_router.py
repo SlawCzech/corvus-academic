@@ -62,6 +62,7 @@ async def trigger_action(
             detail=body.detail,
             model=body.model,
             language=body.language,
+            review_tone=body.review_tone,
             byok=byok,
         )
     except StudentNotFoundError as exc:

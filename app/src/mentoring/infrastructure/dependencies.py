@@ -23,6 +23,7 @@ from src.identity.infrastructure.dependencies import get_current_user
 from src.identity.infrastructure.repositories import UserRepository
 from src.mentoring.application.action_service import ActionService
 from src.mentoring.application.agent_client import BYOK, AgentClient
+from src.mentoring.application.dashboard_service import DashboardService
 from src.mentoring.application.draft_service import DraftService
 from src.mentoring.application.student_service import Caller, StudentService
 from src.mentoring.infrastructure.repositories import (
@@ -116,6 +117,13 @@ def get_draft_service(
     return DraftService(students, ThesisDraftRepository(session))
 
 
+def get_dashboard_service(
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    students: Annotated[StudentService, Depends(get_student_service)],
+) -> DashboardService:
+    return DashboardService(students, AgentActionRepository(session))
+
+
 # ---------- Annotated aliases — what every endpoint actually types ----------
 
 CallerDep = Annotated[Caller, Depends(get_caller)]
@@ -124,3 +132,4 @@ BYOKDep = Annotated[BYOK | None, Depends(get_byok)]
 StudentServiceDep = Annotated[StudentService, Depends(get_student_service)]
 ActionServiceDep = Annotated[ActionService, Depends(get_action_service)]
 DraftServiceDep = Annotated[DraftService, Depends(get_draft_service)]
+DashboardServiceDep = Annotated[DashboardService, Depends(get_dashboard_service)]

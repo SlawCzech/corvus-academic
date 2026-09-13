@@ -359,6 +359,24 @@ def test_review_action_is_queued_once_a_draft_exists(
     assert agent.submitted[0]["action_type"] == "generate_review"
 
 
+def test_review_tone_reaches_the_assembled_context(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+    _upload(client, headers, student_id)
+
+    _trigger(
+        client,
+        headers,
+        student_id,
+        action_type="generate_review",
+        review_tone="diplomatic",
+    )
+
+    assert agent.submitted[0]["context"]["review_tone"] == "diplomatic"
+
+
 # ---------- the promoter's own key ----------
 
 
