@@ -19,7 +19,7 @@ from main import app
 from src.identity.infrastructure.limiter import login_rate_limit
 from src.identity.infrastructure.models import Base as IdentityBase
 from src.identity.infrastructure.models import UserModel
-from src.mentoring.infrastructure.models import Base as MentoringBase
+from src.mentoring.infrastructure.orm import Base as MentoringBase
 from src.shared.database import get_db_session
 
 # Both schemas translate to None so SQLite — which has no schemas — can hold

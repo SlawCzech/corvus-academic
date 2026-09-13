@@ -14,7 +14,7 @@ import structlog
 from src.document.extractor import extract
 from src.mentoring.application.student_service import Caller, StudentService
 from src.mentoring.domain.draft import ThesisDraft
-from src.mentoring.infrastructure.models import ThesisDraftModel
+from src.mentoring.infrastructure.orm import ThesisDraftModel
 from src.mentoring.infrastructure.repositories import ThesisDraftRepository
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)

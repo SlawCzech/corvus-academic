@@ -27,6 +27,10 @@ from src.mentoring.application.context import (
     assemble_propose_topic_context,
 )
 from src.mentoring.application.draft_service import to_domain as draft_to_domain
+from src.mentoring.application.exceptions import (
+    ActionNotFoundError,
+    UnsupportedActionError,
+)
 from src.mentoring.application.student_service import (
     Caller,
     StudentService,
@@ -34,21 +38,13 @@ from src.mentoring.application.student_service import (
 from src.mentoring.domain.action import ActionStatus, ActionType, AgentAction
 from src.mentoring.domain.draft import ThesisDraft
 from src.mentoring.domain.student import Student
-from src.mentoring.infrastructure.models import AgentActionModel
+from src.mentoring.infrastructure.orm import AgentActionModel
 from src.mentoring.infrastructure.repositories import (
     AgentActionRepository,
     ThesisDraftRepository,
 )
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-
-
-class ActionNotFoundError(Exception):
-    """Raised when an action does not exist, or belongs to another student."""
-
-
-class UnsupportedActionError(Exception):
-    """Raised for an action type `app` cannot assemble a context for."""
 
 
 def _to_domain(model: AgentActionModel) -> AgentAction:
@@ -291,9 +287,7 @@ class ActionService:
                     f"No context assembly for action type: {action_type}"
                 )
 
-    async def _latest_drafts(
-        self, student_id: UUID, limit: int
-    ) -> list[ThesisDraft]:
+    async def _latest_drafts(self, student_id: UUID, limit: int) -> list[ThesisDraft]:
         models = await self._drafts.find_latest(student_id, limit=limit)
         return [draft_to_domain(m) for m in models]
 
@@ -339,9 +333,7 @@ class ActionService:
             raise ActionNotFoundError(str(action_id))
         return record
 
-    async def _refresh(
-        self, record: AgentActionModel, token: str
-    ) -> AgentAction:
+    async def _refresh(self, record: AgentActionModel, token: str) -> AgentAction:
         """Copy the agent's current view of the task onto our own row."""
         task_id = record.task_id
         if task_id is None:  # pragma: no cover — guarded by the caller

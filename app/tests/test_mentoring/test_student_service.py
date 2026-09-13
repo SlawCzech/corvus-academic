@@ -14,13 +14,10 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from src.mentoring.application.student_service import (
-    Caller,
-    StudentNotFoundError,
-    StudentService,
-)
+from src.mentoring.application.exceptions import StudentNotFoundError
+from src.mentoring.application.student_service import Caller, StudentService
 from src.mentoring.domain.student import Student, StudentStatus, ThesisType
-from src.mentoring.infrastructure.models import Base
+from src.mentoring.infrastructure.orm import Base
 from src.mentoring.infrastructure.repositories import (
     MeetingNoteRepository,
     StudentRepository,

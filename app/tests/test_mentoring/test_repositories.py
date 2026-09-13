@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from src.mentoring.infrastructure.models import (
+from src.mentoring.infrastructure.orm import (
     Base,
     MeetingNoteModel,
     StudentModel,
@@ -166,9 +166,7 @@ async def test_notes_ordered_by_meeting_date_desc(session: AsyncSession) -> None
 
     await notes.save(_make_note(student.id, content="Pierwsze", occurred_at=_NOW))
     await notes.save(
-        _make_note(
-            student.id, content="Drugie", occurred_at=_NOW + timedelta(days=7)
-        )
+        _make_note(student.id, content="Drugie", occurred_at=_NOW + timedelta(days=7))
     )
 
     assert [n.content for n in await notes.find_by_student(student.id)] == [

@@ -29,7 +29,9 @@ _STUDENT: dict[str, Any] = {
 
 
 def _create_student(
-    client: TestClient, headers: dict[str, str], **overrides: Any  # noqa: ANN401
+    client: TestClient,
+    headers: dict[str, str],
+    **overrides: Any,  # noqa: ANN401
 ) -> dict[str, Any]:
     payload = {**_STUDENT, **overrides}
     resp = client.post("/students", json=payload, headers=headers)
@@ -96,9 +98,7 @@ def test_create_student(client: TestClient) -> None:
 
 def test_create_student_rejects_blank_name(client: TestClient) -> None:
     headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
-    resp = client.post(
-        "/students", json={**_STUDENT, "full_name": ""}, headers=headers
-    )
+    resp = client.post("/students", json={**_STUDENT, "full_name": ""}, headers=headers)
     assert resp.status_code == 422
 
 

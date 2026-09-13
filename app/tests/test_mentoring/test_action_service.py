@@ -12,21 +12,19 @@ from collections.abc import AsyncGenerator
 import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from src.mentoring.application.action_service import (
-    ActionNotFoundError,
-    ActionService,
-)
-from src.mentoring.application.agent_client import BYOK, AgentUnavailableError
-from src.mentoring.application.context import MissingContextError
+from src.mentoring.application.action_service import ActionService
+from src.mentoring.application.agent_client import BYOK
 from src.mentoring.application.draft_service import DraftService
-from src.mentoring.application.student_service import (
-    Caller,
+from src.mentoring.application.exceptions import (
+    ActionNotFoundError,
+    AgentUnavailableError,
+    MissingContextError,
     StudentNotFoundError,
-    StudentService,
 )
+from src.mentoring.application.student_service import Caller, StudentService
 from src.mentoring.domain.action import ActionStatus, ActionType
 from src.mentoring.domain.student import Student, ThesisType
-from src.mentoring.infrastructure.models import Base
+from src.mentoring.infrastructure.orm import Base
 from src.mentoring.infrastructure.repositories import (
     AgentActionRepository,
     MeetingNoteRepository,
@@ -303,9 +301,7 @@ async def test_accepting_a_proposal_sets_the_topic(env: _Fixture) -> None:
         env, student.id, "Instytucje a wzrost", "Kapitał społeczny"
     )
 
-    accepted = await env.actions.accept(
-        PROMOTOR, student.id, action_id, topic_index=1
-    )
+    accepted = await env.actions.accept(PROMOTOR, student.id, action_id, topic_index=1)
 
     assert accepted.accepted is True
     assert accepted.accepted_at is not None

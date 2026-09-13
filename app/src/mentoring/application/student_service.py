@@ -5,25 +5,18 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
+from src.mentoring.application.exceptions import StudentNotFoundError
 from src.mentoring.domain.student import (
     MeetingNote,
     Student,
     StudentStatus,
     ThesisType,
 )
-from src.mentoring.infrastructure.models import MeetingNoteModel, StudentModel
+from src.mentoring.infrastructure.orm import MeetingNoteModel, StudentModel
 from src.mentoring.infrastructure.repositories import (
     MeetingNoteRepository,
     StudentRepository,
 )
-
-
-class StudentNotFoundError(Exception):
-    """Raised when a student does not exist *or* is not visible to the caller.
-
-    One error for both cases on purpose: a promoter asking for someone else's
-    student learns nothing about whether that id exists.
-    """
 
 
 @dataclass(frozen=True)
@@ -205,9 +198,7 @@ class StudentService:
 
     # ---------- internals ----------
 
-    async def _require_model(
-        self, caller: Caller, student_id: UUID
-    ) -> StudentModel:
+    async def _require_model(self, caller: Caller, student_id: UUID) -> StudentModel:
         """Load a student the caller is allowed to see, or raise."""
         model = await self._students.find_by_id(student_id)
         if model is None:

@@ -5,7 +5,7 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.mentoring.infrastructure.models import (
+from src.mentoring.infrastructure.orm import (
     AgentActionModel,
     MeetingNoteModel,
     StudentModel,

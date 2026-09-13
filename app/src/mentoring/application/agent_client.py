@@ -12,13 +12,11 @@ from uuid import UUID
 import httpx
 import structlog
 
+from src.mentoring.application.exceptions import AgentUnavailableError
+
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 _TIMEOUT = 30.0
-
-
-class AgentUnavailableError(Exception):
-    """The agent service could not be reached, or refused the request."""
 
 
 @dataclass(frozen=True)

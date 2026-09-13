@@ -19,9 +19,7 @@ _STUDENT: dict[str, Any] = {
     "thesis_type": "bachelor",
 }
 
-_DOCX_TYPE = (
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-)
+_DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 
 def _new_student(client: TestClient, headers: dict[str, str]) -> str:

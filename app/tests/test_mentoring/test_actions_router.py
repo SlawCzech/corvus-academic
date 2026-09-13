@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from main import app
-from src.mentoring.infrastructure.router import get_agent_client
+from src.mentoring.infrastructure.dependencies import get_agent_client
 from tests.test_mentoring.conftest import (
     OTHER_PROMOTOR_EMAIL,
     OTHER_PROMOTOR_PASSWORD,
@@ -50,9 +50,7 @@ def _trigger(
     client: TestClient, headers: dict[str, str], student_id: str, **body: object
 ) -> dict[str, Any]:
     payload = {"action_type": "propose_topic", **body}
-    resp = client.post(
-        f"/students/{student_id}/actions", json=payload, headers=headers
-    )
+    resp = client.post(f"/students/{student_id}/actions", json=payload, headers=headers)
     assert resp.status_code == 202, resp.text
     result: dict[str, Any] = resp.json()
     return result
@@ -169,9 +167,7 @@ def test_polling_reflects_the_finished_action(
     action = _trigger(client, headers, student_id)
     agent.completes_with(topic_payload("Instytucje a wzrost", "Kapitał społeczny"))
 
-    resp = client.get(
-        f"/students/{student_id}/actions/{action['id']}", headers=headers
-    )
+    resp = client.get(f"/students/{student_id}/actions/{action['id']}", headers=headers)
 
     assert resp.status_code == 200
     body = resp.json()
@@ -197,9 +193,7 @@ def test_unknown_action_is_404(client: TestClient, agent: FakeAgentClient) -> No
     headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
     student_id = _new_student(client, headers)
 
-    resp = client.get(
-        f"/students/{student_id}/actions/{uuid.uuid4()}", headers=headers
-    )
+    resp = client.get(f"/students/{student_id}/actions/{uuid.uuid4()}", headers=headers)
     assert resp.status_code == 404
 
 
@@ -271,9 +265,7 @@ def test_accepting_a_topic_nobody_proposed_is_409(
 # ---------- the rest of the catalog ----------
 
 
-_DOCX_TYPE = (
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-)
+_DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 
 def _upload(client: TestClient, headers: dict[str, str], student_id: str) -> None:
@@ -300,9 +292,7 @@ def test_defence_questions_run_against_the_uploaded_thesis(
             "Jakie są ograniczenia wniosków?",
         )
     )
-    resp = client.get(
-        f"/students/{student_id}/actions/{action['id']}", headers=headers
-    )
+    resp = client.get(f"/students/{student_id}/actions/{action['id']}", headers=headers)
 
     body = resp.json()
     assert body["status"] == "completed"
@@ -350,9 +340,7 @@ def test_accepting_a_drafted_note_creates_the_note(
     )
     assert resp.status_code == 200
 
-    notes = client.get(
-        f"/students/{student_id}/meeting-notes", headers=headers
-    ).json()
+    notes = client.get(f"/students/{student_id}/meeting-notes", headers=headers).json()
     assert len(notes) == 1
     assert notes[0]["content"] == "Omówiliśmy zakres rozdziału 2."
     assert notes[0]["source_action_id"] == action["id"]

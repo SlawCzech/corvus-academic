@@ -10,7 +10,7 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from src.mentoring.infrastructure.models import Base
+from src.mentoring.infrastructure.orm import Base
 from src.shared.settings import settings
 
 config = context.config

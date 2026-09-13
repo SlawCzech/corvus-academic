@@ -11,8 +11,8 @@ from src.mentoring.application.agent_client import (
     BYOK,
     AgentActionStatus,
     AgentClient,
-    AgentUnavailableError,
 )
+from src.mentoring.application.exceptions import AgentUnavailableError
 
 
 class FakeAgentClient(AgentClient):

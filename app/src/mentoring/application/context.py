@@ -14,21 +14,13 @@ from collections.abc import Sequence
 from typing import Any
 
 from src.document.outline import outline_payload
+from src.mentoring.application.exceptions import MissingContextError
 from src.mentoring.domain.draft import ThesisDraft
 from src.mentoring.domain.student import MeetingNote, Student
 
 # How much history is worth sending. Small on purpose — the point is to give
 # the model the state of play, not the student's whole file.
 _MAX_NOTES = 3
-
-
-class MissingContextError(Exception):
-    """The student's record does not yet hold what this action needs.
-
-    Raised before anything is dispatched — asking for defence questions
-    without a thesis, or for a progress check with only one version, is a
-    state problem, not a model problem.
-    """
 
 
 def _document_map(draft: ThesisDraft) -> dict[str, Any]:
@@ -106,9 +98,7 @@ def assemble_check_progress_context(
     the student's whole upload history.
     """
     if len(latest_drafts) < 2:
-        raise MissingContextError(
-            "Progress needs two uploaded versions to compare"
-        )
+        raise MissingContextError("Progress needs two uploaded versions to compare")
     current, previous = latest_drafts[0], latest_drafts[1]
     return {
         "current_text": current.text,
