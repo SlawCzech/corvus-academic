@@ -19,8 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.identity.application.api_keys import load_api_key
 from src.identity.domain.user import Permission, User
+from src.identity.infrastructure.dependencies import get_current_user
 from src.identity.infrastructure.repositories import UserRepository
-from src.identity.infrastructure.router import get_current_user
 from src.mentoring.application.action_service import ActionService
 from src.mentoring.application.agent_client import BYOK, AgentClient
 from src.mentoring.application.draft_service import DraftService

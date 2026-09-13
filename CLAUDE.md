@@ -138,16 +138,19 @@ corvus/
 │   │   ├── identity/
 │   │   │   ├── domain/       # Role, Permission, User, UserRegistration
 │   │   │   ├── application/  # auth.py (JWT), user_service.py (bcrypt)
-│   │   │   └── infrastructure/  # router, models, repositories, secrets,
-│   │   │                          token_store, limiter
+│   │   │   └── infrastructure/  # dependencies, schemas, {auth,users,settings,
+│   │   │                          admin}_router, router (agreguje), models,
+│   │   │                          repositories, secrets, token_store, limiter
 │   │   ├── mentoring/
 │   │   │   ├── domain/       # student.py, draft.py, action.py
 │   │   │   ├── application/  # student_service (Caller, reguła własności),
 │   │   │   │                   draft_service, context, agent_client,
-│   │   │   │                   action_service
-│   │   │   └── infrastructure/  # router (/students/*, .../drafts, .../actions),
-│   │   │                          models (4 tabele), repositories
-│   │   ├── document/         # document.py, extractor.py (wołane in-process)
+│   │   │   │                   action_service, exceptions
+│   │   │   └── infrastructure/  # dependencies, schemas, errors,
+│   │   │                          {students,actions,drafts}_router,
+│   │   │                          router (agreguje), orm/ (4 tabele), repositories
+│   │   ├── document/         # document.py, extractor.py, outline.py
+│   │   │                       (mapa dokumentu bez modelu, wołane in-process)
 │   │   └── shared/           # settings, database, health, logging, middleware
 │   ├── tests/{test_identity,test_mentoring,test_document,test_shared}/
 │   ├── pyproject.toml
