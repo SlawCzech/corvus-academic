@@ -18,7 +18,7 @@ export function middleware(request: NextRequest): NextResponse {
 
   if (pathname.startsWith("/admin")) {
     const role = getRole(accessToken!)
-    if (role !== "ADMIN") {
+    if (role !== "admin") {
       return NextResponse.redirect(new URL("/login", request.url))
     }
   }
