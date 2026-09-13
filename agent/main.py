@@ -10,23 +10,12 @@ Both share the same codebase and Docker image.
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-import structlog
-import structlog.stdlib
 from fastapi import FastAPI
 
 from src.infrastructure.api.router import router
+from src.infrastructure.logging import configure_logging
 
-structlog.configure(
-    processors=[
-        structlog.stdlib.add_log_level,
-        structlog.stdlib.add_logger_name,
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.JSONRenderer(),
-    ],
-    wrapper_class=structlog.stdlib.BoundLogger,
-    context_class=dict,
-    logger_factory=structlog.stdlib.LoggerFactory(),
-)
+configure_logging()
 
 
 @asynccontextmanager

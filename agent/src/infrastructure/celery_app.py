@@ -2,7 +2,13 @@
 
 from celery import Celery
 
+from src.infrastructure.logging import configure_logging
 from src.infrastructure.settings import settings
+
+# The worker process never imports main.py, so nothing else wires this up —
+# without this call the worker's structured logs exist only because
+# `--loglevel=info` happens to reconfigure root logging as a side effect.
+configure_logging()
 
 celery_app = Celery(
     "agent",
