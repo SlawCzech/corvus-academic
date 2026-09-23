@@ -33,7 +33,7 @@ def _document_map(draft: ThesisDraft) -> dict[str, Any]:
     exists on page 18 as never written. Computed here, over the full text,
     with no model involved.
     """
-    return outline_payload(draft.text)
+    return outline_payload(draft.content)
 
 
 def _thesis_metadata(student: Student) -> dict[str, Any]:
@@ -78,7 +78,7 @@ def assemble_evaluate_methodology_context(
             "Methodology can only be assessed once a draft has been uploaded"
         )
     return {
-        "text": latest_draft.text,
+        "text": latest_draft.content,
         "document_map": _document_map(latest_draft),
         "thesis_type": str(student.thesis_type),
         "current_topic": student.current_topic,
@@ -101,9 +101,9 @@ def assemble_check_progress_context(
         raise MissingContextError("Progress needs two uploaded versions to compare")
     current, previous = latest_drafts[0], latest_drafts[1]
     return {
-        "current_text": current.text,
+        "current_text": current.content,
         "current_version": current.version_number,
-        "previous_text": previous.text,
+        "previous_text": previous.content,
         "previous_version": previous.version_number,
         "current_topic": student.current_topic,
         "detail": detail,
@@ -138,7 +138,7 @@ def assemble_defence_questions_context(
             "Defence questions are asked about a thesis — upload one first"
         )
     return {
-        "text": latest_draft.text,
+        "text": latest_draft.content,
         "document_map": _document_map(latest_draft),
         "current_topic": student.current_topic,
         "field_of_study": student.field_of_study,
@@ -162,7 +162,7 @@ def assemble_generate_review_context(
     if latest_draft is None:
         raise MissingContextError("There is no thesis to review yet")
     return {
-        "text": latest_draft.text,
+        "text": latest_draft.content,
         "document_map": _document_map(latest_draft),
         "metadata": _thesis_metadata(student),
         "thesis_type": str(student.thesis_type),

@@ -3,7 +3,7 @@ COMPOSE = docker compose -f infra/docker-compose.yml
 # sets DEBUG=true, which the entrypoints turn into uvicorn --reload.
 COMPOSE_DEV = $(COMPOSE) -f infra/docker-compose.override.yml
 
-.PHONY: help up build down down-volumes logs ps restart migrate ingest-guidelines \
+.PHONY: help up build down down-volumes logs ps restart migrate ingest-guidelines purge-drafts \
         dev dev-build \
         front-up front-down front-restart front-logs front-dev \
         shell-app shell-agent
@@ -41,6 +41,9 @@ migrate:  ## Run database migrations (both app lineages: identity + mentoring)
 
 ingest-guidelines:  ## Embed the university requirements into the vector store
 	$(COMPOSE) run --rm agent python scripts/ingest_guidelines.py
+
+purge-drafts:  ## Run the thesis-version retention sweep once (NOW=<iso> to shift the clock)
+	$(COMPOSE) run --rm app python scripts/purge_drafts.py $(if $(NOW),--now $(NOW))
 
 # ---------- dev stack (hot reload) ----------
 # Edits to app/src, agent/src and frontend/ take effect without a rebuild.

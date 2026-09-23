@@ -35,6 +35,17 @@ class StudentModel(Base):
         DateTime(timezone=True), nullable=True
     )
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="active")
+    closed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # No foreign key: thesis_drafts already points here, and a cycle between
+    # the two tables buys nothing the service does not already check.
+    accepted_draft_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), nullable=True
+    )
+    draft_accepted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )

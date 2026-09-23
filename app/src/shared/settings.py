@@ -53,6 +53,10 @@ class Settings(BaseSettings):
     # read into memory in full.
     max_upload_bytes: int = 25 * 1024 * 1024
 
+    # How often the retention sweep runs in-process; 0 turns it off (tests,
+    # or a deployment that runs `scripts/purge_drafts.py` from cron instead).
+    retention_sweep_interval_hours: float = 24
+
     cors_origins: list[str] = Field(
         default=["http://localhost:3000"],
         description="Allowed CORS origins",

@@ -83,6 +83,55 @@ async def list_drafts(
     return [draft_response(d) for d in drafts]
 
 
+@router.post(
+    "/{student_id}/drafts/{draft_id}/accept", response_model=list[DraftResponse]
+)
+async def accept_draft(
+    student_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    caller: CallerDep,
+    svc: DraftServiceDep,
+) -> list[DraftResponse]:
+    """Mark a version as final. The others are purged after a grace period."""
+    try:
+        views = await svc.accept(caller, student_id, draft_id)
+    except (StudentNotFoundError, DraftNotFoundError) as exc:
+        raise not_found(exc) from exc
+    return [draft_response(v) for v in views]
+
+
+@router.delete(
+    "/{student_id}/drafts/{draft_id}/accept", response_model=list[DraftResponse]
+)
+async def clear_draft_acceptance(
+    student_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    caller: CallerDep,
+    svc: DraftServiceDep,
+) -> list[DraftResponse]:
+    """Undo an acceptance; before the grace period ends, nothing is purged."""
+    try:
+        views = await svc.clear_acceptance(caller, student_id, draft_id)
+    except StudentNotFoundError as exc:
+        raise not_found(exc) from exc
+    return [draft_response(v) for v in views]
+
+
+@router.delete("/{student_id}/drafts/{draft_id}", response_model=list[DraftResponse])
+async def purge_draft(
+    student_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    caller: CallerDep,
+    svc: DraftServiceDep,
+) -> list[DraftResponse]:
+    """Delete a version's text and file now. Its row stays in the history."""
+    try:
+        views = await svc.purge(caller, student_id, draft_id)
+    except (StudentNotFoundError, DraftNotFoundError) as exc:
+        raise not_found(exc) from exc
+    return [draft_response(v) for v in views]
+
+
 @router.get("/{student_id}/drafts/{draft_id}/file")
 async def download_draft(
     student_id: uuid.UUID,

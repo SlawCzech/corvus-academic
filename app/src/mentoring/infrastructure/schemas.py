@@ -12,8 +12,8 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from src.mentoring.application.dashboard_service import DashboardSummary
+from src.mentoring.application.draft_service import DraftView
 from src.mentoring.domain.action import ActionType, AgentAction
-from src.mentoring.domain.draft import ThesisDraft
 from src.mentoring.domain.student import (
     MeetingNote,
     Student,
@@ -48,6 +48,7 @@ class StudentResponse(BaseModel):
     status: str
     created_at: datetime
     updated_at: datetime
+    closed_at: datetime | None
 
 
 def student_response(student: Student) -> StudentResponse:
@@ -63,6 +64,7 @@ def student_response(student: Student) -> StudentResponse:
         status=str(student.status),
         created_at=student.created_at,
         updated_at=student.updated_at,
+        closed_at=student.closed_at,
     )
 
 
@@ -168,9 +170,13 @@ class DraftResponse(BaseModel):
     has_file: bool
     file_size: int | None
     file_sha256: str | None
+    is_accepted: bool
+    purged_at: datetime | None
+    purge_due_at: datetime | None
 
 
-def draft_response(draft: ThesisDraft) -> DraftResponse:
+def draft_response(view: DraftView) -> DraftResponse:
+    draft = view.draft
     return DraftResponse(
         id=draft.id,
         student_id=draft.student_id,
@@ -185,6 +191,9 @@ def draft_response(draft: ThesisDraft) -> DraftResponse:
         has_file=draft.has_file,
         file_size=draft.file_size,
         file_sha256=draft.file_sha256,
+        is_accepted=view.is_accepted,
+        purged_at=draft.purged_at,
+        purge_due_at=view.purge_due_at,
     )
 
 

@@ -32,7 +32,8 @@ class Caller:
     can_view_all: bool = False
 
 
-def _to_domain(model: StudentModel) -> Student:
+def to_domain(model: StudentModel) -> Student:
+    """Map a stored student row to the domain entity."""
     return Student(
         id=model.id,
         promotor_id=model.promotor_id,
@@ -45,11 +46,14 @@ def _to_domain(model: StudentModel) -> Student:
         status=StudentStatus(model.status),
         created_at=model.created_at,
         updated_at=model.updated_at,
+        closed_at=model.closed_at,
+        accepted_draft_id=model.accepted_draft_id,
+        draft_accepted_at=model.draft_accepted_at,
     )
 
 
 def _to_orm(student: Student) -> StudentModel:
-    """The inverse of ``_to_domain`` — a fresh row for a new student.
+    """The inverse of ``to_domain`` — a fresh row for a new student.
 
     Kept next to it for the same reason: the two are one fact read from
     opposite ends, and a field added to one that is forgotten in the other
@@ -67,6 +71,9 @@ def _to_orm(student: Student) -> StudentModel:
         status=str(student.status),
         created_at=student.created_at,
         updated_at=student.updated_at,
+        closed_at=student.closed_at,
+        accepted_draft_id=student.accepted_draft_id,
+        draft_accepted_at=student.draft_accepted_at,
     )
 
 
@@ -131,7 +138,7 @@ class StudentService:
         )
         model = _to_orm(student)
         await self._students.save(model)
-        return _to_domain(model)
+        return to_domain(model)
 
     async def list_students(
         self,
@@ -144,11 +151,11 @@ class StudentService:
             promotor_id=promotor_filter,
             status=str(status) if status is not None else None,
         )
-        return [_to_domain(m) for m in models]
+        return [to_domain(m) for m in models]
 
     async def get(self, caller: Caller, student_id: UUID) -> Student:
         """Return one visible student. Raises StudentNotFoundError otherwise."""
-        return _to_domain(await self._require_model(caller, student_id))
+        return to_domain(await self._require_model(caller, student_id))
 
     async def update(
         self,
@@ -164,7 +171,7 @@ class StudentService:
         always stamped with them.
         """
         model = await self._require_model(caller, student_id)
-        student = _to_domain(model)
+        student = to_domain(model)
 
         if current_topic is not None:
             student.set_topic(current_topic)
@@ -173,9 +180,29 @@ class StudentService:
         if status is not None:
             student.change_status(status)
             model.status = str(student.status)
+            model.closed_at = student.closed_at
 
         await self._students.update(model)
-        return _to_domain(model)
+        return to_domain(model)
+
+    async def set_draft_acceptance(
+        self, caller: Caller, student_id: UUID, draft_id: UUID | None
+    ) -> Student:
+        """Mark a version as final, or clear the mark with ``draft_id=None``.
+
+        That the version belongs to this student is the caller's check to make
+        — the draft service holds the drafts.
+        """
+        model = await self._require_model(caller, student_id)
+        student = to_domain(model)
+        if draft_id is None:
+            student.clear_draft_acceptance()
+        else:
+            student.accept_draft(draft_id)
+        model.accepted_draft_id = student.accepted_draft_id
+        model.draft_accepted_at = student.draft_accepted_at
+        await self._students.update(model)
+        return to_domain(model)
 
     # ---------- meeting notes ----------
 

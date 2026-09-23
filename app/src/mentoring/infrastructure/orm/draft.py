@@ -51,7 +51,9 @@ class ThesisDraftModel(Base):
     )
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
-    text: Mapped[str] = mapped_column(Text, nullable=False)
+    # Null once purged under retention; the row itself is kept.
+    text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    char_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     pages: Mapped[int] = mapped_column(Integer, nullable=False)
     format: Mapped[str] = mapped_column(String(10), nullable=False)
     uploaded_by: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
@@ -63,6 +65,9 @@ class ThesisDraftModel(Base):
     )
     file_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
     file_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    purged_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )

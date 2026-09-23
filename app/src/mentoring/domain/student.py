@@ -55,6 +55,12 @@ class Student:
     status: StudentStatus = StudentStatus.ACTIVE
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    # When supervision ended (graduated or archived) — where the retention
+    # clock for the student's thesis files starts.
+    closed_at: datetime | None = None
+    # The version the promoter accepted as final, and when.
+    accepted_draft_id: UUID | None = None
+    draft_accepted_at: datetime | None = None
 
     def __post_init__(self) -> None:
         self.full_name = _require_text(self.full_name, "full_name")
@@ -80,9 +86,28 @@ class Student:
         self.current_topic = _require_text(topic, "topic")
         self.current_topic_set_at = at or datetime.now(UTC)
 
-    def change_status(self, status: StudentStatus) -> None:
-        """Move the student to another lifecycle status."""
+    def change_status(self, status: StudentStatus, at: datetime | None = None) -> None:
+        """Move the student to another lifecycle status.
+
+        Leaving `active` starts the retention clock once; moving from
+        `graduated` to `archived` does not restart it. Returning to `active`
+        stops it.
+        """
         self.status = status
+        if status is StudentStatus.ACTIVE:
+            self.closed_at = None
+        elif self.closed_at is None:
+            self.closed_at = at or datetime.now(UTC)
+
+    def accept_draft(self, draft_id: UUID, at: datetime | None = None) -> None:
+        """Mark one version as the final one."""
+        self.accepted_draft_id = draft_id
+        self.draft_accepted_at = at or datetime.now(UTC)
+
+    def clear_draft_acceptance(self) -> None:
+        """No version is final any more — a new upload, or a change of mind."""
+        self.accepted_draft_id = None
+        self.draft_accepted_at = None
 
 
 @dataclass

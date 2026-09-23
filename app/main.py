@@ -12,6 +12,7 @@ meeting notes, thesis versions and the AI action log.
 `agent` remains a separate service: LLM work is slow and asynchronous.
 """
 
+import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -20,6 +21,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.identity.infrastructure.router import router as identity_router
+from src.mentoring.infrastructure.retention import run_retention_sweeps
 from src.mentoring.infrastructure.router import router as mentoring_router
 from src.shared.health import health_router
 from src.shared.logging import configure_logging
@@ -31,9 +33,19 @@ configure_logging()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Hold one shared HTTP client for the lifetime of the process."""
+    """Hold one shared HTTP client, and run the retention sweep, for the
+    lifetime of the process."""
     app.state.http_client = httpx.AsyncClient(timeout=30.0)
+    sweeps = (
+        asyncio.create_task(
+            run_retention_sweeps(settings.retention_sweep_interval_hours)
+        )
+        if settings.retention_sweep_interval_hours > 0
+        else None
+    )
     yield
+    if sweeps is not None:
+        sweeps.cancel()
     await app.state.http_client.aclose()
 
 
