@@ -7,6 +7,7 @@ from langchain_core.messages import AIMessage
 
 from src.application.nodes.structure import analyze_structure
 from src.application.state import ActionState
+from src.domain.analysis import Finding, FindingSeverity
 from tests.factories import make_state
 
 _VALID_RESPONSE = (
@@ -39,7 +40,7 @@ def test_analyze_structure_happy_path() -> None:
         result = analyze_structure(_make_state())
 
     assert len(result["findings"]) > 0
-    assert result["error"] is None
+    assert "node_errors" not in result
 
 
 def test_analyze_structure_api_error() -> None:
@@ -50,20 +51,29 @@ def test_analyze_structure_api_error() -> None:
     with patch("src.application.nodes.structure.get_llm", return_value=mock_llm):
         result = analyze_structure(_make_state())
 
-    assert result["error"] is not None
-    assert result["findings"] == []
+    # Reported for the review to carry, not as the action's own error.
+    assert result == {"node_errors": ["structure: API timeout"]}
 
 
-def test_analyze_structure_appends_not_replaces() -> None:
-    """New findings are appended to existing ones, not overwritten."""
+def test_analyze_structure_returns_only_its_own_findings() -> None:
+    """Earlier findings stay out of the update — the state's reducer sums them.
+
+    Handing the whole list back would double it: the branches run in
+    parallel and LangGraph adds each update to what is already there.
+    """
+    earlier = Finding(
+        section="Wstęp",
+        description="earlier",
+        severity=FindingSeverity.MINOR,
+        suggestion="-",
+    )
     mock_llm = MagicMock()
     mock_llm.invoke.return_value = AIMessage(content=_VALID_RESPONSE)
 
     with patch("src.application.nodes.structure.get_llm", return_value=mock_llm):
-        first_result = analyze_structure(_make_state())
-        initial_count = len(first_result["findings"])
-        assert initial_count > 0
+        state = _make_state()
+        state["findings"] = [earlier]
+        result = analyze_structure(state)
 
-        second_result = analyze_structure(first_result)
-
-    assert len(second_result["findings"]) == initial_count * 2
+    assert earlier not in result["findings"]
+    assert len(result["findings"]) == 1

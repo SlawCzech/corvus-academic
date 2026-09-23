@@ -34,6 +34,7 @@ def make_state(
             "student_id": STUDENT_ID,
             "context": context if context is not None else {},
             "findings": findings if findings is not None else [],
+            "node_errors": [],
             "scores": scores if scores is not None else [],
             "output": None,
             "status": status,

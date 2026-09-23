@@ -34,6 +34,34 @@ interface Props {
  * Every action shares one envelope; what differs is the shape under
  * `output`, so this is the one place that knows the difference.
  */
+const STAGE_LABELS: Record<string, string> = {
+  structure: "struktura",
+  methodology: "metodologia",
+  requirements: "zgodność z wymogami",
+}
+
+/**
+ * The review's three analyses run in parallel; if one fails, the review is
+ * still written from the other two. Say so — a thin review should not pass
+ * for a clean one.
+ */
+function PartialAnalysisNotice({ errors }: { errors?: string[] }) {
+  if (!errors || errors.length === 0) return null
+  const stages = errors.map((e) => {
+    const stage = e.split(":")[0] ?? e
+    return STAGE_LABELS[stage] ?? stage
+  })
+  return (
+    <p
+      data-testid="partial-analysis"
+      className="mb-3 rounded-lg border border-major-border bg-major-bg px-3.5 py-2.5 text-[13px] text-major-text"
+    >
+      Nie udała się część analizy ({stages.join(", ")}) — recenzja powstała bez
+      niej. Uruchom ją ponownie, żeby mieć pełny obraz.
+    </p>
+  )
+}
+
 export default function ActionResultView({ action, selected, onSelect }: Props) {
   const result = action.output
   const output = result?.output
@@ -140,6 +168,11 @@ export default function ActionResultView({ action, selected, onSelect }: Props) 
 
     default:
       // evaluate_methodology and generate_review both speak findings/scores.
-      return <AnalysisResultView result={result} />
+      return (
+        <>
+          <PartialAnalysisNotice errors={result.node_errors} />
+          <AnalysisResultView result={result} />
+        </>
+      )
   }
 }

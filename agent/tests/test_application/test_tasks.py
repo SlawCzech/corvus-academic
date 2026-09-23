@@ -125,6 +125,46 @@ def test_node_error_is_recorded_as_a_failed_task(status_writes: MagicMock) -> No
     assert last.kwargs["result"]["error"] == "Ollama unreachable"
 
 
+def test_a_review_written_despite_a_failed_branch_completes_and_says_so(
+    status_writes: MagicMock,
+) -> None:
+    """One branch down still leaves a review — keep it, and keep why it is thin."""
+    graph = _mock_graph(
+        _final_state(
+            output={"summary": "Praca poprawna.", "recommendation": "Dopuścić"},
+            node_errors=["structure: Ollama timeout"],
+        )
+    )
+
+    with patch("src.application.tasks.build_action_graph", return_value=graph):
+        run_action.apply(args=(ACTION_ID, ActionType.GENERATE_REVIEW, STUDENT_ID, {}))
+
+    last = status_writes.call_args_list[-1]
+    assert last.args[1] == TaskStatus.COMPLETED
+    assert last.kwargs["result"]["node_errors"] == ["structure: Ollama timeout"]
+
+
+def test_analysis_that_failed_with_nothing_to_show_is_a_failed_task(
+    status_writes: MagicMock,
+) -> None:
+    """A lone evaluate_methodology whose node broke produced nothing at all."""
+    graph = _mock_graph(
+        _final_state(
+            action_type=ActionType.EVALUATE_METHODOLOGY,
+            node_errors=["methodology: Connection refused"],
+        )
+    )
+
+    with patch("src.application.tasks.build_action_graph", return_value=graph):
+        run_action.apply(
+            args=(ACTION_ID, ActionType.EVALUATE_METHODOLOGY, STUDENT_ID, {})
+        )
+
+    last = status_writes.call_args_list[-1]
+    assert last.args[1] == TaskStatus.FAILED
+    assert last.kwargs["error"] == "methodology: Connection refused"
+
+
 def test_run_action_retries_when_the_graph_raises() -> None:
     with patch("src.application.tasks.build_action_graph") as builder:
         builder.side_effect = Exception("Graph failed")

@@ -32,8 +32,13 @@ IMPLEMENTED_ACTIONS: frozenset[str] = frozenset(ActionType)
 def build_analysis_graph(mode: str = "full") -> CompiledActionGraph:
     """Build and compile the full thesis analysis graph for the given mode.
 
-    mode="full"        — structure → methodology → requirements → review
+    mode="full"        — structure, methodology and requirements in parallel,
+                         then review once all three are done
     mode="review_only" — review only (no intermediate finding nodes)
+
+    The three analysis nodes read the thesis and the guidelines, never each
+    other's findings, so nothing but habit ran them one after another. In
+    parallel the review waits for the slowest of them instead of their sum.
     """
     builder: StateGraph[ActionState, None, Any, Any] = StateGraph(ActionState)
 
@@ -46,10 +51,12 @@ def build_analysis_graph(mode: str = "full") -> CompiledActionGraph:
         builder.add_node("analyze_methodology", analyze_methodology)
         builder.add_node("check_requirements", check_requirements)
         builder.add_node("generate_review", generate_review)
-        builder.add_edge(START, "analyze_structure")
-        builder.add_edge("analyze_structure", "analyze_methodology")
-        builder.add_edge("analyze_methodology", "check_requirements")
-        builder.add_edge("check_requirements", "generate_review")
+        analysis = ["analyze_structure", "analyze_methodology", "check_requirements"]
+        for node in analysis:
+            builder.add_edge(START, node)
+        # A list as the source makes this a join: the review runs once, after
+        # every branch has written its findings (or its error) to state.
+        builder.add_edge(analysis, "generate_review")
         builder.add_edge("generate_review", END)
 
     return builder.compile()

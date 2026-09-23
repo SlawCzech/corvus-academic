@@ -8,7 +8,7 @@ from src.application.json_output import parse_json_array
 from src.domain.analysis import Finding, FindingSeverity
 from src.infrastructure.llm_factory import get_llm
 
-from ..state import ActionState
+from ..state import ActionState, AnalysisUpdate
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -57,7 +57,7 @@ def _get_system_prompt(language: str = "pl") -> str:
     )
 
 
-def check_requirements(state: ActionState) -> ActionState:
+def check_requirements(state: ActionState) -> AnalysisUpdate:
     """Check thesis conformance against university guidelines from state."""
     try:
         ctx = state["context"]
@@ -90,12 +90,7 @@ def check_requirements(state: ActionState) -> ActionState:
                 1 for f in new_findings if f.severity == FindingSeverity.CRITICAL
             ),
         )
-        result: ActionState = state.copy()
-        result["findings"] = state["findings"] + new_findings
-        result["error"] = None
-        return result
+        return {"findings": new_findings}
     except Exception as exc:
         logger.error("requirements_check_failed", error=str(exc))
-        result = state.copy()
-        result["error"] = str(exc)
-        return result
+        return {"node_errors": [f"requirements: {exc}"]}

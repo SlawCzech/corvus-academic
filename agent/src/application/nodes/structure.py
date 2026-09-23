@@ -9,7 +9,7 @@ from src.application.prompts import structure as prompts
 from src.domain.analysis import Finding, FindingSeverity
 from src.infrastructure.llm_factory import get_llm
 
-from ..state import ActionState
+from ..state import ActionState, AnalysisUpdate
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -18,7 +18,7 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 _HEAD_CHARS = 30000
 
 
-def analyze_structure(state: ActionState) -> ActionState:
+def analyze_structure(state: ActionState) -> AnalysisUpdate:
     """Analyze chapter structure and extend state with structural findings."""
     try:
         ctx = state["context"]
@@ -44,12 +44,7 @@ def analyze_structure(state: ActionState) -> ActionState:
             for item in data
         ]
         logger.info("structure_analysis_complete", finding_count=len(new_findings))
-        result: ActionState = state.copy()
-        result["findings"] = state["findings"] + new_findings
-        result["error"] = None
-        return result
+        return {"findings": new_findings}
     except Exception as exc:
         logger.error("structure_analysis_failed", error=str(exc))
-        result = state.copy()
-        result["error"] = str(exc)
-        return result
+        return {"node_errors": [f"structure: {exc}"]}

@@ -70,8 +70,8 @@ def _make_state(
 # ---------------------------------------------------------------------------
 
 
-def test_node_appends_findings_to_existing_not_replaces() -> None:
-    """New findings are appended to pre-existing findings, not overwritten."""
+def test_node_returns_only_its_own_findings() -> None:
+    """Earlier findings stay out of the update — the state's reducer sums them."""
     existing = Finding(
         section="2.1 Bibligrafia",
         description="Za mało źródeł",
@@ -84,8 +84,8 @@ def test_node_appends_findings_to_existing_not_replaces() -> None:
     with patch("src.application.nodes.requirements.get_llm", return_value=mock_llm):
         result = check_requirements(_make_state(extra_findings=[existing]))
 
-    assert len(result["findings"]) == 2
-    assert result["findings"][0] is existing
+    assert len(result["findings"]) == 1
+    assert existing not in result["findings"]
 
 
 def test_node_parses_critical_severity_correctly() -> None:
@@ -98,7 +98,7 @@ def test_node_parses_critical_severity_correctly() -> None:
 
     assert len(result["findings"]) == 1
     assert result["findings"][0].severity == FindingSeverity.CRITICAL
-    assert result["error"] is None
+    assert "node_errors" not in result
 
 
 def test_node_returns_empty_findings_for_conforming_thesis() -> None:
@@ -110,7 +110,7 @@ def test_node_returns_empty_findings_for_conforming_thesis() -> None:
         result = check_requirements(_make_state())
 
     assert result["findings"] == []
-    assert result["error"] is None
+    assert "node_errors" not in result
 
 
 def test_node_sets_error_when_model_returns_invalid_json() -> None:
@@ -123,8 +123,9 @@ def test_node_sets_error_when_model_returns_invalid_json() -> None:
     with patch("src.application.nodes.requirements.get_llm", return_value=mock_llm):
         result = check_requirements(_make_state())
 
-    assert result["error"] is not None
-    assert result["findings"] == []
+    assert len(result["node_errors"]) == 1
+    assert result["node_errors"][0].startswith("requirements: ")
+    assert "findings" not in result
 
 
 def test_node_passes_guidelines_from_state_to_model_prompt() -> None:

@@ -103,7 +103,18 @@ def test_generate_review_happy_path() -> None:
     assert result["output"] is not None
     assert len(result["scores"]) == 4
     assert result["status"] == "analyzed"
-    assert result["error"] is None
+    assert "error" not in result
+
+
+def test_generate_review_does_not_hand_the_findings_back() -> None:
+    """The findings are already in state; returning them would sum them twice."""
+    mock_llm = MagicMock()
+    mock_llm.invoke.return_value = AIMessage(content=_VALID_RESPONSE)
+
+    with patch("src.application.nodes.review.get_llm", return_value=mock_llm):
+        result = generate_review(_make_state())
+
+    assert "findings" not in result
 
 
 def test_generate_review_rejected_when_critical_findings() -> None:
@@ -116,7 +127,7 @@ def test_generate_review_rejected_when_critical_findings() -> None:
 
     assert result["status"] == "rejected"
     assert result["output"] is not None
-    assert result["error"] is None
+    assert "error" not in result
 
 
 def test_generate_review_score_percentage() -> None:
@@ -246,7 +257,7 @@ def test_invalid_tone_falls_back_to_auto_without_crashing() -> None:
         result = generate_review(_make_state(review_tone="invalid_value"))
 
     # Node must not crash
-    assert result["error"] is None
+    assert "error" not in result
     assert result["output"] is not None
     # Fell back to AUTO
     system_content = str(captured_messages[0].content)
@@ -390,4 +401,4 @@ def test_json_parse_error_sets_state_error() -> None:
         result = generate_review(_make_state())
 
     assert result["error"] is not None
-    assert result["output"] is None
+    assert "output" not in result

@@ -124,6 +124,8 @@ export interface ActionOutput {
 /** The agent's whole payload for one finished action. */
 export interface ActionResult {
   findings?: Finding[]
+  /** Analysis branches that failed; the review was written without them. */
+  node_errors?: string[]
   scores?: Score[]
   output?: ActionOutput
   summary?: string | null

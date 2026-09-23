@@ -100,4 +100,32 @@ describe("ActionResultView", () => {
       "Praca spełnia wymogi.",
     )
   })
+
+  it("warns when the review was written without one of its analyses", () => {
+    const action: AgentAction = {
+      ...base,
+      action_type: "generate_review",
+      output: {
+        findings: [],
+        scores: [],
+        node_errors: ["structure: Ollama timeout"],
+        summary: "Praca spełnia wymogi.",
+      },
+    }
+    render(<ActionResultView action={action} selected={0} onSelect={vi.fn()} />)
+
+    expect(screen.getByTestId("partial-analysis")).toHaveTextContent("struktura")
+    expect(screen.getByTestId("summary")).toBeInTheDocument()
+  })
+
+  it("says nothing extra when every analysis went through", () => {
+    const action: AgentAction = {
+      ...base,
+      action_type: "generate_review",
+      output: { findings: [], scores: [], node_errors: [], summary: "OK" },
+    }
+    render(<ActionResultView action={action} selected={0} onSelect={vi.fn()} />)
+
+    expect(screen.queryByTestId("partial-analysis")).not.toBeInTheDocument()
+  })
 })

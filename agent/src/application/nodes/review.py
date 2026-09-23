@@ -14,7 +14,7 @@ from src.domain.evaluation import EvaluationStatus
 from src.domain.review import Review, Score
 from src.infrastructure.llm_factory import get_llm
 
-from ..state import ActionState
+from ..state import ActionState, ReviewUpdate
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -311,7 +311,7 @@ must be adapted to their English equivalents in meaning and register.
 }
 
 
-def generate_review(state: ActionState) -> ActionState:
+def generate_review(state: ActionState) -> ReviewUpdate:
     """Generate final review with tone and language control."""
     try:
         ctx = state["context"]
@@ -415,20 +415,19 @@ def generate_review(state: ActionState) -> ActionState:
             score=review.total_percentage(),
         )
 
-        result: ActionState = state.copy()
-        result["scores"] = scores
-        # The review *is* this action's structured output — same envelope every
-        # other action fills, so `app` stores them all the same way.
-        result["output"] = {
-            "summary": review.summary,
-            "recommendation": review.recommendation,
-            "total_percentage": review.total_percentage(),
+        # Only this node's keys: findings are already in state, and handing
+        # them back would sum them into the list a second time.
+        return {
+            "scores": scores,
+            # The review *is* this action's structured output — same envelope
+            # every other action fills, so `app` stores them all the same way.
+            "output": {
+                "summary": review.summary,
+                "recommendation": review.recommendation,
+                "total_percentage": review.total_percentage(),
+            },
+            "status": final_status.value,
         }
-        result["status"] = final_status.value
-        result["error"] = None
-        return result
     except Exception as exc:
         logger.error("review_generation_failed", error=str(exc))
-        result = state.copy()
-        result["error"] = str(exc)
-        return result
+        return {"error": str(exc)}

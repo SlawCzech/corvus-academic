@@ -24,6 +24,7 @@ _RESULT_KEYS = (
     "action_id",
     "action_type",
     "findings",
+    "node_errors",
     "scores",
     "output",
     "status",
@@ -104,6 +105,7 @@ def _initial_state(
             "student_id": student_id,
             "context": context,
             "findings": [],
+            "node_errors": [],
             "scores": [],
             "output": None,
             "status": "running",
@@ -124,17 +126,28 @@ def _run_graph(
     payload = _result_payload(result)
 
     # Nodes never raise — they record the problem in state and let the graph
-    # finish. An error surviving to the end means the last node produced
-    # nothing usable, so the task is a failure the promoter should see, not a
-    # success with an empty result.
-    node_error = result.get("error")
-    if node_error:
-        record_task_status(
-            task_id, TaskStatus.FAILED, result=payload, error=str(node_error)
-        )
+    # finish. The task failed when the node that produces the result did
+    # (`error`), or when analysis failed and nothing came of it — a lone
+    # `evaluate_methodology` whose one node broke. A review written despite
+    # one broken branch is a result: it completes, and `node_errors` in the
+    # payload says what it could not draw on.
+    failure = _failure(result)
+    if failure:
+        record_task_status(task_id, TaskStatus.FAILED, result=payload, error=failure)
     else:
         record_task_status(task_id, TaskStatus.COMPLETED, result=payload)
     return payload
+
+
+def _failure(result: dict[str, Any]) -> str | None:
+    """Why this run produced nothing usable, or None if it did."""
+    error = result.get("error")
+    if error:
+        return str(error)
+    node_errors = cast(list[str], result.get("node_errors") or [])
+    if node_errors and result.get("output") is None and not result.get("findings"):
+        return "; ".join(node_errors)
+    return None
 
 
 def _record_final_failure(task: Task, task_id: str | None, exc: Exception) -> None:  # type: ignore[type-arg]
