@@ -1,6 +1,6 @@
 # Guideline catalog and stored thesis files — implementation plan
 
-> Status: approved 2026-09-23. Decision record: [ADR 0006](../adr/0006-guideline-catalog-and-thesis-file-retention.md).
+> Status: approved and done 2026-09-23. Decision record: [ADR 0006](../adr/0006-guideline-catalog-and-thesis-file-retention.md).
 
 ## Why
 
@@ -41,7 +41,7 @@ thesis is discarded after extraction, and nothing is ever deleted.
 | 5 | `feat(mentoring):` assess against the student's chosen guideline set | ✅ |
 | 6 | `feat(frontend):` download, accept and delete thesis versions | ✅ |
 | 7 | `feat(frontend):` guideline catalog for admins and promoters | ✅ |
-| 8 | `docs:` CLAUDE.md, architecture, `.env.example` | ☐ |
+| 8 | `docs:` CLAUDE.md, architecture, `.env.example` | ✅ |
 
 ## Out of scope — next steps
 

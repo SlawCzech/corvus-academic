@@ -3,8 +3,8 @@
 > Dokument referencyjny dla Claude Code i developerów.
 > Aktualizuj przy każdej znaczącej zmianie architektury.
 >
-> Ostatnia aktualizacja: 2026-09-05 — po Fazie 0 pivotu: `gateway` + `identity`
-> + `parser` scalone w serwis `app`.
+> Ostatnia aktualizacja: 2026-09-23 — katalog wytycznych uczelni (kontekst
+> `guidelines`) i przechowywanie plików prac z retencją, ADR 0006.
 
 ---
 
@@ -17,8 +17,10 @@ mentoringową dla promotorów. Kontekst i uzasadnienie:
   [0002](adr/0002-consolidate-services-into-app-and-agent.md) (konsolidacja serwisów),
   [0003](adr/0003-postgres-pgvector-for-persistence-and-rag.md) (Postgres/pgvector),
   [0004](adr/0004-self-hosted-default-model-with-byok.md) (model/BYOK),
-  [0005](adr/0005-predefined-actions-not-open-chat.md) (predefiniowane akcje zamiast czatu)
+  [0005](adr/0005-predefined-actions-not-open-chat.md) (predefiniowane akcje zamiast czatu),
+  [0006](adr/0006-guideline-catalog-and-thesis-file-retention.md) (katalog wytycznych, pliki prac, retencja)
 - [docs/specs/mentoring-platform-implementation-plan.md](specs/mentoring-platform-implementation-plan.md) — plan fazowania (Faza 0–6)
+- [docs/specs/guidelines-and-thesis-files-plan.md](specs/guidelines-and-thesis-files-plan.md) — katalog wytycznych i pliki prac
 
 **Zrobione (Faza 0):** `gateway` + `identity` + `parser` scalone w jeden serwis `app`.
 **Zrobione (Faza 1):** kontekst `mentoring` — schemat Postgresa z czterema tabelami
@@ -46,7 +48,16 @@ i wytyczne zaingestowane: 14 chunków dla pracy licencjackiej, 18 dla
 magisterskiej; zapytanie o formatowanie wyciąga inne sekcje niż o bibliografię.
 Bez zaingestowanych wektorów albo bez modelu embeddingów wszystko działa jak
 wcześniej — cały plik.
-**Jeszcze nie:** CI/CD (Faza 6).
+**Zrobione (Faza 6):** CI/CD — GitHub Actions, Jenkins, pre-commit.
+**Zrobione (2026-09-23, ADR 0006):** wytyczne uczelni są danymi, a nie plikami
+w obrazie agenta — kontekst `guidelines` w `app` (uczelnie → zestawy per typ
+pracy → wersje; opublikowana wersja jest niezmienna, akcja zapisuje, według
+której wersji ją oceniono). Promotor wybiera zestaw dla studenta; rubryka
+opublikowanej wersji jedzie w kontekście akcji, a agent bez zmian pomija wtedy
+własne wytyczne. Wgrany plik pracy jest przechowywany (port `FileStore`,
+`bytea` w schemacie kontekstu), promotor akceptuje wersję finalną, a codzienny
+sweep usuwa treść i plik pozostałych wersji po 30 dniach i wszystkich po 150
+dniach od zakończenia opieki; wiersz wersji zostaje jako ślad.
 
 ---
 
@@ -72,7 +83,8 @@ Referencje między kontekstami to gołe UUID bez kluczy obcych.
 |---|---|---|---|
 | identity | `app/src/identity/` | `identity` | autentykacja, użytkownicy, role/permissions, audyt, klucze API |
 | document | `app/src/document/` | — | ekstrakcja tekstu z PDF i DOCX (bezstanowa) |
-| mentoring | `app/src/mentoring/` | `mentoring` | studenci, notatki ze spotkań, wersje draftów, log akcji AI |
+| mentoring | `app/src/mentoring/` | `mentoring` | studenci, notatki ze spotkań, wersje draftów (z plikami i retencją), log akcji AI |
+| guidelines | `app/src/guidelines/` | `guidelines` | katalog wytycznych uczelni: zestawy, wersje, rubryki, progi, oryginały zarządzeń |
 | analysis | `agent/src/` | `analysis` | orkiestracja LangGraph, węzły analizy |
 | review | `agent/src/` | `analysis` | generowanie recenzji, ton, ocena punktowa |
 
@@ -88,7 +100,7 @@ Referencje między kontekstami to gołe UUID bez kluczy obcych.
 | agent-worker | — | Celery | worker wykonujący graf LangGraph (ten sam obraz co `agent`) |
 | ollama | 11434 | Ollama | lokalne modele LLM |
 | redis | 6379 | Redis | broker Celery + blacklist refresh tokenów |
-| postgres | 5432 | PostgreSQL 16 + pgvector | schematy identity, mentoring, analysis (w tym embeddingi wytycznych) |
+| postgres | 5432 | PostgreSQL 16 + pgvector | schematy identity, mentoring, guidelines, analysis (w tym embeddingi wytycznych) |
 | flower | 5555 | Celery Flower | monitoring kolejki |
 | jenkins | 8080 | Jenkins LTS | CI/CD pipeline (jeszcze nieskonfigurowany — Faza 6) |
 | sonarqube | 9000 | SonarQube CE | analiza jakości kodu (jeszcze nieskonfigurowany — Faza 6) |
@@ -125,9 +137,22 @@ app :8000
   │      (VIEW_ALL_STUDENTS); cudzy student to 404, nie 403
   │
   ├──► /students/{id}/drafts  — wersje pracy
-  │      POST   → ekstrakcja in-process (PyMuPDF / python-docx),
-  │               zapis jako wersja N+1; odpowiedź bez tekstu pracy
-  │      GET    → lista wersji (metadane + 400 znaków podglądu)
+  │      POST   → limit 25 MB, format sprawdzony po zawartości, ekstrakcja
+  │               in-process (PyMuPDF / python-docx); plik i tekst zapisane
+  │               jako wersja N+1; nowa wersja zdejmuje akceptację
+  │      GET    → lista wersji (metadane, podgląd, akceptacja, data usunięcia)
+  │      GET    .../{draft_id}/file → oryginał jako załącznik
+  │      POST/DELETE .../{draft_id}/accept → wersja finalna / cofnięcie
+  │      DELETE .../{draft_id} → usunięcie treści i pliku; wiersz zostaje
+  │      Retencja: sweep w lifespan `app` raz na dobę (i `make purge-drafts`):
+  │      niezaakceptowane wersje 30 dni po akceptacji, wszystkie 150 dni po
+  │      graduated/archived
+  │
+  ├──► /guidelines/*  — katalog wytycznych, IN-PROCESS
+  │      GET  → zestawy, wersje, oryginał zarządzenia (promotor: bez szkiców)
+  │      /guidelines/admin/* (MANAGE_GUIDELINES) → uczelnie, zestawy,
+  │               szkic → edycja → publikacja (poprzednia: superseded)
+  │      PATCH /students/{id} {guideline_set_id} → wybór zestawu dla studenta
   │
   ├──► /students/{id}/actions  — akcje AI
   │      POST   → składa kontekst (mentoring/application/context.py),
@@ -172,8 +197,10 @@ app :8000
          evaluate_methodology [analyze_methodology]   — ten sam węzeł, osobno
          draft_meeting_note   [draft_meeting_note]
        Nieznany typ akcji → 422 przy żądaniu, zamiast zadania, które i tak by padło.
-       Wytyczne uczelniane dokłada `agent` (dane statyczne, których jest
-       właścicielem) dla akcji ocenianych względem wymogów — nie cały plik,
+       Gdy student ma wybrany zestaw, rubrykę opublikowanej wersji wkłada do
+       kontekstu `app` (klucz `guidelines`), a `input_ref` akcji zapisuje
+       `guideline_version_id`. W przeciwnym razie wytyczne uczelniane dokłada
+       `agent` (dane statyczne, których jest właścicielem) — nie cały plik,
        tylko sekcje wyszukane pod tę pracę (pgvector, `nomic-embed-text`,
        768 wymiarów) plus sekcja definiująca wagi błędów, zawsze.
        Embeddingi liczy `EMBEDDING_BASE_URL`, który nie musi być tym samym
@@ -215,8 +242,10 @@ corvus/
 │   │   ├── login/               # logowanie
 │   │   ├── students/            # lista studentów + karta studenta
 │   │   │   └── [id]/             # temat, wersje pracy, notatki, akcje AI
+│   │   ├── guidelines/           # katalog wytycznych + strona wersji
 │   │   ├── admin/                # panel admina
 │   │   │   ├── users/            # zarządzanie użytkownikami
+│   │   │   ├── guidelines/       # katalog: uczelnie, zestawy, szkice, publikacja
 │   │   │   └── login-events/     # audyt logowań
 │   │   ├── profile/               # profil użytkownika, zmiana hasła
 │   │   └── api/                    # route handlers — proxy do app
@@ -240,8 +269,11 @@ corvus/
 │   ├── alembic_identity/        # lineage migracji dla schematu `identity`
 │   ├── alembic_mentoring.ini
 │   ├── alembic_mentoring/       # lineage migracji dla schematu `mentoring`
-│   │                              (entrypoint.sh podnosi oba, po kolei)
-│   ├── scripts/seed_admin.py
+│   ├── alembic_guidelines.ini
+│   ├── alembic_guidelines/      # lineage migracji dla schematu `guidelines`
+│   │                              (entrypoint.sh podnosi wszystkie trzy, po kolei)
+│   ├── scripts/                 # seed_admin, seed_guidelines (+ seed_data/),
+│   │                              purge_drafts (sweep retencji, --now)
 │   ├── src/
 │   │   ├── identity/
 │   │   │   ├── domain/user.py       # Role, Permission, User, UserRegistration
@@ -274,16 +306,25 @@ corvus/
 │   │   │       ├── models.py        # StudentModel, ThesisDraftModel,
 │   │   │       │                      MeetingNoteModel, AgentActionModel
 │   │   │       └── repositories.py
+│   │   ├── guidelines/
+│   │   │   ├── domain/catalog.py    # University, GuidelineSet, GuidelineVersion
+│   │   │   │                          (szkic → published → superseded), Thresholds
+│   │   │   ├── application/         # catalog.py (odczyt), admin_service.py
+│   │   │   └── infrastructure/      # orm, repositories, router, schemas,
+│   │   │                              dependencies (MANAGE_GUIDELINES)
 │   │   ├── document/
 │   │   │   ├── document.py          # Document dataclass
-│   │   │   └── extractor.py         # extract, detect_format, extract_pdf/docx
+│   │   │   └── extractor.py         # extract, detect_verified_format (magic bytes)
 │   │   └── shared/
+│   │       ├── files.py              # port FileStore + StoredFile
+│   │       ├── sql_file_store.py     # adapter Postgres (bytea), FileBlobColumns
+│   │       ├── downloads.py          # limit uploadu, odpowiedź-załącznik
 │   │       ├── settings.py           # scalona konfiguracja (identity + gateway)
 │   │       ├── database.py           # jeden async engine + session factory
 │   │       ├── health.py             # GET /health (status agenta)
 │   │       ├── logging.py            # structlog JSON
 │   │       └── middleware.py         # request_id
-│   ├── tests/{test_identity,test_mentoring,test_document,test_shared}/
+│   ├── tests/{test_identity,test_mentoring,test_guidelines,test_document,test_shared}/
 │   └── pyproject.toml
 │
 ├── agent/                      # FastAPI (HTTP API) + Celery + LangGraph

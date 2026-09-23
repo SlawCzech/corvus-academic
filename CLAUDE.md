@@ -48,7 +48,8 @@ Konteksty rozdzielone na poziomie pakietów i schematów Postgresa, nie sieci.
 ```
 app/src/identity/    — autentykacja, użytkownicy, role/permissions, audyt, klucze API
 app/src/document/    — ekstrakcja tekstu z PDF/DOCX (bezstanowa)
-app/src/mentoring/   — studenci, notatki ze spotkań, wersje pracy, akcje AI
+app/src/mentoring/   — studenci, notatki ze spotkań, wersje pracy (pliki, retencja), akcje AI
+app/src/guidelines/  — katalog wytycznych uczelni: zestawy, wersje, rubryki, progi
 agent/src/           — analysis + review: graf LangGraph, węzły, recenzja
 ```
 
@@ -57,7 +58,7 @@ agent/src/           — analysis + review: graf LangGraph, węzły, recenzja
 | Serwis | Port | Stack | Bounded Context |
 |---|---|---|---|
 | frontend | 3000 | Next.js, TypeScript | — |
-| app | 8000 | FastAPI, Postgres | identity + document + mentoring |
+| app | 8000 | FastAPI, Postgres | identity + document + mentoring + guidelines |
 | agent | 8002 | FastAPI, LangGraph | analysis + review |
 | agent-worker | — | Celery | wykonuje graf (ten sam obraz co agent) |
 | ollama | 11434 | Ollama | — |
@@ -79,8 +80,11 @@ Użytkownik
       ├─ /auth/*, /users/*, /admin/*, /settings/*  — obsługiwane in-process
       ├─ /students/*   — roster + notatki ze spotkań, in-process
       ├─ /students/{id}/actions — akcje AI: kontekst składany w `app`,
-      │                  wysyłka do agent POST /actions, polling, akceptacja
-      └─ /students/{id}/drafts — upload wersji pracy, ekstrakcja in-process
+      │                  wysyłka do agent POST /actions, polling, akceptacja;
+      │                  rubryka wybranego zestawu wytycznych jedzie w kontekście
+      ├─ /students/{id}/drafts — upload wersji pracy (plik + tekst), pobranie,
+      │                  akceptacja wersji finalnej, retencja (ADR 0006)
+      └─ /guidelines/* — katalog wytycznych; zapis pod /guidelines/admin
   → agent :8002 (POST /actions, GET /actions/{task_id})
   → Celery task (broker: Redis) → agent-worker
       status zapisywany do Postgresa: running → completed | failed
@@ -133,7 +137,8 @@ corvus/
 │   ├── main.py               # montuje routery: identity, mentoring, health
 │   ├── alembic_identity/     # lineage migracji schematu `identity`
 │   ├── alembic_mentoring/    # lineage migracji schematu `mentoring`
-│   ├── scripts/seed_admin.py
+│   ├── alembic_guidelines/   # lineage migracji schematu `guidelines`
+│   ├── scripts/              # seed_admin, seed_guidelines, purge_drafts
 │   ├── src/
 │   │   ├── identity/
 │   │   │   ├── domain/       # Role, Permission, User, UserRegistration
@@ -142,17 +147,22 @@ corvus/
 │   │   │                          admin}_router, router (agreguje), models,
 │   │   │                          repositories, secrets, token_store, limiter
 │   │   ├── mentoring/
-│   │   │   ├── domain/       # student.py, draft.py, action.py
+│   │   │   ├── domain/       # student.py, draft.py, action.py, retention.py
 │   │   │   ├── application/  # student_service (Caller, reguła własności),
-│   │   │   │                   draft_service, context, agent_client,
+│   │   │   │                   draft_service, retention_service, context,
+│   │   │   │                   guidelines_port, agent_client,
 │   │   │   │                   action_service, exceptions
 │   │   │   └── infrastructure/  # dependencies, schemas, errors,
 │   │   │                          {students,actions,drafts}_router,
-│   │   │                          router (agreguje), orm/ (4 tabele), repositories
+│   │   │                          router (agreguje), orm/, repositories,
+│   │   │                          retention (pętla sweepu), guidelines_adapter
+│   │   ├── guidelines/       # domain/catalog.py, application/{catalog,
+│   │   │                       admin_service}, infrastructure/ (router, orm…)
 │   │   ├── document/         # document.py, extractor.py, outline.py
 │   │   │                       (mapa dokumentu bez modelu, wołane in-process)
-│   │   └── shared/           # settings, database, health, logging, middleware
-│   ├── tests/{test_identity,test_mentoring,test_document,test_shared}/
+│   │   └── shared/           # settings, database, health, logging, middleware,
+│   │                           files (port FileStore), sql_file_store, downloads
+│   ├── tests/{test_identity,test_mentoring,test_guidelines,test_document,test_shared}/
 │   ├── pyproject.toml
 │   └── Dockerfile
 │
@@ -421,6 +431,10 @@ Aktualny plan i status faz:
 | 5 | pgvector: RAG nad wytycznymi | ✅ 2026-09-06 |
 | 6 | deploy + CI/CD (GitHub Actions, Jenkins, pre-commit) | ✅ 2026-09-06 |
 
+Po pivocie: katalog wytycznych uczelni i pliki prac z retencją — ✅ 2026-09-23,
+[ADR 0006](docs/adr/0006-guideline-catalog-and-thesis-file-retention.md) ·
+[plan](docs/specs/guidelines-and-thesis-files-plan.md).
+
 ---
 
 ## 10. Zmienne środowiskowe (.env.example)
@@ -449,6 +463,10 @@ REDIS_URL=redis://redis:6379/0
 FERNET_KEY=                              # wygeneruj: patrz sekcja 8
 JWT_SECRET=                              # losowy string min 32 znaki
 JWT_ALGORITHM=HS256
+
+# Pliki prac (ADR 0006)
+MAX_UPLOAD_BYTES=26214400                # 25 MB
+RETENTION_SWEEP_INTERVAL_HOURS=24        # 0 = sweep tylko z `make purge-drafts`
 
 # SonarQube
 SONAR_TOKEN=                             # z panelu SonarQube
