@@ -12,7 +12,6 @@ import {
   IconMoon,
   IconLogout,
   IconBook,
-  IconBooks,
   IconSchool,
   IconCpu,
 } from "@tabler/icons-react"
@@ -27,15 +26,19 @@ interface NavItem {
   href: string
   label: string
   icon: React.ReactNode
+  /** Other path prefixes that belong to this item. */
+  also?: string[]
 }
 
-function useActive(href: string): boolean {
+function useActive(item: NavItem): boolean {
   const pathname = usePathname()
-  return pathname === href || pathname.startsWith(`${href}/`)
+  return [item.href, ...(item.also ?? [])].some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  )
 }
 
 function NavLink({ item, compact }: { item: NavItem; compact: boolean }) {
-  const active = useActive(item.href)
+  const active = useActive(item)
   return (
     <Link
       href={item.href}
@@ -69,53 +72,61 @@ export default function Sidebar({ email, role }: SidebarProps) {
   const { resolvedTheme, setTheme } = useTheme()
   const compact = useCompact()
 
-  const items: NavItem[] = [
-    {
-      href: "/dashboard",
-      label: "Dashboard",
-      icon: <IconLayoutDashboard size={17} stroke={1.75} />,
-    },
-    {
-      href: "/students",
-      label: "Studenci",
-      icon: <IconSchool size={17} stroke={1.75} />,
-    },
-    {
-      href: "/guidelines",
-      label: "Wytyczne",
-      icon: <IconBook size={17} stroke={1.75} />,
-    },
-    {
-      href: "/profile",
-      label: "Profil",
-      icon: <IconUserCircle size={17} stroke={1.75} />,
-    },
-  ]
-
-  if (role === "admin") {
-    items.push(
-      {
-        href: "/admin/users",
-        label: "Użytkownicy",
-        icon: <IconUsers size={17} stroke={1.75} />,
-      },
-      {
-        href: "/admin/guidelines",
-        label: "Katalog wytycznych",
-        icon: <IconBooks size={17} stroke={1.75} />,
-      },
-      {
-        href: "/admin/models",
-        label: "Modele AI",
-        icon: <IconCpu size={17} stroke={1.75} />,
-      },
-      {
-        href: "/admin/login-events",
-        label: "Logi logowań",
-        icon: <IconClipboardList size={17} stroke={1.75} />,
-      },
-    )
-  }
+  // Two roles, two menus: an admin runs the platform, a promoter supervises
+  // students. The profile is the only screen they share.
+  const items: NavItem[] =
+    role === "admin"
+      ? [
+          {
+            href: "/admin/users",
+            label: "Użytkownicy",
+            icon: <IconUsers size={17} stroke={1.75} />,
+          },
+          {
+            href: "/admin/guidelines",
+            label: "Wytyczne",
+            icon: <IconBook size={17} stroke={1.75} />,
+            // A version's own page is shared with promoters.
+            also: ["/guidelines"],
+          },
+          {
+            href: "/admin/models",
+            label: "Modele AI",
+            icon: <IconCpu size={17} stroke={1.75} />,
+          },
+          {
+            href: "/admin/login-events",
+            label: "Logi logowań",
+            icon: <IconClipboardList size={17} stroke={1.75} />,
+          },
+          {
+            href: "/profile",
+            label: "Profil",
+            icon: <IconUserCircle size={17} stroke={1.75} />,
+          },
+        ]
+      : [
+          {
+            href: "/dashboard",
+            label: "Dashboard",
+            icon: <IconLayoutDashboard size={17} stroke={1.75} />,
+          },
+          {
+            href: "/students",
+            label: "Studenci",
+            icon: <IconSchool size={17} stroke={1.75} />,
+          },
+          {
+            href: "/guidelines",
+            label: "Wytyczne",
+            icon: <IconBook size={17} stroke={1.75} />,
+          },
+          {
+            href: "/profile",
+            label: "Profil",
+            icon: <IconUserCircle size={17} stroke={1.75} />,
+          },
+        ]
 
   const initials = (email ?? "?")
     .split(/[.@]/)

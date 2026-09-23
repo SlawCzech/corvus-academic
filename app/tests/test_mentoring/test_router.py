@@ -51,10 +51,12 @@ def test_promotor_manages_own_students_only() -> None:
     assert promotor.can(Permission.VIEW_ALL_STUDENTS) is False
 
 
-def test_admin_sees_every_roster() -> None:
+def test_admin_has_no_access_to_students() -> None:
+    """An admin runs the platform; theses and students are the promoters'."""
     admin = user_domain.User(id=ADMIN_UUID, email=ADMIN_EMAIL, role=Role.ADMIN)
-    assert admin.can(Permission.MANAGE_STUDENTS) is True
-    assert admin.can(Permission.VIEW_ALL_STUDENTS) is True
+    assert admin.can(Permission.MANAGE_STUDENTS) is False
+    assert admin.can(Permission.VIEW_ALL_STUDENTS) is False
+    assert admin.can(Permission.SUBMIT_ANALYSIS) is False
 
 
 # ---------- auth ----------
@@ -125,16 +127,12 @@ def test_promotor_lists_only_own_students(client: TestClient) -> None:
     assert names == ["Moja Studentka"]
 
 
-def test_admin_lists_all_students(client: TestClient) -> None:
-    mine = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
-    theirs = login(client, OTHER_PROMOTOR_EMAIL, OTHER_PROMOTOR_PASSWORD)
-    _create_student(client, mine, full_name="Moja Studentka")
-    _create_student(client, theirs, full_name="Cudzy Student")
-
+def test_admin_cannot_list_or_create_students(client: TestClient) -> None:
     admin = login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
-    resp = client.get("/students", headers=admin)
-    assert resp.status_code == 200
-    assert len(resp.json()) == 2
+
+    assert client.get("/students", headers=admin).status_code == 403
+    assert client.post("/students", json=_STUDENT, headers=admin).status_code == 403
+    assert client.get("/dashboard/summary", headers=admin).status_code == 403
 
 
 def test_list_filters_by_status(client: TestClient) -> None:
@@ -171,13 +169,13 @@ def test_get_other_promotors_student_is_404(client: TestClient) -> None:
     assert resp.status_code == 404
 
 
-def test_admin_gets_any_students_record(client: TestClient) -> None:
+def test_admin_cannot_open_a_students_record(client: TestClient) -> None:
     theirs = login(client, OTHER_PROMOTOR_EMAIL, OTHER_PROMOTOR_PASSWORD)
     created = _create_student(client, theirs)
 
     admin = login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
     resp = client.get(f"/students/{created['id']}", headers=admin)
-    assert resp.status_code == 200
+    assert resp.status_code == 403
 
 
 def test_get_unknown_student_is_404(client: TestClient) -> None:
@@ -318,18 +316,3 @@ def test_listing_notes_of_other_promotors_student_is_404(client: TestClient) -> 
     mine = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
     resp = client.get(f"/students/{created['id']}/meeting-notes", headers=mine)
     assert resp.status_code == 404
-
-
-def test_admin_note_records_the_admin_as_author(client: TestClient) -> None:
-    """An admin acting on another roster is the note's author, not the supervisor."""
-    theirs = login(client, OTHER_PROMOTOR_EMAIL, OTHER_PROMOTOR_PASSWORD)
-    created = _create_student(client, theirs)
-
-    admin = login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
-    resp = client.post(
-        f"/students/{created['id']}/meeting-notes",
-        json={"content": "Wpis administratora"},
-        headers=admin,
-    )
-    assert resp.status_code == 201
-    assert resp.json()["promotor_id"] == str(ADMIN_UUID)

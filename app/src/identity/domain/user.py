@@ -28,8 +28,18 @@ class Permission(StrEnum):
     MANAGE_MODELS = "manage_models"
 
 
+# Two roles that do not overlap: an admin runs the platform (accounts, the
+# guideline catalog, which models are offered), a promoter supervises
+# students. An admin who also supervises uses a second, promoter account —
+# students and their theses are not the admin's to see.
 _ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
-    Role.ADMIN: frozenset(Permission),
+    Role.ADMIN: frozenset(
+        {
+            Permission.MANAGE_USERS,
+            Permission.MANAGE_GUIDELINES,
+            Permission.MANAGE_MODELS,
+        }
+    ),
     Role.PROMOTOR: frozenset(
         {Permission.SUBMIT_ANALYSIS, Permission.MANAGE_STUDENTS}
     ),

@@ -54,3 +54,11 @@ export function getRole(token: string): string | null {
 export function getUserId(token: string): string | null {
   return decodeToken(token)?.sub ?? null
 }
+
+/**
+ * Where a role starts. Admin and promoter share no screens beyond the
+ * profile: an admin runs the platform, a promoter supervises students.
+ */
+export function homeFor(role: string | null | undefined): string {
+  return role === "admin" ? "/admin/users" : "/dashboard"
+}

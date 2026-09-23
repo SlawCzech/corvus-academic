@@ -8,6 +8,8 @@ export default async function ProfilePage() {
   const cookieStore = await cookies()
   const token = cookieStore.get("access_token")?.value ?? ""
   const payload = decodeToken(token)
+  // BYOK and AI defaults only matter to someone who runs AI actions.
+  const isPromoter = payload?.role !== "admin"
 
   return (
     <main className="mx-auto max-w-2xl px-8 py-10">
@@ -22,24 +24,30 @@ export default async function ProfilePage() {
           </div>
           <div className="flex gap-4">
             <dt className="w-20 text-muted">Rola</dt>
-            <dd className="text-foreground">{payload?.role ?? "—"}</dd>
+            <dd className="text-foreground">
+              {payload?.role === "admin" ? "Administrator" : "Promotor"}
+            </dd>
           </div>
         </dl>
       </section>
 
-      <section className="mb-10">
-        <h2 className="mb-4 text-[15px] font-semibold text-foreground">
-          Własny klucz API
-        </h2>
-        <ApiKeySection />
-      </section>
+      {isPromoter && (
+        <>
+          <section className="mb-10">
+            <h2 className="mb-4 text-[15px] font-semibold text-foreground">
+              Własny klucz API
+            </h2>
+            <ApiKeySection />
+          </section>
 
-      <section className="mb-10">
-        <h2 className="mb-4 text-[15px] font-semibold text-foreground">
-          Domyślne ustawienia AI
-        </h2>
-        <ProfileAiDefaults />
-      </section>
+          <section className="mb-10">
+            <h2 className="mb-4 text-[15px] font-semibold text-foreground">
+              Domyślne ustawienia AI
+            </h2>
+            <ProfileAiDefaults />
+          </section>
+        </>
+      )}
 
       <section>
         <h2 className="mb-4 text-[15px] font-semibold text-foreground">

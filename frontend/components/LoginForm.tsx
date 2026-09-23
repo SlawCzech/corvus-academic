@@ -35,7 +35,8 @@ export default function LoginForm() {
       setServerError("Invalid email or password.")
       return
     }
-    router.push("/dashboard")
+    const { home } = (await res.json()) as { home?: string }
+    router.push(home ?? "/dashboard")
   }
 
   return (

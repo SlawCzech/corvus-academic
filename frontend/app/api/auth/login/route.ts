@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { APP_URL } from "@/lib/appProxy"
-import { ACCESS_COOKIE_MAX_AGE, REFRESH_COOKIE_MAX_AGE } from "@/lib/auth"
+import { ACCESS_COOKIE_MAX_AGE, REFRESH_COOKIE_MAX_AGE, getRole, homeFor } from "@/lib/auth"
 
 export async function POST(request: Request): Promise<Response> {
   const body = (await request.json()) as { email?: string; password?: string }
@@ -17,7 +17,7 @@ export async function POST(request: Request): Promise<Response> {
     access_token: string
     refresh_token?: string
   }
-  const response = NextResponse.json({ ok: true })
+  const response = NextResponse.json({ ok: true, home: homeFor(getRole(data.access_token)) })
   response.cookies.set("access_token", data.access_token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { isTokenExpired, getRole } from "@/lib/auth"
+import { isTokenExpired, getRole, homeFor } from "@/lib/auth"
 
 export function middleware(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl
@@ -16,10 +16,23 @@ export function middleware(request: NextRequest): NextResponse {
     return NextResponse.redirect(url)
   }
 
+  const role = getRole(accessToken!)
+
   if (pathname.startsWith("/admin")) {
-    const role = getRole(accessToken!)
     if (role !== "admin") {
       return NextResponse.redirect(new URL("/login", request.url))
+    }
+  }
+
+  // An admin has no roster: the promoter's screens send them to their own.
+  if (role === "admin") {
+    if (pathname.startsWith("/dashboard") || pathname.startsWith("/students")) {
+      return NextResponse.redirect(new URL(homeFor(role), request.url))
+    }
+    // The catalog they manage is /admin/guidelines; a single version's page
+    // (/guidelines/<id>) stays shared, the admin view links to it.
+    if (pathname === "/guidelines") {
+      return NextResponse.redirect(new URL("/admin/guidelines", request.url))
     }
   }
 

@@ -7,6 +7,12 @@
 
 ## Jakość kodu — stan faktyczny (zweryfikowany 2026-09-05)
 
+- [ ] **Martwa ścieżka „widzi wszystkich studentów”** (od ADR 0008, 2026-09-23) —
+  żadna rola nie ma już `VIEW_ALL_STUDENTS`, więc `Caller.can_view_all` i gałęzie
+  „view all” w `mentoring/infrastructure/repositories.py` (oraz nieużywane
+  `VIEW_ALL_ANALYSES`) są nieosiągalne. Usunąć albo świadomie zostawić pod
+  przyszłą rolę nadzoru (np. dziekanat).
+
 - [~] **`pyright --strict` — kod produkcyjny czysty, testy nie.** Historycznie nie
   przechodził nigdy (przed konsolidacją: `identity` **736** błędów, `parser` **88**;
   po konsolidacji `app` **160**). Od Fazy 6 **`pyright src` zwraca 0 błędów w obu

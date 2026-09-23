@@ -1,13 +1,14 @@
 "use client"
 
 import Link from "next/link"
+import { homeFor } from "@/lib/auth"
 
 interface NavProps {
   role?: string | null
   isLoggedIn?: boolean
 }
 
-export default function Nav({ isLoggedIn }: NavProps) {
+export default function Nav({ role, isLoggedIn }: NavProps) {
   return (
     <nav className="flex h-[76px] items-center justify-between border-b border-line px-16">
       <Link href="/" className="flex items-center gap-2.5">
@@ -31,10 +32,10 @@ export default function Nav({ isLoggedIn }: NavProps) {
       <div className="flex items-center gap-3">
         {isLoggedIn ? (
           <Link
-            href="/dashboard"
+            href={homeFor(role)}
             className="flex h-10 items-center rounded-lg bg-accent px-[18px] text-[14px] font-semibold text-white hover:bg-accent-hover transition-colors"
           >
-            Otwórz Dashboard
+            {role === "admin" ? "Otwórz panel" : "Otwórz Dashboard"}
           </Link>
         ) : (
           <>

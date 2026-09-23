@@ -198,8 +198,8 @@ def test_promotor_can_set_their_own_key(client: TestClient) -> None:
     assert resp.json() == {"configured": True, "provider": "openai"}
 
 
-def test_set_api_key_admin_success(client: TestClient) -> None:
-    token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+def test_set_api_key_promotor_success(client: TestClient) -> None:
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
     resp = client.patch(
         "/settings/api-key",
         json={"api_key": "sk-ant-test-key", "provider": "claude"},
@@ -207,6 +207,18 @@ def test_set_api_key_admin_success(client: TestClient) -> None:
     )
     assert resp.status_code == 200
     assert resp.json() == {"configured": True, "provider": "claude"}
+
+
+def test_admin_has_no_api_key_settings(client: TestClient) -> None:
+    """An admin runs no AI actions, so there is nothing for a key to pay for."""
+    headers = {"Authorization": f"Bearer {_login(client, ADMIN_EMAIL, ADMIN_PASSWORD)}"}
+    resp = client.patch(
+        "/settings/api-key",
+        json={"api_key": "sk-ant-test-key", "provider": "claude"},
+        headers=headers,
+    )
+    assert resp.status_code == 403
+    assert client.get("/settings/api-key/status", headers=headers).status_code == 403
 
 
 def test_unsupported_provider_is_rejected(client: TestClient) -> None:
@@ -221,7 +233,7 @@ def test_unsupported_provider_is_rejected(client: TestClient) -> None:
 
 def test_response_never_contains_plain_key(client: TestClient) -> None:
     plain_key = "sk-ant-super-secret-value"
-    token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
     resp = client.patch(
         "/settings/api-key",
         json={"api_key": plain_key, "provider": "claude"},
@@ -232,7 +244,7 @@ def test_response_never_contains_plain_key(client: TestClient) -> None:
 
 
 def test_get_status_not_configured(client: TestClient) -> None:
-    token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
     resp = client.get(
         "/settings/api-key/status",
         headers={"Authorization": f"Bearer {token}"},
@@ -242,7 +254,7 @@ def test_get_status_not_configured(client: TestClient) -> None:
 
 
 def test_status_reports_the_provider(client: TestClient) -> None:
-    token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
     client.patch(
         "/settings/api-key",
         json={"api_key": "sk-ant-key", "provider": "claude"},

@@ -53,6 +53,16 @@ def require_admin(user: Annotated[User, Depends(get_current_user)]) -> User:
     return user
 
 
+def require_ai_user(user: Annotated[User, Depends(get_current_user)]) -> User:
+    """FastAPI dependency — assert the caller runs AI actions (a promoter)."""
+    if not user.can(Permission.SUBMIT_ANALYSIS):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only promoters run AI actions",
+        )
+    return user
+
+
 def get_user_repo(
     session: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> UserRepository:

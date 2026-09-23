@@ -49,4 +49,25 @@ describe("middleware", () => {
     const res = middleware(makeRequest("/analysis", token))
     expect(res.headers.get("location")).toBeNull()
   })
+
+  it("sends an admin away from the promoter's screens", () => {
+    const token = fakeJwt({ sub: "u1", role: "admin", exp: 9999999999 })
+    for (const path of ["/dashboard", "/students", "/students/abc"]) {
+      const res = middleware(makeRequest(path, token))
+      expect(res.headers.get("location")).toBe("http://localhost/admin/users")
+    }
+  })
+
+  it("sends an admin to the catalog they manage, but lets a version page through", () => {
+    const token = fakeJwt({ sub: "u1", role: "admin", exp: 9999999999 })
+    expect(middleware(makeRequest("/guidelines", token)).headers.get("location")).toBe(
+      "http://localhost/admin/guidelines",
+    )
+    expect(middleware(makeRequest("/guidelines/v1", token)).headers.get("location")).toBeNull()
+  })
+
+  it("lets a promoter into the roster", () => {
+    const token = fakeJwt({ sub: "u1", role: "promotor", exp: 9999999999 })
+    expect(middleware(makeRequest("/students", token)).headers.get("location")).toBeNull()
+  })
 })
