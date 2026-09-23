@@ -14,6 +14,7 @@ from src.mentoring.application.exceptions import (
     UnsupportedActionError,
 )
 from src.mentoring.domain.action import ActionType
+from src.mentoring.domain.model_policy import ModelNotAllowedError
 from src.mentoring.infrastructure.dependencies import (
     ActionServiceDep,
     BYOKDep,
@@ -68,6 +69,10 @@ async def trigger_action(
     except StudentNotFoundError as exc:
         raise not_found(exc) from exc
     except UnsupportedActionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
+        ) from exc
+    except ModelNotAllowedError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc

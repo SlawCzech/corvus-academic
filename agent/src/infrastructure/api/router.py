@@ -6,13 +6,15 @@ history of what the AI did for a student has to outlive that.
 """
 
 import uuid
+from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 from typing import Annotated, Any, cast
 
+import httpx
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.graph import IMPLEMENTED_ACTIONS
@@ -20,8 +22,10 @@ from src.domain.action import SUPPORTED_PROVIDERS, TaskStatus
 from src.infrastructure.api.auth import Role, TokenUser, verify_access_token
 from src.infrastructure.celery_app import celery_app
 from src.infrastructure.database import get_db_session
+from src.infrastructure.model_catalog import load_model_catalog
 from src.infrastructure.models import AgentTaskModel
 from src.infrastructure.repositories import AgentTaskRepository
+from src.infrastructure.settings import settings
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -53,10 +57,16 @@ def get_task_repo(
     return AgentTaskRepository(session)
 
 
+async def get_http_client() -> AsyncGenerator[httpx.AsyncClient]:
+    async with httpx.AsyncClient() as client:
+        yield client
+
+
 # ---------- Annotated aliases — what every endpoint actually types ----------
 
 CurrentUserDep = Annotated[TokenUser, Depends(get_current_user)]
 TaskRepoDep = Annotated[AgentTaskRepository, Depends(get_task_repo)]
+HttpClientDep = Annotated[httpx.AsyncClient, Depends(get_http_client)]
 
 
 # ---------- schemas ----------
@@ -89,7 +99,9 @@ class ActionRequest(BaseModel):
     action_type: str
     student_id: uuid.UUID
     context: dict[str, Any] = {}
-    model: str = "qwen3:30b-a3b"
+    # No model named → the server's OLLAMA_MODEL, the same default /models
+    # reports; `app` leaves it out when the admin has not picked one.
+    model: str = Field(default_factory=lambda: settings.ollama_model)
     language: str = "pl"
     byok: BYOKConfig | None = None
 
@@ -122,7 +134,46 @@ class ActionStatusResponse(BaseModel):
     error: str | None
 
 
+class LocalModelResponse(BaseModel):
+    name: str
+    parameter_size: str | None
+
+
+class ModelCatalogResponse(BaseModel):
+    """What the action panel offers: local models, or the promoter's provider.
+
+    ``byok`` maps each provider to the model a stored key runs on — the
+    ``model`` field of an action does not apply to those.
+    """
+
+    backend: str
+    default: str
+    local: list[LocalModelResponse]
+    local_available: bool
+    byok: dict[str, str]
+
+
 # ---------- endpoints ----------
+
+
+@router.get(
+    "/models",
+    response_model=ModelCatalogResponse,
+    dependencies=[Depends(get_current_user)],
+)
+async def list_models(client: HttpClientDep) -> ModelCatalogResponse:
+    """The chat models installed on the Ollama the worker uses."""
+    catalog = await load_model_catalog(client)
+    return ModelCatalogResponse(
+        backend=catalog.backend,
+        default=catalog.default,
+        local=[
+            LocalModelResponse(name=m.name, parameter_size=m.parameter_size)
+            for m in catalog.local
+        ],
+        local_available=catalog.local_available,
+        byok=catalog.byok,
+    )
 
 
 @router.post(

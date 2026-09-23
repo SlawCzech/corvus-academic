@@ -35,6 +35,7 @@ from src.mentoring.application.guidelines_port import (
     GuidelineRubric,
     GuidelineSource,
 )
+from src.mentoring.application.model_service import ModelService
 from src.mentoring.application.student_service import (
     Caller,
     StudentService,
@@ -81,12 +82,14 @@ class ActionService:
         drafts: ThesisDraftRepository,
         agent: AgentClient,
         guidelines: GuidelineSource | None = None,
+        models: ModelService | None = None,
     ) -> None:
         self._students = students
         self._actions = actions
         self._drafts = drafts
         self._agent = agent
         self._guidelines = guidelines
+        self._models = models
 
     # ---------- trigger ----------
 
@@ -109,6 +112,13 @@ class ActionService:
         promoter can read back later.
         """
         student = await self._students.get(caller, student_id)
+        if byok is not None:
+            # The provider's own model runs; a local tag would be ignored.
+            model = None
+        elif self._models is not None:
+            # Before anything is recorded: a refused model is a bad request,
+            # not a failed action in the student's history.
+            model = await self._models.resolve(model)
         context, input_ref = await self._assemble(
             caller, student, action_type, detail, review_tone
         )

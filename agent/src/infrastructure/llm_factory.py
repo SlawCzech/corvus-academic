@@ -32,6 +32,11 @@ _BYOK_MODELS: dict[str, str] = {
 }
 
 
+def byok_models() -> dict[str, str]:
+    """The model each provider runs on when the user brings the key."""
+    return dict(_BYOK_MODELS)
+
+
 @dataclass(frozen=True)
 class ModelCredentials:
     """One user's own provider key, for the length of one task."""

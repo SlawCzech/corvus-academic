@@ -1,13 +1,16 @@
 """Async repositories for persisting mentoring data."""
 
 import uuid
+from datetime import UTC, datetime
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.mentoring.domain.model_policy import ModelPolicy, ModelSetting
 from src.mentoring.infrastructure.orm import (
     AgentActionModel,
     MeetingNoteModel,
+    ModelSettingModel,
     StudentModel,
     ThesisDraftModel,
 )
@@ -217,3 +220,51 @@ class ThesisDraftRepository:
         )
         current: int | None = result.scalar_one_or_none()
         return (current or 0) + 1
+
+
+class ModelSettingRepository:
+    """Async store for the admin's local-model allowlist."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def policy(self) -> ModelPolicy:
+        """Every setting, as the domain policy (no server default attached)."""
+        rows = (await self._session.execute(select(ModelSettingModel))).scalars()
+        return ModelPolicy(
+            settings=[
+                ModelSetting(name=r.name, enabled=r.enabled, is_default=r.is_default)
+                for r in rows
+            ]
+        )
+
+    async def set_enabled(self, name: str, enabled: bool, by: uuid.UUID) -> None:
+        row = await self._session.get(ModelSettingModel, name)
+        if row is None:
+            row = ModelSettingModel(name=name, is_default=False, updated_by=by)
+            self._session.add(row)
+        row.enabled = enabled
+        row.updated_by = by
+        row.updated_at = datetime.now(UTC)
+        await self._session.commit()
+
+    async def set_default(self, name: str, by: uuid.UUID) -> None:
+        """Make `name` the one default, enabling it on the way."""
+        now = datetime.now(UTC)
+        # Clear the old default first and flush, so the partial unique index
+        # never sees two defaults inside the transaction.
+        await self._session.execute(
+            update(ModelSettingModel)
+            .where(ModelSettingModel.is_default.is_(True))
+            .values(is_default=False, updated_by=by, updated_at=now)
+        )
+        await self._session.flush()
+        row = await self._session.get(ModelSettingModel, name)
+        if row is None:
+            row = ModelSettingModel(name=name, updated_by=by)
+            self._session.add(row)
+        row.enabled = True
+        row.is_default = True
+        row.updated_by = by
+        row.updated_at = now
+        await self._session.commit()

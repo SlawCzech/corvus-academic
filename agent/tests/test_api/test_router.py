@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import httpx
 import jwt
 import pytest
 from fastapi.testclient import TestClient
@@ -20,6 +21,7 @@ os.environ.setdefault("JWT_SECRET", "test-secret-key-that-is-long-enough-32ch")
 
 from main import app  # noqa: E402
 from src.domain.action import ActionType, TaskStatus  # noqa: E402
+from src.infrastructure.api.router import get_http_client  # noqa: E402
 from src.infrastructure.database import get_db_session  # noqa: E402
 from src.infrastructure.models import AgentTaskModel, Base  # noqa: E402
 from src.infrastructure.repositories import AgentTaskRepository  # noqa: E402
@@ -349,3 +351,31 @@ async def test_the_key_is_not_stored_on_the_task_row(
     assert "sk-user-key" not in json.dumps(
         {"result": stored.result, "error": stored.error}, default=str
     )
+
+
+# ---------- GET /models ----------
+
+
+def test_models_requires_a_token(client: TestClient) -> None:
+    assert client.get("/models").status_code in (401, 403)
+
+
+def test_models_lists_ollama_chat_models(client: TestClient) -> None:
+    tags = {"models": [{"name": "gemma4:12b", "details": {"family": "gemma4"}}]}
+
+    async def _fake_client() -> AsyncGenerator[httpx.AsyncClient, None]:
+        transport = httpx.MockTransport(lambda _req: httpx.Response(200, json=tags))
+        async with httpx.AsyncClient(transport=transport) as fake:
+            yield fake
+
+    app.dependency_overrides[get_http_client] = _fake_client
+    try:
+        resp = client.get("/models", headers=_auth(PROMOTOR_ID, "promotor"))
+    finally:
+        app.dependency_overrides.pop(get_http_client, None)
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["local"] == [{"name": "gemma4:12b", "parameter_size": None}]
+    assert body["local_available"] is True
+    assert body["default"] == settings.ollama_model

@@ -85,6 +85,10 @@ class AgentClient:
             error=str(error) if error else None,
         )
 
+    async def list_models(self, token: str) -> dict[str, Any]:
+        """The chat models the agent's Ollama has installed, plus BYOK models."""
+        return await self._get("/models", token)
+
     # ---------- transport ----------
 
     async def _post(

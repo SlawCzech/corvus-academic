@@ -435,6 +435,10 @@ Po pivocie: katalog wytycznych uczelni i pliki prac z retencją — ✅ 2026-09-
 [ADR 0006](docs/adr/0006-guideline-catalog-and-thesis-file-retention.md) ·
 [plan](docs/specs/guidelines-and-thesis-files-plan.md).
 
+Modele lokalne udostępnia admin (`/admin/models`), promotor wybiera tylko z tej
+listy, a `app` pilnuje tego przy każdej akcji —
+[ADR 0007](docs/adr/0007-admin-managed-local-model-allowlist.md).
+
 ---
 
 ## 10. Zmienne środowiskowe (.env.example)

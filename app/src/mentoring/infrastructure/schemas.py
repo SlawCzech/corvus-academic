@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from src.mentoring.application.dashboard_service import DashboardSummary
 from src.mentoring.application.draft_service import DraftView
+from src.mentoring.application.model_service import AdminCatalog, PromoterCatalog
 from src.mentoring.domain.action import ActionType, AgentAction
 from src.mentoring.domain.student import (
     MeetingNote,
@@ -235,3 +236,76 @@ def dashboard_summary_response(summary: DashboardSummary) -> DashboardSummaryRes
             for a in summary.recent_activity
         ],
     )
+
+
+# ---------- model catalog ----------
+
+
+class LocalModelResponse(BaseModel):
+    name: str
+    parameter_size: str | None = None
+
+
+class ModelCatalogResponse(BaseModel):
+    """What a promoter may pick: installed models the admin has enabled.
+
+    ``byok`` maps each provider to the model a stored key runs on; the
+    frontend shows that instead of the local list when the promoter has one.
+    """
+
+    default: str
+    available: list[LocalModelResponse]
+    local_available: bool
+    byok: dict[str, str]
+
+
+def model_catalog_response(catalog: PromoterCatalog) -> ModelCatalogResponse:
+    return ModelCatalogResponse(
+        default=catalog.default,
+        available=[
+            LocalModelResponse(name=m.name, parameter_size=m.parameter_size)
+            for m in catalog.available
+        ],
+        local_available=catalog.local_available,
+        byok=catalog.byok,
+    )
+
+
+class AdminModelResponse(BaseModel):
+    name: str
+    parameter_size: str | None
+    installed: bool
+    enabled: bool
+    is_default: bool
+
+
+class AdminModelCatalogResponse(BaseModel):
+    models: list[AdminModelResponse]
+    local_available: bool
+    server_default: str
+
+
+def admin_model_catalog_response(catalog: AdminCatalog) -> AdminModelCatalogResponse:
+    return AdminModelCatalogResponse(
+        models=[
+            AdminModelResponse(
+                name=m.name,
+                parameter_size=m.parameter_size,
+                installed=m.installed,
+                enabled=m.enabled,
+                is_default=m.is_default,
+            )
+            for m in catalog.models
+        ],
+        local_available=catalog.local_available,
+        server_default=catalog.server_default,
+    )
+
+
+class ModelEnabledRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    enabled: bool
+
+
+class ModelDefaultRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=200)

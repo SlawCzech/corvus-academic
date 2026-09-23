@@ -29,12 +29,14 @@ from src.mentoring.application.action_service import ActionService
 from src.mentoring.application.agent_client import BYOK, AgentClient
 from src.mentoring.application.dashboard_service import DashboardService
 from src.mentoring.application.draft_service import DraftService
+from src.mentoring.application.model_service import ModelService
 from src.mentoring.application.student_service import Caller, StudentService
 from src.mentoring.infrastructure.guidelines_adapter import CatalogGuidelineSource
 from src.mentoring.infrastructure.orm import DraftFileModel
 from src.mentoring.infrastructure.repositories import (
     AgentActionRepository,
     MeetingNoteRepository,
+    ModelSettingRepository,
     StudentRepository,
     ThesisDraftRepository,
 )
@@ -109,11 +111,31 @@ def get_agent_client(request: Request) -> AgentClient:
     return AgentClient(client, settings.agent_url)
 
 
+def get_model_service(
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    agent: Annotated[AgentClient, Depends(get_agent_client)],
+) -> ModelService:
+    return ModelService(ModelSettingRepository(session), agent)
+
+
+def require_model_admin(
+    user: Annotated[User, Depends(get_current_user)],
+) -> User:
+    """Only an admin decides which local models promoters may use."""
+    if not user.can(Permission.MANAGE_MODELS):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Model management permission required",
+        )
+    return user
+
+
 def get_action_service(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     students: Annotated[StudentService, Depends(get_student_service)],
     agent: Annotated[AgentClient, Depends(get_agent_client)],
     catalog: Annotated[GuidelineCatalog, Depends(get_catalog)],
+    models: Annotated[ModelService, Depends(get_model_service)],
 ) -> ActionService:
     return ActionService(
         students,
@@ -121,6 +143,7 @@ def get_action_service(
         ThesisDraftRepository(session),
         agent,
         CatalogGuidelineSource(catalog),
+        models,
     )
 
 
@@ -145,7 +168,10 @@ def get_dashboard_service(
 CallerDep = Annotated[Caller, Depends(get_caller)]
 TokenDep = Annotated[str, Depends(get_bearer_token)]
 BYOKDep = Annotated[BYOK | None, Depends(get_byok)]
+AgentClientDep = Annotated[AgentClient, Depends(get_agent_client)]
 StudentServiceDep = Annotated[StudentService, Depends(get_student_service)]
 ActionServiceDep = Annotated[ActionService, Depends(get_action_service)]
 DraftServiceDep = Annotated[DraftService, Depends(get_draft_service)]
 DashboardServiceDep = Annotated[DashboardService, Depends(get_dashboard_service)]
+ModelServiceDep = Annotated[ModelService, Depends(get_model_service)]
+ModelAdminDep = Annotated[User, Depends(require_model_admin)]

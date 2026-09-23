@@ -25,6 +25,7 @@ class Permission(StrEnum):
     MANAGE_STUDENTS = "manage_students"
     VIEW_ALL_STUDENTS = "view_all_students"
     MANAGE_GUIDELINES = "manage_guidelines"
+    MANAGE_MODELS = "manage_models"
 
 
 _ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {

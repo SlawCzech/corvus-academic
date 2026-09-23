@@ -30,6 +30,17 @@ class FakeAgentClient(AgentClient):
         self.polls: list[str] = []
         self.unavailable = False
         self.next_status = AgentActionStatus("pending", None, None)
+        self.models: dict[str, Any] = {
+            "backend": "ollama",
+            "default": "qwen3:30b-a3b",
+            "local": [
+                {"name": "gemma4:12b", "parameter_size": "11.9B"},
+                {"name": "qwen3:30b-a3b", "parameter_size": "30.5B"},
+                {"name": "llama3.1:latest", "parameter_size": "8.0B"},
+            ],
+            "local_available": True,
+            "byok": {"claude": "claude-sonnet-4-20250514", "openai": "gpt-4o"},
+        }
 
     async def submit_action(
         self,
@@ -63,6 +74,11 @@ class FakeAgentClient(AgentClient):
             raise AgentUnavailableError("connection refused")
         self.polls.append(task_id)
         return self.next_status
+
+    async def list_models(self, token: str) -> dict[str, Any]:
+        if self.unavailable:
+            raise AgentUnavailableError("connection refused")
+        return self.models
 
     def completes_with(self, payload: dict[str, Any]) -> None:
         """Arrange the next poll to report a finished action."""
