@@ -218,3 +218,63 @@ def test_duplicate_university_is_a_conflict(client: TestClient) -> None:
     resp = client.post("/guidelines/admin/universities", json=body, headers=admin)
 
     assert resp.status_code == 409
+
+
+def test_promotor_picks_a_guideline_set_for_a_student(client: TestClient) -> None:
+    """End to end through both contexts: the catalog's set, mentoring's student."""
+    admin = _admin(client)
+    guideline_set = _set(client, admin)
+    _published(client, admin, guideline_set["id"], "## v1")
+    promotor = _promotor(client)
+    student = client.post(
+        "/students",
+        json={
+            "full_name": "Jan",
+            "field_of_study": "Ekonomia",
+            "thesis_type": "bachelor",
+        },
+        headers=promotor,
+    ).json()
+
+    chosen = client.patch(
+        f"/students/{student['id']}",
+        json={"guideline_set_id": guideline_set["id"]},
+        headers=promotor,
+    )
+    kept = client.patch(
+        f"/students/{student['id']}", json={"current_topic": "Temat"}, headers=promotor
+    )
+    cleared = client.patch(
+        f"/students/{student['id']}", json={"guideline_set_id": None}, headers=promotor
+    )
+
+    assert chosen.status_code == 200, chosen.text
+    assert chosen.json()["guideline_set_id"] == guideline_set["id"]
+    assert kept.json()["guideline_set_id"] == guideline_set["id"]
+    assert cleared.json()["guideline_set_id"] is None
+
+
+def test_a_set_for_another_thesis_type_is_refused_for_a_student(
+    client: TestClient,
+) -> None:
+    admin = _admin(client)
+    guideline_set = _set(client, admin)
+    _published(client, admin, guideline_set["id"], "## v1")
+    promotor = _promotor(client)
+    student = client.post(
+        "/students",
+        json={
+            "full_name": "Anna",
+            "field_of_study": "Finanse",
+            "thesis_type": "master_article",
+        },
+        headers=promotor,
+    ).json()
+
+    resp = client.patch(
+        f"/students/{student['id']}",
+        json={"guideline_set_id": guideline_set["id"]},
+        headers=promotor,
+    )
+
+    assert resp.status_code == 422

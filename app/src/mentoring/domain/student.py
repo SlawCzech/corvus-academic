@@ -61,6 +61,9 @@ class Student:
     # The version the promoter accepted as final, and when.
     accepted_draft_id: UUID | None = None
     draft_accepted_at: datetime | None = None
+    # The university requirements this thesis is judged against — an id in the
+    # guideline catalog, another bounded context.
+    guideline_set_id: UUID | None = None
 
     def __post_init__(self) -> None:
         self.full_name = _require_text(self.full_name, "full_name")

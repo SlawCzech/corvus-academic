@@ -7,7 +7,9 @@ and never two endpoints resolving the same dependency two different ways.
 
 This is also the one file in ``mentoring`` that imports from ``identity``
 (``User``, ``Permission``, ``get_current_user``) — mentoring needs to know
-who is asking; identity never imports anything back.
+who is asking; identity never imports anything back. The same goes for
+``guidelines``: the catalog is wired in here, behind mentoring's own
+``GuidelineSource`` port (``guidelines_adapter.py``).
 """
 
 from typing import Annotated
@@ -17,6 +19,8 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.guidelines.application.catalog import GuidelineCatalog
+from src.guidelines.infrastructure.dependencies import get_catalog
 from src.identity.application.api_keys import load_api_key
 from src.identity.domain.user import Permission, User
 from src.identity.infrastructure.dependencies import get_current_user
@@ -26,6 +30,7 @@ from src.mentoring.application.agent_client import BYOK, AgentClient
 from src.mentoring.application.dashboard_service import DashboardService
 from src.mentoring.application.draft_service import DraftService
 from src.mentoring.application.student_service import Caller, StudentService
+from src.mentoring.infrastructure.guidelines_adapter import CatalogGuidelineSource
 from src.mentoring.infrastructure.orm import DraftFileModel
 from src.mentoring.infrastructure.repositories import (
     AgentActionRepository,
@@ -67,8 +72,13 @@ def get_caller(
 
 def get_student_service(
     session: Annotated[AsyncSession, Depends(get_db_session)],
+    catalog: Annotated[GuidelineCatalog, Depends(get_catalog)],
 ) -> StudentService:
-    return StudentService(StudentRepository(session), MeetingNoteRepository(session))
+    return StudentService(
+        StudentRepository(session),
+        MeetingNoteRepository(session),
+        CatalogGuidelineSource(catalog),
+    )
 
 
 def get_bearer_token(
@@ -103,12 +113,14 @@ def get_action_service(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     students: Annotated[StudentService, Depends(get_student_service)],
     agent: Annotated[AgentClient, Depends(get_agent_client)],
+    catalog: Annotated[GuidelineCatalog, Depends(get_catalog)],
 ) -> ActionService:
     return ActionService(
         students,
         AgentActionRepository(session),
         ThesisDraftRepository(session),
         agent,
+        CatalogGuidelineSource(catalog),
     )
 
 

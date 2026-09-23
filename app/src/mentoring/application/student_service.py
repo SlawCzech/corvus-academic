@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from src.mentoring.application.exceptions import StudentNotFoundError
+from src.mentoring.application.guidelines_port import GuidelineSource
 from src.mentoring.domain.student import (
     MeetingNote,
     Student,
@@ -49,6 +50,7 @@ def to_domain(model: StudentModel) -> Student:
         closed_at=model.closed_at,
         accepted_draft_id=model.accepted_draft_id,
         draft_accepted_at=model.draft_accepted_at,
+        guideline_set_id=model.guideline_set_id,
     )
 
 
@@ -74,6 +76,7 @@ def _to_orm(student: Student) -> StudentModel:
         closed_at=student.closed_at,
         accepted_draft_id=student.accepted_draft_id,
         draft_accepted_at=student.draft_accepted_at,
+        guideline_set_id=student.guideline_set_id,
     )
 
 
@@ -109,9 +112,11 @@ class StudentService:
         self,
         students: StudentRepository,
         notes: MeetingNoteRepository,
+        guidelines: GuidelineSource | None = None,
     ) -> None:
         self._students = students
         self._notes = notes
+        self._guidelines = guidelines
 
     # ---------- students ----------
 
@@ -163,15 +168,26 @@ class StudentService:
         student_id: UUID,
         current_topic: str | None = None,
         status: StudentStatus | None = None,
+        guideline_set_id: UUID | None = None,
+        set_guidelines: bool = False,
     ) -> Student:
-        """Set the current topic and/or lifecycle status of a student.
+        """Set the current topic, lifecycle status and/or guideline set.
 
-        Both fields are optional; omitted ones are left untouched. Topic
+        Every field is optional; omitted ones are left untouched. Topic
         changes go through the domain entity so ``current_topic_set_at`` is
-        always stamped with them.
+        always stamped with them. ``set_guidelines`` says the guideline set was
+        given at all — ``guideline_set_id=None`` with it clears the choice.
+
+        Raises ValueError for a guideline set that does not exist, has nothing
+        published, or is for another kind of thesis.
         """
         model = await self._require_model(caller, student_id)
         student = to_domain(model)
+
+        if set_guidelines:
+            if guideline_set_id is not None:
+                await self._check_guideline_set(student, guideline_set_id)
+            model.guideline_set_id = guideline_set_id
 
         if current_topic is not None:
             student.set_topic(current_topic)
@@ -184,6 +200,18 @@ class StudentService:
 
         await self._students.update(model)
         return to_domain(model)
+
+    async def _check_guideline_set(self, student: Student, set_id: UUID) -> None:
+        if self._guidelines is None:  # pragma: no cover — wiring error
+            raise RuntimeError("StudentService has no guideline source")
+        thesis_type = await self._guidelines.thesis_type_of(set_id)
+        if thesis_type is None:
+            raise ValueError("Guideline set not found or has nothing published")
+        if thesis_type != str(student.thesis_type):
+            raise ValueError(
+                f"Guideline set is for {thesis_type} theses, "
+                f"the student writes a {student.thesis_type} one"
+            )
 
     async def set_draft_acceptance(
         self, caller: Caller, student_id: UUID, draft_id: UUID | None

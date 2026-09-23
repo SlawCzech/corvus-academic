@@ -4,6 +4,7 @@ import uuid
 from datetime import UTC, datetime
 
 from src.mentoring.application.context import (
+    assemble_evaluate_methodology_context,
     assemble_generate_review_context,
     assemble_propose_topic_context,
 )
@@ -110,3 +111,22 @@ def test_sources_are_counted_in_app_not_guessed_by_the_model() -> None:
     context = assemble_generate_review_context(_student(), _draft(_LONG_THESIS))
 
     assert context["document_map"]["bibliography_entries"] == 1
+
+
+def test_a_chosen_guideline_rubric_travels_in_the_context() -> None:
+    review = assemble_generate_review_context(
+        _student(), _draft(_LONG_THESIS), guidelines="## Wymogi UE Katowice"
+    )
+    methodology = assemble_evaluate_methodology_context(
+        _student(), _draft(_LONG_THESIS), guidelines="## Wymogi UE Katowice"
+    )
+
+    assert review["guidelines"] == "## Wymogi UE Katowice"
+    assert methodology["guidelines"] == "## Wymogi UE Katowice"
+
+
+def test_without_a_rubric_the_key_is_absent_so_the_agent_loads_its_own() -> None:
+    """`agent` falls back exactly when `guidelines` is not in the context."""
+    context = assemble_generate_review_context(_student(), _draft(_LONG_THESIS))
+
+    assert "guidelines" not in context

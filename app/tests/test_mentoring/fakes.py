@@ -13,6 +13,7 @@ from src.mentoring.application.agent_client import (
     AgentClient,
 )
 from src.mentoring.application.exceptions import AgentUnavailableError
+from src.mentoring.application.guidelines_port import GuidelineRubric
 
 
 class FakeAgentClient(AgentClient):
@@ -136,3 +137,24 @@ def note_payload(content: str) -> dict[str, Any]:
         "status": "drafted",
         "error": None,
     }
+
+
+class FakeGuidelineSource:
+    """A guideline catalog holding whatever sets a test puts in it."""
+
+    def __init__(self) -> None:
+        self.sets: dict[UUID, tuple[str, GuidelineRubric | None]] = {}
+
+    def publish(self, set_id: UUID, thesis_type: str, rubric_md: str) -> UUID:
+        """Put a set with a published rubric in the catalog; return the version id."""
+        version_id = UUID(int=len(self.sets) + 1)
+        self.sets[set_id] = (thesis_type, GuidelineRubric(version_id, rubric_md))
+        return version_id
+
+    async def thesis_type_of(self, set_id: UUID) -> str | None:
+        entry = self.sets.get(set_id)
+        return entry[0] if entry and entry[1] else None
+
+    async def current_rubric(self, set_id: UUID) -> GuidelineRubric | None:
+        entry = self.sets.get(set_id)
+        return entry[1] if entry else None

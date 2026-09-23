@@ -31,6 +31,10 @@ from src.mentoring.application.exceptions import (
     ActionNotFoundError,
     UnsupportedActionError,
 )
+from src.mentoring.application.guidelines_port import (
+    GuidelineRubric,
+    GuidelineSource,
+)
 from src.mentoring.application.student_service import (
     Caller,
     StudentService,
@@ -76,11 +80,13 @@ class ActionService:
         actions: AgentActionRepository,
         drafts: ThesisDraftRepository,
         agent: AgentClient,
+        guidelines: GuidelineSource | None = None,
     ) -> None:
         self._students = students
         self._actions = actions
         self._drafts = drafts
         self._agent = agent
+        self._guidelines = guidelines
 
     # ---------- trigger ----------
 
@@ -258,11 +264,15 @@ class ActionService:
                 )
             case ActionType.EVALUATE_METHODOLOGY:
                 latest = await self._latest_drafts(student.id, 1)
+                rubric = await self._rubric(student)
                 return (
                     assemble_evaluate_methodology_context(
-                        student, latest[0] if latest else None, detail
+                        student,
+                        latest[0] if latest else None,
+                        detail,
+                        guidelines=rubric.rubric_md if rubric else None,
                     ),
-                    base_ref | self._draft_ref(latest[:1]),
+                    base_ref | self._draft_ref(latest[:1]) | self._rubric_ref(rubric),
                 )
             case ActionType.DEFENCE_QUESTIONS:
                 latest = await self._latest_drafts(student.id, 1)
@@ -274,11 +284,16 @@ class ActionService:
                 )
             case ActionType.GENERATE_REVIEW:
                 latest = await self._latest_drafts(student.id, 1)
+                rubric = await self._rubric(student)
                 return (
                     assemble_generate_review_context(
-                        student, latest[0] if latest else None, detail, review_tone
+                        student,
+                        latest[0] if latest else None,
+                        detail,
+                        review_tone,
+                        guidelines=rubric.rubric_md if rubric else None,
                     ),
-                    base_ref | self._draft_ref(latest[:1]),
+                    base_ref | self._draft_ref(latest[:1]) | self._rubric_ref(rubric),
                 )
             case ActionType.CHECK_PROGRESS:
                 latest = await self._latest_drafts(student.id, 2)
@@ -290,6 +305,17 @@ class ActionService:
                 raise UnsupportedActionError(
                     f"No context assembly for action type: {action_type}"
                 )
+
+    async def _rubric(self, student: Student) -> GuidelineRubric | None:
+        """The rubric in force for the student's chosen guideline set."""
+        if student.guideline_set_id is None or self._guidelines is None:
+            return None
+        return await self._guidelines.current_rubric(student.guideline_set_id)
+
+    @staticmethod
+    def _rubric_ref(rubric: GuidelineRubric | None) -> dict[str, Any]:
+        """Which guideline version the action was judged against — its audit."""
+        return {"guideline_version_id": str(rubric.version_id)} if rubric else {}
 
     async def _latest_drafts(self, student_id: UUID, limit: int) -> list[ThesisDraft]:
         models = await self._drafts.find_latest(student_id, limit=limit)

@@ -67,24 +67,37 @@ def assemble_propose_topic_context(
     }
 
 
+def _with_guidelines(context: dict[str, Any], guidelines: str | None) -> dict[str, Any]:
+    """Add the rubric of the student's guideline set, when there is one.
+
+    The key is left out rather than set to None: `agent` loads its own
+    requirements exactly when the context carries no `guidelines`.
+    """
+    return context if guidelines is None else {**context, "guidelines": guidelines}
+
+
 def assemble_evaluate_methodology_context(
     student: Student,
     latest_draft: ThesisDraft | None,
     detail: str | None = None,
+    guidelines: str | None = None,
 ) -> dict[str, Any]:
     """Build the context for a methodology review of the current version."""
     if latest_draft is None:
         raise MissingContextError(
             "Methodology can only be assessed once a draft has been uploaded"
         )
-    return {
-        "text": latest_draft.content,
-        "document_map": _document_map(latest_draft),
-        "thesis_type": str(student.thesis_type),
-        "current_topic": student.current_topic,
-        "version_number": latest_draft.version_number,
-        "detail": detail,
-    }
+    return _with_guidelines(
+        {
+            "text": latest_draft.content,
+            "document_map": _document_map(latest_draft),
+            "thesis_type": str(student.thesis_type),
+            "current_topic": student.current_topic,
+            "version_number": latest_draft.version_number,
+            "detail": detail,
+        },
+        guidelines,
+    )
 
 
 def assemble_check_progress_context(
@@ -153,20 +166,25 @@ def assemble_generate_review_context(
     latest_draft: ThesisDraft | None,
     detail: str | None = None,
     review_tone: str = "auto",
+    guidelines: str | None = None,
 ) -> dict[str, Any]:
     """Build the context for the full four-node review.
 
-    `guidelines` is deliberately absent: the requirements document is static
-    data `agent` owns, and it loads it itself from `thesis_type`.
+    `guidelines` is the rubric of the guideline set the promoter chose for
+    this student. Without one, `agent` falls back to its own requirements for
+    the thesis type.
     """
     if latest_draft is None:
         raise MissingContextError("There is no thesis to review yet")
-    return {
-        "text": latest_draft.content,
-        "document_map": _document_map(latest_draft),
-        "metadata": _thesis_metadata(student),
-        "thesis_type": str(student.thesis_type),
-        "review_tone": review_tone,
-        "version_number": latest_draft.version_number,
-        "detail": detail,
-    }
+    return _with_guidelines(
+        {
+            "text": latest_draft.content,
+            "document_map": _document_map(latest_draft),
+            "metadata": _thesis_metadata(student),
+            "thesis_type": str(student.thesis_type),
+            "review_tone": review_tone,
+            "version_number": latest_draft.version_number,
+            "detail": detail,
+        },
+        guidelines,
+    )

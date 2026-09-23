@@ -34,6 +34,8 @@ class StudentCreateRequest(BaseModel):
 class StudentUpdateRequest(BaseModel):
     current_topic: str | None = Field(default=None, min_length=1)
     status: StudentStatus | None = None
+    # Sent as null to clear the choice; left out to keep it.
+    guideline_set_id: uuid.UUID | None = None
 
 
 class StudentResponse(BaseModel):
@@ -49,6 +51,7 @@ class StudentResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     closed_at: datetime | None
+    guideline_set_id: uuid.UUID | None
 
 
 def student_response(student: Student) -> StudentResponse:
@@ -65,6 +68,7 @@ def student_response(student: Student) -> StudentResponse:
         created_at=student.created_at,
         updated_at=student.updated_at,
         closed_at=student.closed_at,
+        guideline_set_id=student.guideline_set_id,
     )
 
 

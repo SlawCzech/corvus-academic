@@ -10,7 +10,8 @@ import uuid
 from collections.abc import AsyncGenerator
 
 import pytest
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.mentoring.application.action_service import ActionService
 from src.mentoring.application.agent_client import BYOK
@@ -24,7 +25,7 @@ from src.mentoring.application.exceptions import (
 from src.mentoring.application.student_service import Caller, StudentService
 from src.mentoring.domain.action import ActionStatus, ActionType
 from src.mentoring.domain.student import Student, ThesisType
-from src.mentoring.infrastructure.orm import Base, DraftFileModel
+from src.mentoring.infrastructure.orm import AgentActionModel, Base, DraftFileModel
 from src.mentoring.infrastructure.repositories import (
     AgentActionRepository,
     MeetingNoteRepository,
@@ -34,6 +35,7 @@ from src.mentoring.infrastructure.repositories import (
 from src.shared.sql_file_store import SqlFileStore
 from tests.test_mentoring.fakes import (
     FakeAgentClient,
+    FakeGuidelineSource,
     docx_bytes,
     note_payload,
     topic_payload,
@@ -48,7 +50,7 @@ TOKEN = "header.payload.signature"  # noqa: S105
 
 
 class _Fixture:
-    """The three collaborators a test needs, wired to one SQLite session."""
+    """The collaborators a test needs, wired to one SQLite session."""
 
     def __init__(
         self,
@@ -56,11 +58,15 @@ class _Fixture:
         actions: ActionService,
         drafts: DraftService,
         agent: FakeAgentClient,
+        guidelines: FakeGuidelineSource,
+        session: AsyncSession,
     ) -> None:
         self.students = students
         self.actions = actions
         self.drafts = drafts
         self.agent = agent
+        self.guidelines = guidelines
+        self.session = session
 
 
 @pytest.fixture
@@ -70,16 +76,21 @@ async def env() -> AsyncGenerator[_Fixture, None]:
         await conn.run_sync(Base.metadata.create_all)
     factory = async_sessionmaker(engine, expire_on_commit=False)
     async with factory() as session:
+        guidelines = FakeGuidelineSource()
         students = StudentService(
-            StudentRepository(session), MeetingNoteRepository(session)
+            StudentRepository(session), MeetingNoteRepository(session), guidelines
         )
         agent = FakeAgentClient()
         drafts = ThesisDraftRepository(session)
         yield _Fixture(
             students,
-            ActionService(students, AgentActionRepository(session), drafts, agent),
+            ActionService(
+                students, AgentActionRepository(session), drafts, agent, guidelines
+            ),
             DraftService(students, drafts, SqlFileStore(session, DraftFileModel)),
             agent,
+            guidelines,
+            session,
         )
     await engine.dispose()
 
@@ -168,6 +179,104 @@ async def test_trigger_defaults_review_tone_to_auto(env: _Fixture) -> None:
     )
 
     assert env.agent.submitted[0]["context"]["review_tone"] == "auto"
+
+
+async def test_review_is_judged_against_the_chosen_guideline_set(
+    env: _Fixture,
+) -> None:
+    """The rubric in force goes to the agent, and the action records its version."""
+    student = await _student(env)
+    set_id = uuid.uuid4()
+    version_id = env.guidelines.publish(set_id, "bachelor", "## UE Katowice v2")
+    await env.students.update(
+        PROMOTOR, student.id, guideline_set_id=set_id, set_guidelines=True
+    )
+    await env.drafts.upload(
+        PROMOTOR, student.id, filename="praca.docx", data=docx_bytes()
+    )
+
+    action = await env.actions.trigger(
+        PROMOTOR, student.id, action_type=ActionType.GENERATE_REVIEW, token=TOKEN
+    )
+
+    assert env.agent.submitted[0]["context"]["guidelines"] == "## UE Katowice v2"
+    record = await env.actions.list_actions(PROMOTOR, student.id)
+    assert record[0].id == action.id
+    stored = await _input_ref(env, student.id)
+    assert stored["guideline_version_id"] == str(version_id)
+
+
+async def test_without_a_guideline_set_the_agent_uses_its_own(env: _Fixture) -> None:
+    student = await _student(env)
+    await env.drafts.upload(
+        PROMOTOR, student.id, filename="praca.docx", data=docx_bytes()
+    )
+
+    await env.actions.trigger(
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.EVALUATE_METHODOLOGY,
+        token=TOKEN,
+    )
+
+    assert "guidelines" not in env.agent.submitted[0]["context"]
+    assert "guideline_version_id" not in await _input_ref(env, student.id)
+
+
+async def test_a_guideline_set_for_another_thesis_type_is_refused(
+    env: _Fixture,
+) -> None:
+    student = await _student(env)
+    set_id = uuid.uuid4()
+    env.guidelines.publish(set_id, "master_article", "## Magisterskie")
+
+    with pytest.raises(ValueError, match="master_article"):
+        await env.students.update(
+            PROMOTOR, student.id, guideline_set_id=set_id, set_guidelines=True
+        )
+
+
+async def test_an_unknown_guideline_set_is_refused(env: _Fixture) -> None:
+    student = await _student(env)
+
+    with pytest.raises(ValueError, match="not found"):
+        await env.students.update(
+            PROMOTOR, student.id, guideline_set_id=uuid.uuid4(), set_guidelines=True
+        )
+
+
+async def test_the_guideline_choice_can_be_cleared(env: _Fixture) -> None:
+    student = await _student(env)
+    set_id = uuid.uuid4()
+    env.guidelines.publish(set_id, "bachelor", "## v1")
+    await env.students.update(
+        PROMOTOR, student.id, guideline_set_id=set_id, set_guidelines=True
+    )
+
+    cleared = await env.students.update(
+        PROMOTOR, student.id, guideline_set_id=None, set_guidelines=True
+    )
+    kept = await env.students.update(PROMOTOR, student.id, current_topic="Temat")
+
+    assert cleared.guideline_set_id is None
+    assert kept.guideline_set_id is None
+
+
+async def _input_ref(env: _Fixture, student_id: uuid.UUID) -> dict[str, object]:
+    """The provenance stored on the student's newest action."""
+    row = (
+        (
+            await env.session.execute(
+                select(AgentActionModel)
+                .where(AgentActionModel.student_id == student_id)
+                .order_by(AgentActionModel.created_at.desc())
+            )
+        )
+        .scalars()
+        .first()
+    )
+    assert row is not None
+    return dict(row.input_ref or {})
 
 
 async def test_trigger_on_another_promotors_student_is_not_found(
