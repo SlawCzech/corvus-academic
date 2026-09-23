@@ -1,14 +1,19 @@
 """Thesis-draft upload and listing endpoints."""
 
 import uuid
+from urllib.parse import quote
 
 import structlog
-from fastapi import APIRouter, HTTPException, UploadFile, status
+from fastapi import APIRouter, HTTPException, Response, UploadFile, status
 
-from src.mentoring.application.exceptions import StudentNotFoundError
+from src.mentoring.application.exceptions import (
+    DraftNotFoundError,
+    StudentNotFoundError,
+)
 from src.mentoring.infrastructure.dependencies import CallerDep, DraftServiceDep
 from src.mentoring.infrastructure.errors import not_found
 from src.mentoring.infrastructure.schemas import DraftResponse, draft_response
+from src.shared.settings import settings
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -29,9 +34,16 @@ async def upload_draft(
     """Upload the next version of a student's thesis.
 
     The PDF/DOCX is parsed in-process — the payoff of folding the old parser
-    service into `app` — and stored as version N+1 for that student.
+    service into `app` — and stored, file and text, as version N+1.
     """
-    data = await file.read()
+    # Read one byte past the limit: enough to know it was exceeded without
+    # pulling an arbitrarily large upload into memory.
+    data = await file.read(settings.max_upload_bytes + 1)
+    if len(data) > settings.max_upload_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail=f"File larger than {settings.max_upload_bytes // (1024 * 1024)} MB",
+        )
     try:
         draft = await svc.upload(
             caller,
@@ -69,3 +81,31 @@ async def list_drafts(
     except StudentNotFoundError as exc:
         raise not_found(exc) from exc
     return [draft_response(d) for d in drafts]
+
+
+@router.get("/{student_id}/drafts/{draft_id}/file")
+async def download_draft(
+    student_id: uuid.UUID,
+    draft_id: uuid.UUID,
+    caller: CallerDep,
+    svc: DraftServiceDep,
+) -> Response:
+    """Return the original upload of one version, as an attachment.
+
+    Always an attachment, never rendered inline: the file came from outside,
+    and the browser should save it rather than open it in our origin.
+    """
+    try:
+        stored, data = await svc.download(caller, student_id, draft_id)
+    except (StudentNotFoundError, DraftNotFoundError) as exc:
+        raise not_found(exc) from exc
+    return Response(
+        content=data,
+        media_type=stored.content_type,
+        headers={
+            "Content-Disposition": (
+                f"attachment; filename*=UTF-8''{quote(stored.filename)}"
+            ),
+            "X-Content-Type-Options": "nosniff",
+        },
+    )

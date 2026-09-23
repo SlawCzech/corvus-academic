@@ -10,6 +10,7 @@ from src.document.document import Document
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
+
 def extract_pdf(file: bytes) -> Document:
     """Extract text and page count from a PDF file."""
     pdf = fitz.open(stream=file, filetype="pdf")  # pyright: ignore[reportUnknownMemberType]
@@ -61,12 +62,40 @@ def detect_format(filename: str, content_type: str = "") -> str | None:
     return _CONTENT_TYPE_MAP.get(content_type)
 
 
-def extract(data: bytes, filename: str, content_type: str = "") -> Document:
-    """Extract text from an uploaded file, choosing the parser by format.
+# What each format's bytes start with. The name and the declared type come from
+# the client; the file is now stored and handed back to a promoter, so the
+# format is confirmed from the content before anything is kept.
+_MAGIC: dict[str, bytes] = {
+    "pdf": b"%PDF-",
+    "docx": b"PK\x03\x04",
+}
 
-    Raises ValueError for anything that is not a PDF or a DOCX.
+# The type a stored file is served back with — ours, never the client's.
+CANONICAL_CONTENT_TYPE: dict[str, str] = {
+    "pdf": "application/pdf",
+    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
+
+
+def detect_verified_format(data: bytes, filename: str, content_type: str = "") -> str:
+    """Return the file's format once its content agrees with its name.
+
+    Raises ValueError for an unsupported format, or for a file whose bytes are
+    not what its extension or declared type claims.
     """
     fmt = detect_format(filename, content_type)
     if fmt is None:
         raise ValueError(f"Unsupported format: {filename!r} ({content_type})")
+    if not data.startswith(_MAGIC[fmt]):
+        raise ValueError(f"File content is not a valid {fmt.upper()}: {filename!r}")
+    return fmt
+
+
+def extract(data: bytes, filename: str, content_type: str = "") -> Document:
+    """Extract text from an uploaded file, choosing the parser by format.
+
+    Raises ValueError for anything that is not a PDF or a DOCX, by name or by
+    content.
+    """
+    fmt = detect_verified_format(data, filename, content_type)
     return extract_pdf(data) if fmt == "pdf" else extract_docx(data)

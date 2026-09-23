@@ -12,7 +12,7 @@ one context, one schema, one migration lineage.
 One file per aggregate, mirroring ``domain/`` exactly — ``student.py`` holds
 both ``StudentModel`` and ``MeetingNoteModel``, the same pairing as
 ``domain.student``'s ``Student``/``MeetingNote``. This module re-exports all
-four: every model must be imported somewhere before Alembic or
+of them: every model must be imported somewhere before Alembic or
 ``Base.metadata.create_all`` reads ``Base.metadata``, so importing this
 package — rather than a specific submodule — is what guarantees every table
 is registered. That guarantee is the one thing splitting the classes across
@@ -21,12 +21,13 @@ files must not break.
 
 from src.mentoring.infrastructure.orm.action import AgentActionModel
 from src.mentoring.infrastructure.orm.base import Base
-from src.mentoring.infrastructure.orm.draft import ThesisDraftModel
+from src.mentoring.infrastructure.orm.draft import DraftFileModel, ThesisDraftModel
 from src.mentoring.infrastructure.orm.student import MeetingNoteModel, StudentModel
 
 __all__ = [
     "AgentActionModel",
     "Base",
+    "DraftFileModel",
     "MeetingNoteModel",
     "StudentModel",
     "ThesisDraftModel",

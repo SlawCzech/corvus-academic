@@ -1,5 +1,6 @@
 """Integration tests for mentoring repositories using in-memory SQLite."""
 
+import hashlib
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
@@ -9,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from src.mentoring.infrastructure.orm import (
     Base,
+    DraftFileModel,
     MeetingNoteModel,
     StudentModel,
 )
@@ -16,6 +18,7 @@ from src.mentoring.infrastructure.repositories import (
     MeetingNoteRepository,
     StudentRepository,
 )
+from src.shared.sql_file_store import SqlFileStore
 
 _SQLITE_URL = "sqlite+aiosqlite:///:memory:"
 _SCHEMA_TRANSLATE = {"schema_translate_map": {"mentoring": None}}
@@ -173,3 +176,34 @@ async def test_notes_ordered_by_meeting_date_desc(session: AsyncSession) -> None
         "Drugie",
         "Pierwsze",
     ]
+
+
+# ---------- SqlFileStore ----------
+
+
+async def test_file_store_round_trip_and_delete(session: AsyncSession) -> None:
+    store = SqlFileStore(session, DraftFileModel)
+
+    stored = await store.put("praca.pdf", "application/pdf", b"%PDF-1.7 bytes")
+    await session.commit()
+
+    found = await store.get(stored.id)
+    assert found is not None
+    meta, data = found
+    assert data == b"%PDF-1.7 bytes"
+    assert meta.size == len(data)
+    assert meta.sha256 == hashlib.sha256(data).hexdigest()
+
+    await store.delete(stored.id)
+    await session.commit()
+    assert await store.get(stored.id) is None
+
+
+async def test_file_store_does_not_commit_on_its_own(session: AsyncSession) -> None:
+    """The caller's commit decides — a rolled-back upload leaves no file."""
+    store = SqlFileStore(session, DraftFileModel)
+
+    stored = await store.put("praca.pdf", "application/pdf", b"%PDF-")
+    await session.rollback()
+
+    assert await store.get(stored.id) is None

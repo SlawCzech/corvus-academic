@@ -35,7 +35,7 @@ thesis is discarded after extraction, and nothing is ever deleted.
 | # | Commit | Status |
 |---|---|---|
 | 1 | `docs:` ADR 0006 and this spec | ✅ |
-| 2 | `feat(mentoring):` keep the original thesis file — `FileStore`, `draft_files`, download endpoint, upload limit and content sniffing | ☐ |
+| 2 | `feat(mentoring):` keep the original thesis file — `FileStore`, `draft_files`, download endpoint, upload limit and content sniffing | ✅ |
 | 3 | `feat(mentoring):` accept a final draft, purge the rest on a retention schedule | ☐ |
 | 4 | `feat(guidelines):` admin-managed catalog — domain, schema, lineage, API, seed of the current files as version 1 | ☐ |
 | 5 | `feat(mentoring):` assess against the student's chosen guideline set | ☐ |

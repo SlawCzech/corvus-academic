@@ -3,7 +3,7 @@
 import pytest
 
 from src.document.document import Document
-from src.document.extractor import extract_docx, extract_pdf
+from src.document.extractor import detect_verified_format, extract_docx, extract_pdf
 
 
 def test_extract_pdf_returns_document(pdf_bytes: bytes) -> None:
@@ -44,3 +44,22 @@ def test_extract_docx_format(docx_bytes: bytes) -> None:
 def test_extract_docx_contains_text(docx_bytes: bytes) -> None:
     doc = extract_docx(docx_bytes)
     assert "Introduction" in doc.text
+
+
+def test_verified_format_accepts_matching_content(
+    pdf_bytes: bytes, docx_bytes: bytes
+) -> None:
+    assert detect_verified_format(pdf_bytes, "praca.pdf") == "pdf"
+    assert detect_verified_format(docx_bytes, "praca.docx") == "docx"
+
+
+def test_verified_format_rejects_content_that_contradicts_the_name(
+    docx_bytes: bytes,
+) -> None:
+    with pytest.raises(ValueError, match="not a valid PDF"):
+        detect_verified_format(docx_bytes, "praca.pdf")
+
+
+def test_verified_format_rejects_unsupported_names() -> None:
+    with pytest.raises(ValueError, match="Unsupported format"):
+        detect_verified_format(b"%PDF-", "praca.txt")

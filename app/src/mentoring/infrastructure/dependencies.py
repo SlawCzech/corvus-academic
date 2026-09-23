@@ -26,6 +26,7 @@ from src.mentoring.application.agent_client import BYOK, AgentClient
 from src.mentoring.application.dashboard_service import DashboardService
 from src.mentoring.application.draft_service import DraftService
 from src.mentoring.application.student_service import Caller, StudentService
+from src.mentoring.infrastructure.orm import DraftFileModel
 from src.mentoring.infrastructure.repositories import (
     AgentActionRepository,
     MeetingNoteRepository,
@@ -34,6 +35,7 @@ from src.mentoring.infrastructure.repositories import (
 )
 from src.shared.database import get_db_session
 from src.shared.settings import settings
+from src.shared.sql_file_store import SqlFileStore
 
 _bearer = HTTPBearer()
 
@@ -114,7 +116,9 @@ def get_draft_service(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     students: Annotated[StudentService, Depends(get_student_service)],
 ) -> DraftService:
-    return DraftService(students, ThesisDraftRepository(session))
+    return DraftService(
+        students, ThesisDraftRepository(session), SqlFileStore(session, DraftFileModel)
+    )
 
 
 def get_dashboard_service(

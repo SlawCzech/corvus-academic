@@ -19,6 +19,10 @@ class StudentNotFoundError(Exception):
     """
 
 
+class DraftNotFoundError(Exception):
+    """Raised when a draft, or its file, does not exist for this student."""
+
+
 class ActionNotFoundError(Exception):
     """Raised when an action does not exist, or belongs to another student."""
 

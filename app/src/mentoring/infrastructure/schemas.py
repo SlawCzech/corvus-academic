@@ -165,6 +165,9 @@ class DraftResponse(BaseModel):
     preview: str
     uploaded_by: uuid.UUID
     created_at: datetime
+    has_file: bool
+    file_size: int | None
+    file_sha256: str | None
 
 
 def draft_response(draft: ThesisDraft) -> DraftResponse:
@@ -179,6 +182,9 @@ def draft_response(draft: ThesisDraft) -> DraftResponse:
         preview=draft.preview,
         uploaded_by=draft.uploaded_by,
         created_at=draft.created_at,
+        has_file=draft.has_file,
+        file_size=draft.file_size,
+        file_sha256=draft.file_sha256,
     )
 
 

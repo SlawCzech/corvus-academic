@@ -25,6 +25,11 @@ class ThesisDraft:
     format: str
     uploaded_by: UUID
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    # The original upload. `file_id` is None for versions uploaded before files
+    # were kept; hash and size are the draft's own, so they outlive the file.
+    file_id: UUID | None = None
+    file_sha256: str | None = None
+    file_size: int | None = None
 
     def __post_init__(self) -> None:
         if self.version_number < 1:
@@ -32,6 +37,11 @@ class ThesisDraft:
         if not self.text.strip():
             raise ValueError("draft text must not be empty")
         self.filename = self.filename.strip() or "bez-nazwy"
+
+    @property
+    def has_file(self) -> bool:
+        """Whether the original upload can still be downloaded."""
+        return self.file_id is not None
 
     @property
     def char_count(self) -> int:

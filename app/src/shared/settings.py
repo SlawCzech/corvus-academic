@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     # Downstream services still reached over HTTP.
     agent_url: str = Field(..., description="Base URL of the agent service")
 
+    # Largest file accepted on upload. A thesis with figures runs to a few
+    # megabytes; this leaves room while refusing anything absurd before it is
+    # read into memory in full.
+    max_upload_bytes: int = 25 * 1024 * 1024
+
     cors_origins: list[str] = Field(
         default=["http://localhost:3000"],
         description="Allowed CORS origins",

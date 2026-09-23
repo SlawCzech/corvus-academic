@@ -150,6 +150,10 @@ class ThesisDraftRepository:
         await self._session.commit()
         await self._session.refresh(model)
 
+    async def find_by_id(self, draft_id: uuid.UUID) -> ThesisDraftModel | None:
+        """Return one version, or None."""
+        return await self._session.get(ThesisDraftModel, draft_id)
+
     async def find_by_student(self, student_id: uuid.UUID) -> list[ThesisDraftModel]:
         """Return a student's versions, newest first."""
         result = await self._session.execute(

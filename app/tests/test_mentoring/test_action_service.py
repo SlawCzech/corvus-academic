@@ -24,13 +24,14 @@ from src.mentoring.application.exceptions import (
 from src.mentoring.application.student_service import Caller, StudentService
 from src.mentoring.domain.action import ActionStatus, ActionType
 from src.mentoring.domain.student import Student, ThesisType
-from src.mentoring.infrastructure.orm import Base
+from src.mentoring.infrastructure.orm import Base, DraftFileModel
 from src.mentoring.infrastructure.repositories import (
     AgentActionRepository,
     MeetingNoteRepository,
     StudentRepository,
     ThesisDraftRepository,
 )
+from src.shared.sql_file_store import SqlFileStore
 from tests.test_mentoring.fakes import (
     FakeAgentClient,
     docx_bytes,
@@ -77,7 +78,7 @@ async def env() -> AsyncGenerator[_Fixture, None]:
         yield _Fixture(
             students,
             ActionService(students, AgentActionRepository(session), drafts, agent),
-            DraftService(students, drafts),
+            DraftService(students, drafts, SqlFileStore(session, DraftFileModel)),
             agent,
         )
     await engine.dispose()
