@@ -14,6 +14,7 @@ import {
   IconBook,
   IconBooks,
   IconSchool,
+  IconCpu,
 } from "@tabler/icons-react"
 import LogoutButton from "@/components/LogoutButton"
 
@@ -33,25 +34,40 @@ function useActive(href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-function NavLink({ item }: { item: NavItem }) {
+function NavLink({ item, compact }: { item: NavItem; compact: boolean }) {
   const active = useActive(item.href)
   return (
     <Link
       href={item.href}
-      className={`flex h-10 items-center gap-3 rounded-lg px-4 text-[13.5px] font-medium transition-colors ${
+      title={compact ? item.label : undefined}
+      className={`flex h-10 items-center gap-3 whitespace-nowrap rounded-lg text-[13.5px] font-medium transition-colors ${
+        compact ? "px-3" : "px-4"
+      } ${
         active
           ? "bg-white/8 text-white"
           : "text-[#a8b6c7] hover:bg-white/5 hover:text-white"
       }`}
     >
-      {item.icon}
+      <span className="shrink-0">{item.icon}</span>
       {item.label}
     </Link>
   )
 }
 
+/**
+ * A student's page brings its own sub-nav, and two full-width menus side by
+ * side crowd out the content. There the main menu folds to an icon rail and
+ * slides out over the page on hover or keyboard focus — without pushing the
+ * layout around.
+ */
+function useCompact(): boolean {
+  const pathname = usePathname()
+  return /^\/students\/[^/]+/.test(pathname)
+}
+
 export default function Sidebar({ email, role }: SidebarProps) {
   const { resolvedTheme, setTheme } = useTheme()
+  const compact = useCompact()
 
   const items: NavItem[] = [
     {
@@ -89,6 +105,11 @@ export default function Sidebar({ email, role }: SidebarProps) {
         icon: <IconBooks size={17} stroke={1.75} />,
       },
       {
+        href: "/admin/models",
+        label: "Modele AI",
+        icon: <IconCpu size={17} stroke={1.75} />,
+      },
+      {
         href: "/admin/login-events",
         label: "Logi logowań",
         icon: <IconClipboardList size={17} stroke={1.75} />,
@@ -104,51 +125,66 @@ export default function Sidebar({ email, role }: SidebarProps) {
     .join("")
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col justify-between bg-navy px-4 py-6">
-      <div>
-        <Link href="/" className="mb-9 flex items-center gap-2.5 px-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 font-serif text-[15px] font-semibold text-[#e8b876]">
-            C
+    <aside
+      className={compact ? "group/nav relative z-40 w-16 shrink-0" : "flex w-60 shrink-0"}
+    >
+      <div
+        className={`flex flex-col justify-between bg-navy py-6 ${
+          compact
+            ? "absolute inset-y-0 left-0 w-16 overflow-hidden px-3 transition-[width,box-shadow] duration-200 ease-out group-hover/nav:w-60 group-hover/nav:shadow-2xl group-focus-within/nav:w-60 group-focus-within/nav:shadow-2xl"
+            : "w-full px-4"
+        }`}
+      >
+        <div>
+          <Link href="/" className="mb-9 flex items-center gap-2.5 whitespace-nowrap px-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 font-serif text-[15px] font-semibold text-[#e8b876]">
+              C
+            </div>
+            <span className="font-serif text-[17px] font-semibold text-[#fbfaf8]">
+              Corvus
+            </span>
+          </Link>
+
+          <nav className="flex flex-col gap-0.5">
+            {items.map((item) => (
+              <NavLink key={item.href} item={item} compact={compact} />
+            ))}
+            <button
+              type="button"
+              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              title={compact ? "Zmień motyw" : undefined}
+              className={`flex h-10 items-center gap-3 whitespace-nowrap rounded-lg text-[13.5px] font-medium text-[#a8b6c7] transition-colors hover:bg-white/5 hover:text-white ${
+                compact ? "px-3" : "px-4"
+              }`}
+            >
+              <span className="shrink-0">
+                {resolvedTheme === "dark" ? (
+                  <IconSun size={17} stroke={1.75} />
+                ) : (
+                  <IconMoon size={17} stroke={1.75} />
+                )}
+              </span>
+              {resolvedTheme === "dark" ? "Jasny motyw" : "Ciemny motyw"}
+            </button>
+          </nav>
+        </div>
+
+        <div className="flex items-center gap-2.5 whitespace-nowrap border-t border-white/10 px-2 pt-3">
+          <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-navy-soft text-[12px] font-semibold text-[#e8b876]">
+            {initials || "?"}
           </div>
-          <span className="font-serif text-[17px] font-semibold text-[#fbfaf8]">
-            Corvus
-          </span>
-        </Link>
-
-        <nav className="flex flex-col gap-0.5">
-          {items.map((item) => (
-            <NavLink key={item.href} item={item} />
-          ))}
-          <button
-            type="button"
-            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-            className="flex h-10 items-center gap-3 rounded-lg px-4 text-[13.5px] font-medium text-[#a8b6c7] transition-colors hover:bg-white/5 hover:text-white"
-          >
-            {resolvedTheme === "dark" ? (
-              <IconSun size={17} stroke={1.75} />
-            ) : (
-              <IconMoon size={17} stroke={1.75} />
-            )}
-            {resolvedTheme === "dark" ? "Jasny motyw" : "Ciemny motyw"}
-          </button>
-        </nav>
-      </div>
-
-      <div className="flex items-center gap-2.5 border-t border-white/10 px-2 pt-3">
-        <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-navy-soft text-[12px] font-semibold text-[#e8b876]">
-          {initials || "?"}
+          <div className="min-w-0 flex-1">
+            <span className="block truncate text-[12.5px] font-medium text-[#fbfaf8]">
+              {email ?? "—"}
+            </span>
+            <span className="block text-[11px] text-[#8a97ab]">
+              {role === "admin" ? "Administrator" : "Promotor"}
+            </span>
+          </div>
+          <LogoutButton className="flex h-7 w-7 items-center justify-center rounded-md text-[#8a97ab] hover:bg-white/5 hover:text-white transition-colors">
+            <IconLogout size={16} stroke={1.75} />
+          </LogoutButton>
         </div>
-        <div className="min-w-0 flex-1">
-          <span className="block truncate text-[12.5px] font-medium text-[#fbfaf8]">
-            {email ?? "—"}
-          </span>
-          <span className="block text-[11px] text-[#8a97ab]">
-            {role === "admin" ? "Administrator" : "Promotor"}
-          </span>
-        </div>
-        <LogoutButton className="flex h-7 w-7 items-center justify-center rounded-md text-[#8a97ab] hover:bg-white/5 hover:text-white transition-colors">
-          <IconLogout size={16} stroke={1.75} />
-        </LogoutButton>
       </div>
     </aside>
   )

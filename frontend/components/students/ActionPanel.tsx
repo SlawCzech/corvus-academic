@@ -2,6 +2,8 @@
 
 import { useState } from "react"
 import { IconChevronDown } from "@tabler/icons-react"
+import ModelSelect, { useAvailableModel } from "@/components/ai/ModelSelect"
+import ReviewToneChoice from "@/components/ai/ReviewToneChoice"
 import ActionResultView from "@/components/students/ActionResultView"
 import { useAction } from "@/hooks/useAction"
 import { useAiDefaults, type AiDefaults } from "@/lib/aiDefaults"
@@ -65,16 +67,6 @@ const STATUS_LABELS: Record<string, string> = {
   failed: "Błąd",
 }
 
-const TONE_OPTIONS: { value: string; label: string }[] = [
-  { value: "auto", label: "Automatyczny" },
-  { value: "enthusiastic", label: "Entuzjastyczny" },
-  { value: "commendable", label: "Pochlebny" },
-  { value: "positive", label: "Pozytywny" },
-  { value: "diplomatic", label: "Dyplomatyczny" },
-  { value: "reserved", label: "Powściągliwy" },
-  { value: "negative", label: "Negatywny" },
-]
-
 const optionInputClass =
   "w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[13.5px] " +
   "text-foreground focus:border-accent focus:outline-none"
@@ -108,6 +100,9 @@ function ActionPanelInner({
   const [model, setModel] = useState(defaults.model)
   const [language, setLanguage] = useState(defaults.language)
   const [reviewTone, setReviewTone] = useState(defaults.reviewTone)
+  // What actually gets sent: a saved model the admin has since withdrawn
+  // falls back to the default rather than getting the action refused.
+  const { effective: effectiveModel, withdrawn } = useAvailableModel(model)
 
   const spec = ACTIONS.find((a) => a.type === selectedType) ?? null
   const shown = action && action.action_type === selectedType ? action : null
@@ -119,7 +114,7 @@ function ActionPanelInner({
     if (!selectedType) return
     setTopicIndex(0)
     await run(selectedType, detail.trim() || undefined, {
-      model: model.trim() || undefined,
+      model: effectiveModel || undefined,
       language,
       reviewTone,
     })
@@ -167,12 +162,22 @@ function ActionPanelInner({
             </label>
           )}
 
+          {showTone && (
+            <div className="mt-3.5">
+              <ReviewToneChoice
+                name="action-review-tone"
+                value={reviewTone}
+                onChange={setReviewTone}
+              />
+            </div>
+          )}
+
           <button
             type="button"
             onClick={() => setOptionsOpen((v) => !v)}
             className="mt-3.5 flex items-center gap-1 text-[12.5px] text-muted hover:text-foreground"
           >
-            Opcje: model, język, ton
+            Opcje: model, język
             <IconChevronDown
               size={13}
               stroke={2.25}
@@ -180,19 +185,23 @@ function ActionPanelInner({
             />
           </button>
 
+          {withdrawn && !optionsOpen && (
+            <p className="mt-1.5 text-[12px] text-major-text">
+              Model {withdrawn} z Twoich ustawień nie jest już dostępny — użyję
+              domyślnego.
+            </p>
+          )}
+
           {optionsOpen && (
             <div className="mt-3 flex gap-3 rounded-lg bg-surface-alt p-3.5">
-              <label className="block flex-1">
-                <span className="mb-1 block text-[11.5px] text-muted">
-                  Model (Ollama, opcjonalnie)
-                </span>
-                <input
+              <div className="flex-1">
+                <ModelSelect
                   value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  placeholder="np. qwen3:30b-a3b"
+                  onChange={setModel}
                   className={optionInputClass}
+                  labelClassName="mb-1 block text-[11.5px] text-muted"
                 />
-              </label>
+              </div>
               <label className="block flex-1">
                 <span className="mb-1 block text-[11.5px] text-muted">Język</span>
                 <select
@@ -204,24 +213,6 @@ function ActionPanelInner({
                   <option value="en">English</option>
                 </select>
               </label>
-              {showTone && (
-                <label className="block flex-1">
-                  <span className="mb-1 block text-[11.5px] text-muted">
-                    Ton recenzji
-                  </span>
-                  <select
-                    value={reviewTone}
-                    onChange={(e) => setReviewTone(e.target.value)}
-                    className={optionInputClass}
-                  >
-                    {TONE_OPTIONS.map((t) => (
-                      <option key={t.value} value={t.value}>
-                        {t.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
             </div>
           )}
 

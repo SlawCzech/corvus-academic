@@ -1,4 +1,5 @@
 import type {
+  AdminModelCatalog,
   AgentAction,
   ActionType,
   GuidelineSetDetail,
@@ -324,4 +325,24 @@ export async function dismissAccessRequest(id: string): Promise<void> {
     method: "DELETE",
   })
   if (!res.ok) await fail(res, "Nie udało się odrzucić prośby")
+}
+
+// ---------- local models (admin) ----------
+
+export function setModelEnabled(name: string, enabled: boolean): Promise<AdminModelCatalog> {
+  return sendJson(
+    "/api/admin/models",
+    "PATCH",
+    { name, enabled },
+    enabled ? "Nie udało się udostępnić modelu" : "Nie udało się wyłączyć modelu",
+  )
+}
+
+export function setDefaultModel(name: string): Promise<AdminModelCatalog> {
+  return sendJson(
+    "/api/admin/models/default",
+    "PUT",
+    { name },
+    "Nie udało się ustawić modelu domyślnego",
+  )
 }

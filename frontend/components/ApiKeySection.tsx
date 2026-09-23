@@ -3,14 +3,10 @@
 import { useState } from "react"
 import useSWR from "swr"
 import { fetcher } from "@/lib/api.client"
+import type { ApiKeyStatus } from "@/lib/api.types"
 
 type Provider = "claude" | "openai"
 type SaveStatus = "idle" | "saving" | "saved" | "error"
-
-interface ApiKeyStatus {
-  configured: boolean
-  provider: string | null
-}
 
 const PROVIDER_LABELS: Record<string, string> = {
   claude: "Claude (Anthropic)",

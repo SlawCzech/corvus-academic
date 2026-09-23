@@ -1,17 +1,9 @@
 "use client"
 
 import { useState } from "react"
+import ModelSelect, { useAvailableModel } from "@/components/ai/ModelSelect"
+import ReviewToneChoice from "@/components/ai/ReviewToneChoice"
 import { useAiDefaults, writeAiDefaults, type AiDefaults } from "@/lib/aiDefaults"
-
-const TONE_OPTIONS: { value: string; label: string }[] = [
-  { value: "auto", label: "Automatyczny" },
-  { value: "enthusiastic", label: "Entuzjastyczny" },
-  { value: "commendable", label: "Pochlebny" },
-  { value: "positive", label: "Pozytywny" },
-  { value: "diplomatic", label: "Dyplomatyczny" },
-  { value: "reserved", label: "Powściągliwy" },
-  { value: "negative", label: "Negatywny" },
-]
 
 const inputClass =
   "w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[14px] " +
@@ -33,8 +25,12 @@ function ProfileAiDefaultsForm({ saved }: { saved: AiDefaults }) {
   const [draft, setDraft] = useState<AiDefaults>(saved)
   const [justSaved, setJustSaved] = useState(false)
 
+  const { effective: effectiveModel } = useAvailableModel(draft.model)
+
   function save(): void {
-    writeAiDefaults(draft)
+    // Saving drops a withdrawn model instead of keeping a preference that
+    // can no longer be honoured.
+    writeAiDefaults({ ...draft, model: effectiveModel })
     setJustSaved(true)
     setTimeout(() => setJustSaved(false), 2000)
   }
@@ -48,17 +44,12 @@ function ProfileAiDefaultsForm({ saved }: { saved: AiDefaults }) {
       </p>
 
       <div className="flex flex-col gap-3">
-        <label className="block">
-          <span className="mb-1 block text-[12px] text-muted">
-            Model (opcjonalnie — tag Ollama, np. qwen3:30b-a3b)
-          </span>
-          <input
-            value={draft.model}
-            onChange={(e) => setDraft({ ...draft, model: e.target.value })}
-            placeholder="zostaw puste dla domyślnego"
-            className={inputClass}
-          />
-        </label>
+        <ModelSelect
+          value={draft.model}
+          onChange={(model) => setDraft({ ...draft, model })}
+          className={inputClass}
+          labelClassName="mb-1 block text-[12px] text-muted"
+        />
         <label className="block">
           <span className="mb-1 block text-[12px] text-muted">Język</span>
           <select
@@ -70,22 +61,16 @@ function ProfileAiDefaultsForm({ saved }: { saved: AiDefaults }) {
             <option value="en">English</option>
           </select>
         </label>
-        <label className="block">
-          <span className="mb-1 block text-[12px] text-muted">
-            Ton recenzji (dotyczy tylko akcji &bdquo;Napisz recenzję&rdquo;)
-          </span>
-          <select
+        <div>
+          <ReviewToneChoice
+            name="profile-review-tone"
             value={draft.reviewTone}
-            onChange={(e) => setDraft({ ...draft, reviewTone: e.target.value })}
-            className={inputClass}
-          >
-            {TONE_OPTIONS.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </label>
+            onChange={(reviewTone) => setDraft({ ...draft, reviewTone })}
+          />
+          <p className="mt-1.5 text-[11.5px] text-muted">
+            Dotyczy tylko akcji &bdquo;Napisz recenzję&rdquo;.
+          </p>
+        </div>
       </div>
 
       <div className="mt-4 flex items-center gap-3">
