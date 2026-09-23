@@ -1,170 +1,174 @@
-# Master's Thesis Requirements — Article Format
-# Wymogi formalne prac magisterskich — forma artykułu naukowego
+# Wymogi formalne prac magisterskich w formie artykułu naukowego — UE Katowice
 
-> Source: Załącznik Nr 2 do zarządzenia Nr 117/22
-> Applies to: theoretical and empirical master's theses (article format)
-> Does NOT apply to: project-based master's theses
-> Seeded as version 1 of the UE Katowice set in the Corvus guideline catalog.
-
----
-
-## 1. Required Structure — Article Format
-
-The thesis MUST contain ALL of the following elements (in this order):
-
-### 1.1 Title Page
-### 1.2 Independence Statement
-### 1.3 Table of Contents
-
-### 1.4 Abstract (Abstrakt) — CRITICAL ELEMENT
-Must contain ALL of the following:
-- [ ] Research objective
-- [ ] Research methods applied
-- [ ] Results
-- [ ] Conclusions
-- [ ] **Maximum length: 150 words**
-
-### 1.5 Keywords (Słowa kluczowe) — CRITICAL ELEMENT
-- [ ] Minimum 3 keywords
-- [ ] Maximum 5 keywords
-
-### 1.6 Introduction (Wstęp) — CRITICAL ELEMENT
-Must contain ALL of the following:
-- [ ] Research problem definition (theoretical and/or empirical)
-- [ ] Justification of significance and topicality
-- [ ] Research objectives
-- [ ] Research question(s) AND/OR research hypothesis/hypotheses
-- [ ] Scope definition: subject, object, time, geographic
-- [ ] Description of research methods, techniques, and tools used
-- [ ] Description of thesis structure
-- Note: general literature characterization belongs in Literature
-  Review section, NOT in introduction
-
-### 1.7 Literature Review (Przegląd literatury) — CRITICAL ELEMENT
-- Dedicated section, separate from introduction
-- Must engage with literature relevant to the research problem
-- Must include academic discussion of existing research
-
-### 1.8 Research Methodology (Metodyka badań) — CRITICAL ELEMENT
-Must contain ALL of the following:
-- [ ] Subject scope (podmiotowy)
-- [ ] Object scope (przedmiotowy)
-- [ ] Time scope (czasowy)
-- [ ] Geographic scope (przestrzenny)
-- [ ] Research methods used
-- [ ] Research tools used
-- [ ] Research techniques used
-
-### 1.9 Research Results (Wyniki badań) — CRITICAL ELEMENT
-- Presentation of research findings
-
-### 1.10 Discussion (Dyskusja) — CRITICAL ELEMENT
-Must contain:
-- [ ] Polemic with existing research results in the field
-- [ ] Author's own conclusions compared with existing results
-
-### 1.11 Conclusions (Wnioski) — CRITICAL ELEMENT
-Must contain ALL of the following:
-- [ ] Summary of research results
-- [ ] Main theoretical conclusions
-- [ ] Main methodological conclusions
-- [ ] Main empirical conclusions (if thesis contains research results)
-- [ ] Reference to hypothesis/hypotheses (confirmation or rejection)
-- [ ] Research limitations
-- [ ] Recommendations and guidelines for economic practice (if applicable)
-- [ ] Directions for further research (if justified)
-
-### 1.12 Bibliography (Spis literatury)
-- APA style, alphabetical order, numbered
-
-### 1.13 Attachments (empirical theses — required)
-- Collected empirical data AND/OR
-- Extended methodology description AND/OR
-- Documentation of the research process
-- Must be prepared independently by the student
+> Źródło: Zarządzenie Nr 117/22, załącznik Nr 2 — „Wymogi formalne dla prac
+> dyplomowych na studiach stacjonarnych i niestacjonarnych drugiego stopnia”.
+> Dotyczy: prac magisterskich o charakterze teoretycznym lub empirycznym,
+> które przyjmują formę artykułu naukowego (§ 3).
+> Nie dotyczy: prac projektowych (§ 4) — mają inną strukturę i objętość
+> 110 000 – 170 000 znaków.
+> Sekcje 1–3 streszczają zarządzenie (w nawiasach paragraf). Sekcja 4 to
+> interpretacja Corvusa — zarządzenie jej nie zawiera.
 
 ---
 
-## 2. Formal and Technical Requirements
+## 1. Wymagane elementy pracy (§ 3)
 
-### 2.1 Length — Article Format
-- **Required:** 55,000 – 65,000 characters including spaces
-- Lists and attachments NOT counted toward this limit
-- Research tools NOT counted
+Praca MUSI zawierać wszystkie poniższe elementy:
 
-### 2.2 Bibliography Requirements
-- **Minimum:** 40 bibliographic sources
-- **Minimum:** 8 foreign-language sources
-- Netography (websites) does NOT count toward the 40-source minimum
-- Literature must be current and appropriate for the research problem
+### 1.1 Strona tytułowa
+### 1.2 Oświadczenie o samodzielności przygotowania pracy
+### 1.3 Spis treści
 
-### 2.3 Citation Style
-- **Required:** APA style throughout
-- All citations must enable identification of the source
-- Bibliography: alphabetical order, numbered
+### 1.4 Abstrakt — ELEMENT KRYTYCZNY
+- [ ] cel pracy
+- [ ] zastosowane metody badawcze
+- [ ] wyniki
+- [ ] konkluzje
+- [ ] **maksymalnie 150 słów**
 
-### 2.4 Language Quality
-- Linguistically correct: spelling, grammar, style, punctuation
-- Serious language or formal errors may result in supervisor
-  refusing to verify the thesis
+### 1.5 Słowa kluczowe — ELEMENT KRYTYCZNY
+- [ ] od 3 do 5 słów kluczowych
+
+### 1.6 Wstęp — ELEMENT KRYTYCZNY
+Musi zawierać wszystkie poniższe elementy:
+- [ ] określenie problemu badawczego (teoretycznego i/lub empirycznego)
+- [ ] uzasadnienie jego znaczenia i aktualności
+- [ ] cele pracy
+- [ ] pytanie/pytania badawcze i/lub hipotezę/hipotezy badawcze
+- [ ] zakres pracy: podmiotowy, przedmiotowy, czasowy, przestrzenny
+- [ ] opis zastosowanych metod, technik i narzędzi badawczych
+- [ ] opis struktury pracy
+- charakterystyka literatury należy do przeglądu literatury, nie do wstępu
+
+### 1.7 Przegląd literatury — ELEMENT KRYTYCZNY
+- literatura przedmiotu dotycząca problematyki artykułu
+
+### 1.8 Metodyka badań — ELEMENT KRYTYCZNY
+- [ ] zakres podmiotowy
+- [ ] zakres przedmiotowy
+- [ ] zakres czasowy
+- [ ] zakres przestrzenny
+- [ ] zastosowane metody, narzędzia i techniki badawcze
+
+### 1.9 Wyniki badań — ELEMENT KRYTYCZNY
+
+### 1.10 Dyskusja — ELEMENT KRYTYCZNY
+- [ ] polemika z dotychczasowymi wynikami badań w podjętej problematyce
+- [ ] własne wnioski zestawione z tymi wynikami
+
+### 1.11 Wnioski — ELEMENT KRYTYCZNY
+- [ ] podsumowanie wyników badań
+- [ ] główne wnioski teoretyczne, metodyczne i empiryczne (empiryczne —
+      jeśli praca zawiera wyniki badań)
+- [ ] odniesienie do hipotezy/hipotez badawczych
+- [ ] ograniczenia badań
+- [ ] rekomendacje i zalecenia dla praktyki gospodarczej (jeśli dotyczy)
+- [ ] kierunki dalszych badań (jeśli zasadne)
+
+### 1.12 Spis literatury
+- bibliografia i netografia, zgodnie z załącznikiem Nr 4 do zarządzenia
+  (styl APA)
+- uporządkowany alfabetycznie i numerowany (§ 5)
+
+### 1.13 Załączniki — wymagane w pracy empirycznej
+- zgromadzone dane empiryczne i/lub szerszy opis metodyki i innych elementów
+  dokumentujących proces badawczy, wskazanych przez promotora
+- przygotowane samodzielnie przez studenta
+- w tym samym języku co praca
+
+Nie ma wymogu opublikowania artykułu przed obroną.
 
 ---
 
-## 3. Academic Competencies to Assess
+## 2. Wymogi formalne i techniczne (§ 5)
 
-The thesis must confirm the student's ability to:
+### 2.1 Objętość
+- **Sugerowana:** 55 000 – 65 000 znaków ze spacjami
+- do limitu nie wlicza się spisów i załączników, w tym narzędzi badawczych
+  (np. kwestionariuszy ankiet)
+- zarządzenie mówi o objętości „sugerowanej” — to nie jest twardy wymóg
 
-- Independently select and critically evaluate source materials
-- Analyze and synthesize theoretical achievements in the discipline
-- Apply research methodology appropriate to the problem
-- Conduct logical argumentation and polemic with existing literature
-- Draw and formulate original conclusions from evidence
-- Use clear and precise academic language at graduate level
+### 2.2 Literatura
+- **co najmniej 40 pozycji literaturowych**
+- **w tym co najmniej 8 pozycji literatury obcojęzycznej**
+- netografii nie wlicza się do tej liczby
+- literatura obcojęzyczna to pozycje w języku innym niż język pracy
+- literatura musi być aktualna i dobrana tak, by umożliwiała rozwiązanie
+  problemu badawczego
+
+### 2.3 Przypisy
+- styl APA (załącznik Nr 4 do zarządzenia)
+- przypisy muszą umożliwiać identyfikację wykorzystanych źródeł (§ 6)
+
+### 2.4 Poprawność językowa
+- poprawność językowa, ortograficzna, gramatyczna, stylistyczna
+  i interpunkcyjna
+- rażące błędy językowe i formalne mogą być podstawą odmowy weryfikacji
+  pracy przez promotora
+
+### 2.5 Układ
+- układ pracy odpowiada elementom z sekcji 1 (§ 3)
 
 ---
 
-## 4. Severity Classification for Corvus Analysis
+## 3. Umiejętności, które praca ma potwierdzać (§ 2)
 
-> **Corvus interpretation, not part of the regulation.** The classification
-> below is how Corvus grades what it finds; the university's regulation does not
-> define CRITICAL, MAJOR or MINOR.
+- samodzielny dobór materiałów źródłowych
+- analiza i synteza dorobku teoretycznego dyscypliny
+- diagnozowanie, formułowanie i ocena problemów w gospodarce lub badanym
+  podmiocie
+- identyfikacja i analiza zjawisk ekonomicznych
+- stosowanie warsztatu badawczego i metod pracy naukowej
+- wykorzystanie wiedzy w praktyce i formułowanie rekomendacji
+- logiczny tok wywodu
+- wyciąganie i formułowanie wniosków
+- jasny i precyzyjny język właściwy dla kierunku
 
-### CRITICAL — blocks admission to defense
-- Missing required structure element (abstract, keywords, introduction,
-  literature review, methodology, results, discussion, conclusions,
-  bibliography, title page, independence statement)
-- Abstract exceeds 150 words OR missing any required element
-  (objective, methods, results, conclusions)
-- Keywords fewer than 3 or more than 5
-- Introduction missing: research problem, objectives, or
-  research questions/hypotheses
-- Conclusions missing: response to hypotheses, research limitations,
-  or summary of results
-- Discussion absent or does not engage with existing literature
-- Methodology missing scope definitions or method descriptions
-- Fewer than 40 bibliographic sources (excluding netography)
-- Fewer than 8 foreign-language sources
-- No in-text citations present (plagiarism risk)
-- Length significantly outside 55,000–65,000 character range
-- APA citation style not used
-- Empirical thesis missing required attachments with data
+---
 
-### MAJOR — significant deficiency requiring correction
-- Abstract present but incomplete (missing one required element)
-- Introduction incomplete (missing one or more required elements)
-- Conclusions incomplete (missing one or more required elements)
-- Literature review not engaging with relevant academic discourse
-- Discussion not sufficiently polemical with existing research
-- Bibliography borderline: 40–45 sources of questionable quality
-- Foreign sources borderline: 8–10 of questionable relevance
-- Significant language errors (grammar, spelling, style)
-- Research scope not fully defined in methodology section
-- Empirical thesis attachments incomplete or not independently prepared
+## 4. Klasyfikacja wagi uchybień
 
-### MINOR — improvement recommended
-- Minor language or style issues
-- Bibliography formatting inconsistencies (APA minor deviations)
-- Section length proportions suboptimal but acceptable
-- Heavy use of netography (not critical, but noted)
-- Directions for further research missing when content justifies it
-- Recommendations for practice missing when applicable
+> **Interpretacja Corvusa, nie zapis zarządzenia.** Zarządzenie nie definiuje
+> kategorii CRITICAL, MAJOR i MINOR — tak Corvus klasyfikuje to, co znajdzie.
+> Nazwy kategorii zostają po angielsku, bo tak zapisuje je system.
+
+### CRITICAL — blokuje dopuszczenie do obrony
+- brak wymaganego elementu: abstraktu, słów kluczowych, wstępu, przeglądu
+  literatury, metodyki, wyników, dyskusji, wniosków, spisu literatury, strony
+  tytułowej albo oświadczenia
+- abstrakt dłuższy niż 150 słów albo bez celu, metod, wyników lub konkluzji
+- mniej niż 3 albo więcej niż 5 słów kluczowych
+- wstęp bez problemu badawczego, celów albo pytań/hipotez badawczych
+- wnioski bez odniesienia do hipotez, bez ograniczeń badań albo bez
+  podsumowania wyników
+- dyskusja nie odnosi się do dotychczasowych wyników badań
+- metodyka bez określenia zakresów albo opisu metod
+- mniej niż 40 pozycji literaturowych (bez netografii)
+- mniej niż 8 pozycji literatury obcojęzycznej
+- brak przypisów umożliwiających identyfikację źródeł (naruszenie praw
+  autorskich wyklucza dopuszczenie do obrony — § 6)
+- przypisy niezgodne ze stylem APA
+- praca empiryczna bez załączników z danymi
+
+### MAJOR — istotne uchybienie do poprawy
+- abstrakt niekompletny (brak jednego wymaganego elementu)
+- wstęp niekompletny
+- wnioski niekompletne
+- przegląd literatury nie odnosi się do istotnego dorobku
+- dyskusja bez wyraźnej polemiki z dotychczasowymi badaniami
+- literatura na granicy minimum (40–45 pozycji) wątpliwej jakości
+- literatura obcojęzyczna na granicy minimum (8–10 pozycji) o wątpliwym
+  związku z tematem
+- objętość wyraźnie poza sugerowanym zakresem 55 000 – 65 000 znaków
+- poważne błędy językowe
+- niepełne określenie zakresu badań w metodyce
+- załączniki pracy empirycznej niekompletne albo nieprzygotowane samodzielnie
+
+### MINOR — zalecana poprawa
+- drobne błędy językowe lub stylistyczne
+- niespójności w formatowaniu spisu literatury (drobne odstępstwa od APA)
+- objętość nieznacznie poza sugerowanym zakresem
+- nieproporcjonalna, ale akceptowalna długość części pracy
+- duży udział netografii
+- brak kierunków dalszych badań, gdy treść to uzasadnia
+- brak rekomendacji dla praktyki, gdy dotyczy

@@ -43,8 +43,8 @@ migrate:  ## Run database migrations (all app lineages: identity, mentoring, gui
 ingest-guidelines:  ## Embed the university requirements into the vector store
 	$(COMPOSE) run --rm agent python scripts/ingest_guidelines.py
 
-seed-guidelines:  ## Load UE Katowice's requirements as version 1 of the catalog (idempotent)
-	$(COMPOSE) run --rm app python scripts/seed_guidelines.py
+seed-guidelines:  ## Fill the guideline catalog (UPDATE=1 publishes changed seed data as a new version)
+	$(COMPOSE) run --rm app python scripts/seed_guidelines.py $(if $(UPDATE),--update)
 
 purge-drafts:  ## Run the thesis-version retention sweep once (NOW=<iso> to shift the clock)
 	$(COMPOSE) run --rm app python scripts/purge_drafts.py $(if $(NOW),--now $(NOW))
