@@ -23,9 +23,9 @@ from src.domain.action import ActionType, TaskStatus  # noqa: E402
 from src.infrastructure.database import get_db_session  # noqa: E402
 from src.infrastructure.models import AgentTaskModel, Base  # noqa: E402
 from src.infrastructure.repositories import AgentTaskRepository  # noqa: E402
+from src.infrastructure.settings import settings  # noqa: E402
 
 _SQLITE_URL = "sqlite+aiosqlite:///:memory:"
-_JWT_SECRET = "test-secret-key-that-is-long-enough-32ch"
 
 ADMIN_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 PROMOTOR_ID = uuid.UUID("00000000-0000-0000-0000-000000000002")
@@ -40,7 +40,9 @@ def _make_token(user_id: uuid.UUID, role: str) -> str:
         "type": "access",
         "exp": int(datetime.now(UTC).timestamp()) + 3600,
     }
-    return jwt.encode(payload, _JWT_SECRET, algorithm="HS256")
+    # Signed with whatever secret the app verifies with — CI sets its own
+    # JWT_SECRET, and a hard-coded one here only matched the local default.
+    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
 def _auth(user_id: uuid.UUID, role: str) -> dict[str, str]:

@@ -1,7 +1,6 @@
 """Integration tests for the dashboard summary endpoint."""
 
 from collections.abc import Generator
-from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -27,7 +26,7 @@ def agent() -> Generator[FakeAgentClient, None, None]:
 
 
 def _new_student(
-    client: TestClient, headers: dict[str, str], **overrides: Any
+    client: TestClient, headers: dict[str, str], **overrides: str
 ) -> str:
     body = {
         "full_name": "Jan Kowalski",
