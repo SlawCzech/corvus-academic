@@ -40,7 +40,7 @@ thesis is discarded after extraction, and nothing is ever deleted.
 | 4 | `feat(guidelines):` admin-managed catalog — domain, schema, lineage, API, seed of the current files as version 1 | ✅ |
 | 5 | `feat(mentoring):` assess against the student's chosen guideline set | ✅ |
 | 6 | `feat(frontend):` download, accept and delete thesis versions | ✅ |
-| 7 | `feat(frontend):` guideline catalog for admins and promoters | ☐ |
+| 7 | `feat(frontend):` guideline catalog for admins and promoters | ✅ |
 | 8 | `docs:` CLAUDE.md, architecture, `.env.example` | ☐ |
 
 ## Out of scope — next steps

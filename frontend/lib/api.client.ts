@@ -1,9 +1,13 @@
 import type {
   AgentAction,
   ActionType,
+  GuidelineSetDetail,
+  GuidelineVersion,
   MeetingNote,
   Student,
   ThesisDraft,
+  Thresholds,
+  University,
 } from "./api.types"
 
 /**
@@ -86,7 +90,7 @@ export async function createStudent(student: NewStudent): Promise<Student> {
 
 export async function updateStudent(
   studentId: string,
-  changes: { current_topic?: string; status?: string },
+  changes: { current_topic?: string; status?: string; guideline_set_id?: string | null },
 ): Promise<Student> {
   const res = await request(`/api/students/${studentId}`, {
     method: "PATCH",
@@ -223,6 +227,94 @@ export async function acceptAction(
   )
   if (!res.ok) return fail(res, "Nie udało się zaakceptować wyniku")
   return res.json() as Promise<AgentAction>
+}
+
+// ---------- guideline catalog ----------
+
+async function sendJson<T>(url: string, method: string, body: unknown, failure: string): Promise<T> {
+  const res = await request(url, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) return fail(res, failure)
+  return res.json() as Promise<T>
+}
+
+export function guidelineSourceUrl(versionId: string): string {
+  return `/api/guidelines/versions/${versionId}/source`
+}
+
+export function createUniversity(name: string, shortName: string): Promise<University> {
+  return sendJson(
+    "/api/admin/guidelines/universities",
+    "POST",
+    { name, short_name: shortName },
+    "Nie udało się dodać uczelni",
+  )
+}
+
+export function createGuidelineSet(
+  universityId: string,
+  thesisType: string,
+  name: string,
+): Promise<GuidelineSetDetail> {
+  return sendJson(
+    "/api/admin/guidelines/sets",
+    "POST",
+    { university_id: universityId, thesis_type: thesisType, name },
+    "Nie udało się dodać zestawu",
+  )
+}
+
+/** Open the next version as a draft; it starts from the version in force. */
+export function createGuidelineDraft(setId: string): Promise<GuidelineVersion> {
+  return sendJson(
+    `/api/admin/guidelines/sets/${setId}/versions`,
+    "POST",
+    {},
+    "Nie udało się utworzyć szkicu",
+  )
+}
+
+export interface GuidelineDraftChanges {
+  rubric_md?: string
+  thresholds?: Thresholds
+  effective_from?: string | null
+}
+
+export function updateGuidelineDraft(
+  versionId: string,
+  changes: GuidelineDraftChanges,
+): Promise<GuidelineVersion> {
+  return sendJson(
+    `/api/admin/guidelines/versions/${versionId}`,
+    "PATCH",
+    changes,
+    "Nie udało się zapisać szkicu",
+  )
+}
+
+export async function uploadGuidelineSource(
+  versionId: string,
+  file: File,
+): Promise<GuidelineVersion> {
+  const form = new FormData()
+  form.append("file", file)
+  const res = await request(`/api/admin/guidelines/versions/${versionId}/source`, {
+    method: "PUT",
+    body: form,
+  })
+  if (!res.ok) return fail(res, "Nie udało się wczytać pliku")
+  return res.json() as Promise<GuidelineVersion>
+}
+
+export async function publishGuidelineVersion(versionId: string): Promise<GuidelineVersion> {
+  const res = await request(`/api/admin/guidelines/versions/${versionId}/publish`, {
+    method: "POST",
+  })
+  if (!res.ok) return fail(res, "Nie udało się opublikować wersji")
+  return res.json() as Promise<GuidelineVersion>
 }
 
 // ---------- access requests ----------

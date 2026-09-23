@@ -81,7 +81,7 @@ describe("FileUpload", () => {
     )
   })
 
-  it("rejects a file over 50 MB and shows an error", async () => {
+  it("rejects a file over 25 MB and shows an error", async () => {
     render(<FileUpload onFileSelect={onFileSelect} />)
     const bigFile = new File(["x"], "big.pdf", { type: "application/pdf" })
     await act(async () => {
@@ -93,7 +93,7 @@ describe("FileUpload", () => {
     })
     expect(onFileSelect).not.toHaveBeenCalled()
     expect(screen.getByTestId("rejection-error")).toHaveTextContent(
-      /50 mb limit/i,
+      /25 mb limit/i,
     )
   })
 

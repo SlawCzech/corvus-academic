@@ -3,7 +3,9 @@
 import { useCallback, useState } from "react"
 import { useDropzone, type FileRejection } from "react-dropzone"
 
-const MAX_SIZE_BYTES = 50 * 1024 * 1024
+// Matches `app`'s MAX_UPLOAD_BYTES, so an oversized file is refused here rather
+// than after the whole upload.
+const MAX_SIZE_BYTES = 25 * 1024 * 1024
 
 const ACCEPTED_TYPES = {
   "application/pdf": [".pdf"],
@@ -33,7 +35,7 @@ export default function FileUpload({ onFileSelect, disabled }: FileUploadProps) 
         const [first] = rejections
         const code = first.errors[0]?.code ?? "unknown"
         if (code === "file-too-large") {
-          setRejectionError("File exceeds the 50 MB limit.")
+          setRejectionError("File exceeds the 25 MB limit.")
         } else if (code === "file-invalid-type") {
           setRejectionError("Only PDF and DOCX files are accepted.")
         } else {

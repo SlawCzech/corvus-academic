@@ -32,6 +32,8 @@ export interface Student {
   updated_at: string
   /** When supervision ended — the start of the thesis files' retention clock. */
   closed_at: string | null
+  /** The guideline set the thesis is judged against; null = the agent's defaults. */
+  guideline_set_id: string | null
 }
 
 export interface MeetingNote {
@@ -165,4 +167,68 @@ export interface AgentAction {
   accepted_at: string | null
   created_at: string
   updated_at: string
+}
+
+// ---------- guideline catalog ----------
+
+export type GuidelineVersionStatus = "draft" | "published" | "superseded"
+
+export interface University {
+  id: string
+  name: string
+  short_name: string
+}
+
+export interface Thresholds {
+  min_sources: number | null
+  min_foreign_sources: number | null
+  min_body_chars: number | null
+  max_body_chars: number | null
+}
+
+export interface GuidelineVersionSummary {
+  id: string
+  version_no: number
+  status: GuidelineVersionStatus
+  effective_from: string | null
+  published_at: string | null
+  created_at: string
+}
+
+export interface GuidelineSource {
+  filename: string
+  sha256: string
+  size: number
+  downloadable: boolean
+}
+
+export interface GuidelineVersion extends GuidelineVersionSummary {
+  set_id: string
+  set_name: string
+  thesis_type: ThesisType
+  university: University
+  rubric_md: string
+  thresholds: Thresholds
+  source: GuidelineSource | null
+  created_by: string
+  published_by: string | null
+}
+
+export interface GuidelineSet {
+  id: string
+  name: string
+  thesis_type: ThesisType
+  university: University
+  /** The version in force; null while a set has only a draft. */
+  current: GuidelineVersionSummary | null
+  has_draft: boolean
+}
+
+export interface GuidelineSetDetail {
+  id: string
+  name: string
+  thesis_type: ThesisType
+  university: University
+  /** Newest first. */
+  versions: GuidelineVersionSummary[]
 }

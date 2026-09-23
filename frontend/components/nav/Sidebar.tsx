@@ -11,6 +11,8 @@ import {
   IconSun,
   IconMoon,
   IconLogout,
+  IconBook,
+  IconBooks,
 } from "@tabler/icons-react"
 import LogoutButton from "@/components/LogoutButton"
 
@@ -57,6 +59,11 @@ export default function Sidebar({ email, role }: SidebarProps) {
       icon: <IconLayoutDashboard size={17} stroke={1.75} />,
     },
     {
+      href: "/guidelines",
+      label: "Wytyczne",
+      icon: <IconBook size={17} stroke={1.75} />,
+    },
+    {
       href: "/profile",
       label: "Profil",
       icon: <IconUserCircle size={17} stroke={1.75} />,
@@ -69,6 +76,11 @@ export default function Sidebar({ email, role }: SidebarProps) {
         href: "/admin/users",
         label: "Użytkownicy",
         icon: <IconUsers size={17} stroke={1.75} />,
+      },
+      {
+        href: "/admin/guidelines",
+        label: "Katalog wytycznych",
+        icon: <IconBooks size={17} stroke={1.75} />,
       },
       {
         href: "/admin/login-events",

@@ -6,6 +6,7 @@ import FileUpload from "@/components/FileUpload"
 import ActionPanel from "@/components/students/ActionPanel"
 import ActionResultView from "@/components/students/ActionResultView"
 import DraftList from "@/components/students/DraftList"
+import GuidelinePicker from "@/components/students/GuidelinePicker"
 import StudentSubNav, { type Section } from "@/components/students/StudentSubNav"
 import { createMeetingNote, fetcher, uploadDraft } from "@/lib/api.client"
 import type { AgentAction, MeetingNote, Student, ThesisDraft } from "@/lib/api.types"
@@ -40,7 +41,10 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
   const draftsKey = `${studentKey}/drafts`
   const actionsKey = `${studentKey}/actions`
 
-  const { data: student, error } = useSWR<Student>(studentKey, fetcher)
+  const { data: student, error, mutate: mutateStudent } = useSWR<Student>(
+    studentKey,
+    fetcher,
+  )
   const { data: notes, mutate: mutateNotes } = useSWR<MeetingNote[]>(
     notesKey,
     fetcher,
@@ -174,6 +178,11 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
                   </div>
                 </div>
               </div>
+
+              <GuidelinePicker
+                student={student}
+                onChange={(next) => void mutateStudent(next, { revalidate: false })}
+              />
             </div>
           </div>
         )}
