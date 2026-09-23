@@ -31,7 +31,7 @@ export default function Nav({ isLoggedIn }: NavProps) {
       <div className="flex items-center gap-3">
         {isLoggedIn ? (
           <Link
-            href="/students"
+            href="/dashboard"
             className="flex h-10 items-center rounded-lg bg-accent px-[18px] text-[14px] font-semibold text-white hover:bg-accent-hover transition-colors"
           >
             Otwórz Dashboard

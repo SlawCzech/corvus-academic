@@ -9,21 +9,13 @@ import {
   IconMessage2,
   IconHistory,
 } from "@tabler/icons-react"
+import {
+  STUDENT_STATUS_LABELS as STATUS_LABELS,
+  STUDENT_STATUS_STYLES as STATUS_STYLES,
+} from "@/components/students/format"
 import type { Student } from "@/lib/api.types"
 
 export type Section = "overview" | "actions" | "drafts" | "notes" | "history"
-
-const STATUS_LABELS: Record<string, string> = {
-  active: "Aktywny",
-  graduated: "Obroniony",
-  archived: "Archiwalny",
-}
-
-const STATUS_STYLES: Record<string, string> = {
-  active: "bg-success-bg text-success-text",
-  graduated: "bg-info-bg text-info-text",
-  archived: "bg-surface-alt text-muted-strong",
-}
 
 const SECTIONS: { key: Section; label: string; icon: typeof IconEye }[] = [
   { key: "overview", label: "Przegląd", icon: IconEye },

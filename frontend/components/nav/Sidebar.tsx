@@ -13,6 +13,7 @@ import {
   IconLogout,
   IconBook,
   IconBooks,
+  IconSchool,
 } from "@tabler/icons-react"
 import LogoutButton from "@/components/LogoutButton"
 
@@ -29,7 +30,7 @@ interface NavItem {
 
 function useActive(href: string): boolean {
   const pathname = usePathname()
-  return href === "/students" ? pathname.startsWith("/students") : pathname.startsWith(href)
+  return pathname === href || pathname.startsWith(`${href}/`)
 }
 
 function NavLink({ item }: { item: NavItem }) {
@@ -54,9 +55,14 @@ export default function Sidebar({ email, role }: SidebarProps) {
 
   const items: NavItem[] = [
     {
-      href: "/students",
+      href: "/dashboard",
       label: "Dashboard",
       icon: <IconLayoutDashboard size={17} stroke={1.75} />,
+    },
+    {
+      href: "/students",
+      label: "Studenci",
+      icon: <IconSchool size={17} stroke={1.75} />,
     },
     {
       href: "/guidelines",

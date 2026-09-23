@@ -53,7 +53,7 @@ describe("LoginForm", () => {
     await user.type(screen.getByTestId("email-input"), "admin@example.com")
     await user.type(screen.getByTestId("password-input"), "password123")
     await user.click(screen.getByTestId("submit-button"))
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/students"))
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/dashboard"))
     expect(vi.mocked(fetch)).toHaveBeenCalledWith(
       "/api/auth/login",
       expect.objectContaining({ method: "POST" }),
