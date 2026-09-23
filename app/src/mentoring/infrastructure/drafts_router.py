@@ -1,7 +1,6 @@
 """Thesis-draft upload and listing endpoints."""
 
 import uuid
-from urllib.parse import quote
 
 import structlog
 from fastapi import APIRouter, HTTPException, Response, UploadFile, status
@@ -13,7 +12,7 @@ from src.mentoring.application.exceptions import (
 from src.mentoring.infrastructure.dependencies import CallerDep, DraftServiceDep
 from src.mentoring.infrastructure.errors import not_found
 from src.mentoring.infrastructure.schemas import DraftResponse, draft_response
-from src.shared.settings import settings
+from src.shared.downloads import attachment_response, read_upload
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -36,14 +35,7 @@ async def upload_draft(
     The PDF/DOCX is parsed in-process — the payoff of folding the old parser
     service into `app` — and stored, file and text, as version N+1.
     """
-    # Read one byte past the limit: enough to know it was exceeded without
-    # pulling an arbitrarily large upload into memory.
-    data = await file.read(settings.max_upload_bytes + 1)
-    if len(data) > settings.max_upload_bytes:
-        raise HTTPException(
-            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-            detail=f"File larger than {settings.max_upload_bytes // (1024 * 1024)} MB",
-        )
+    data = await read_upload(file)
     try:
         draft = await svc.upload(
             caller,
@@ -139,22 +131,9 @@ async def download_draft(
     caller: CallerDep,
     svc: DraftServiceDep,
 ) -> Response:
-    """Return the original upload of one version, as an attachment.
-
-    Always an attachment, never rendered inline: the file came from outside,
-    and the browser should save it rather than open it in our origin.
-    """
+    """Return the original upload of one version, as an attachment."""
     try:
         stored, data = await svc.download(caller, student_id, draft_id)
     except (StudentNotFoundError, DraftNotFoundError) as exc:
         raise not_found(exc) from exc
-    return Response(
-        content=data,
-        media_type=stored.content_type,
-        headers={
-            "Content-Disposition": (
-                f"attachment; filename*=UTF-8''{quote(stored.filename)}"
-            ),
-            "X-Content-Type-Options": "nosniff",
-        },
-    )
+    return attachment_response(stored, data)

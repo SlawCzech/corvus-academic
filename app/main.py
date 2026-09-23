@@ -7,7 +7,8 @@
   - gateway   — reverse proxy (gone: `app` calls `agent` explicitly now)
 
 plus `mentoring`, the bounded context the pivot is built on: students,
-meeting notes, thesis versions and the AI action log.
+meeting notes, thesis versions and the AI action log; and `guidelines`, the
+admin-managed catalog of university requirements mentoring judges against.
 
 `agent` remains a separate service: LLM work is slow and asynchronous.
 """
@@ -20,6 +21,7 @@ import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.guidelines.infrastructure.router import router as guidelines_router
 from src.identity.infrastructure.router import router as identity_router
 from src.mentoring.infrastructure.retention import run_retention_sweeps
 from src.mentoring.infrastructure.router import router as mentoring_router
@@ -63,4 +65,5 @@ app.middleware("http")(request_id_middleware)
 
 app.include_router(identity_router)
 app.include_router(mentoring_router)
+app.include_router(guidelines_router)
 app.include_router(health_router)

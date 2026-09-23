@@ -3,7 +3,7 @@ COMPOSE = docker compose -f infra/docker-compose.yml
 # sets DEBUG=true, which the entrypoints turn into uvicorn --reload.
 COMPOSE_DEV = $(COMPOSE) -f infra/docker-compose.override.yml
 
-.PHONY: help up build down down-volumes logs ps restart migrate ingest-guidelines purge-drafts \
+.PHONY: help up build down down-volumes logs ps restart migrate ingest-guidelines seed-guidelines purge-drafts \
         dev dev-build \
         front-up front-down front-restart front-logs front-dev \
         shell-app shell-agent
@@ -35,12 +35,16 @@ ps:  ## Show container status
 restart:  ## Restart every service
 	$(COMPOSE) restart
 
-migrate:  ## Run database migrations (both app lineages: identity + mentoring)
+migrate:  ## Run database migrations (all app lineages: identity, mentoring, guidelines)
 	$(COMPOSE) run --rm app alembic -c alembic_identity.ini upgrade head
 	$(COMPOSE) run --rm app alembic -c alembic_mentoring.ini upgrade head
+	$(COMPOSE) run --rm app alembic -c alembic_guidelines.ini upgrade head
 
 ingest-guidelines:  ## Embed the university requirements into the vector store
 	$(COMPOSE) run --rm agent python scripts/ingest_guidelines.py
+
+seed-guidelines:  ## Load UE Katowice's requirements as version 1 of the catalog (idempotent)
+	$(COMPOSE) run --rm app python scripts/seed_guidelines.py
 
 purge-drafts:  ## Run the thesis-version retention sweep once (NOW=<iso> to shift the clock)
 	$(COMPOSE) run --rm app python scripts/purge_drafts.py $(if $(NOW),--now $(NOW))

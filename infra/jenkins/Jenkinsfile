@@ -35,11 +35,12 @@ pipeline {
         }
 
         stage('Migrate') {
-            // Migrations run before the new containers serve traffic: both
-            // app lineages and the agent's own.
+            // Migrations run before the new containers serve traffic: the
+            // three app lineages and the agent's own.
             steps {
                 sh "${COMPOSE} run --rm app alembic -c alembic_identity.ini upgrade head"
                 sh "${COMPOSE} run --rm app alembic -c alembic_mentoring.ini upgrade head"
+                sh "${COMPOSE} run --rm app alembic -c alembic_guidelines.ini upgrade head"
                 sh "${COMPOSE} run --rm agent alembic upgrade head"
             }
         }

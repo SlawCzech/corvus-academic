@@ -9,6 +9,9 @@ alembic -c alembic_identity.ini upgrade head
 echo "[app] Running mentoring migrations..."
 alembic -c alembic_mentoring.ini upgrade head
 
+echo "[app] Running guidelines migrations..."
+alembic -c alembic_guidelines.ini upgrade head
+
 echo "[app] Seeding admin user..."
 python scripts/seed_admin.py
 

@@ -135,12 +135,13 @@ jobs:
         with:
           enable-cache: true
 
-      - name: identity + mentoring lineages
+      - name: identity + mentoring + guidelines lineages
         working-directory: app
         run: |
           uv sync --frozen
           uv run alembic -c alembic_identity.ini upgrade head
           uv run alembic -c alembic_mentoring.ini upgrade head
+          uv run alembic -c alembic_guidelines.ini upgrade head
 
       - name: analysis lineage
         working-directory: agent
