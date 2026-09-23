@@ -5,6 +5,7 @@ import useSWR from "swr"
 import FileUpload from "@/components/FileUpload"
 import ActionPanel from "@/components/students/ActionPanel"
 import ActionResultView from "@/components/students/ActionResultView"
+import DraftList from "@/components/students/DraftList"
 import StudentSubNav, { type Section } from "@/components/students/StudentSubNav"
 import { createMeetingNote, fetcher, uploadDraft } from "@/lib/api.client"
 import type { AgentAction, MeetingNote, Student, ThesisDraft } from "@/lib/api.types"
@@ -195,26 +196,11 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
                 {uploadError}
               </p>
             )}
-            <div className="rounded-xl border border-line bg-surface p-2">
-              {(drafts ?? []).length === 0 && (
-                <p className="p-4 text-[13.5px] text-muted">Brak przesłanych wersji.</p>
-              )}
-              {(drafts ?? []).map((draft) => (
-                <div
-                  key={draft.id}
-                  className="flex justify-between border-b border-line/60 px-4 py-3 text-[13.5px] last:border-none"
-                >
-                  <span className="text-foreground">
-                    <span className="font-semibold">v{draft.version_number}</span>{" "}
-                    {draft.filename}
-                  </span>
-                  <span className="text-muted">
-                    {draft.char_count.toLocaleString("pl-PL")} znaków ·{" "}
-                    {formatDate(draft.created_at)}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <DraftList
+              studentId={studentId}
+              drafts={drafts ?? []}
+              onChange={(next) => void mutateDrafts(next, { revalidate: false })}
+            />
           </div>
         )}
 

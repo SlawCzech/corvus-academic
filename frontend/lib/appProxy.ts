@@ -51,3 +51,30 @@ export async function proxy(path: string, init: ProxyInit = {}): Promise<Respons
     headers: { "Content-Type": "application/json" },
   })
 }
+
+/**
+ * Forward a file download from `app` untouched.
+ *
+ * `proxy()` reads the body as text and labels it JSON, which would corrupt a
+ * PDF or DOCX. This streams the bytes and keeps the headers that make it a
+ * download: the type, the attachment disposition with the original filename,
+ * and `nosniff`. An error from `app` still arrives as its JSON explanation.
+ */
+export async function proxyFile(path: string): Promise<Response> {
+  const token = (await cookies()).get("access_token")?.value
+  if (!token) {
+    return NextResponse.json({ detail: "Unauthorized" }, { status: 401 })
+  }
+
+  const upstream = await fetch(`${APP_URL}${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  })
+
+  const headers = new Headers()
+  for (const name of ["content-type", "content-disposition", "x-content-type-options"]) {
+    const value = upstream.headers.get(name)
+    if (value) headers.set(name, value)
+  }
+  return new Response(upstream.body, { status: upstream.status, headers })
+}

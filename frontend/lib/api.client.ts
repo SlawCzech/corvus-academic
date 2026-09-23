@@ -129,6 +129,44 @@ export async function uploadDraft(
   return res.json() as Promise<ThesisDraft>
 }
 
+/** The list comes back whole: accepting one version changes the others' fate. */
+async function changeDrafts(url: string, method: string, failure: string): Promise<ThesisDraft[]> {
+  const res = await request(url, { method })
+  if (!res.ok) return fail(res, failure)
+  return res.json() as Promise<ThesisDraft[]>
+}
+
+export function acceptDraft(studentId: string, draftId: string): Promise<ThesisDraft[]> {
+  return changeDrafts(
+    `/api/students/${studentId}/drafts/${draftId}/accept`,
+    "POST",
+    "Nie udało się zaakceptować wersji",
+  )
+}
+
+export function clearDraftAcceptance(
+  studentId: string,
+  draftId: string,
+): Promise<ThesisDraft[]> {
+  return changeDrafts(
+    `/api/students/${studentId}/drafts/${draftId}/accept`,
+    "DELETE",
+    "Nie udało się cofnąć akceptacji",
+  )
+}
+
+export function deleteDraft(studentId: string, draftId: string): Promise<ThesisDraft[]> {
+  return changeDrafts(
+    `/api/students/${studentId}/drafts/${draftId}`,
+    "DELETE",
+    "Nie udało się usunąć wersji",
+  )
+}
+
+export function draftFileUrl(studentId: string, draftId: string): string {
+  return `/api/students/${studentId}/drafts/${draftId}/file`
+}
+
 // ---------- AI actions ----------
 
 export interface ActionOptions {

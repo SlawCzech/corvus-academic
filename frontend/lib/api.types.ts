@@ -30,6 +30,8 @@ export interface Student {
   status: StudentStatus
   created_at: string
   updated_at: string
+  /** When supervision ended — the start of the thesis files' retention clock. */
+  closed_at: string | null
 }
 
 export interface MeetingNote {
@@ -53,6 +55,16 @@ export interface ThesisDraft {
   preview: string
   uploaded_by: string
   created_at: string
+  /** Whether the original upload can still be downloaded. */
+  has_file: boolean
+  file_size: number | null
+  file_sha256: string | null
+  /** The version the promoter accepted as final. */
+  is_accepted: boolean
+  /** Set once the text and file are gone; the row stays as a trace. */
+  purged_at: string | null
+  /** When retention will purge this version, if it is scheduled at all. */
+  purge_due_at: string | null
 }
 
 export type ActionType =
