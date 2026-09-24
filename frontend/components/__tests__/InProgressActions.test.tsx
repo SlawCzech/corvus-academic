@@ -42,6 +42,11 @@ describe("InProgressActions", () => {
   beforeEach(() => {
     listed = [DEAD, FRESH]
     fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+      if (init?.method === "DELETE") {
+        const id = url.split("/")[5]
+        listed = listed.filter((a) => a.id !== id)
+        return Promise.resolve(new Response(null, { status: 204 }))
+      }
       if (init?.method === "POST") {
         const id = url.split("/")[5]
         listed = listed.filter((a) => a.id !== id)
@@ -98,5 +103,17 @@ describe("InProgressActions", () => {
     listed = []
     renderList()
     expect(await screen.findByText("Nic się teraz nie liczy.")).toBeInTheDocument()
+  })
+
+  it("deletes a dead one outright", async () => {
+    renderList()
+    const [dead] = await screen.findAllByTestId("in-progress-item")
+
+    await userEvent.click(within(dead!).getByRole("button", { name: "Usuń" }))
+    await userEvent.click(within(dead!).getByRole("button", { name: "Tak, usuń" }))
+
+    await waitFor(() => expect(screen.getAllByTestId("in-progress-item")).toHaveLength(1))
+    const del = fetchMock.mock.calls.find(([, init]) => init?.method === "DELETE")
+    expect(del?.[0]).toBe("/api/students/s2/actions/dead")
   })
 })

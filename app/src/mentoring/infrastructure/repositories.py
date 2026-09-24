@@ -3,7 +3,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.mentoring.domain.model_policy import ModelPolicy, ModelSetting
@@ -72,11 +72,28 @@ class StudentRepository:
         return list(result.scalars().all())
 
     async def delete(self, student_id: uuid.UUID) -> None:
-        """Delete the student with the given id if it exists."""
-        student = await self._session.get(StudentModel, student_id)
-        if student is not None:
-            await self._session.delete(student)
-            await self._session.commit()
+        """Delete a student and every record of theirs, in one commit.
+
+        Notes, actions and versions are deleted by statement rather than left
+        to ``ON DELETE CASCADE``: the result is the same in Postgres, and it
+        does not depend on a database enforcing foreign keys (SQLite, in
+        tests, does not). The versions' files are not rows of these tables —
+        delete them through the ``FileStore`` first, in the same session, so
+        they go in this commit too.
+        """
+        await self._session.execute(
+            delete(MeetingNoteModel).where(MeetingNoteModel.student_id == student_id)
+        )
+        await self._session.execute(
+            delete(AgentActionModel).where(AgentActionModel.student_id == student_id)
+        )
+        await self._session.execute(
+            delete(ThesisDraftModel).where(ThesisDraftModel.student_id == student_id)
+        )
+        await self._session.execute(
+            delete(StudentModel).where(StudentModel.id == student_id)
+        )
+        await self._session.commit()
 
 
 class MeetingNoteRepository:
@@ -117,6 +134,21 @@ class AgentActionRepository:
         """Commit in-place changes to an already-persisted action."""
         await self._session.commit()
         await self._session.refresh(model)
+
+    async def delete(self, model: AgentActionModel) -> None:
+        """Delete one action and commit.
+
+        A meeting note written from it keeps its text and loses only the
+        provenance — set explicitly, as ``ON DELETE SET NULL`` would, so it
+        does not depend on the database enforcing foreign keys.
+        """
+        await self._session.execute(
+            update(MeetingNoteModel)
+            .where(MeetingNoteModel.source_action_id == model.id)
+            .values(source_action_id=None)
+        )
+        await self._session.delete(model)
+        await self._session.commit()
 
     async def find_by_id(self, action_id: uuid.UUID) -> AgentActionModel | None:
         """Return the action with the given id, or None if not found."""

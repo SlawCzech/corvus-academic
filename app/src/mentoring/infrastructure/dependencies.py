@@ -30,6 +30,7 @@ from src.mentoring.application.agent_client import BYOK, AgentClient
 from src.mentoring.application.dashboard_service import DashboardService
 from src.mentoring.application.draft_service import DraftService
 from src.mentoring.application.model_service import ModelService
+from src.mentoring.application.student_deletion import StudentDeletionService
 from src.mentoring.application.student_service import Caller, StudentService
 from src.mentoring.infrastructure.guidelines_adapter import CatalogGuidelineSource
 from src.mentoring.infrastructure.orm import DraftFileModel
@@ -156,6 +157,20 @@ def get_draft_service(
     )
 
 
+def get_student_deletion_service(
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    students: Annotated[StudentService, Depends(get_student_service)],
+    agent: Annotated[AgentClient, Depends(get_agent_client)],
+) -> StudentDeletionService:
+    return StudentDeletionService(
+        students,
+        StudentRepository(session),
+        ThesisDraftRepository(session),
+        SqlFileStore(session, DraftFileModel),
+        agent,
+    )
+
+
 def get_dashboard_service(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     students: Annotated[StudentService, Depends(get_student_service)],
@@ -174,5 +189,8 @@ StudentServiceDep = Annotated[StudentService, Depends(get_student_service)]
 ActionServiceDep = Annotated[ActionService, Depends(get_action_service)]
 DraftServiceDep = Annotated[DraftService, Depends(get_draft_service)]
 DashboardServiceDep = Annotated[DashboardService, Depends(get_dashboard_service)]
+StudentDeletionServiceDep = Annotated[
+    StudentDeletionService, Depends(get_student_deletion_service)
+]
 ModelServiceDep = Annotated[ModelService, Depends(get_model_service)]
 ModelAdminDep = Annotated[User, Depends(require_model_admin)]

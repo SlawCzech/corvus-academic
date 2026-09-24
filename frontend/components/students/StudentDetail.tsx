@@ -5,6 +5,7 @@ import useSWR from "swr"
 import FileUpload from "@/components/FileUpload"
 import ActionPanel from "@/components/students/ActionPanel"
 import ActionResultView from "@/components/students/ActionResultView"
+import DeleteStudentPanel from "@/components/students/DeleteStudentPanel"
 import DraftList from "@/components/students/DraftList"
 import GuidelinePicker from "@/components/students/GuidelinePicker"
 import LatestResults from "@/components/students/LatestResults"
@@ -12,7 +13,8 @@ import StudentDetailsCard from "@/components/students/StudentDetailsCard"
 import StudentSubNav, { type Section } from "@/components/students/StudentSubNav"
 import TopicCard from "@/components/students/TopicCard"
 import { ACTION_LABELS } from "@/components/students/format"
-import { createMeetingNote, fetcher, uploadDraft } from "@/lib/api.client"
+import { IconTrash } from "@tabler/icons-react"
+import { createMeetingNote, deleteAction, fetcher, uploadDraft } from "@/lib/api.client"
 import type { AgentAction, MeetingNote, Student, ThesisDraft } from "@/lib/api.types"
 
 const STATUS_LABELS: Record<string, string> = {
@@ -49,10 +51,13 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
     draftsKey,
     fetcher,
   )
-  const { data: actions } = useSWR<AgentAction[]>(actionsKey, fetcher)
+  const { data: actions, mutate: mutateActions } = useSWR<AgentAction[]>(actionsKey, fetcher)
 
   const [section, setSection] = useState<Section>("overview")
   const [openActionId, setOpenActionId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [historyError, setHistoryError] = useState<string | null>(null)
   const [noteText, setNoteText] = useState("")
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -82,6 +87,20 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
       setUploadError(err instanceof Error ? err.message : "Nie udało się wczytać")
     } finally {
       setUploading(false)
+    }
+  }
+
+  async function removeAction(actionId: string): Promise<void> {
+    setDeletingId(actionId)
+    setHistoryError(null)
+    try {
+      await deleteAction(studentId, actionId)
+      void mutateActions()
+    } catch (err) {
+      setHistoryError(err instanceof Error ? err.message : "Nie udało się usunąć akcji")
+    } finally {
+      setDeletingId(null)
+      setConfirmDeleteId(null)
     }
   }
 
@@ -175,6 +194,8 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
                 actions={actions ?? []}
                 onShowHistory={() => setSection("history")}
               />
+
+              <DeleteStudentPanel student={student} />
             </div>
           </div>
         )}
@@ -244,6 +265,11 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
         {section === "history" && (
           <div>
             <h1 className="mb-5 text-[24px] font-semibold text-foreground">Historia akcji</h1>
+            {historyError && (
+              <p role="alert" className="mb-4 text-[13px] text-critical-text">
+                {historyError}
+              </p>
+            )}
             {(actions ?? []).length === 0 ? (
               <p className="text-[13.5px] text-muted">Nic jeszcze nie uruchomiono.</p>
             ) : (
@@ -252,34 +278,66 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
                   const readable = action.output !== null || action.error !== null
                   const open = openActionId === action.id
                   return (
-                    <div key={action.id}>
-                      <button
-                        type="button"
-                        disabled={!readable}
-                        aria-expanded={open}
-                        onClick={() => setOpenActionId(open ? null : action.id)}
-                        className={`flex w-full items-center justify-between px-4 py-3 text-left text-[13.5px] ${
-                          i > 0 ? "border-t border-line/60" : ""
-                        } ${
-                          readable
-                            ? "text-foreground hover:bg-surface-alt"
-                            : "cursor-default text-muted"
-                        }`}
-                      >
-                        <span>
-                          {readable && (
-                            <span className="mr-1.5 inline-block w-3 text-muted">
-                              {open ? "−" : "+"}
-                            </span>
-                          )}
-                          {ACTION_LABELS[action.action_type] ?? action.action_type}
-                          {action.accepted ? " · zaakceptowana" : ""}
-                        </span>
-                        <span className="text-muted">
-                          {STATUS_LABELS[action.status] ?? action.status} ·{" "}
-                          {formatDate(action.created_at)}
-                        </span>
-                      </button>
+                    <div
+                      key={action.id}
+                      data-testid="history-row"
+                      className={i > 0 ? "border-t border-line/60" : ""}
+                    >
+                      <div className="flex items-center">
+                        <button
+                          type="button"
+                          disabled={!readable}
+                          aria-expanded={open}
+                          onClick={() => setOpenActionId(open ? null : action.id)}
+                          className={`flex min-w-0 flex-1 items-center justify-between px-4 py-3 text-left text-[13.5px] ${
+                            readable
+                              ? "text-foreground hover:bg-surface-alt"
+                              : "cursor-default text-muted"
+                          }`}
+                        >
+                          <span>
+                            {readable && (
+                              <span className="mr-1.5 inline-block w-3 text-muted">
+                                {open ? "−" : "+"}
+                              </span>
+                            )}
+                            {ACTION_LABELS[action.action_type] ?? action.action_type}
+                            {action.accepted ? " · zaakceptowana" : ""}
+                          </span>
+                          <span className="text-muted">
+                            {STATUS_LABELS[action.status] ?? action.status} ·{" "}
+                            {formatDate(action.created_at)}
+                          </span>
+                        </button>
+                        {confirmDeleteId === action.id ? (
+                          <span className="flex shrink-0 items-center gap-1.5 pr-3">
+                            <button
+                              type="button"
+                              disabled={deletingId === action.id}
+                              onClick={() => void removeAction(action.id)}
+                              className="h-7 rounded-md bg-critical-text px-2.5 text-[12px] font-semibold text-white disabled:opacity-50"
+                            >
+                              Usuń
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="h-7 rounded-md border border-line px-2.5 text-[12px] text-foreground hover:bg-surface-alt"
+                            >
+                              Nie
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            aria-label="Usuń z historii"
+                            onClick={() => setConfirmDeleteId(action.id)}
+                            className="shrink-0 px-3 py-3 text-muted hover:text-critical-text"
+                          >
+                            <IconTrash size={15} stroke={1.75} />
+                          </button>
+                        )}
+                      </div>
                       {open && (
                         <div
                           data-testid="history-result"

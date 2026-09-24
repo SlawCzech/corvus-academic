@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useState } from "react"
 import useSWR from "swr"
 import { ACTION_LABELS } from "@/components/students/format"
-import { cancelAction, fetcher } from "@/lib/api.client"
+import { cancelAction, deleteAction, fetcher } from "@/lib/api.client"
 import type { ActionInProgress } from "@/lib/api.types"
 
 /** Past this, a run is almost certainly dead — a full review takes minutes. */
@@ -46,22 +46,27 @@ export default function InProgressActions({ onChange }: { onChange: () => void }
   )
   // One "now" per mount: ages on a list opened for a glance need not tick.
   const [now] = useState(() => Date.now())
-  const [confirmId, setConfirmId] = useState<string | null>(null)
+  // Which row asks for confirmation, and of what: stopping keeps the action
+  // in the student's history as "przerwana", deleting takes it out.
+  const [confirm, setConfirm] = useState<{ id: string; kind: "cancel" | "delete" } | null>(
+    null,
+  )
   const [busyId, setBusyId] = useState<string | null>(null)
-  const [cancelError, setCancelError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
-  async function cancel(item: ActionInProgress): Promise<void> {
+  async function apply(item: ActionInProgress, kind: "cancel" | "delete"): Promise<void> {
     setBusyId(item.id)
-    setCancelError(null)
+    setActionError(null)
     try {
-      await cancelAction(item.student_id, item.id)
+      if (kind === "cancel") await cancelAction(item.student_id, item.id)
+      else await deleteAction(item.student_id, item.id)
       await mutate()
       onChange()
     } catch (err) {
-      setCancelError(err instanceof Error ? err.message : "Nie udało się przerwać akcji")
+      setActionError(err instanceof Error ? err.message : "Nie udało się")
     } finally {
       setBusyId(null)
-      setConfirmId(null)
+      setConfirm(null)
     }
   }
 
@@ -103,33 +108,44 @@ export default function InProgressActions({ onChange }: { onChange: () => void }
                   </span>
                 </span>
 
-                {confirmId === item.id ? (
+                {confirm?.id === item.id ? (
                   <span className="flex shrink-0 items-center gap-2">
-                    <span className="text-[12.5px] text-muted-strong">Przerwać?</span>
+                    <span className="text-[12.5px] text-muted-strong">
+                      {confirm.kind === "cancel" ? "Przerwać?" : "Usunąć z historii?"}
+                    </span>
                     <button
                       type="button"
                       disabled={busyId === item.id}
-                      onClick={() => void cancel(item)}
+                      onClick={() => void apply(item, confirm.kind)}
                       className="h-8 rounded-lg bg-critical-text px-3 text-[12.5px] font-semibold text-white disabled:opacity-50"
                     >
-                      Tak, przerwij
+                      {confirm.kind === "cancel" ? "Tak, przerwij" : "Tak, usuń"}
                     </button>
                     <button
                       type="button"
-                      onClick={() => setConfirmId(null)}
+                      onClick={() => setConfirm(null)}
                       className="h-8 rounded-lg border border-line px-3 text-[12.5px] text-foreground hover:bg-surface-alt"
                     >
                       Nie
                     </button>
                   </span>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmId(item.id)}
-                    className="h-8 shrink-0 rounded-lg border border-line px-3 text-[12.5px] font-medium text-critical-text hover:bg-surface-alt"
-                  >
-                    Przerwij
-                  </button>
+                  <span className="flex shrink-0 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setConfirm({ id: item.id, kind: "cancel" })}
+                      className="h-8 rounded-lg border border-line px-3 text-[12.5px] font-medium text-critical-text hover:bg-surface-alt"
+                    >
+                      Przerwij
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirm({ id: item.id, kind: "delete" })}
+                      className="h-8 rounded-lg border border-line px-3 text-[12.5px] font-medium text-critical-text hover:bg-surface-alt"
+                    >
+                      Usuń
+                    </button>
+                  </span>
                 )}
               </div>
             )
@@ -137,9 +153,9 @@ export default function InProgressActions({ onChange }: { onChange: () => void }
         </div>
       )}
 
-      {cancelError && (
+      {actionError && (
         <p role="alert" className="mt-2 text-[13px] text-critical-text">
-          {cancelError}
+          {actionError}
         </p>
       )}
     </div>

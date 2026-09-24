@@ -7,3 +7,9 @@ export async function GET(_request: Request, { params }: Params): Promise<Respon
   const { id, actionId } = await params
   return proxy(`/students/${id}/actions/${actionId}`)
 }
+
+/** Delete the action from the history, here and in the agent. */
+export async function DELETE(_request: Request, { params }: Params): Promise<Response> {
+  const { id, actionId } = await params
+  return proxy(`/students/${id}/actions/${actionId}`, { method: "DELETE" })
+}

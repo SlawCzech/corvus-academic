@@ -119,6 +119,19 @@ export async function updateStudent(
   return res.json() as Promise<Student>
 }
 
+const AGENT_DOWN =
+  "Serwis AI nie odpowiada, więc nic nie zostało usunięte — wyniki AI są też po jego stronie. Spróbuj za chwilę."
+
+/**
+ * Delete a student for good: notes, versions, files and AI results.
+ * Nothing is deleted when the AI service cannot be reached (503).
+ */
+export async function deleteStudent(studentId: string): Promise<void> {
+  const res = await request(`/api/students/${studentId}`, { method: "DELETE" })
+  if (res.status === 503) throw new Error(AGENT_DOWN)
+  if (!res.ok) await fail(res, "Nie udało się usunąć studenta")
+}
+
 // ---------- meeting notes ----------
 
 export async function createMeetingNote(
@@ -237,6 +250,15 @@ export async function cancelAction(studentId: string, actionId: string): Promise
   })
   if (!res.ok) return fail(res, "Nie udało się przerwać akcji")
   return res.json() as Promise<AgentAction>
+}
+
+/** Delete an action from the history, result and all; a running one is stopped. */
+export async function deleteAction(studentId: string, actionId: string): Promise<void> {
+  const res = await request(`/api/students/${studentId}/actions/${actionId}`, {
+    method: "DELETE",
+  })
+  if (res.status === 503) throw new Error(AGENT_DOWN)
+  if (!res.ok) await fail(res, "Nie udało się usunąć akcji")
 }
 
 export async function acceptAction(

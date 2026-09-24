@@ -300,6 +300,65 @@ async def cancel_action(
     return _status_response(record)
 
 
+def _revoke_unfinished(records: list[AgentTaskModel]) -> None:
+    """Kill whatever of these is still queued or running; best effort."""
+    for record in records:
+        if record.task_id and not TaskStatus(record.status).is_terminal:
+            try:
+                celery_app.control.revoke(record.task_id, terminate=True)
+            except Exception as exc:
+                logger.warning(
+                    "action_revoke_failed", task_id=record.task_id, error=str(exc)
+                )
+
+
+@router.delete("/actions/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_action(
+    task_id: str,
+    user: CurrentUserDep,
+    repo: TaskRepoDep,
+) -> None:
+    """Forget one action: stop it if it runs, then delete its row and result.
+
+    Idempotent — nothing to delete is not an error, so `app` can retry a
+    deletion that failed on its own side after this one succeeded.
+    """
+    record = (
+        await repo.find_by_task_id(task_id)
+        if user.role == Role.ADMIN
+        else await repo.find_by_user_and_task_id(user.id, task_id)
+    )
+    if record is None:
+        return
+    _revoke_unfinished([record])
+    await repo.delete([record])
+    logger.info("action_deleted", task_id=task_id, user_id=str(user.id))
+
+
+@router.delete("/students/{student_id}/actions", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_student_actions(
+    student_id: uuid.UUID,
+    user: CurrentUserDep,
+    repo: TaskRepoDep,
+) -> None:
+    """Forget every action run for a student `app` is deleting.
+
+    The results here are copies of what `app` stored — reviews, findings,
+    proposed topics — and a deleted student must not live on in them.
+    """
+    records = await repo.find_by_student(
+        student_id, None if user.role == Role.ADMIN else user.id
+    )
+    _revoke_unfinished(records)
+    await repo.delete(records)
+    logger.info(
+        "student_actions_deleted",
+        student_id=str(student_id),
+        count=len(records),
+        user_id=str(user.id),
+    )
+
+
 def _status_response(record: AgentTaskModel) -> ActionStatusResponse:
     task_id = record.task_id or ""
     stored: Any = record.result

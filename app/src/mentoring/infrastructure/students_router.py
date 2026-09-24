@@ -6,9 +6,17 @@ from typing import Annotated
 import structlog
 from fastapi import APIRouter, HTTPException, Query, status
 
-from src.mentoring.application.exceptions import StudentNotFoundError
+from src.mentoring.application.exceptions import (
+    AgentUnavailableError,
+    StudentNotFoundError,
+)
 from src.mentoring.domain.student import StudentStatus
-from src.mentoring.infrastructure.dependencies import CallerDep, StudentServiceDep
+from src.mentoring.infrastructure.dependencies import (
+    CallerDep,
+    StudentDeletionServiceDep,
+    StudentServiceDep,
+    TokenDep,
+)
 from src.mentoring.infrastructure.errors import not_found
 from src.mentoring.infrastructure.schemas import (
     MeetingNoteCreateRequest,
@@ -115,6 +123,31 @@ async def update_student(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc
     return student_response(student)
+
+
+@router.delete("/{student_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_student(
+    student_id: uuid.UUID,
+    caller: CallerDep,
+    token: TokenDep,
+    svc: StudentDeletionServiceDep,
+) -> None:
+    """Delete a student for good: notes, versions, files and AI results.
+
+    Irreversible, unlike moving the student to `archived`, which only starts
+    the retention clock.
+    """
+    try:
+        await svc.delete(caller, student_id, token)
+    except StudentNotFoundError as exc:
+        raise not_found(exc) from exc
+    except AgentUnavailableError as exc:
+        # Nothing was deleted: the student's AI results live in the agent too,
+        # and a deletion that left them there would not be one.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The analysis service is unavailable",
+        ) from exc
 
 
 # ---------- meeting notes ----------

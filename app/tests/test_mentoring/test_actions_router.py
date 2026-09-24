@@ -275,6 +275,80 @@ def test_cancelling_another_promotors_action_is_404(
     assert agent.cancelled == []
 
 
+def test_deleting_an_action_takes_it_out_of_the_history(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+    action = _trigger(client, headers, student_id)
+
+    resp = client.delete(
+        f"/students/{student_id}/actions/{action['id']}", headers=headers
+    )
+
+    assert resp.status_code == 204
+    assert client.get(f"/students/{student_id}/actions", headers=headers).json() == []
+    assert agent.deleted == ["task-1"]
+
+
+def test_deleting_an_action_without_the_agent_is_503(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+    action = _trigger(client, headers, student_id)
+    agent.unavailable = True
+
+    resp = client.delete(
+        f"/students/{student_id}/actions/{action['id']}", headers=headers
+    )
+
+    assert resp.status_code == 503
+    agent.unavailable = False
+    listed = client.get(f"/students/{student_id}/actions", headers=headers).json()
+    assert len(listed) == 1
+
+
+def test_deleting_a_student_is_final(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+    _trigger(client, headers, student_id)
+
+    resp = client.delete(f"/students/{student_id}", headers=headers)
+
+    assert resp.status_code == 204
+    assert client.get(f"/students/{student_id}", headers=headers).status_code == 404
+    assert [str(s) for s in agent.deleted_students] == [student_id]
+
+
+def test_deleting_another_promotors_student_is_404(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    theirs = login(client, OTHER_PROMOTOR_EMAIL, OTHER_PROMOTOR_PASSWORD)
+    student_id = _new_student(client, theirs)
+
+    mine = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    resp = client.delete(f"/students/{student_id}", headers=mine)
+
+    assert resp.status_code == 404
+    assert client.get(f"/students/{student_id}", headers=theirs).status_code == 200
+
+
+def test_deleting_a_student_without_the_agent_is_503(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+    agent.unavailable = True
+
+    resp = client.delete(f"/students/{student_id}", headers=headers)
+
+    assert resp.status_code == 503
+    assert client.get(f"/students/{student_id}", headers=headers).status_code == 200
+
+
 def test_accepting_a_topic_nobody_proposed_is_409(
     client: TestClient, agent: FakeAgentClient
 ) -> None:

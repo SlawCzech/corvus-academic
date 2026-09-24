@@ -166,3 +166,26 @@ async def cancel_action(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
     return action_response(action)
+
+
+@router.delete(
+    "/{student_id}/actions/{action_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+async def delete_action(
+    student_id: uuid.UUID,
+    action_id: uuid.UUID,
+    caller: CallerDep,
+    token: TokenDep,
+    svc: ActionServiceDep,
+) -> None:
+    """Delete an action from the history, result and all — a running one too."""
+    try:
+        await svc.delete(caller, student_id, action_id, token)
+    except (StudentNotFoundError, ActionNotFoundError) as exc:
+        raise not_found(exc) from exc
+    except AgentUnavailableError as exc:
+        # Nothing was deleted; the agent's side is idempotent, so retry.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The analysis service is unavailable",
+        ) from exc

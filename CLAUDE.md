@@ -440,6 +440,9 @@ listy, a `app` pilnuje tego przy każdej akcji —
 [ADR 0007](docs/adr/0007-admin-managed-local-model-allowlist.md).
 Admin i promotor to rozłączne role: admin nie widzi studentów ani prac —
 [ADR 0008](docs/adr/0008-admin-and-promoter-are-separate-roles.md).
+Twarde usuwanie studenta (z plikami i wynikami AI po stronie agenta) i pojedynczej
+akcji — wszystko albo nic, bez agenta 503 —
+[ADR 0009](docs/adr/0009-hard-delete-of-students-and-actions.md).
 
 ---
 

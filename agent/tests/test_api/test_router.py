@@ -366,6 +366,87 @@ async def test_cancel_someone_elses_task_is_404(
     revoke.assert_not_called()
 
 
+# ---------- deleting ----------
+
+
+async def test_delete_forgets_a_finished_action(
+    client: TestClient, db_session: AsyncSession, revoke: MagicMock
+) -> None:
+    task_id = str(uuid.uuid4())
+    await _store(db_session, task_id, TaskStatus.COMPLETED, result={"summary": "x"})
+    headers = _auth(PROMOTOR_ID, "promotor")
+
+    resp = client.delete(f"/actions/{task_id}", headers=headers)
+
+    assert resp.status_code == 204
+    assert client.get(f"/actions/{task_id}", headers=headers).status_code == 404
+    revoke.assert_not_called()
+
+
+async def test_delete_stops_a_running_action_first(
+    client: TestClient, db_session: AsyncSession, revoke: MagicMock
+) -> None:
+    task_id = str(uuid.uuid4())
+    await _store(db_session, task_id, TaskStatus.RUNNING)
+
+    client.delete(f"/actions/{task_id}", headers=_auth(PROMOTOR_ID, "promotor"))
+
+    revoke.assert_called_once_with(task_id, terminate=True)
+
+
+def test_delete_of_nothing_is_not_an_error(client: TestClient) -> None:
+    """`app` retries a deletion that failed on its side after this one succeeded."""
+    resp = client.delete(
+        f"/actions/{uuid.uuid4()}", headers=_auth(PROMOTOR_ID, "promotor")
+    )
+    assert resp.status_code == 204
+
+
+async def test_delete_leaves_someone_elses_action(
+    client: TestClient, db_session: AsyncSession, revoke: MagicMock
+) -> None:
+    task_id = str(uuid.uuid4())
+    await _store(db_session, task_id, TaskStatus.COMPLETED)
+
+    client.delete(f"/actions/{task_id}", headers=_auth(uuid.uuid4(), "promotor"))
+
+    kept = client.get(f"/actions/{task_id}", headers=_auth(PROMOTOR_ID, "promotor"))
+    assert kept.status_code == 200
+
+
+async def test_deleting_a_students_actions_takes_every_result(
+    client: TestClient, db_session: AsyncSession, revoke: MagicMock
+) -> None:
+    done, running = str(uuid.uuid4()), str(uuid.uuid4())
+    await _store(db_session, done, TaskStatus.COMPLETED, result={"summary": "x"})
+    await _store(db_session, running, TaskStatus.RUNNING)
+    headers = _auth(PROMOTOR_ID, "promotor")
+
+    resp = client.delete(
+        f"/students/{_ACTION_BODY['student_id']}/actions", headers=headers
+    )
+
+    assert resp.status_code == 204
+    assert client.get(f"/actions/{done}", headers=headers).status_code == 404
+    assert client.get(f"/actions/{running}", headers=headers).status_code == 404
+    revoke.assert_called_once_with(running, terminate=True)
+
+
+async def test_deleting_a_students_actions_leaves_other_promoters_alone(
+    client: TestClient, db_session: AsyncSession, revoke: MagicMock
+) -> None:
+    task_id = str(uuid.uuid4())
+    await _store(db_session, task_id, TaskStatus.COMPLETED)
+
+    client.delete(
+        f"/students/{_ACTION_BODY['student_id']}/actions",
+        headers=_auth(uuid.uuid4(), "promotor"),
+    )
+
+    kept = client.get(f"/actions/{task_id}", headers=_auth(PROMOTOR_ID, "promotor"))
+    assert kept.status_code == 200
+
+
 # ---------- the caller's own key ----------
 
 

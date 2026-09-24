@@ -4,6 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SWRConfig } from "swr"
 import StudentDetail from "../students/StudentDetail"
 
+const mockPush = vi.fn()
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockPush }),
+}))
+
 /**
  * Not everything about a student has to come from the AI: the promoter types
  * the topic agreed in person and corrects the student's details by hand, on
@@ -61,6 +66,7 @@ describe("StudentDetail — overview", () => {
           ? (JSON.parse(init.body as string) as Record<string, unknown>)
           : null
         calls.push({ url, method, body })
+        if (method === "DELETE") return Promise.resolve(new Response(null, { status: 204 }))
         if (method === "PATCH" && body) {
           student = {
             ...student,
@@ -149,5 +155,37 @@ describe("StudentDetail — overview", () => {
         status: "active",
       },
     ])
+  })
+
+  it("deletes the student only once their name is typed", async () => {
+    renderDetail()
+    await userEvent.click(await screen.findByRole("button", { name: "Usuń studenta" }))
+    const panel = screen.getByTestId("delete-student")
+    const confirm = within(panel).getByRole("button", { name: "Usuń na zawsze" })
+
+    expect(confirm).toBeDisabled()
+    await userEvent.type(within(panel).getByRole("textbox"), "Julia Krzemień")
+    await userEvent.click(confirm)
+
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/students"))
+    expect(calls.some((c) => c.method === "DELETE" && c.url === "/api/students/s1")).toBe(true)
+  })
+
+  it("keeps the student when the AI service cannot confirm the deletion", async () => {
+    mockPush.mockClear()
+    const base = vi.mocked(fetch).getMockImplementation()!
+    vi.mocked(fetch).mockImplementation((url, init) =>
+      init?.method === "DELETE"
+        ? Promise.resolve(new Response(null, { status: 503 }))
+        : base(url, init),
+    )
+    renderDetail()
+    await userEvent.click(await screen.findByRole("button", { name: "Usuń studenta" }))
+    const panel = screen.getByTestId("delete-student")
+    await userEvent.type(within(panel).getByRole("textbox"), "Julia Krzemień")
+    await userEvent.click(within(panel).getByRole("button", { name: "Usuń na zawsze" }))
+
+    expect(await within(panel).findByRole("alert")).toHaveTextContent("nic nie zostało usunięte")
+    expect(mockPush).not.toHaveBeenCalled()
   })
 })

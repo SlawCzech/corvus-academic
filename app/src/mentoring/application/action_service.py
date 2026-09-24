@@ -291,6 +291,29 @@ class ActionService:
         logger.info("action_cancelled", action_id=str(record.id))
         return _to_domain(record)
 
+    # ---------- delete ----------
+
+    async def delete(
+        self,
+        caller: Caller,
+        student_id: UUID,
+        action_id: UUID,
+        token: str,
+    ) -> None:
+        """Delete an action from the history, here and in the agent.
+
+        Unlike cancelling, nothing is left behind: the row, its result, and
+        the agent's copy of it. One still running is stopped by the agent as
+        part of forgetting it. The agent goes first, so a failure there
+        (AgentUnavailableError) leaves the action as it was — retrying is
+        safe, the agent's side is idempotent.
+        """
+        record = await self._require_record(caller, student_id, action_id)
+        if record.task_id is not None:
+            await self._agent.delete_action(record.task_id, token)
+        await self._actions.delete(record)
+        logger.info("action_deleted", action_id=str(action_id))
+
     # ---------- accept ----------
 
     async def accept(

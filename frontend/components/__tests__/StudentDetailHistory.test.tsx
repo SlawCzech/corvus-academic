@@ -4,6 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SWRConfig } from "swr"
 import StudentDetail from "../students/StudentDetail"
 
+const mockPush = vi.fn()
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockPush }),
+}))
+
 /**
  * Finished actions are stored whole — status, findings, scores, review text —
  * and the history list used to show only "Recenzja · gotowe · 12.09.2026".
@@ -144,5 +149,33 @@ describe("StudentDetail — action history", () => {
 
     const entry = await screen.findByRole("button", { name: /Recenzja/ })
     expect(entry).toBeDisabled()
+  })
+
+  it("deletes an action from the history after asking", async () => {
+    let actions = [REVIEW]
+    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+      if (init?.method === "DELETE") {
+        actions = []
+        return Promise.resolve(new Response(null, { status: 204 }))
+      }
+      const body = url.endsWith("/actions")
+        ? actions
+        : url.endsWith("/meeting-notes") ||
+            url.endsWith("/drafts") ||
+            url.includes("/guidelines/")
+          ? []
+          : STUDENT
+      return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }))
+    })
+    vi.stubGlobal("fetch", fetchMock)
+    renderDetail()
+    await openHistorySection()
+
+    await userEvent.click(await screen.findByRole("button", { name: "Usuń z historii" }))
+    await userEvent.click(screen.getByRole("button", { name: "Usuń" }))
+
+    expect(await screen.findByText("Nic jeszcze nie uruchomiono.")).toBeInTheDocument()
+    const del = fetchMock.mock.calls.find(([, init]) => init?.method === "DELETE")
+    expect(del?.[0]).toBe("/api/students/s1/actions/a1")
   })
 })

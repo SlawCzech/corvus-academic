@@ -43,6 +43,22 @@ class AgentTaskRepository:
         )
         return result.scalar_one_or_none()
 
+    async def find_by_student(
+        self, student_id: uuid.UUID, user_id: uuid.UUID | None = None
+    ) -> list[AgentTaskModel]:
+        """A student's tasks — only ``user_id``'s, unless it is None (admin)."""
+        stmt = select(AgentTaskModel).where(AgentTaskModel.student_id == student_id)
+        if user_id is not None:
+            stmt = stmt.where(AgentTaskModel.user_id == user_id)
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def delete(self, models: Sequence[AgentTaskModel]) -> None:
+        """Delete these task rows, result and all, in one commit."""
+        for model in models:
+            await self._session.delete(model)
+        await self._session.commit()
+
     async def update_status(
         self,
         task_id: str,

@@ -90,6 +90,14 @@ class AgentClient:
         data = await self._post(f"/actions/{task_id}/cancel", {}, token)
         return AgentActionStatus(status=str(data["status"]), result=None, error=None)
 
+    async def delete_action(self, task_id: str, token: str) -> None:
+        """Have the agent forget one action; idempotent on its side."""
+        await self._delete(f"/actions/{task_id}", token)
+
+    async def delete_student_actions(self, student_id: UUID, token: str) -> None:
+        """Have the agent forget every action run for a student."""
+        await self._delete(f"/students/{student_id}/actions", token)
+
     async def list_models(self, token: str) -> dict[str, Any]:
         """The chat models the agent's Ollama has installed, plus BYOK models."""
         return await self._get("/models", token)
@@ -124,6 +132,18 @@ class AgentClient:
             logger.error("agent_request_failed", path=path, error=str(exc))
             raise AgentUnavailableError(str(exc)) from exc
         return self._as_dict(response)
+
+    async def _delete(self, path: str, token: str) -> None:
+        try:
+            response = await self._client.delete(
+                f"{self._base_url}{path}",
+                headers={"Authorization": f"Bearer {token}"},
+                timeout=_TIMEOUT,
+            )
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            logger.error("agent_request_failed", path=path, error=str(exc))
+            raise AgentUnavailableError(str(exc)) from exc
 
     @staticmethod
     def _as_dict(response: httpx.Response) -> dict[str, Any]:
