@@ -2,11 +2,15 @@
 
 export type FindingSeverity = "critical" | "major" | "minor"
 
+export type FindingSource = "structure" | "methodology" | "requirements"
+
 export interface Finding {
   section: string
   description: string
   severity: FindingSeverity
   suggestion: string
+  // Which analysis raised it; absent on results stored before 2026-09-24.
+  source?: FindingSource | null
 }
 
 export interface Score {

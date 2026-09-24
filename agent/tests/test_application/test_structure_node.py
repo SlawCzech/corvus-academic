@@ -7,7 +7,7 @@ from langchain_core.messages import AIMessage
 
 from src.application.nodes.structure import analyze_structure
 from src.application.state import ActionState
-from src.domain.analysis import Finding, FindingSeverity
+from src.domain.analysis import Finding, FindingSeverity, FindingSource
 from tests.factories import make_state
 
 _VALID_RESPONSE = (
@@ -77,3 +77,31 @@ def test_analyze_structure_returns_only_its_own_findings() -> None:
 
     assert earlier not in result["findings"]
     assert len(result["findings"]) == 1
+
+
+def test_findings_are_tagged_as_structure() -> None:
+    """Each finding names the analysis that raised it."""
+    mock_llm = MagicMock()
+    mock_llm.invoke.return_value = AIMessage(content=_VALID_RESPONSE)
+
+    with patch("src.application.nodes.structure.get_llm", return_value=mock_llm):
+        result = analyze_structure(_make_state())
+
+    assert {f.source for f in result["findings"]} == {FindingSource.STRUCTURE}
+
+
+def test_the_guidelines_stay_out_of_the_structure_prompt() -> None:
+    """Required elements are `check_requirements`' call, not this node's.
+
+    Given the same rubric, both nodes reported the same missing chapter.
+    """
+    mock_llm = MagicMock()
+    mock_llm.invoke.return_value = AIMessage(content="[]")
+
+    with patch("src.application.nodes.structure.get_llm", return_value=mock_llm):
+        analyze_structure(_make_state())
+
+    messages: list[Any] = mock_llm.invoke.call_args.args[0]
+    sent = "".join(str(m.content) for m in messages)
+    assert "at least five chapters" not in sent
+    assert "Chapter 1: Introduction" in sent

@@ -1,9 +1,16 @@
 """System prompt for the methodology analysis node."""
 
+from src.domain.analysis import FindingSource
+
+from .scopes import scope_instruction
+
 _BASE = (
     "You are a thesis reviewer evaluating the research methodology and bibliography "
     "of a diploma thesis. Assess clarity of research design, appropriateness of "
-    "methods, and quality and completeness of citations. "
+    "methods, and the quality of the sources and how they are used. "
+    "The university requirements that come with the thesis tell you what is "
+    "expected of the research; judging formal conformance with them is not "
+    "your task. "
     "Return your findings as a JSON array. "
     "Each element must have these fields: "
     "section (str), description (str), "
@@ -13,6 +20,7 @@ _BASE = (
     "with it lists the sections of the complete thesis. Never report a "
     "section as missing when the map lists it, and never infer that the "
     "thesis is incomplete from where the excerpt ends."
+    + scope_instruction(FindingSource.METHODOLOGY)
 )
 
 _LANG_SUFFIX = {

@@ -5,7 +5,8 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.application.excerpt import render_document_block
 from src.application.json_output import parse_json_array
-from src.domain.analysis import Finding, FindingSeverity
+from src.application.prompts.scopes import scope_instruction
+from src.domain.analysis import Finding, FindingSeverity, FindingSource
 from src.infrastructure.llm_factory import get_llm
 
 from ..state import ActionState, AnalysisUpdate
@@ -43,6 +44,11 @@ The thesis text may be an excerpt. The document map that comes with it was
 computed from the complete thesis: a section it lists EXISTS. Never raise a
 finding that a section is missing when the map lists it, and never treat the
 end of the excerpt as the end of the thesis.
+
+When a requirement concerns the quality of the research or of the argument
+rather than an element or a rule you can check, check only that what it asks
+for is there; how well it is done is judged by the other analyses.
+{scope_instruction}
 {lang_instruction}"""
 
 _LANG_INSTRUCTIONS = {
@@ -53,7 +59,8 @@ _LANG_INSTRUCTIONS = {
 
 def _get_system_prompt(language: str = "pl") -> str:
     return _SYSTEM_PROMPT_BASE.format(
-        lang_instruction=_LANG_INSTRUCTIONS.get(language, _LANG_INSTRUCTIONS["pl"])
+        scope_instruction=scope_instruction(FindingSource.REQUIREMENTS),
+        lang_instruction=_LANG_INSTRUCTIONS.get(language, _LANG_INSTRUCTIONS["pl"]),
     )
 
 
@@ -80,6 +87,7 @@ def check_requirements(state: ActionState) -> AnalysisUpdate:
                 description=item["description"],
                 severity=FindingSeverity(item["severity"]),
                 suggestion=item["suggestion"],
+                source=FindingSource.REQUIREMENTS,
             )
             for item in data
         ]

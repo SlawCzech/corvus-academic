@@ -6,7 +6,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from src.application.excerpt import render_document_block
 from src.application.json_output import parse_json_array
 from src.application.prompts import structure as prompts
-from src.domain.analysis import Finding, FindingSeverity
+from src.domain.analysis import Finding, FindingSeverity, FindingSource
 from src.infrastructure.llm_factory import get_llm
 
 from ..state import ActionState, AnalysisUpdate
@@ -28,9 +28,10 @@ def analyze_structure(state: ActionState) -> AnalysisUpdate:
             SystemMessage(  # type: ignore[attr-defined]
                 content=prompts.get_system_prompt(state.get("language", "pl"))
             ),
-            HumanMessage(
-                content=(f"{document}\n\nGuidelines:\n{ctx.get('guidelines', '')}")
-            ),
+            # No guidelines: whether required elements are there and follow
+            # the rules is `check_requirements`' call. Handed the same rubric,
+            # this node reported the same missing chapter a second time.
+            HumanMessage(content=document),
         ]
         response = llm.invoke(messages)
         data = parse_json_array(response.content)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
@@ -40,6 +41,7 @@ def analyze_structure(state: ActionState) -> AnalysisUpdate:
                 description=item["description"],
                 severity=FindingSeverity(item["severity"]),
                 suggestion=item["suggestion"],
+                source=FindingSource.STRUCTURE,
             )
             for item in data
         ]

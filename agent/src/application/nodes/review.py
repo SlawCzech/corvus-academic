@@ -36,6 +36,11 @@ from the complete thesis. A section the map lists EXISTS — never write that
 it is missing, and never judge the work incomplete because the excerpt ends
 where it does. Base the review on the findings and on what you can see.
 
+Each finding is labelled with the analysis that raised it — structure,
+methodology or requirements. Their scopes are separate, but should two
+findings still describe the same problem, weigh it once, at the higher
+severity.
+
 ## Style rules
 
 Write in formal Polish academic prose. Follow this structure exactly:
@@ -329,7 +334,8 @@ def generate_review(state: ActionState) -> ReviewUpdate:
         )
 
         findings_summary = "\n".join(
-            f"- [{f.severity.upper()}] {f.section}: {f.description}"
+            f"- [{f.severity.upper()}] ({f.source or 'unknown'}) "
+            f"{f.section}: {f.description}"
             for f in state["findings"]
         )
 

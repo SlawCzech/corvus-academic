@@ -8,7 +8,7 @@ from langchain_core.messages import AIMessage
 
 from src.application.nodes.review import generate_review
 from src.application.state import ActionState, ThesisMetadataDict
-from src.domain.analysis import Finding, FindingSeverity
+from src.domain.analysis import Finding, FindingSeverity, FindingSource
 from tests.factories import make_state
 
 _VALID_RESPONSE = json.dumps(
@@ -402,3 +402,34 @@ def test_json_parse_error_sets_state_error() -> None:
 
     assert result["error"] is not None
     assert "output" not in result
+
+
+def test_each_finding_reaches_the_review_labelled_with_its_source() -> None:
+    """The label lets the review weigh a problem two analyses raised once."""
+    state = _make_state()
+    state["findings"] = [
+        Finding(
+            section="Wnioski",
+            description="Brak wniosków",
+            severity=FindingSeverity.CRITICAL,
+            suggestion="Dodaj wnioski.",
+            source=FindingSource.REQUIREMENTS,
+        ),
+        Finding(
+            section="Wstęp",
+            description="Cel niejasny",
+            severity=FindingSeverity.MINOR,
+            suggestion="Doprecyzuj cel.",
+        ),
+    ]
+    mock_llm = MagicMock()
+    mock_llm.invoke.return_value = AIMessage(content=_VALID_RESPONSE)
+
+    with patch("src.application.nodes.review.get_llm", return_value=mock_llm):
+        generate_review(state)
+
+    messages: list[Any] = mock_llm.invoke.call_args.args[0]
+    user_message = str(messages[1].content)
+    assert "- [CRITICAL] (requirements) Wnioski: Brak wniosków" in user_message
+    assert "- [MINOR] (unknown) Wstęp: Cel niejasny" in user_message
+    assert "weigh it once" in str(messages[0].content)

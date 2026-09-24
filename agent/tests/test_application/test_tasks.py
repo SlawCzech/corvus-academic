@@ -9,6 +9,7 @@ from celery.exceptions import Retry
 
 from src.application.tasks import _result_payload, run_action
 from src.domain.action import ActionType, TaskStatus
+from src.domain.analysis import Finding, FindingSeverity, FindingSource
 from src.infrastructure.celery_app import celery_app
 from src.infrastructure.llm_factory import current_credentials
 from tests.factories import ACTION_ID, STUDENT_ID
@@ -236,6 +237,21 @@ def test_result_payload_leaves_other_actions_output_alone() -> None:
 
     assert "summary" not in payload
     assert payload["output"] == {"topics": [], "recommended": 0}
+
+
+def test_result_payload_keeps_which_analysis_raised_each_finding() -> None:
+    """The source survives into the stored JSON as a plain string."""
+    finding = Finding(
+        section="Wnioski",
+        description="Brak wniosków",
+        severity=FindingSeverity.CRITICAL,
+        suggestion="Dodaj wnioski.",
+        source=FindingSource.REQUIREMENTS,
+    )
+
+    payload = json.loads(json.dumps(_result_payload(_final_state(findings=[finding]))))
+
+    assert payload["findings"][0]["source"] == "requirements"
 
 
 # ---------- guidelines ----------

@@ -6,7 +6,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from src.application.excerpt import render_document_block
 from src.application.json_output import parse_json_array
 from src.application.prompts import methodology as prompts
-from src.domain.analysis import Finding, FindingSeverity
+from src.domain.analysis import Finding, FindingSeverity, FindingSource
 from src.infrastructure.llm_factory import get_llm
 
 from ..state import ActionState, AnalysisUpdate
@@ -40,6 +40,7 @@ def analyze_methodology(state: ActionState) -> AnalysisUpdate:
                 description=item["description"],
                 severity=FindingSeverity(item["severity"]),
                 suggestion=item["suggestion"],
+                source=FindingSource.METHODOLOGY,
             )
             for item in data
         ]

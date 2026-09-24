@@ -1,6 +1,12 @@
 "use client"
 
-import type { ActionResult, Finding, FindingSeverity, Score } from "@/lib/api.types"
+import type {
+  ActionResult,
+  Finding,
+  FindingSeverity,
+  FindingSource,
+  Score,
+} from "@/lib/api.types"
 
 const SEVERITY_ORDER: FindingSeverity[] = ["critical", "major", "minor"]
 
@@ -8,6 +14,12 @@ const SEVERITY_LABELS: Record<FindingSeverity, string> = {
   critical: "Krytyczne",
   major: "Poważne",
   minor: "Drobne",
+}
+
+const SOURCE_LABELS: Record<FindingSource, string> = {
+  structure: "Struktura",
+  methodology: "Metodologia",
+  requirements: "Wymogi",
 }
 
 const SEVERITY_COLORS: Record<FindingSeverity, string> = {
@@ -36,7 +48,17 @@ function FindingGroup({
             data-testid="finding-item"
             className="rounded-lg border border-line p-3 text-[13px]"
           >
-            <p className="font-semibold text-foreground">{f.section}</p>
+            <p className="font-semibold text-foreground">
+              {f.section}
+              {f.source && (
+                <span
+                  data-testid="finding-source"
+                  className="ml-2 text-[11px] font-normal text-muted"
+                >
+                  {SOURCE_LABELS[f.source]}
+                </span>
+              )}
+            </p>
             <p className="mt-0.5 text-muted-strong">{f.description}</p>
             {f.suggestion && (
               <p className="mt-1 italic text-muted">→ {f.suggestion}</p>

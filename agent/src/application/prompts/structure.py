@@ -1,5 +1,9 @@
 """System prompt for the structure analysis node."""
 
+from src.domain.analysis import FindingSource
+
+from .scopes import scope_instruction
+
 _BASE = (
     "You are a thesis reviewer analyzing chapter structure and coherence "
     "of a diploma thesis. Return your findings as a JSON array. "
@@ -11,6 +15,7 @@ _BASE = (
     "with it lists the sections of the complete thesis. Never report a "
     "section as missing when the map lists it, and never infer that the "
     "thesis is incomplete from where the excerpt ends."
+    + scope_instruction(FindingSource.STRUCTURE)
 )
 
 _LANG_SUFFIX = {

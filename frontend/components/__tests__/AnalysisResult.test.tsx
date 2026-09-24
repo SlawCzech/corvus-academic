@@ -67,6 +67,32 @@ describe("AnalysisResultView", () => {
     expect(items).toHaveLength(3)
   })
 
+  it("labels each finding with the analysis that raised it", () => {
+    const result: ActionResult = {
+      ...baseResult,
+      findings: [
+        {
+          section: "Wnioski",
+          description: "Brak wniosków",
+          severity: "critical",
+          suggestion: "Dodaj wnioski.",
+          source: "requirements",
+        },
+        {
+          section: "Wstęp",
+          description: "Wynik sprzed 2026-09-24, bez źródła",
+          severity: "minor",
+          suggestion: "",
+        },
+      ],
+    }
+    render(<AnalysisResultView result={result} />)
+
+    const labels = screen.getAllByTestId("finding-source")
+    expect(labels).toHaveLength(1)
+    expect(labels[0]).toHaveTextContent("Wymogi")
+  })
+
   it("hides severity groups that have no findings", () => {
     const result: ActionResult = {
       ...baseResult,

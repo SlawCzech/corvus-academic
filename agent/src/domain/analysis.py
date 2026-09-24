@@ -13,6 +13,19 @@ class FindingSeverity(StrEnum):
     MINOR = "minor"
 
 
+class FindingSource(StrEnum):
+    """Which analysis raised a finding.
+
+    The review's three analyses run in parallel and cannot see each other's
+    results, so each owns a separate scope. The source says whose scope a
+    finding fell in — and makes an overlap countable instead of anecdotal.
+    """
+
+    STRUCTURE = "structure"
+    METHODOLOGY = "methodology"
+    REQUIREMENTS = "requirements"
+
+
 class ReviewTone(StrEnum):
     """Tone style for the generated thesis review."""
 
@@ -40,6 +53,9 @@ class Finding:
     description: str
     severity: FindingSeverity
     suggestion: str
+    # None only for findings built outside the analysis nodes (tests,
+    # payloads stored before the field existed).
+    source: FindingSource | None = None
 
 
 @dataclass

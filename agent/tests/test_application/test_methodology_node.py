@@ -7,7 +7,7 @@ from langchain_core.messages import AIMessage
 
 from src.application.nodes.methodology import analyze_methodology
 from src.application.state import ActionState
-from src.domain.analysis import Finding, FindingSeverity
+from src.domain.analysis import Finding, FindingSeverity, FindingSource
 from tests.factories import make_state
 
 _VALID_RESPONSE = (
@@ -77,3 +77,14 @@ def test_analyze_methodology_returns_only_its_own_findings() -> None:
 
     assert earlier not in result["findings"]
     assert len(result["findings"]) == 1
+
+
+def test_findings_are_tagged_as_methodology() -> None:
+    """Each finding names the analysis that raised it."""
+    mock_llm = MagicMock()
+    mock_llm.invoke.return_value = AIMessage(content=_VALID_RESPONSE)
+
+    with patch("src.application.nodes.methodology.get_llm", return_value=mock_llm):
+        result = analyze_methodology(_make_state())
+
+    assert {f.source for f in result["findings"]} == {FindingSource.METHODOLOGY}
