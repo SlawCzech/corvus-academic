@@ -183,14 +183,27 @@ class ActionService:
         self,
         caller: Caller,
         student_id: UUID,
+        token: str,
         action_type: ActionType | None = None,
     ) -> list[AgentAction]:
-        """Return a student's action history, newest first."""
+        """Return a student's action history, newest first.
+
+        Unfinished actions are refreshed from the agent on the way out. The
+        single-action poll is not enough on its own: a client that reloads
+        the page loses the id it was polling and only ever asks for the
+        list, so without this the row would stay `running` forever while
+        the agent's result sits unread.
+        """
         student = await self._students.get(caller, student_id)
         records = await self._actions.find_by_student(
             student.id, action_type=str(action_type) if action_type else None
         )
-        return [_to_domain(r) for r in records]
+        return [
+            await self._refresh(r, token)
+            if r.task_id is not None and not ActionStatus(r.status).is_terminal
+            else _to_domain(r)
+            for r in records
+        ]
 
     async def get_action(
         self,

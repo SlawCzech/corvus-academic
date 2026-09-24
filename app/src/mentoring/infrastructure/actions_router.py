@@ -95,12 +95,13 @@ async def trigger_action(
 async def list_actions(
     student_id: uuid.UUID,
     caller: CallerDep,
+    token: TokenDep,
     svc: ActionServiceDep,
     action_type: Annotated[ActionType | None, Query(alias="type")] = None,
 ) -> list[ActionResponse]:
-    """Return a student's AI action history, newest first."""
+    """Return a student's AI action history, newest first, unfinished ones refreshed."""
     try:
-        actions = await svc.list_actions(caller, student_id, action_type)
+        actions = await svc.list_actions(caller, student_id, token, action_type)
     except StudentNotFoundError as exc:
         raise not_found(exc) from exc
     return [action_response(a) for a in actions]

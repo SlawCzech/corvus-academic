@@ -200,7 +200,7 @@ async def test_review_is_judged_against_the_chosen_guideline_set(
     )
 
     assert env.agent.submitted[0]["context"]["guidelines"] == "## UE Katowice v2"
-    record = await env.actions.list_actions(PROMOTOR, student.id)
+    record = await env.actions.list_actions(PROMOTOR, student.id, TOKEN)
     assert record[0].id == action.id
     stored = await _input_ref(env, student.id)
     assert stored["guideline_version_id"] == str(version_id)
@@ -304,7 +304,7 @@ async def test_action_needing_a_draft_is_refused_without_one(
             action_type=ActionType.DEFENCE_QUESTIONS,
             token=TOKEN,
         )
-    assert await env.actions.list_actions(PROMOTOR, student.id) == []
+    assert await env.actions.list_actions(PROMOTOR, student.id, TOKEN) == []
     assert env.agent.submitted == []
 
 
@@ -330,7 +330,7 @@ async def test_failed_dispatch_stays_in_the_history(env: _Fixture) -> None:
             PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
         )
 
-    actions = await env.actions.list_actions(PROMOTOR, student.id)
+    actions = await env.actions.list_actions(PROMOTOR, student.id, TOKEN)
     assert len(actions) == 1
     assert actions[0].status is ActionStatus.FAILED
     assert "connection refused" in (actions[0].error or "")
@@ -393,6 +393,45 @@ async def test_agent_failure_is_recorded(env: _Fixture) -> None:
     assert refreshed.error == "Ollama unreachable"
 
 
+async def test_listing_picks_up_a_result_nobody_polled_for(env: _Fixture) -> None:
+    """A reloaded page only asks for the list — the result must still land."""
+    student = await _student(env)
+    action = await env.actions.trigger(
+        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+    )
+    env.agent.completes_with(topic_payload("Instytucje a wzrost"))
+
+    listed = await env.actions.list_actions(PROMOTOR, student.id, TOKEN)
+
+    assert listed[0].id == action.id
+    assert listed[0].status is ActionStatus.COMPLETED
+    assert listed[0].proposed_topics()[0]["title"] == "Instytucje a wzrost"
+    stored = await env.actions.get_action(PROMOTOR, student.id, action.id, TOKEN)
+    assert stored.status is ActionStatus.COMPLETED
+
+
+async def test_listing_does_not_poll_finished_actions(env: _Fixture) -> None:
+    student = await _student(env)
+    await _completed_action(env, student.id, "Instytucje a wzrost")
+    env.agent.polls.clear()
+
+    await env.actions.list_actions(PROMOTOR, student.id, TOKEN)
+
+    assert env.agent.polls == []
+
+
+async def test_listing_survives_an_unavailable_agent(env: _Fixture) -> None:
+    student = await _student(env)
+    await env.actions.trigger(
+        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+    )
+    env.agent.unavailable = True
+
+    listed = await env.actions.list_actions(PROMOTOR, student.id, TOKEN)
+
+    assert listed[0].status is ActionStatus.PENDING
+
+
 async def test_action_of_another_student_is_not_found(env: _Fixture) -> None:
     mine = await _student(env)
     theirs = await _student(env)
@@ -413,13 +452,15 @@ async def test_list_filters_by_action_type(env: _Fixture) -> None:
     assert (
         len(
             await env.actions.list_actions(
-                PROMOTOR, student.id, ActionType.PROPOSE_TOPIC
+                PROMOTOR, student.id, TOKEN, ActionType.PROPOSE_TOPIC
             )
         )
         == 1
     )
     assert (
-        await env.actions.list_actions(PROMOTOR, student.id, ActionType.GENERATE_REVIEW)
+        await env.actions.list_actions(
+            PROMOTOR, student.id, TOKEN, ActionType.GENERATE_REVIEW
+        )
         == []
     )
 
@@ -482,7 +523,7 @@ async def test_unknown_topic_index_changes_nothing(env: _Fixture) -> None:
         await env.actions.accept(PROMOTOR, student.id, action_id, topic_index=5)
 
     assert (await env.students.get(PROMOTOR, student.id)).current_topic is None
-    actions = await env.actions.list_actions(PROMOTOR, student.id)
+    actions = await env.actions.list_actions(PROMOTOR, student.id, TOKEN)
     assert actions[0].accepted is False
 
 
@@ -562,7 +603,7 @@ async def test_progress_check_sends_both_versions(env: _Fixture) -> None:
     assert "Wersja pierwsza" in context["previous_text"]
     assert (context["current_version"], context["previous_version"]) == (2, 1)
     # Provenance: which rows fed the prompt, by id — never the text itself.
-    stored = (await env.actions.list_actions(PROMOTOR, student.id))[0]
+    stored = (await env.actions.list_actions(PROMOTOR, student.id, TOKEN))[0]
     assert stored.id == action.id
 
 
@@ -629,7 +670,7 @@ async def test_the_key_is_not_written_to_the_action_row(env: _Fixture) -> None:
         byok=BYOK(provider="claude", api_key="sk-user-key"),
     )
 
-    stored = (await env.actions.list_actions(PROMOTOR, student.id))[0]
+    stored = (await env.actions.list_actions(PROMOTOR, student.id, TOKEN))[0]
     assert stored.id == action.id
     assert "sk-user-key" not in json.dumps(
         {"detail": stored.detail, "output": stored.output, "error": stored.error},
