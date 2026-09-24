@@ -39,6 +39,17 @@ describe("ActionResultView", () => {
     expect(screen.getByText("Kapitał społeczny")).toBeInTheDocument()
   })
 
+  it("shows proposed topics to read, with nothing to pick, without onSelect", () => {
+    const action: AgentAction = {
+      ...base,
+      output: { output: { topics: [{ title: "Instytucje a wzrost" }] } },
+    }
+    render(<ActionResultView action={action} />)
+
+    expect(screen.getByText("Instytucje a wzrost")).toBeInTheDocument()
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument()
+  })
+
   it("numbers the defence questions", () => {
     const action: AgentAction = {
       ...base,

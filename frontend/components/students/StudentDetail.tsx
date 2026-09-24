@@ -7,20 +7,13 @@ import ActionPanel from "@/components/students/ActionPanel"
 import ActionResultView from "@/components/students/ActionResultView"
 import DraftList from "@/components/students/DraftList"
 import GuidelinePicker from "@/components/students/GuidelinePicker"
+import LatestResults from "@/components/students/LatestResults"
 import StudentDetailsCard from "@/components/students/StudentDetailsCard"
 import StudentSubNav, { type Section } from "@/components/students/StudentSubNav"
 import TopicCard from "@/components/students/TopicCard"
+import { ACTION_LABELS } from "@/components/students/format"
 import { createMeetingNote, fetcher, uploadDraft } from "@/lib/api.client"
 import type { AgentAction, MeetingNote, Student, ThesisDraft } from "@/lib/api.types"
-
-const ACTION_LABELS: Record<string, string> = {
-  propose_topic: "Propozycja tematu",
-  defence_questions: "Pytania na obronę",
-  check_progress: "Sprawdzenie postępu",
-  evaluate_methodology: "Ocena metodologii",
-  draft_meeting_note: "Szkic notatki",
-  generate_review: "Recenzja",
-}
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "w kolejce",
@@ -176,6 +169,11 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
                 student={student}
                 onChange={(next) => void mutateStudent(next, { revalidate: false })}
               />
+
+              <LatestResults
+                actions={actions ?? []}
+                onShowHistory={() => setSection("history")}
+              />
             </div>
           </div>
         )}
@@ -286,7 +284,7 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
                           data-testid="history-result"
                           className="border-t border-line/60 bg-surface-alt/40 p-4"
                         >
-                          <ActionResultView action={action} selected={0} onSelect={() => {}} />
+                          <ActionResultView action={action} />
                         </div>
                       )}
                     </div>

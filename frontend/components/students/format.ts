@@ -1,5 +1,14 @@
 import type { StudentStatus } from "@/lib/api.types"
 
+export const ACTION_LABELS: Record<string, string> = {
+  propose_topic: "Propozycja tematu",
+  defence_questions: "Pytania na obronę",
+  check_progress: "Sprawdzenie postępu",
+  evaluate_methodology: "Ocena metodologii",
+  draft_meeting_note: "Szkic notatki",
+  generate_review: "Recenzja",
+}
+
 export const STUDENT_STATUS_LABELS: Record<StudentStatus, string> = {
   active: "Aktywny",
   graduated: "Obroniony",

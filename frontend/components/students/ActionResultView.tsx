@@ -23,9 +23,13 @@ function Bullets({ title, items }: { title: string; items?: string[] }) {
 
 interface Props {
   action: AgentAction
-  /** Which proposed topic the promoter has selected, for propose_topic. */
-  selected: number
-  onSelect: (index: number) => void
+  /**
+   * Which proposed topic the promoter has selected, for propose_topic.
+   * Left out, the proposals are shown to read, with nothing to pick — the
+   * history and the overview, where there is no "accept" to follow.
+   */
+  selected?: number
+  onSelect?: (index: number) => void
 }
 
 /**
@@ -77,6 +81,20 @@ export default function ActionResultView({ action, selected, onSelect }: Props) 
 
   switch (action.action_type) {
     case "propose_topic":
+      if (onSelect === undefined) {
+        return (
+          <ol data-testid="topics" className="space-y-2">
+            {(output?.topics ?? []).map((topic, i) => (
+              <li key={i} className={CARD}>
+                <p className="font-semibold text-foreground">{topic.title}</p>
+                {topic.rationale && <p className="mt-1 text-muted-strong">{topic.rationale}</p>}
+                {topic.scope && <p className="mt-1 text-muted">Zakres: {topic.scope}</p>}
+                {topic.risks && <p className="mt-1 text-muted">Ryzyka: {topic.risks}</p>}
+              </li>
+            ))}
+          </ol>
+        )
+      }
       return (
         <div data-testid="topics" className="space-y-2">
           {(output?.topics ?? []).map((topic, i) => (
