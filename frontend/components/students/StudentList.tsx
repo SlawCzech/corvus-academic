@@ -118,7 +118,7 @@ export default function StudentList() {
 
       {showForm && (
         <StudentForm
-          onCreated={() => {
+          onSaved={() => {
             void mutate()
             setShowForm(false)
           }}

@@ -7,7 +7,9 @@ import ActionPanel from "@/components/students/ActionPanel"
 import ActionResultView from "@/components/students/ActionResultView"
 import DraftList from "@/components/students/DraftList"
 import GuidelinePicker from "@/components/students/GuidelinePicker"
+import StudentDetailsCard from "@/components/students/StudentDetailsCard"
 import StudentSubNav, { type Section } from "@/components/students/StudentSubNav"
+import TopicCard from "@/components/students/TopicCard"
 import { createMeetingNote, fetcher, uploadDraft } from "@/lib/api.client"
 import type { AgentAction, MeetingNote, Student, ThesisDraft } from "@/lib/api.types"
 
@@ -55,7 +57,7 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
   )
   const { data: actions } = useSWR<AgentAction[]>(actionsKey, fetcher)
 
-  const [section, setSection] = useState<Section>("actions")
+  const [section, setSection] = useState<Section>("overview")
   const [openActionId, setOpenActionId] = useState<string | null>(null)
   const [noteText, setNoteText] = useState("")
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -131,25 +133,11 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
             )}
 
             <div className="grid grid-cols-2 gap-5">
-              <div className="rounded-xl border border-line bg-surface p-5">
-                <h3 className="mb-3 text-[11.5px] font-semibold uppercase tracking-wide text-muted">
-                  Temat pracy
-                </h3>
-                {student.current_topic ? (
-                  <>
-                    <p className="text-[15px] leading-relaxed text-foreground">
-                      {student.current_topic}
-                    </p>
-                    {student.current_topic_set_at && (
-                      <p className="mt-2.5 text-[12.5px] text-muted">
-                        Ustalony {formatDate(student.current_topic_set_at)}
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-[13.5px] italic text-muted">Temat nieustalony</p>
-                )}
-              </div>
+              <TopicCard
+                student={student}
+                onChange={(next) => void mutateStudent(next, { revalidate: false })}
+                onAskAi={() => setSection("actions")}
+              />
 
               <div className="rounded-xl border border-line bg-surface p-5">
                 <h3 className="mb-3 text-[11.5px] font-semibold uppercase tracking-wide text-muted">
@@ -180,6 +168,11 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
               </div>
 
               <GuidelinePicker
+                student={student}
+                onChange={(next) => void mutateStudent(next, { revalidate: false })}
+              />
+
+              <StudentDetailsCard
                 student={student}
                 onChange={(next) => void mutateStudent(next, { revalidate: false })}
               />

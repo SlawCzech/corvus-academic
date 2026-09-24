@@ -53,7 +53,7 @@ function renderDetail(): void {
 
 /**
  * The history list lives behind the student's "Historia" sub-nav section
- * now — it is not the page's default view (that's "Akcje AI"), so every
+ * now — it is not the page's default view (that's "Przegląd"), so every
  * test that wants to see it has to switch there first.
  */
 async function openHistorySection(): Promise<void> {
@@ -68,7 +68,9 @@ describe("StudentDetail — action history", () => {
       vi.fn((url: string) => {
         const body = url.endsWith("/actions")
           ? [REVIEW]
-          : url.endsWith("/meeting-notes") || url.endsWith("/drafts")
+          : url.endsWith("/meeting-notes") ||
+              url.endsWith("/drafts") ||
+              url.includes("/guidelines/")
             ? []
             : STUDENT
         return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }))
@@ -126,7 +128,9 @@ describe("StudentDetail — action history", () => {
             JSON.stringify(
               url.endsWith("/actions")
                 ? [pending]
-                : url.endsWith("/meeting-notes") || url.endsWith("/drafts")
+                : url.endsWith("/meeting-notes") ||
+                    url.endsWith("/drafts") ||
+                    url.includes("/guidelines/")
                   ? []
                   : STUDENT,
             ),

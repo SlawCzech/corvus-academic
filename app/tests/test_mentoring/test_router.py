@@ -227,6 +227,58 @@ def test_update_rejects_blank_topic(client: TestClient) -> None:
     assert resp.status_code == 422
 
 
+def test_update_edits_details(client: TestClient) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    created = _create_student(client, headers)
+
+    resp = client.patch(
+        f"/students/{created['id']}",
+        json={
+            "full_name": "Anna Nowak",
+            "field_of_study": "Finanse",
+            "thesis_type": "master_article",
+            "index_number": "12345",
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    body: dict[str, Any] = resp.json()
+    assert body["full_name"] == "Anna Nowak"
+    assert body["field_of_study"] == "Finanse"
+    assert body["thesis_type"] == "master_article"
+    assert body["index_number"] == "12345"
+
+
+def test_null_clears_topic_and_index_number(client: TestClient) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    created = _create_student(client, headers)
+    url = f"/students/{created['id']}"
+    client.patch(
+        url, json={"current_topic": "Temat", "index_number": "1"}, headers=headers
+    )
+
+    kept = client.patch(url, json={"full_name": "Anna Nowak"}, headers=headers)
+    cleared = client.patch(
+        url, json={"current_topic": None, "index_number": None}, headers=headers
+    )
+
+    assert kept.json()["current_topic"] == "Temat"
+    assert kept.json()["index_number"] == "1"
+    assert cleared.json()["current_topic"] is None
+    assert cleared.json()["current_topic_set_at"] is None
+    assert cleared.json()["index_number"] is None
+
+
+def test_update_rejects_blank_name(client: TestClient) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    created = _create_student(client, headers)
+
+    resp = client.patch(
+        f"/students/{created['id']}", json={"full_name": ""}, headers=headers
+    )
+    assert resp.status_code == 422
+
+
 def test_update_other_promotors_student_is_404(client: TestClient) -> None:
     theirs = login(client, OTHER_PROMOTOR_EMAIL, OTHER_PROMOTOR_PASSWORD)
     created = _create_student(client, theirs)

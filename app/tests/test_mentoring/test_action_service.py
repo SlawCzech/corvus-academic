@@ -262,6 +262,40 @@ async def test_the_guideline_choice_can_be_cleared(env: _Fixture) -> None:
     assert kept.guideline_set_id is None
 
 
+async def test_a_new_thesis_type_drops_the_guideline_choice(env: _Fixture) -> None:
+    student = await _student(env)
+    set_id = uuid.uuid4()
+    env.guidelines.publish(set_id, "bachelor", "## Licencjackie")
+    await env.students.update(
+        PROMOTOR, student.id, guideline_set_id=set_id, set_guidelines=True
+    )
+
+    changed = await env.students.update(
+        PROMOTOR, student.id, thesis_type=ThesisType.MASTER_ARTICLE
+    )
+
+    assert changed.guideline_set_id is None
+
+
+async def test_a_guideline_set_is_checked_against_the_new_thesis_type(
+    env: _Fixture,
+) -> None:
+    student = await _student(env)
+    set_id = uuid.uuid4()
+    env.guidelines.publish(set_id, "master_article", "## Magisterskie")
+
+    changed = await env.students.update(
+        PROMOTOR,
+        student.id,
+        thesis_type=ThesisType.MASTER_ARTICLE,
+        guideline_set_id=set_id,
+        set_guidelines=True,
+    )
+
+    assert changed.thesis_type is ThesisType.MASTER_ARTICLE
+    assert changed.guideline_set_id == set_id
+
+
 async def _input_ref(env: _Fixture, student_id: uuid.UUID) -> dict[str, object]:
     """The provenance stored on the student's newest action."""
     row = (

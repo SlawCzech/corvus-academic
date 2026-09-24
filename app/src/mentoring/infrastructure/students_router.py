@@ -86,19 +86,27 @@ async def update_student(
     caller: CallerDep,
     svc: StudentServiceDep,
 ) -> StudentResponse:
-    """Set the student's current topic, lifecycle status and/or guideline set.
+    """Edit the student's details, topic, lifecycle status and/or guideline set.
 
     Manual topic entry here; the same field is also written by accepting a
-    `propose_topic` action.
+    `propose_topic` action. `index_number`, `current_topic` and
+    `guideline_set_id` sent as null are cleared.
     """
+    given = body.model_fields_set
     try:
         student = await svc.update(
             caller,
             student_id,
+            full_name=body.full_name,
+            field_of_study=body.field_of_study,
+            thesis_type=body.thesis_type,
+            index_number=body.index_number,
+            set_index_number="index_number" in given,
             current_topic=body.current_topic,
+            clear_topic="current_topic" in given and body.current_topic is None,
             status=body.status,
             guideline_set_id=body.guideline_set_id,
-            set_guidelines="guideline_set_id" in body.model_fields_set,
+            set_guidelines="guideline_set_id" in given,
         )
     except StudentNotFoundError as exc:
         raise not_found(exc) from exc

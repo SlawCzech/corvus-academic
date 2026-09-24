@@ -6,8 +6,10 @@ import type {
   GuidelineVersion,
   MeetingNote,
   Student,
+  StudentStatus,
   ThesisDraft,
   Thresholds,
+  ThesisType,
   University,
 } from "./api.types"
 
@@ -89,9 +91,24 @@ export async function createStudent(student: NewStudent): Promise<Student> {
   return res.json() as Promise<Student>
 }
 
+/**
+ * A partial edit of a student. A key left out is kept; `null` clears the
+ * three fields that may be empty. A new `thesis_type` drops the guideline set
+ * unless one for the new type is sent alongside.
+ */
+export interface StudentChanges {
+  full_name?: string
+  field_of_study?: string
+  thesis_type?: ThesisType
+  index_number?: string | null
+  current_topic?: string | null
+  status?: StudentStatus
+  guideline_set_id?: string | null
+}
+
 export async function updateStudent(
   studentId: string,
-  changes: { current_topic?: string; status?: string; guideline_set_id?: string | null },
+  changes: StudentChanges,
 ): Promise<Student> {
   const res = await request(`/api/students/${studentId}`, {
     method: "PATCH",

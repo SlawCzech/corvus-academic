@@ -80,14 +80,62 @@ class Student:
         """Return True if the given promoter supervises this student."""
         return self.promotor_id == promotor_id
 
-    def set_topic(self, topic: str, at: datetime | None = None) -> None:
-        """Record the accepted thesis topic and when it was accepted.
+    def update_details(
+        self,
+        full_name: str | None = None,
+        field_of_study: str | None = None,
+    ) -> None:
+        """Correct the student's name and/or field of study.
 
+        Both are validated before either is applied, so a blank one leaves
+        the student as it was.
+        """
+        name = _require_text(full_name, "full_name") if full_name is not None else None
+        field_ = (
+            _require_text(field_of_study, "field_of_study")
+            if field_of_study is not None
+            else None
+        )
+        if name is not None:
+            self.full_name = name
+        if field_ is not None:
+            self.field_of_study = field_
+
+    def set_index_number(self, index_number: str | None) -> None:
+        """Set the index number, or clear it with ``None``."""
+        self.index_number = (
+            _require_text(index_number, "index_number")
+            if index_number is not None
+            else None
+        )
+
+    def change_thesis_type(self, thesis_type: ThesisType) -> None:
+        """Switch the kind of thesis the student writes.
+
+        The guideline set is chosen per thesis type, so a real change drops
+        the choice — a set for the old type would judge the thesis against
+        the wrong rules.
+        """
+        if thesis_type is self.thesis_type:
+            return
+        self.thesis_type = thesis_type
+        self.guideline_set_id = None
+
+    def set_topic(self, topic: str, at: datetime | None = None) -> None:
+        """Record the thesis topic and when it was settled.
+
+        Written by hand, or by accepting a ``propose_topic`` action — the
+        promoter does not need the AI to agree on a topic with the student.
         The only piece of state denormalized onto the student — everything
         else stays queryable as history through ``agent_actions``.
         """
         self.current_topic = _require_text(topic, "topic")
         self.current_topic_set_at = at or datetime.now(UTC)
+
+    def clear_topic(self) -> None:
+        """The topic is open again."""
+        self.current_topic = None
+        self.current_topic_set_at = None
 
     def change_status(self, status: StudentStatus, at: datetime | None = None) -> None:
         """Move the student to another lifecycle status.

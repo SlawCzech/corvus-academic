@@ -33,10 +33,14 @@ class StudentCreateRequest(BaseModel):
 
 
 class StudentUpdateRequest(BaseModel):
+    full_name: str | None = Field(default=None, min_length=1, max_length=255)
+    field_of_study: str | None = Field(default=None, min_length=1, max_length=255)
+    thesis_type: ThesisType | None = None
+    # These three: sent as null to clear, left out to keep.
+    index_number: str | None = Field(default=None, min_length=1, max_length=50)
     current_topic: str | None = Field(default=None, min_length=1)
-    status: StudentStatus | None = None
-    # Sent as null to clear the choice; left out to keep it.
     guideline_set_id: uuid.UUID | None = None
+    status: StudentStatus | None = None
 
 
 class StudentResponse(BaseModel):

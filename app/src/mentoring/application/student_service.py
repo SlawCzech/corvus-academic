@@ -170,29 +170,50 @@ class StudentService:
         status: StudentStatus | None = None,
         guideline_set_id: UUID | None = None,
         set_guidelines: bool = False,
+        full_name: str | None = None,
+        field_of_study: str | None = None,
+        thesis_type: ThesisType | None = None,
+        index_number: str | None = None,
+        set_index_number: bool = False,
+        clear_topic: bool = False,
     ) -> Student:
-        """Set the current topic, lifecycle status and/or guideline set.
+        """Edit the student: details, topic, lifecycle status, guideline set.
 
-        Every field is optional; omitted ones are left untouched. Topic
-        changes go through the domain entity so ``current_topic_set_at`` is
-        always stamped with them. ``set_guidelines`` says the guideline set was
-        given at all — ``guideline_set_id=None`` with it clears the choice.
+        Every field is optional; omitted ones are left untouched. Changes go
+        through the domain entity so its rules hold — a topic is stamped with
+        when it was set, a new thesis type drops a guideline set chosen for
+        the old one. The ``set_*`` flags say a clearable field was given at
+        all: with them, ``None`` clears it. ``clear_topic`` reopens the topic.
 
-        Raises ValueError for a guideline set that does not exist, has nothing
-        published, or is for another kind of thesis.
+        Raises ValueError for a blank name, field, index number or topic, and
+        for a guideline set that does not exist, has nothing published, or is
+        for another kind of thesis than the student's (after this change).
         """
         model = await self._require_model(caller, student_id)
         student = to_domain(model)
 
+        student.update_details(full_name=full_name, field_of_study=field_of_study)
+        if set_index_number:
+            student.set_index_number(index_number)
+        if thesis_type is not None:
+            student.change_thesis_type(thesis_type)
+        if clear_topic:
+            student.clear_topic()
+        elif current_topic is not None:
+            student.set_topic(current_topic)
+        # Checked against the thesis type as it is after this change.
         if set_guidelines:
             if guideline_set_id is not None:
                 await self._check_guideline_set(student, guideline_set_id)
-            model.guideline_set_id = guideline_set_id
+            student.guideline_set_id = guideline_set_id
 
-        if current_topic is not None:
-            student.set_topic(current_topic)
-            model.current_topic = student.current_topic
-            model.current_topic_set_at = student.current_topic_set_at
+        model.full_name = student.full_name
+        model.field_of_study = student.field_of_study
+        model.index_number = student.index_number
+        model.thesis_type = str(student.thesis_type)
+        model.current_topic = student.current_topic
+        model.current_topic_set_at = student.current_topic_set_at
+        model.guideline_set_id = student.guideline_set_id
         if status is not None:
             student.change_status(status)
             model.status = str(student.status)
