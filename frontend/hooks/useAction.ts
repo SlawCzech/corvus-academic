@@ -4,6 +4,7 @@ import { useCallback, useState } from "react"
 import useSWR, { useSWRConfig } from "swr"
 import {
   acceptAction,
+  cancelAction,
   fetchAction,
   triggerAction,
   type ActionOptions,
@@ -12,12 +13,14 @@ import type { ActionType, AgentAction } from "@/lib/api.types"
 
 const POLL_MS = 3000
 
-/** Stop polling once the agent has finished with the action. */
+function isFinished(action: AgentAction): boolean {
+  return action.status === "completed" || action.status === "failed" || action.status === "cancelled"
+}
+
+/** Stop polling once the agent has finished with the action — or was stopped. */
 export function getRefreshInterval(action: AgentAction | undefined): number {
   if (!action) return POLL_MS
-  return action.status === "completed" || action.status === "failed"
-    ? 0
-    : POLL_MS
+  return isFinished(action) ? 0 : POLL_MS
 }
 
 export interface UseActionReturn {
@@ -28,6 +31,8 @@ export interface UseActionReturn {
   error: string | null
   run: (actionType: ActionType, detail?: string, options?: ActionOptions) => Promise<void>
   accept: (topicIndex?: number) => Promise<void>
+  /** Stop the watched action — a wrong request, or one that runs forever. */
+  cancel: () => Promise<void>
   watch: (actionId: string) => void
   dismiss: () => void
 }
@@ -53,7 +58,7 @@ export function useAction(studentId: string): UseActionReturn {
         if (data.status === "failed") {
           setError(data.error ?? "Akcja zakończyła się błędem")
         }
-        if (data.status === "completed" || data.status === "failed") {
+        if (isFinished(data)) {
           void mutate(`/api/students/${studentId}/actions`)
         }
       },
@@ -92,6 +97,18 @@ export function useAction(studentId: string): UseActionReturn {
     [studentId, actionId, mutate],
   )
 
+  const cancel = useCallback(async () => {
+    if (!actionId) return
+    setError(null)
+    try {
+      const stopped = await cancelAction(studentId, actionId)
+      void mutate(`action:${studentId}:${actionId}`, stopped, { revalidate: false })
+      void mutate(`/api/students/${studentId}/actions`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nie udało się przerwać akcji")
+    }
+  }, [studentId, actionId, mutate])
+
   const watch = useCallback((id: string) => {
     setError(null)
     setActionId(id)
@@ -111,6 +128,7 @@ export function useAction(studentId: string): UseActionReturn {
     error,
     run,
     accept,
+    cancel,
     watch,
     dismiss,
   }

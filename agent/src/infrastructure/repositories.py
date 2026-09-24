@@ -8,6 +8,7 @@ from typing import Any
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.domain.action import TaskStatus
 from src.infrastructure.models import AgentTaskModel, GuidelineChunkModel
 
 
@@ -54,10 +55,16 @@ class AgentTaskRepository:
         Returns False when no row matches — the caller decides whether that is
         worth an alert. ``result`` and ``error`` are only written when given,
         so a "running" update never clears an earlier value.
+
+        A cancelled task stays cancelled: revoking a task that is already on
+        a worker races with that worker's own final write, and the promoter's
+        decision has to win it.
         """
         model = await self.find_by_task_id(task_id)
         if model is None:
             return False
+        if model.status == TaskStatus.CANCELLED and status != TaskStatus.CANCELLED:
+            return True
         model.status = status
         if result is not None:
             model.result = result

@@ -14,11 +14,12 @@ from tests.test_mentoring.conftest import (
     PROMOTOR_PASSWORD,
     login,
 )
-from tests.test_mentoring.fakes import FakeAgentClient
+from tests.test_mentoring.fakes import FakeAgentClient, topic_payload
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def agent() -> Generator[FakeAgentClient, None, None]:
+    """Every dashboard read checks unfinished actions with the agent."""
     fake = FakeAgentClient()
     app.dependency_overrides[get_agent_client] = lambda: fake
     yield fake
@@ -88,3 +89,75 @@ def test_summary_is_scoped_to_the_caller_own_students(client: TestClient) -> Non
 
     assert body["active_students"] == 0
     assert body["recent_activity"] == []
+
+
+def _trigger(client: TestClient, headers: dict[str, str], student_id: str) -> str:
+    resp = client.post(
+        f"/students/{student_id}/actions",
+        json={"action_type": "propose_topic"},
+        headers=headers,
+    )
+    assert resp.status_code == 202, resp.text
+    return str(resp.json()["id"])
+
+
+def test_a_run_that_finished_unseen_is_not_counted(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    """Nobody opened the student, so our row still says pending — the agent knows."""
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    _trigger(client, headers, _new_student(client, headers))
+    agent.completes_with(topic_payload("Instytucje a wzrost"))
+
+    body = client.get("/dashboard/summary", headers=headers).json()
+
+    assert body["actions_in_progress"] == 0
+    assert body["recent_activity"][0]["status"] == "completed"
+
+
+def test_actions_in_progress_lists_what_the_count_is_made_of(
+    client: TestClient,
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers, full_name="Anna Nowak")
+    action_id = _trigger(client, headers, student_id)
+
+    resp = client.get("/dashboard/actions-in-progress", headers=headers)
+
+    assert resp.status_code == 200, resp.text
+    [item] = resp.json()
+    assert item["id"] == action_id
+    assert item["student_id"] == student_id
+    assert item["student_name"] == "Anna Nowak"
+    assert item["action_type"] == "propose_topic"
+    assert item["created_at"]
+
+
+def test_a_cancelled_action_leaves_the_list(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+    action_id = _trigger(client, headers, student_id)
+
+    resp = client.post(
+        f"/students/{student_id}/actions/{action_id}/cancel", headers=headers
+    )
+
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["status"] == "cancelled"
+    assert agent.cancelled == ["task-1"]
+    assert client.get("/dashboard/actions-in-progress", headers=headers).json() == []
+    assert (
+        client.get("/dashboard/summary", headers=headers).json()["actions_in_progress"]
+        == 0
+    )
+
+
+def test_actions_in_progress_is_scoped_to_the_caller(client: TestClient) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    _trigger(client, headers, _new_student(client, headers))
+
+    other = login(client, OTHER_PROMOTOR_EMAIL, OTHER_PROMOTOR_PASSWORD)
+
+    assert client.get("/dashboard/actions-in-progress", headers=other).json() == []

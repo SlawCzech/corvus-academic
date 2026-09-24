@@ -26,20 +26,27 @@ class ActionType(StrEnum):
 class ActionStatus(StrEnum):
     """Lifecycle of one action, mirroring what `agent` persists.
 
-    The same four values on both sides of the wire: the agent writes them to
-    its own row, `app` copies them here, and neither depends on Celery's
-    expiring result backend to know what happened.
+    The same values on both sides of the wire: the agent writes them to its
+    own row, `app` copies them here, and neither depends on Celery's expiring
+    result backend to know what happened.
     """
 
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
+    # Stopped by the promoter — a mistake in the request, or a run that died
+    # and would otherwise count as "in progress" forever.
+    CANCELLED = "cancelled"
 
     @property
     def is_terminal(self) -> bool:
         """Return True when no further status change is expected."""
-        return self in (ActionStatus.COMPLETED, ActionStatus.FAILED)
+        return self in (
+            ActionStatus.COMPLETED,
+            ActionStatus.FAILED,
+            ActionStatus.CANCELLED,
+        )
 
 
 @dataclass
@@ -121,3 +128,9 @@ class AgentAction:
             raise ValueError(f"Action in status {self.status} cannot be accepted")
         self.accepted = True
         self.accepted_at = at or datetime.now(UTC)
+
+    def cancel(self) -> None:
+        """Stop the action. Only one the agent has not finished can be stopped."""
+        if self.is_finished:
+            raise ValueError(f"Action in status {self.status} cannot be cancelled")
+        self.status = ActionStatus.CANCELLED

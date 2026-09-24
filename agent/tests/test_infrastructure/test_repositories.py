@@ -103,6 +103,19 @@ async def test_update_status_records_error(repo: AgentTaskRepository) -> None:
     assert found.error == "Ollama unreachable"
 
 
+async def test_a_cancelled_task_stays_cancelled(repo: AgentTaskRepository) -> None:
+    """A worker finishing after the revoke must not bring the task back."""
+    await repo.save(_task("task-1", status=TaskStatus.RUNNING))
+    await repo.update_status("task-1", TaskStatus.CANCELLED)
+
+    await repo.update_status("task-1", TaskStatus.COMPLETED, result={"summary": "x"})
+
+    found = await repo.find_by_task_id("task-1")
+    assert found is not None
+    assert found.status == TaskStatus.CANCELLED
+    assert found.result is None
+
+
 async def test_update_status_reports_missing_row(repo: AgentTaskRepository) -> None:
     assert await repo.update_status("ghost", TaskStatus.COMPLETED) is False
 

@@ -145,3 +145,24 @@ async def accept_action(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
     return action_response(action)
+
+
+@router.post("/{student_id}/actions/{action_id}/cancel", response_model=ActionResponse)
+async def cancel_action(
+    student_id: uuid.UUID,
+    action_id: uuid.UUID,
+    caller: CallerDep,
+    token: TokenDep,
+    svc: ActionServiceDep,
+) -> ActionResponse:
+    """Stop an action that has not finished — a mistake, or a run long dead."""
+    try:
+        action = await svc.cancel(caller, student_id, action_id, token)
+    except (StudentNotFoundError, ActionNotFoundError) as exc:
+        raise not_found(exc) from exc
+    except ValueError as exc:
+        # Already completed, failed or cancelled.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+    return action_response(action)

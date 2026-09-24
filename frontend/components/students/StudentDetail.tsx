@@ -20,6 +20,7 @@ const STATUS_LABELS: Record<string, string> = {
   running: "w toku",
   completed: "gotowe",
   failed: "błąd",
+  cancelled: "przerwana",
 }
 
 function formatDate(iso: string): string {

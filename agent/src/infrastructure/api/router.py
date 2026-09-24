@@ -245,13 +245,10 @@ async def submit_action(
     return ActionTaskResponse(task_id=task_id)
 
 
-@router.get("/actions/{task_id}", response_model=ActionStatusResponse)
-async def get_action_status(
-    task_id: str,
-    user: CurrentUserDep,
-    repo: TaskRepoDep,
-) -> ActionStatusResponse:
-    """Poll one action — ADMIN sees any, others only their own."""
+async def _require_task(
+    repo: AgentTaskRepository, user: TokenUser, task_id: str
+) -> AgentTaskModel:
+    """The caller's task — any task, for an admin — or 404."""
     record = (
         await repo.find_by_task_id(task_id)
         if user.role == Role.ADMIN
@@ -261,6 +258,50 @@ async def get_action_status(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Action not found"
         )
+    return record
+
+
+@router.get("/actions/{task_id}", response_model=ActionStatusResponse)
+async def get_action_status(
+    task_id: str,
+    user: CurrentUserDep,
+    repo: TaskRepoDep,
+) -> ActionStatusResponse:
+    """Poll one action — ADMIN sees any, others only their own."""
+    return _status_response(await _require_task(repo, user, task_id))
+
+
+@router.post("/actions/{task_id}/cancel", response_model=ActionStatusResponse)
+async def cancel_action(
+    task_id: str,
+    user: CurrentUserDep,
+    repo: TaskRepoDep,
+) -> ActionStatusResponse:
+    """Stop an action that has not finished; a finished one is left as it is.
+
+    The row is marked first, so the decision holds even if the revoke never
+    reaches a worker. `terminate` kills a run already in progress — a model
+    call is minutes of work nobody is going to read. A queued task, or one
+    waiting for a retry, is dropped when a worker picks it up.
+    """
+    record = await _require_task(repo, user, task_id)
+    if TaskStatus(record.status).is_terminal:
+        return _status_response(record)
+
+    await repo.update_status(task_id, TaskStatus.CANCELLED)
+    try:
+        celery_app.control.revoke(task_id, terminate=True)
+    except Exception as exc:
+        # The row already says cancelled, and a late worker write cannot
+        # undo that; the run just burns its model time for nothing.
+        logger.warning("action_revoke_failed", task_id=task_id, error=str(exc))
+    logger.info("action_cancelled", task_id=task_id, user_id=str(user.id))
+    record.status = TaskStatus.CANCELLED
+    return _status_response(record)
+
+
+def _status_response(record: AgentTaskModel) -> ActionStatusResponse:
+    task_id = record.task_id or ""
     stored: Any = record.result
     payload = cast(dict[str, Any], stored) if isinstance(stored, dict) else {}
     return ActionStatusResponse(

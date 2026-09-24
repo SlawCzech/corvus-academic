@@ -28,6 +28,7 @@ class FakeAgentClient(AgentClient):
         self.task_id = task_id
         self.submitted: list[dict[str, Any]] = []
         self.polls: list[str] = []
+        self.cancelled: list[str] = []
         self.unavailable = False
         self.next_status = AgentActionStatus("pending", None, None)
         self.models: dict[str, Any] = {
@@ -74,6 +75,12 @@ class FakeAgentClient(AgentClient):
             raise AgentUnavailableError("connection refused")
         self.polls.append(task_id)
         return self.next_status
+
+    async def cancel_action(self, task_id: str, token: str) -> AgentActionStatus:
+        if self.unavailable:
+            raise AgentUnavailableError("connection refused")
+        self.cancelled.append(task_id)
+        return AgentActionStatus("cancelled", None, None)
 
     async def list_models(self, token: str) -> dict[str, Any]:
         if self.unavailable:

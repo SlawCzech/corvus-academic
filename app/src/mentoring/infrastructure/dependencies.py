@@ -159,8 +159,9 @@ def get_draft_service(
 def get_dashboard_service(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     students: Annotated[StudentService, Depends(get_student_service)],
+    actions: Annotated[ActionService, Depends(get_action_service)],
 ) -> DashboardService:
-    return DashboardService(students, AgentActionRepository(session))
+    return DashboardService(students, AgentActionRepository(session), actions)
 
 
 # ---------- Annotated aliases — what every endpoint actually types ----------

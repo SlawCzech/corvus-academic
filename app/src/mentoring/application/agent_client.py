@@ -85,6 +85,11 @@ class AgentClient:
             error=str(error) if error else None,
         )
 
+    async def cancel_action(self, task_id: str, token: str) -> AgentActionStatus:
+        """Ask the agent to stop one action; a finished one is left as it is."""
+        data = await self._post(f"/actions/{task_id}/cancel", {}, token)
+        return AgentActionStatus(status=str(data["status"]), result=None, error=None)
+
     async def list_models(self, token: str) -> dict[str, Any]:
         """The chat models the agent's Ollama has installed, plus BYOK models."""
         return await self._get("/models", token)

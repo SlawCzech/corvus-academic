@@ -244,6 +244,37 @@ def test_accepting_an_unfinished_action_is_409(
     assert resp.status_code == 409
 
 
+def test_cancelling_a_finished_action_is_409(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+    action_id = _completed(client, headers, agent, student_id)
+
+    resp = client.post(
+        f"/students/{student_id}/actions/{action_id}/cancel", headers=headers
+    )
+
+    assert resp.status_code == 409
+    assert agent.cancelled == []
+
+
+def test_cancelling_another_promotors_action_is_404(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    theirs = login(client, OTHER_PROMOTOR_EMAIL, OTHER_PROMOTOR_PASSWORD)
+    student_id = _new_student(client, theirs)
+    action = _trigger(client, theirs, student_id)
+
+    mine = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    resp = client.post(
+        f"/students/{student_id}/actions/{action['id']}/cancel", headers=mine
+    )
+
+    assert resp.status_code == 404
+    assert agent.cancelled == []
+
+
 def test_accepting_a_topic_nobody_proposed_is_409(
     client: TestClient, agent: FakeAgentClient
 ) -> None:

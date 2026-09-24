@@ -1,10 +1,12 @@
 "use client"
 
 import { useState } from "react"
+import { useSWRConfig } from "swr"
 import { IconChevronDown } from "@tabler/icons-react"
 import ModelSelect, { useAvailableModel } from "@/components/ai/ModelSelect"
 import ReviewToneChoice from "@/components/ai/ReviewToneChoice"
 import ActionResultView from "@/components/students/ActionResultView"
+import GuidelinePicker from "@/components/students/GuidelinePicker"
 import { useAction } from "@/hooks/useAction"
 import { useAiDefaults, type AiDefaults } from "@/lib/aiDefaults"
 import type { ActionType, Student } from "@/lib/api.types"
@@ -65,7 +67,11 @@ const STATUS_LABELS: Record<string, string> = {
   running: "Liczy się…",
   completed: "Gotowe",
   failed: "Błąd",
+  cancelled: "Przerwano",
 }
+
+/** Judged against university requirements — the chosen set matters here. */
+const USES_GUIDELINES: ActionType[] = ["generate_review", "evaluate_methodology"]
 
 const optionInputClass =
   "w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[13.5px] " +
@@ -91,7 +97,8 @@ function ActionPanelInner({
   student: Student
   defaults: AiDefaults
 }) {
-  const { action, running, error, run, accept, dismiss } = useAction(student.id)
+  const { action, running, error, run, accept, cancel, dismiss } = useAction(student.id)
+  const { mutate } = useSWRConfig()
   const [selectedType, setSelectedType] = useState<ActionType | null>(null)
   const [detail, setDetail] = useState("")
   const [topicIndex, setTopicIndex] = useState(0)
@@ -109,6 +116,7 @@ function ActionPanelInner({
   const canAccept =
     shown?.status === "completed" && !shown.accepted && spec?.acceptable
   const showTone = selectedType === "generate_review"
+  const showGuidelines = selectedType !== null && USES_GUIDELINES.includes(selectedType)
 
   async function start(): Promise<void> {
     if (!selectedType) return
@@ -160,6 +168,17 @@ function ActionPanelInner({
                 className="w-full rounded-lg border border-line bg-surface px-3.5 py-2 text-[14px] text-foreground focus:border-accent focus:outline-none"
               />
             </label>
+          )}
+
+          {showGuidelines && (
+            <div className="mt-3.5">
+              <GuidelinePicker
+                student={student}
+                onChange={(next) =>
+                  void mutate(`/api/students/${student.id}`, next, { revalidate: false })
+                }
+              />
+            </div>
           )}
 
           {showTone && (
@@ -216,15 +235,27 @@ function ActionPanelInner({
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={() => void start()}
-            disabled={running}
-            data-testid="run-action"
-            className="mt-4 h-9 rounded-lg bg-accent px-4 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
-          >
-            {running ? "Pracuje…" : "Uruchom"}
-          </button>
+          <div className="mt-4 flex gap-2">
+            <button
+              type="button"
+              onClick={() => void start()}
+              disabled={running}
+              data-testid="run-action"
+              className="h-9 rounded-lg bg-accent px-4 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
+            >
+              {running ? "Pracuje…" : "Uruchom"}
+            </button>
+            {running && (
+              <button
+                type="button"
+                onClick={() => void cancel()}
+                data-testid="cancel-action"
+                className="h-9 rounded-lg border border-line px-4 text-[13px] font-medium text-critical-text hover:bg-surface-alt transition-colors"
+              >
+                Przerwij
+              </button>
+            )}
+          </div>
 
           {shown && (
             <div className="mt-5 border-t border-line/60 pt-5">

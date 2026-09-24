@@ -81,7 +81,7 @@ export type ActionType =
   | "defence_questions"
   | "generate_review"
 
-export type ActionStatus = "pending" | "running" | "completed" | "failed"
+export type ActionStatus = "pending" | "running" | "completed" | "failed" | "cancelled"
 
 /** One proposed thesis topic. */
 export interface ProposedTopic {
@@ -149,6 +149,17 @@ export interface RecentActivity {
   student_name: string
   action_type: ActionType
   status: ActionStatus
+  updated_at: string
+}
+
+/** An action still pending or running — really, or dead and waiting to be cancelled. */
+export interface ActionInProgress {
+  id: string
+  student_id: string
+  student_name: string
+  action_type: ActionType
+  status: ActionStatus
+  created_at: string
   updated_at: string
 }
 

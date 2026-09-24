@@ -230,6 +230,15 @@ export function fetchAction(
   )
 }
 
+/** Stop an action that has not finished. 409 when it already has. */
+export async function cancelAction(studentId: string, actionId: string): Promise<AgentAction> {
+  const res = await request(`/api/students/${studentId}/actions/${actionId}/cancel`, {
+    method: "POST",
+  })
+  if (!res.ok) return fail(res, "Nie udało się przerwać akcji")
+  return res.json() as Promise<AgentAction>
+}
+
 export async function acceptAction(
   studentId: string,
   actionId: string,

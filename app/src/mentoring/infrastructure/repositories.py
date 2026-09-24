@@ -156,6 +156,25 @@ class AgentActionRepository:
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
+    async def find_unfinished_by_promotor(
+        self, promotor_id: uuid.UUID | None
+    ) -> list[AgentActionModel]:
+        """Return every pending or running action, oldest first.
+
+        No limit: this is the list the promoter clears stale runs from, and
+        the oldest are the likeliest to be dead. ``promotor_id=None`` as in
+        ``find_recent_by_promotor``.
+        """
+        stmt = (
+            select(AgentActionModel)
+            .where(AgentActionModel.status.in_(("pending", "running")))
+            .order_by(AgentActionModel.created_at)
+        )
+        if promotor_id is not None:
+            stmt = stmt.where(AgentActionModel.promotor_id == promotor_id)
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
 
 class ThesisDraftRepository:
     """Async store for uploaded thesis versions."""

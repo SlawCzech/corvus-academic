@@ -32,4 +32,8 @@ describe("getRefreshInterval", () => {
     expect(getRefreshInterval({ ...base, status: "completed" })).toBe(0)
     expect(getRefreshInterval({ ...base, status: "failed" })).toBe(0)
   })
+
+  it("stops once the promoter has cancelled it", () => {
+    expect(getRefreshInterval({ ...base, status: "cancelled" })).toBe(0)
+  })
 })

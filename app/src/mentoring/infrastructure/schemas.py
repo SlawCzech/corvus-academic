@@ -11,6 +11,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from src.mentoring.application.action_service import ActionInProgress
 from src.mentoring.application.dashboard_service import DashboardSummary
 from src.mentoring.application.draft_service import DraftView
 from src.mentoring.application.model_service import AdminCatalog, PromoterCatalog
@@ -222,6 +223,28 @@ class DashboardSummaryResponse(BaseModel):
     without_topic: int
     actions_in_progress: int
     recent_activity: list[RecentActivityResponse]
+
+
+class ActionInProgressResponse(BaseModel):
+    id: uuid.UUID
+    student_id: uuid.UUID
+    student_name: str
+    action_type: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+
+def action_in_progress_response(item: ActionInProgress) -> ActionInProgressResponse:
+    return ActionInProgressResponse(
+        id=item.action.id,
+        student_id=item.action.student_id,
+        student_name=item.student_name,
+        action_type=str(item.action.action_type),
+        status=str(item.action.status),
+        created_at=item.action.created_at,
+        updated_at=item.action.updated_at,
+    )
 
 
 def dashboard_summary_response(summary: DashboardSummary) -> DashboardSummaryResponse:

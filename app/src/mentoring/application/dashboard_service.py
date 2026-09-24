@@ -9,13 +9,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
+from src.mentoring.application.action_service import ActionService
 from src.mentoring.application.student_service import Caller, StudentService
 from src.mentoring.domain.student import StudentStatus
 from src.mentoring.infrastructure.repositories import AgentActionRepository
 
-_RECENT_LIMIT = 30
 _RECENT_ACTIVITY_SHOWN = 6
-_IN_PROGRESS_STATUSES = {"pending", "running"}
 
 
 @dataclass(frozen=True)
@@ -42,11 +41,22 @@ class DashboardService:
         self,
         students: StudentService,
         actions: AgentActionRepository,
+        action_service: ActionService,
     ) -> None:
         self._students = students
         self._actions = actions
+        self._action_service = action_service
 
-    async def summary(self, caller: Caller) -> DashboardSummary:
+    async def summary(self, caller: Caller, token: str) -> DashboardSummary:
+        """Stats and recent activity for the caller's students.
+
+        "In progress" is checked with the agent, not read off our rows: a run
+        that finished while nobody had the student open would otherwise be
+        counted as running until someone did. It runs first, so the recent
+        activity below reads the statuses it just brought up to date.
+        """
+        actions_in_progress = len(await self._action_service.in_progress(caller, token))
+
         students = await self._students.list_students(caller)
         names = {s.id: s.full_name for s in students}
 
@@ -59,10 +69,7 @@ class DashboardService:
 
         promotor_filter = None if caller.can_view_all else caller.user_id
         recent = await self._actions.find_recent_by_promotor(
-            promotor_filter, limit=_RECENT_LIMIT
-        )
-        actions_in_progress = sum(
-            1 for a in recent if a.status in _IN_PROGRESS_STATUSES
+            promotor_filter, limit=_RECENT_ACTIVITY_SHOWN
         )
         recent_activity = [
             RecentActivity(

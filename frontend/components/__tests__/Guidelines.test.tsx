@@ -120,6 +120,27 @@ describe("guideline catalog UI", () => {
     expect(JSON.parse(patch![1].body as string)).toEqual({ guideline_set_id: "set1" })
   })
 
+  it("warns that the built-in requirements are not the university's", async () => {
+    fetchMock.mockImplementation(() => Promise.resolve(json([SET])))
+
+    withSWR(<GuidelinePicker student={STUDENT} onChange={vi.fn()} />)
+
+    expect(await screen.findByTestId("default-guidelines")).toHaveTextContent(
+      "nie wytyczne Twojej uczelni",
+    )
+  })
+
+  it("does not warn once a university's set is chosen", async () => {
+    fetchMock.mockImplementation(() => Promise.resolve(json([SET])))
+
+    withSWR(
+      <GuidelinePicker student={{ ...STUDENT, guideline_set_id: "set1" }} onChange={vi.fn()} />,
+    )
+
+    expect(await screen.findByText(/według wersji 2/)).toBeInTheDocument()
+    expect(screen.queryByTestId("default-guidelines")).not.toBeInTheDocument()
+  })
+
   it("saves the draft's thresholds as numbers, empty ones as null, then publishes", async () => {
     const draft = { ...VERSION, status: "draft" as const, published_at: null }
     fetchMock.mockImplementation((url: string, init?: RequestInit) =>

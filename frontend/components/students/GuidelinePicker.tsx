@@ -59,6 +59,12 @@ export default function GuidelinePicker({ student, onChange }: Props) {
           </option>
         ))}
       </select>
+      {!student.guideline_set_id && (
+        <p data-testid="default-guidelines" className="mt-2.5 text-[12.5px] text-major-text">
+          Uwaga: to ogólne wymogi wbudowane w Corvusa, nie wytyczne Twojej uczelni. Recenzja i
+          ocena metodologii nie sprawdzą zgodności z regulaminem uczelni.
+        </p>
+      )}
       {chosen?.current && (
         <p className="mt-2.5 text-[12.5px] text-muted">
           Recenzja i ocena metodologii według wersji {chosen.current.version_no}.{" "}

@@ -466,6 +466,71 @@ async def test_listing_survives_an_unavailable_agent(env: _Fixture) -> None:
     assert listed[0].status is ActionStatus.PENDING
 
 
+async def test_cancel_stops_the_run_and_marks_the_action(env: _Fixture) -> None:
+    student = await _student(env)
+    action = await env.actions.trigger(
+        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+    )
+
+    cancelled = await env.actions.cancel(PROMOTOR, student.id, action.id, TOKEN)
+
+    assert cancelled.status is ActionStatus.CANCELLED
+    assert env.agent.cancelled == ["task-1"]
+    stored = await env.actions.get_action(PROMOTOR, student.id, action.id, TOKEN)
+    assert stored.status is ActionStatus.CANCELLED
+
+
+async def test_cancel_holds_without_the_agent(env: _Fixture) -> None:
+    """A run dead long ago is cleared even when the agent cannot be told."""
+    student = await _student(env)
+    action = await env.actions.trigger(
+        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+    )
+    env.agent.unavailable = True
+
+    cancelled = await env.actions.cancel(PROMOTOR, student.id, action.id, TOKEN)
+
+    assert cancelled.status is ActionStatus.CANCELLED
+
+
+async def test_a_finished_action_cannot_be_cancelled(env: _Fixture) -> None:
+    student = await _student(env)
+    action_id = await _completed_action(env, student.id, "Instytucje a wzrost")
+
+    with pytest.raises(ValueError, match="cannot be cancelled"):
+        await env.actions.cancel(PROMOTOR, student.id, action_id, TOKEN)
+    assert env.agent.cancelled == []
+
+
+async def test_a_cancelled_action_is_not_polled(env: _Fixture) -> None:
+    student = await _student(env)
+    action = await env.actions.trigger(
+        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+    )
+    await env.actions.cancel(PROMOTOR, student.id, action.id, TOKEN)
+    env.agent.completes_with(topic_payload("Za późno"))
+    env.agent.polls.clear()
+
+    listed = await env.actions.list_actions(PROMOTOR, student.id, TOKEN)
+
+    assert listed[0].status is ActionStatus.CANCELLED
+    assert env.agent.polls == []
+
+
+async def test_in_progress_drops_what_the_agent_finished(env: _Fixture) -> None:
+    student = await _student(env)
+    await env.actions.trigger(
+        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+    )
+    running = await env.actions.in_progress(PROMOTOR, TOKEN)
+    env.agent.completes_with(topic_payload("Instytucje a wzrost"))
+
+    after = await env.actions.in_progress(PROMOTOR, TOKEN)
+
+    assert [a.student_name for a in running] == ["Jan Kowalski"]
+    assert after == []
+
+
 async def test_action_of_another_student_is_not_found(env: _Fixture) -> None:
     mine = await _student(env)
     theirs = await _student(env)

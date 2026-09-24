@@ -7,6 +7,7 @@ only runs the graph.
 """
 
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, cast
 from uuid import UUID
@@ -70,6 +71,14 @@ def _to_domain(model: AgentActionModel) -> AgentAction:
         created_at=model.created_at,
         updated_at=model.updated_at,
     )
+
+
+@dataclass(frozen=True)
+class ActionInProgress:
+    """An unfinished action, with the name of the student it is for."""
+
+    action: AgentAction
+    student_name: str
 
 
 class ActionService:
@@ -218,6 +227,69 @@ class ActionService:
         if action.is_finished or record.task_id is None:
             return action
         return await self._refresh(record, token)
+
+    async def in_progress(self, caller: Caller, token: str) -> list[ActionInProgress]:
+        """Every action of the caller's that is still pending or running.
+
+        Each is checked with the agent first, so one that finished while
+        nobody was looking drops off the list instead of padding the count.
+        What is left is really running — or dead, for the promoter to cancel.
+        Oldest first: the longer it has been going, the likelier it is dead.
+        """
+        students = await self._students.list_students(caller)
+        names = {s.id: s.full_name for s in students}
+        promotor_filter = None if caller.can_view_all else caller.user_id
+        records = await self._actions.find_unfinished_by_promotor(promotor_filter)
+
+        unfinished: list[ActionInProgress] = []
+        for record in records:
+            action = (
+                await self._refresh(record, token)
+                if record.task_id is not None
+                else _to_domain(record)
+            )
+            if not action.is_finished:
+                unfinished.append(
+                    ActionInProgress(action, names.get(action.student_id, "—"))
+                )
+        return unfinished
+
+    # ---------- cancel ----------
+
+    async def cancel(
+        self,
+        caller: Caller,
+        student_id: UUID,
+        action_id: UUID,
+        token: str,
+    ) -> AgentAction:
+        """Stop an action that has not finished.
+
+        Our row is marked whatever the agent says: the promoter may be
+        clearing a run that died long ago, which the agent may not know about
+        or may not be up to hear of. When the agent is reachable it stops the
+        run too; when it is not, the run finishes into a row nobody reads.
+
+        Raises ValueError for an action that has already finished.
+        """
+        record = await self._require_record(caller, student_id, action_id)
+        action = _to_domain(record)
+        action.cancel()
+
+        if record.task_id is not None:
+            try:
+                await self._agent.cancel_action(record.task_id, token)
+            except AgentUnavailableError as exc:
+                logger.warning(
+                    "action_cancel_not_forwarded",
+                    action_id=str(record.id),
+                    error=str(exc),
+                )
+
+        record.status = str(action.status)
+        await self._actions.update(record)
+        logger.info("action_cancelled", action_id=str(record.id))
+        return _to_domain(record)
 
     # ---------- accept ----------
 

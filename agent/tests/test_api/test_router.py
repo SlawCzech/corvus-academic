@@ -297,6 +297,75 @@ async def test_running_task_is_reported_as_running(
     assert resp.json()["result"] is None
 
 
+# ---------- cancelling ----------
+
+
+@pytest.fixture
+def revoke() -> Generator[MagicMock, None, None]:
+    with patch("src.infrastructure.api.router.celery_app.control.revoke") as mock:
+        yield mock
+
+
+async def test_cancel_stops_a_running_task(
+    client: TestClient, db_session: AsyncSession, revoke: MagicMock
+) -> None:
+    task_id = str(uuid.uuid4())
+    await _store(db_session, task_id, TaskStatus.RUNNING)
+
+    resp = client.post(
+        f"/actions/{task_id}/cancel", headers=_auth(PROMOTOR_ID, "promotor")
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "cancelled"
+    revoke.assert_called_once_with(task_id, terminate=True)
+    polled = client.get(f"/actions/{task_id}", headers=_auth(PROMOTOR_ID, "promotor"))
+    assert polled.json()["status"] == "cancelled"
+
+
+async def test_cancel_leaves_a_finished_task_alone(
+    client: TestClient, db_session: AsyncSession, revoke: MagicMock
+) -> None:
+    task_id = str(uuid.uuid4())
+    await _store(db_session, task_id, TaskStatus.COMPLETED, result={"summary": "x"})
+
+    resp = client.post(
+        f"/actions/{task_id}/cancel", headers=_auth(PROMOTOR_ID, "promotor")
+    )
+
+    assert resp.json()["status"] == "completed"
+    revoke.assert_not_called()
+
+
+async def test_cancel_holds_when_the_revoke_fails(
+    client: TestClient, db_session: AsyncSession, revoke: MagicMock
+) -> None:
+    """The broker being down must not leave the task looking alive."""
+    revoke.side_effect = ConnectionError("redis down")
+    task_id = str(uuid.uuid4())
+    await _store(db_session, task_id, TaskStatus.PENDING)
+
+    resp = client.post(
+        f"/actions/{task_id}/cancel", headers=_auth(PROMOTOR_ID, "promotor")
+    )
+
+    assert resp.json()["status"] == "cancelled"
+
+
+async def test_cancel_someone_elses_task_is_404(
+    client: TestClient, db_session: AsyncSession, revoke: MagicMock
+) -> None:
+    task_id = str(uuid.uuid4())
+    await _store(db_session, task_id, TaskStatus.RUNNING)
+
+    resp = client.post(
+        f"/actions/{task_id}/cancel", headers=_auth(uuid.uuid4(), "promotor")
+    )
+
+    assert resp.status_code == 404
+    revoke.assert_not_called()
+
+
 # ---------- the caller's own key ----------
 
 

@@ -35,8 +35,11 @@ class TaskStatus(StrEnum):
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
+    # Stopped by the promoter. Final: a worker finishing late does not
+    # overwrite it (see AgentTaskRepository.update_status).
+    CANCELLED = "cancelled"
 
     @property
     def is_terminal(self) -> bool:
         """Return True when no further status change is expected."""
-        return self in (TaskStatus.COMPLETED, TaskStatus.FAILED)
+        return self in (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED)

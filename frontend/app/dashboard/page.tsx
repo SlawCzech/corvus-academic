@@ -10,6 +10,7 @@ import {
   IconLoader2,
   IconArrowRight,
 } from "@tabler/icons-react"
+import InProgressActions from "@/components/InProgressActions"
 import StudentForm from "@/components/students/StudentForm"
 import { timeAgo } from "@/components/students/format"
 import { fetcher } from "@/lib/api.client"
@@ -29,6 +30,7 @@ const STATUS_ACTIVITY_LABELS: Record<string, string> = {
   running: "w toku",
   completed: "gotowe",
   failed: "błąd",
+  cancelled: "przerwana",
 }
 
 export default function DashboardPage() {
@@ -37,6 +39,7 @@ export default function DashboardPage() {
     fetcher,
   )
   const [showForm, setShowForm] = useState(false)
+  const [showInProgress, setShowInProgress] = useState(false)
 
   return (
     <main className="px-12 py-10">
@@ -84,15 +87,29 @@ export default function DashboardPage() {
             {summary?.active_students ?? "—"}
           </span>
         </Link>
-        <div className="rounded-xl border border-line bg-surface p-5">
+        <button
+          type="button"
+          aria-expanded={showInProgress}
+          onClick={() => setShowInProgress((v) => !v)}
+          className={`group rounded-xl border bg-surface p-5 text-left transition-colors hover:border-accent ${
+            showInProgress ? "border-accent" : "border-line"
+          }`}
+        >
           <div className="mb-2 flex items-center gap-2 text-muted">
             <IconLoader2 size={15} stroke={1.75} />
             <span className="text-[12px]">Akcje AI w toku</span>
+            <IconArrowRight
+              size={13}
+              stroke={2}
+              className={`ml-auto transition-all ${
+                showInProgress ? "rotate-90 opacity-100" : "opacity-0 group-hover:opacity-100"
+              }`}
+            />
           </div>
           <span className="font-serif text-[28px] font-semibold text-foreground">
             {summary?.actions_in_progress ?? "—"}
           </span>
-        </div>
+        </button>
         <Link
           href="/students?topic=none"
           className="group rounded-xl border border-major-border bg-major-bg p-5 transition-colors hover:border-major-text"
@@ -111,6 +128,8 @@ export default function DashboardPage() {
           </span>
         </Link>
       </div>
+
+      {showInProgress && <InProgressActions onChange={() => void mutate()} />}
 
       {error && (
         <p className="text-[13px] text-critical-text">
