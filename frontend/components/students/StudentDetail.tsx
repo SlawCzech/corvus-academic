@@ -119,7 +119,12 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
 
   return (
     <div className="flex min-h-screen">
-      <StudentSubNav student={student} section={section} onSectionChange={setSection} />
+      <StudentSubNav
+        student={student}
+        section={section}
+        onSectionChange={setSection}
+        onStudentChange={(next) => void mutateStudent(next, { revalidate: false })}
+      />
 
       <main className="min-w-0 flex-1 px-10 py-10">
         {section === "overview" && (

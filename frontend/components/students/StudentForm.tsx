@@ -1,16 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { STUDENT_STATUS_LABELS } from "@/components/students/format"
 import { createStudent, updateStudent } from "@/lib/api.client"
-import type { Student, StudentStatus, ThesisType } from "@/lib/api.types"
+import type { Student, ThesisType } from "@/lib/api.types"
 
 const THESIS_TYPES: { value: ThesisType; label: string }[] = [
   { value: "bachelor", label: "Licencjacka" },
   { value: "master_article", label: "Magisterska (artykuł)" },
 ]
-
-const STATUSES = Object.entries(STUDENT_STATUS_LABELS) as [StudentStatus, string][]
 
 const inputClass =
   "w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[14px] " +
@@ -29,7 +26,6 @@ export default function StudentForm({ student, onSaved, onCancel }: StudentFormP
   const [fieldOfStudy, setFieldOfStudy] = useState(student?.field_of_study ?? "")
   const [indexNumber, setIndexNumber] = useState(student?.index_number ?? "")
   const [thesisType, setThesisType] = useState<ThesisType>(student?.thesis_type ?? "bachelor")
-  const [status, setStatus] = useState<StudentStatus>(student?.status ?? "active")
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -48,7 +44,7 @@ export default function StudentForm({ student, onSaved, onCancel }: StudentFormP
     }
     try {
       if (editing) {
-        onSaved(await updateStudent(student.id, { ...details, status }))
+        onSaved(await updateStudent(student.id, details))
       } else {
         const created = await createStudent(details)
         setFullName("")
@@ -113,32 +109,11 @@ export default function StudentForm({ student, onSaved, onCancel }: StudentFormP
             ))}
           </select>
         </label>
-        {editing && (
-          <label className="block">
-            <span className="mb-1 block text-[12px] text-muted">Status</span>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as StudentStatus)}
-              className={inputClass}
-            >
-              {STATUSES.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
       </div>
 
       {dropsGuidelines && (
         <p className="mt-3 text-[12.5px] text-major-text">
           Zmiana typu pracy wyczyści wybrany zestaw wytycznych — był dla poprzedniego typu.
-        </p>
-      )}
-      {editing && status !== "active" && student.status === "active" && (
-        <p className="mt-3 text-[12.5px] text-muted-strong">
-          Zakończenie opieki uruchamia licznik retencji plików pracy.
         </p>
       )}
 

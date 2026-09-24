@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SWRConfig } from "swr"
@@ -100,5 +100,75 @@ describe("StudentList", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /Bez ustalonego tematu/ }))
     expect(mockReplace).toHaveBeenLastCalledWith("/students", { scroll: false })
+  })
+
+  describe("acting on a row", () => {
+    let roster: ReturnType<typeof student>[]
+    const fetchMock = vi.fn()
+
+    beforeEach(() => {
+      roster = STUDENTS.map((s) => ({ ...s }))
+      fetchMock.mockReset()
+      fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+        const id = url.split("/")[3]
+        if (init?.method === "PATCH") {
+          const changes = JSON.parse(init.body as string) as Record<string, unknown>
+          const updated = { ...roster.find((s) => s.id === id)!, ...changes }
+          roster = roster.map((s) => (s.id === id ? updated : s))
+          return Promise.resolve(new Response(JSON.stringify(updated), { status: 200 }))
+        }
+        if (init?.method === "DELETE") {
+          roster = roster.filter((s) => s.id !== id)
+          return Promise.resolve(new Response(null, { status: 204 }))
+        }
+        return Promise.resolve(new Response(JSON.stringify(roster), { status: 200 }))
+      })
+      vi.stubGlobal("fetch", fetchMock)
+    })
+
+    it("changes a student's status right in the table", async () => {
+      renderList("status=all")
+
+      await userEvent.selectOptions(
+        await screen.findByRole("combobox", { name: "Status: Anna Aktywna" }),
+        "archived",
+      )
+
+      await waitFor(() =>
+        expect(screen.getByRole("combobox", { name: "Status: Anna Aktywna" })).toHaveValue(
+          "archived",
+        ),
+      )
+      const patch = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH")
+      expect(patch?.[0]).toBe("/api/students/s1")
+      expect(JSON.parse(patch?.[1].body as string)).toEqual({ status: "archived" })
+    })
+
+    it("deletes a student from the table once their name is typed", async () => {
+      renderList()
+
+      await userEvent.click(await screen.findByRole("button", { name: "Usuń: Bartek Beztematu" }))
+      const dialog = screen.getByRole("dialog", { name: "Usuń: Bartek Beztematu" })
+      const confirm = within(dialog).getByRole("button", { name: "Usuń na zawsze" })
+      expect(confirm).toBeDisabled()
+      await userEvent.type(within(dialog).getByRole("textbox"), "Bartek Beztematu")
+      await userEvent.click(confirm)
+
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument())
+      await waitFor(() => expect(screen.queryByText("Bartek Beztematu")).not.toBeInTheDocument())
+      expect(screen.getByText("Anna Aktywna")).toBeInTheDocument()
+      const del = fetchMock.mock.calls.find(([, init]) => init?.method === "DELETE")
+      expect(del?.[0]).toBe("/api/students/s2")
+    })
+
+    it("closes the confirmation without deleting", async () => {
+      renderList()
+
+      await userEvent.click(await screen.findByRole("button", { name: "Usuń: Anna Aktywna" }))
+      await userEvent.click(screen.getByRole("button", { name: "Anuluj" }))
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+      expect(fetchMock.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(false)
+    })
   })
 })

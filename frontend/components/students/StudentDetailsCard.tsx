@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import StudentForm from "@/components/students/StudentForm"
-import { STUDENT_STATUS_LABELS } from "@/components/students/format"
 import type { Student } from "@/lib/api.types"
 
 const THESIS_TYPE_LABELS: Record<Student["thesis_type"], string> = {
@@ -39,7 +38,6 @@ export default function StudentDetailsCard({ student, onChange }: Props) {
     ["Kierunek", student.field_of_study],
     ["Nr indeksu", student.index_number ?? "—"],
     ["Typ pracy", THESIS_TYPE_LABELS[student.thesis_type]],
-    ["Status", STUDENT_STATUS_LABELS[student.status]],
   ]
 
   return (

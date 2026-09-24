@@ -152,7 +152,6 @@ describe("StudentDetail — overview", () => {
         field_of_study: "Zarządzanie",
         thesis_type: "master_article",
         index_number: null,
-        status: "active",
       },
     ])
   })
@@ -187,5 +186,19 @@ describe("StudentDetail — overview", () => {
 
     expect(await within(panel).findByRole("alert")).toHaveTextContent("nic nie zostało usunięte")
     expect(mockPush).not.toHaveBeenCalled()
+  })
+
+  it("changes the status in one click, from any section", async () => {
+    renderDetail()
+    const select = await screen.findByRole("combobox", { name: "Status: Julia Krzemień" })
+
+    await userEvent.selectOptions(select, "graduated")
+
+    await waitFor(() => expect(patches()).toEqual([{ status: "graduated" }]))
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Status: Julia Krzemień" })).toHaveValue(
+        "graduated",
+      ),
+    )
   })
 })

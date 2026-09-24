@@ -4,13 +4,11 @@ import { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import useSWR from "swr"
-import { IconSearch, IconPlus, IconX } from "@tabler/icons-react"
+import { IconSearch, IconPlus, IconTrash, IconX } from "@tabler/icons-react"
+import DeleteStudentConfirm from "@/components/students/DeleteStudentConfirm"
+import StatusSelect from "@/components/students/StatusSelect"
 import StudentForm from "@/components/students/StudentForm"
-import {
-  STUDENT_STATUS_LABELS,
-  STUDENT_STATUS_STYLES,
-  timeAgo,
-} from "@/components/students/format"
+import { timeAgo } from "@/components/students/format"
 import { fetcher } from "@/lib/api.client"
 import type { Student, StudentStatus } from "@/lib/api.types"
 
@@ -45,6 +43,13 @@ export default function StudentList() {
 
   const [showForm, setShowForm] = useState(false)
   const [query, setQuery] = useState("")
+  const [deleting, setDeleting] = useState<Student | null>(null)
+
+  function replaceStudent(next: Student): void {
+    void mutate((list) => list?.map((s) => (s.id === next.id ? next : s)), {
+      revalidate: false,
+    })
+  }
 
   function setFilters(next: { status?: StatusFilter; withoutTopic?: boolean }): void {
     const params = new URLSearchParams(searchParams.toString())
@@ -187,7 +192,10 @@ export default function StudentList() {
                 <th className="py-2.5 pl-6 font-semibold">Student</th>
                 <th className="py-2.5 font-semibold">Temat</th>
                 <th className="py-2.5 font-semibold">Status</th>
-                <th className="py-2.5 pr-6 font-semibold">Ostatnia aktywność</th>
+                <th className="py-2.5 font-semibold">Ostatnia aktywność</th>
+                <th className="w-12 py-2.5 pr-4">
+                  <span className="sr-only">Usuń</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -210,17 +218,46 @@ export default function StudentList() {
                     )}
                   </td>
                   <td className="py-3.5">
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-[12px] font-medium ${STUDENT_STATUS_STYLES[s.status]}`}
-                    >
-                      {STUDENT_STATUS_LABELS[s.status]}
-                    </span>
+                    <StatusSelect student={s} onChange={replaceStudent} />
                   </td>
-                  <td className="py-3.5 pr-6 text-muted">{timeAgo(s.updated_at)}</td>
+                  <td className="py-3.5 text-muted">{timeAgo(s.updated_at)}</td>
+                  <td className="py-3.5 pr-4 text-right">
+                    <button
+                      type="button"
+                      aria-label={`Usuń: ${s.full_name}`}
+                      title="Usuń studenta"
+                      onClick={() => setDeleting(s)}
+                      className="rounded-md p-1.5 text-muted hover:bg-surface-alt hover:text-critical-text"
+                    >
+                      <IconTrash size={15} stroke={1.75} />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+      {deleting && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Usuń: ${deleting.full_name}`}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setDeleting(null)
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setDeleting(null)
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+        >
+          <div className="w-full max-w-lg rounded-xl bg-surface shadow-xl">
+            <DeleteStudentConfirm
+              student={deleting}
+              onDeleted={() => setDeleting(null)}
+              onCancel={() => setDeleting(null)}
+            />
+          </div>
         </div>
       )}
     </main>

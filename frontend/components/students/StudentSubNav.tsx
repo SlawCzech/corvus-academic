@@ -9,10 +9,7 @@ import {
   IconMessage2,
   IconHistory,
 } from "@tabler/icons-react"
-import {
-  STUDENT_STATUS_LABELS as STATUS_LABELS,
-  STUDENT_STATUS_STYLES as STATUS_STYLES,
-} from "@/components/students/format"
+import StatusSelect from "@/components/students/StatusSelect"
 import type { Student } from "@/lib/api.types"
 
 export type Section = "overview" | "actions" | "drafts" | "notes" | "history"
@@ -38,12 +35,14 @@ interface StudentSubNavProps {
   student: Student
   section: Section
   onSectionChange: (section: Section) => void
+  onStudentChange: (student: Student) => void
 }
 
 export default function StudentSubNav({
   student,
   section,
   onSectionChange,
+  onStudentChange,
 }: StudentSubNavProps) {
   return (
     <aside className="w-64 shrink-0 border-r border-line bg-surface-alt px-4 py-6">
@@ -66,13 +65,9 @@ export default function StudentSubNav({
           {student.field_of_study}
           {student.index_number ? ` · nr ${student.index_number}` : ""}
         </span>
-        <span
-          className={`mt-2.5 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
-            STATUS_STYLES[student.status] ?? "bg-surface-alt text-muted-strong"
-          }`}
-        >
-          {STATUS_LABELS[student.status] ?? student.status}
-        </span>
+        <div className="mt-2.5">
+          <StatusSelect student={student} onChange={onStudentChange} />
+        </div>
       </div>
 
       <nav className="flex flex-col gap-0.5">
