@@ -111,6 +111,7 @@ def _initial_state(
             "context": context,
             "findings": [],
             "node_errors": [],
+            "chapter_digests": [],
             "scores": [],
             "verification": None,
             "output": None,

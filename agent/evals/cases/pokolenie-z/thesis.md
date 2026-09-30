@@ -17,20 +17,20 @@ Oświadczam, że niniejsza praca licencjacka została napisana przeze mnie samod
 
 SPIS TREŚCI
 
-Wstęp
-Rozdział 1. Motywacja w teorii zarządzania
-1.1. Pojęcie motywacji
-1.2. Teorie motywacji
-Rozdział 2. Naukowa organizacja pracy F. W. Taylora
-2.1. Życie i działalność Taylora
-2.2. Zasady naukowego zarządzania
-2.3. Taylorowskie systemy płac akordowych
-Rozdział 3. Motywowanie pokolenia Z — badanie własne
-3.1. Metodyka badania
-3.2. Wyniki badania
-Zakończenie
-Bibliografia
-Spis wykresów
+Wstęp .......... 3
+Rozdział 1. Motywacja w teorii zarządzania .......... 5
+1.1. Pojęcie motywacji .......... 7
+1.2. Teorie motywacji .......... 9
+Rozdział 2. Naukowa organizacja pracy F. W. Taylora .......... 11
+2.1. Życie i działalność Taylora .......... 13
+2.2. Zasady naukowego zarządzania .......... 15
+2.3. Taylorowskie systemy płac akordowych .......... 17
+Rozdział 3. Motywowanie pokolenia Z — badanie własne .......... 19
+3.1. Metodyka badania .......... 21
+3.2. Wyniki badania .......... 23
+Zakończenie .......... 25
+Bibliografia .......... 27
+Spis wykresów .......... 29
 
 WSTĘP
 

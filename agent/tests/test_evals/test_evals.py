@@ -79,7 +79,7 @@ def test_condensed_guidelines_scale_only_the_length_rule() -> None:
     text = condensed_guidelines("bachelor")
 
     assert "80,000" not in text
-    assert "7,000 – 20,000 characters" in text
+    assert "5,000 – 20,000 characters" in text
     # Everything else is the real document.
     assert "Minimum:** 25 bibliographic sources" in text
 
@@ -88,6 +88,8 @@ def test_case_context_skips_retrieval_with_its_own_guidelines() -> None:
     context = load_cases(["kryptowaluty"])[0].context()
 
     assert context["guidelines"] == condensed_guidelines("bachelor")
+    # The map travels with the text, as it does from `app`.
+    assert context["document_map"]["body_chars"] > 5000
     assert context["metadata"]["title"].startswith("Wpływ kryptowalut")
 
 

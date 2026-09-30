@@ -37,7 +37,7 @@ from the complete thesis. A section the map lists EXISTS — never write that
 it is missing, and never judge the work incomplete because the excerpt ends
 where it does. Base the review on the findings and on what you can see.
 
-Each finding is labelled with the analysis that raised it — structure,
+Each finding is labelled with the analysis that raised it — structure, coherence,
 methodology or requirements. Their scopes are separate, but should two
 findings still describe the same problem, weigh it once, at the higher
 severity.

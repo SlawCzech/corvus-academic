@@ -20,6 +20,7 @@ const SOURCE_LABELS: Record<FindingSource, string> = {
   structure: "Struktura",
   methodology: "Metodologia",
   requirements: "Wymogi",
+  coherence: "Spójność wniosków",
 }
 
 const SEVERITY_COLORS: Record<FindingSeverity, string> = {

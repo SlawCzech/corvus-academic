@@ -68,6 +68,25 @@ class FindingReply(_Reply):
 FINDINGS = TypeAdapter(list[FindingReply])
 
 
+# ---------- the coherence check: chapter digests ----------
+
+
+class ClaimReply(_Reply):
+    claim: Text
+    # Verbatim, like a finding's: the coherence check quotes these back.
+    quote: str = ""
+
+
+class DigestReply(_Reply):
+    """What one chapter says, recorded — not judged."""
+
+    summary: Text
+    claims: list[ClaimReply] = Field(default_factory=list[ClaimReply])
+
+
+DIGEST = TypeAdapter(DigestReply)
+
+
 # ---------- the review ----------
 
 

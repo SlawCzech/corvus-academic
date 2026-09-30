@@ -17,19 +17,19 @@ Oświadczam, że niniejsza praca licencjacka została napisana przeze mnie samod
 
 SPIS TREŚCI
 
-Wstęp
-Rozdział 1. Teoretyczne ujęcie oszczędzania gospodarstw domowych
-1.1. Pojęcie i funkcje oszczędności
-1.2. Teorie konsumpcji i oszczędzania
-Rozdział 2. Oszczędzanie gospodarstw domowych w Polsce — przegląd badań i danych
-2.1. Stopa oszczędności w Polsce na tle Unii Europejskiej
-2.2. Wyniki wcześniejszych badań empirycznych
-Rozdział 3. Determinanty oszczędzania — analiza empiryczna
-3.1. Dane i metoda badania
-3.2. Wyniki estymacji
-3.3. Dyskusja wyników
-Zakończenie
-Bibliografia
+Wstęp .......... 3
+Rozdział 1. Teoretyczne ujęcie oszczędzania gospodarstw domowych .......... 5
+1.1. Pojęcie i funkcje oszczędności .......... 7
+1.2. Teorie konsumpcji i oszczędzania .......... 9
+Rozdział 2. Oszczędzanie gospodarstw domowych w Polsce — przegląd badań i danych .......... 11
+2.1. Stopa oszczędności w Polsce na tle Unii Europejskiej .......... 13
+2.2. Wyniki wcześniejszych badań empirycznych .......... 15
+Rozdział 3. Determinanty oszczędzania — analiza empiryczna .......... 17
+3.1. Dane i metoda badania .......... 19
+3.2. Wyniki estymacji .......... 21
+3.3. Dyskusja wyników .......... 23
+Zakończenie .......... 25
+Bibliografia .......... 27
 
 WSTĘP
 

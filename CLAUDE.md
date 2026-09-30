@@ -89,8 +89,11 @@ Użytkownik
   → Celery task (broker: Redis) → agent-worker
       status zapisywany do Postgresa: running → completed | failed
   → LangGraph — graf zależny od typu akcji
-      → generate_review:      [Struktura ∥ Metodologia ∥ Wymogi] → [Weryfikacja]
+      → generate_review:      [Struktura ∥ Metodologia ∥ Wymogi ∥ Rozdział×N → Spójność]
+                              → [Weryfikacja]
                               → [Wybór promotora]* → [Recenzja]
+        (Rozdział×N: `Send` per rozdział z mapy dokumentu — streszczenie z cytatami;
+         Spójność: czy wnioski wynikają z wyników, czy hipotezy rozstrzygnięte)
         (*tylko gdy promotor zaznaczył „Pokaż mi uwagi…”: `interrupt`, status
          `awaiting_input`, wznowienie POST …/actions/{id}/resume z indeksami uwag)
       → propose_topic:        [Propozycja tematu]

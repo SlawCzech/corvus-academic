@@ -2,7 +2,7 @@
 
 export type FindingSeverity = "critical" | "major" | "minor"
 
-export type FindingSource = "structure" | "methodology" | "requirements"
+export type FindingSource = "structure" | "methodology" | "requirements" | "coherence"
 
 export interface Finding {
   section: string

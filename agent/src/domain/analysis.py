@@ -24,6 +24,9 @@ class FindingSource(StrEnum):
     STRUCTURE = "structure"
     METHODOLOGY = "methodology"
     REQUIREMENTS = "requirements"
+    # Read across the whole body: do the conclusions follow from the results,
+    # are the hypotheses answered, do the chapters contradict each other.
+    COHERENCE = "coherence"
 
 
 class ReviewTone(StrEnum):

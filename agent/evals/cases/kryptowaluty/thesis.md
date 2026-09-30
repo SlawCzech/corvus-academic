@@ -17,18 +17,18 @@ Oświadczam, że niniejsza praca licencjacka została napisana przeze mnie samod
 
 SPIS TREŚCI
 
-Wstęp
-Rozdział 1. Istota i rodzaje kryptowalut
-1.1. Pojęcie kryptowaluty
-1.2. Bitcoin i inne kryptowaluty
-Rozdział 2. Kryptowaluty a system finansowy
-2.1. Kryptowaluty a banki
-2.2. Regulacje prawne
-Rozdział 3. Badanie własne
-3.1. Opis badania
-3.2. Wyniki badania
-Zakończenie
-Bibliografia
+Wstęp .......... 3
+Rozdział 1. Istota i rodzaje kryptowalut .......... 5
+1.1. Pojęcie kryptowaluty .......... 7
+1.2. Bitcoin i inne kryptowaluty .......... 9
+Rozdział 2. Kryptowaluty a system finansowy .......... 11
+2.1. Kryptowaluty a banki .......... 13
+2.2. Regulacje prawne .......... 15
+Rozdział 3. Badanie własne .......... 17
+3.1. Opis badania .......... 19
+3.2. Wyniki badania .......... 21
+Zakończenie .......... 23
+Bibliografia .......... 25
 
 WSTĘP
 

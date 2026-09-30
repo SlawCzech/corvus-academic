@@ -1,4 +1,4 @@
-"""Who judges what — the scopes of the review's three analyses.
+"""Who judges what — the scopes of the review's analyses.
 
 The analyses run in parallel and never see each other's findings, so nothing
 at run time can stop two of them reporting the same problem. What stops it is
@@ -12,16 +12,21 @@ from src.domain.analysis import FindingSource
 SCOPES: dict[FindingSource, str] = {
     FindingSource.STRUCTURE: (
         "the order and proportions of the chapters; the logical flow and the "
-        "transitions between them; whether the stated aim, the chapters and "
-        "the conclusions fit together (does each chapter serve the aim, do "
-        "the conclusions answer it); repetition, digressions and gaps in the "
-        "line of argument"
+        "transitions between them; whether each chapter serves the stated "
+        "aim; repetition, digressions and gaps in the line of argument"
     ),
     FindingSource.METHODOLOGY: (
         "the research problem, questions and hypotheses as a research design; "
         "whether the methods and data suit the aim; how the research was "
         "carried out and what limits its results; the quality, relevance and "
         "currency of the sources and how they are used in the argument"
+    ),
+    FindingSource.COHERENCE: (
+        "whether the conclusions follow from the results the body reports, "
+        "and never contradict them; whether every research question and "
+        "hypothesis stated in the introduction is answered — confirmed or "
+        "rejected — in the conclusions; contradictions between chapters "
+        "(numbers, claims); results generalised beyond the data they rest on"
     ),
     FindingSource.REQUIREMENTS: (
         "whether each element the university requires is present and complete "

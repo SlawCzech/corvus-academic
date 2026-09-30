@@ -47,6 +47,9 @@ class ActionState(TypedDict):
     # Why an analysis branch produced nothing. Collected, never cleared: a
     # later node succeeding must not erase that an earlier one failed.
     node_errors: Annotated[list[str], operator.add]
+    # One digest per body chapter, summed from the parallel `digest_chapter`
+    # branches that `Send` fans out; read by `check_coherence`.
+    chapter_digests: Annotated[list[dict[str, Any]], operator.add]
     scores: list[Score]
     # What `verify` did to the findings: how many it kept, which it dropped
     # as ungrounded, how many it merged. None when no verification ran.

@@ -1,0 +1,73 @@
+{
+  "total_chars": 8668,
+  "body_chars": 5530,
+  "sections": [
+    {
+      "title": "SPIS TREŚCI",
+      "canonical": "toc",
+      "start": 384,
+      "char_count": 595
+    },
+    {
+      "title": "WSTĘP",
+      "canonical": "introduction",
+      "start": 979,
+      "char_count": 4996
+    },
+    {
+      "title": "1.1. Pojęcie motywacji",
+      "canonical": null,
+      "start": 2496,
+      "char_count": 469
+    },
+    {
+      "title": "1.2. Teorie motywacji",
+      "canonical": null,
+      "start": 2965,
+      "char_count": 697
+    },
+    {
+      "title": "2.1. Życie i działalność Taylora",
+      "canonical": null,
+      "start": 3662,
+      "char_count": 396
+    },
+    {
+      "title": "2.2. Zasady naukowego zarządzania",
+      "canonical": null,
+      "start": 4058,
+      "char_count": 455
+    },
+    {
+      "title": "2.3. Taylorowskie systemy płac akordowych",
+      "canonical": null,
+      "start": 4513,
+      "char_count": 453
+    },
+    {
+      "title": "3.1. Metodyka badania",
+      "canonical": null,
+      "start": 4966,
+      "char_count": 406
+    },
+    {
+      "title": "3.2. Wyniki badania",
+      "canonical": null,
+      "start": 5372,
+      "char_count": 603
+    },
+    {
+      "title": "ZAKOŃCZENIE",
+      "canonical": "conclusions",
+      "start": 5975,
+      "char_count": 534
+    },
+    {
+      "title": "BIBLIOGRAFIA",
+      "canonical": "bibliography",
+      "start": 6509,
+      "char_count": 2159
+    }
+  ],
+  "bibliography_entries": 25
+}

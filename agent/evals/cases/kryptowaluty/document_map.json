@@ -1,0 +1,67 @@
+{
+  "total_chars": 7309,
+  "body_chars": 5756,
+  "sections": [
+    {
+      "title": "SPIS TREŚCI",
+      "canonical": "toc",
+      "start": 374,
+      "char_count": 466
+    },
+    {
+      "title": "WSTĘP",
+      "canonical": "introduction",
+      "start": 840,
+      "char_count": 5389
+    },
+    {
+      "title": "1.1. Pojęcie kryptowaluty",
+      "canonical": null,
+      "start": 1583,
+      "char_count": 1175
+    },
+    {
+      "title": "1.2. Bitcoin i inne kryptowaluty",
+      "canonical": null,
+      "start": 2758,
+      "char_count": 1096
+    },
+    {
+      "title": "2.1. Kryptowaluty a banki",
+      "canonical": null,
+      "start": 3854,
+      "char_count": 920
+    },
+    {
+      "title": "2.2. Regulacje prawne",
+      "canonical": null,
+      "start": 4774,
+      "char_count": 656
+    },
+    {
+      "title": "3.1. Opis badania",
+      "canonical": null,
+      "start": 5430,
+      "char_count": 284
+    },
+    {
+      "title": "3.2. Wyniki badania",
+      "canonical": null,
+      "start": 5714,
+      "char_count": 515
+    },
+    {
+      "title": "ZAKOŃCZENIE",
+      "canonical": "conclusions",
+      "start": 6229,
+      "char_count": 367
+    },
+    {
+      "title": "BIBLIOGRAFIA",
+      "canonical": "bibliography",
+      "start": 6596,
+      "char_count": 713
+    }
+  ],
+  "bibliography_entries": 9
+}

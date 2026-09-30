@@ -28,6 +28,11 @@ Prace są skrócone (7–12 tys. znaków zamiast 80–130), żeby całość mie�
 w wycinku, który czyta węzeł. Wymóg długości w wytycznych jest dlatego
 przeskalowany (`dataset.condensed_guidelines`); reszta to prawdziwy dokument.
 
+Każdy przypadek ma `document_map.json` — mapę, którą `app` wysłałby razem z
+tekstem (z niej `check_coherence` tnie pracę na rozdziały). Po edycji pracy:
+`make eval-maps`. Od 2026-09-30 spisy treści mają numery stron — bez nich
+mapa `app` brała spis za treść (zgłoszone osobno).
+
 Znana rzecz spoza klucza: w `pokolenie-z` „Kozioł” stoi po „Koźmińskim” — w
 polskim porządku alfabetycznym powinien przed. Model, który to wyłapie, ma
 rację; w wyniku liczy się to jako `unmatched`.
