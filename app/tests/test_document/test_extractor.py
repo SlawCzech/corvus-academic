@@ -1,6 +1,9 @@
 """Unit tests for PDF and DOCX extraction functions."""
 
+import io
+
 import pytest
+from docx import Document as DocxDocument
 
 from src.document.document import Document
 from src.document.extractor import detect_verified_format, extract_docx, extract_pdf
@@ -44,6 +47,47 @@ def test_extract_docx_format(docx_bytes: bytes) -> None:
 def test_extract_docx_contains_text(docx_bytes: bytes) -> None:
     doc = extract_docx(docx_bytes)
     assert "Introduction" in doc.text
+
+
+def _docx_with_table() -> bytes:
+    doc = DocxDocument()
+    doc.add_paragraph("Tabela 1 przedstawia stopę bezrobocia.")
+    table = doc.add_table(rows=3, cols=2)
+    for row, values in zip(
+        table.rows,
+        [("Rok", "Stopa (%)"), ("2004", "19,0"), ("2008", "9,5")],
+        strict=True,
+    ):
+        for cell, value in zip(row.cells, values, strict=True):
+            cell.text = value
+    doc.add_paragraph("Źródło: GUS.")
+    buf = io.BytesIO()
+    doc.save(buf)
+    return buf.getvalue()
+
+
+def test_extract_docx_keeps_tables_in_document_order() -> None:
+    lines = extract_docx(_docx_with_table()).text.splitlines()
+    assert lines == [
+        "Tabela 1 przedstawia stopę bezrobocia.",
+        "Rok | Stopa (%)",
+        "2004 | 19,0",
+        "2008 | 9,5",
+        "Źródło: GUS.",
+    ]
+
+
+def test_extract_docx_takes_a_merged_cell_once() -> None:
+    doc = DocxDocument()
+    table = doc.add_table(rows=2, cols=3)
+    table.cell(0, 0).merge(table.cell(0, 1)).text = "Wiek"
+    table.cell(0, 2).text = "N"
+    for cell, value in zip(table.rows[1].cells, ("20–29", "30–39", "4"), strict=True):
+        cell.text = value
+    buf = io.BytesIO()
+    doc.save(buf)
+    lines = extract_docx(buf.getvalue()).text.splitlines()
+    assert lines[-2:] == ["Wiek | N", "20–29 | 30–39 | 4"]
 
 
 def test_verified_format_accepts_matching_content(

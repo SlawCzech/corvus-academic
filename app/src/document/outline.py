@@ -83,6 +83,10 @@ _NUMBERED = re.compile(r"^(\d{1,2}(?:\.\d{1,2})*)\.?\s+(\S.*)$")
 # A bibliography entry carries a year in brackets; a heading does not.
 _YEAR = re.compile(r"\(\s*\d{4}[a-z]?\s*[,)]")
 
+# The cell separator a DOCX table row is extracted with ("2004 | 19,0"). A row
+# is never a heading, even one that opens with a number and a capital letter.
+_TABLE_CELL_SEPARATOR = " | "
+
 # Longest line still plausibly a heading rather than a sentence.
 _MAX_HEADING_CHARS = 80
 
@@ -120,6 +124,8 @@ def _heading_at(line: str) -> tuple[str, str | None] | None:
     if not stripped or len(stripped) > _MAX_HEADING_CHARS:
         return None
     if _DOT_LEADER.search(stripped) or _YEAR.search(stripped):
+        return None
+    if _TABLE_CELL_SEPARATOR in stripped:
         return None
 
     canonical = _BY_ALIAS.get(_normalise(stripped))

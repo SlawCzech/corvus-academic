@@ -5,6 +5,7 @@ import io
 import fitz  # PyMuPDF
 import structlog
 from docx import Document as DocxDocument
+from docx.table import Table
 
 from src.document.document import Document
 
@@ -28,16 +29,42 @@ def extract_pdf(file: bytes) -> Document:
     return Document(text=text, pages=pages, format="pdf")
 
 
+def _table_lines(table: Table) -> list[str]:
+    """One line per row, cells joined with " | ".
+
+    A cell merged across columns is listed once per column it spans, so it is
+    taken once; a cell of several paragraphs is folded onto the row's line.
+    """
+    lines: list[str] = []
+    for row in table.rows:
+        cells: list[str] = []
+        skip = 0
+        for cell in row.cells:
+            if skip:
+                skip -= 1
+                continue
+            skip = cell.grid_span - 1
+            cells.append(" ".join(p.text.strip() for p in cell.paragraphs).strip())
+        if any(cells):
+            lines.append(" | ".join(cells))
+    return lines
+
+
 def extract_docx(file: bytes) -> Document:
-    """Extract text and section count from a DOCX file."""
-    docx = DocxDocument(io.BytesIO(file))  # pyright: ignore[reportUnknownMemberType]
-    paragraphs: list[str] = []
-    for para in docx.paragraphs:  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
-        raw: str = para.text  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
-        paragraphs.append(raw)
-    text = "\n".join(paragraphs)
-    sections: list[object] = list(docx.sections)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType, reportUnknownVariableType]
-    pages = len(sections)
+    """Extract text and section count from a DOCX file.
+
+    Paragraphs and tables are read in document order, each table rendered in
+    place — theses carry their statistics and survey results in tables.
+    """
+    docx = DocxDocument(io.BytesIO(file))
+    lines: list[str] = []
+    for block in docx.iter_inner_content():
+        if isinstance(block, Table):
+            lines.extend(_table_lines(block))
+        else:
+            lines.append(block.text)
+    text = "\n".join(lines)
+    pages = len(docx.sections)
     logger.info("docx_extracted", sections=pages, chars=len(text))
     return Document(text=text, pages=pages, format="docx")
 

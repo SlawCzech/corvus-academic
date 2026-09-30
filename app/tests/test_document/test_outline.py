@@ -243,3 +243,12 @@ def test_a_bare_toc_ends_at_the_first_paragraph() -> None:
         "1.1. Pojęcie kryptowaluty",
         "Bibliografia",
     ]
+
+
+def test_table_rows_are_not_headings() -> None:
+    # A DOCX table row that opens like a numbered heading: "12. Ankieta" in
+    # the first cell, a count in the next.
+    text = "Wstęp\nTekst.\n12. Ankieta | 30\n3.1. Wyniki szczegółowe\nTekst.\n"
+    titles = [s.title for s in extract_outline(text)]
+    assert "12. Ankieta | 30" not in titles
+    assert "3.1. Wyniki szczegółowe" in titles
