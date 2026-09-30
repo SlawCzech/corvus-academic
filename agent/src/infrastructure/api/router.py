@@ -5,6 +5,7 @@ the backend is Redis with an expiry (~1 day by default), and a promoter's
 history of what the AI did for a student has to outlive that.
 """
 
+import asyncio
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
@@ -21,6 +22,7 @@ from src.application.graph import IMPLEMENTED_ACTIONS
 from src.domain.action import SUPPORTED_PROVIDERS, TaskStatus
 from src.infrastructure.api.auth import Role, TokenUser, verify_access_token
 from src.infrastructure.celery_app import celery_app
+from src.infrastructure.checkpoints import delete as delete_checkpoints
 from src.infrastructure.database import get_db_session
 from src.infrastructure.model_catalog import load_model_catalog
 from src.infrastructure.models import AgentTaskModel
@@ -334,6 +336,7 @@ async def delete_action(
         return
     _revoke_unfinished([record])
     await repo.delete([record])
+    await _delete_checkpoints([record])
     logger.info("action_deleted", task_id=task_id, user_id=str(user.id))
 
 
@@ -353,11 +356,23 @@ async def delete_student_actions(
     )
     _revoke_unfinished(records)
     await repo.delete(records)
+    await _delete_checkpoints(records)
     logger.info(
         "student_actions_deleted",
         student_id=str(student_id),
         count=len(records),
         user_id=str(user.id),
+    )
+
+
+async def _delete_checkpoints(records: list[AgentTaskModel]) -> None:
+    """Delete what a run left checkpointed — the state holds thesis text.
+
+    A finished run deletes its own; this catches the ones that never
+    finished: cancelled, or deleted while running (ADR 0009).
+    """
+    await asyncio.to_thread(
+        delete_checkpoints, [r.task_id for r in records if r.task_id]
     )
 
 

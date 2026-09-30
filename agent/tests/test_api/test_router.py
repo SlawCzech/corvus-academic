@@ -396,6 +396,19 @@ async def test_delete_stops_a_running_action_first(
     revoke.assert_called_once_with(task_id, terminate=True)
 
 
+async def test_delete_takes_the_runs_checkpoints_too(
+    client: TestClient, db_session: AsyncSession, revoke: MagicMock
+) -> None:
+    """A run that never finished leaves checkpoints — with the thesis in them."""
+    task_id = str(uuid.uuid4())
+    await _store(db_session, task_id, TaskStatus.CANCELLED)
+
+    with patch("src.infrastructure.api.router.delete_checkpoints") as delete:
+        client.delete(f"/actions/{task_id}", headers=_auth(PROMOTOR_ID, "promotor"))
+
+    delete.assert_called_once_with([task_id])
+
+
 def test_delete_of_nothing_is_not_an_error(client: TestClient) -> None:
     """`app` retries a deletion that failed on its side after this one succeeded."""
     resp = client.delete(
@@ -424,14 +437,16 @@ async def test_deleting_a_students_actions_takes_every_result(
     await _store(db_session, running, TaskStatus.RUNNING)
     headers = _auth(PROMOTOR_ID, "promotor")
 
-    resp = client.delete(
-        f"/students/{_ACTION_BODY['student_id']}/actions", headers=headers
-    )
+    with patch("src.infrastructure.api.router.delete_checkpoints") as checkpoints:
+        resp = client.delete(
+            f"/students/{_ACTION_BODY['student_id']}/actions", headers=headers
+        )
 
     assert resp.status_code == 204
     assert client.get(f"/actions/{done}", headers=headers).status_code == 404
     assert client.get(f"/actions/{running}", headers=headers).status_code == 404
     revoke.assert_called_once_with(running, terminate=True)
+    assert sorted(checkpoints.call_args.args[0]) == sorted([done, running])
 
 
 async def test_deleting_a_students_actions_leaves_other_promoters_alone(

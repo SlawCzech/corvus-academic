@@ -445,6 +445,10 @@ Admin i promotor to rozłączne role: admin nie widzi studentów ani prac —
 Twarde usuwanie studenta (z plikami i wynikami AI po stronie agenta) i pojedynczej
 akcji — wszystko albo nic, bez agenta 503 —
 [ADR 0009](docs/adr/0009-hard-delete-of-students-and-actions.md).
+Każdy przebieg grafu ma checkpointy w Postgresie (wątek = id taska), taski są
+potwierdzane po zakończeniu — padnięty worker wznawia recenzję od ostatniego
+kroku, a checkpointy znikają, gdy przebieg ma wynik —
+[ADR 0010](docs/adr/0010-graph-checkpoints-and-late-acks.md).
 
 ---
 
