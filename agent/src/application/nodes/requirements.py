@@ -87,6 +87,7 @@ def check_requirements(state: ActionState) -> AnalysisUpdate:
                 severity=FindingSeverity(item.severity),
                 suggestion=item.suggestion,
                 source=FindingSource.REQUIREMENTS,
+                quote=item.quote.strip(),
             )
             for item in data
         ]

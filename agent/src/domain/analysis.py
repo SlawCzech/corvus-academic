@@ -56,6 +56,9 @@ class Finding:
     # None only for findings built outside the analysis nodes (tests,
     # payloads stored before the field existed).
     source: FindingSource | None = None
+    # The passage of the thesis the finding rests on, verbatim; "" when the
+    # defect is that something is absent.
+    quote: str = ""
 
 
 @dataclass

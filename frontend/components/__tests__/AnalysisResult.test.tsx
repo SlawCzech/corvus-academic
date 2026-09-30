@@ -93,6 +93,32 @@ describe("AnalysisResultView", () => {
     expect(labels[0]).toHaveTextContent("Wymogi")
   })
 
+  it("shows the passage a finding rests on, and nothing for an absence", () => {
+    const result: ActionResult = {
+      ...baseResult,
+      findings: [
+        {
+          section: "3.1",
+          description: "Próba nieopisana",
+          severity: "major",
+          suggestion: "Opisać próbę.",
+          quote: "przeprowadzono ankietę wśród znajomych autora",
+        },
+        {
+          section: "Wstęp",
+          description: "Brak hipotez",
+          severity: "critical",
+          suggestion: "Dodać hipotezy.",
+          quote: "",
+        },
+      ],
+    }
+    render(<AnalysisResultView result={result} />)
+    const quotes = screen.getAllByTestId("finding-quote")
+    expect(quotes).toHaveLength(1)
+    expect(quotes[0]).toHaveTextContent("przeprowadzono ankietę wśród znajomych autora")
+  })
+
   it("hides severity groups that have no findings", () => {
     const result: ActionResult = {
       ...baseResult,

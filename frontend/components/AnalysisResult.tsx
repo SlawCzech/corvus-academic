@@ -60,6 +60,14 @@ function FindingGroup({
               )}
             </p>
             <p className="mt-0.5 text-muted-strong">{f.description}</p>
+            {f.quote && (
+              <blockquote
+                data-testid="finding-quote"
+                className="mt-1.5 border-l-2 border-line pl-2 text-[12px] text-muted"
+              >
+                „{f.quote}”
+              </blockquote>
+            )}
             {f.suggestion && (
               <p className="mt-1 italic text-muted">→ {f.suggestion}</p>
             )}

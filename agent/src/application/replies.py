@@ -45,13 +45,24 @@ class _Reply(BaseModel):
 # ---------- the review's analysis nodes ----------
 
 
+def _quote_is_required(schema: dict[str, Any]) -> None:
+    # Present in every reply Ollama decodes, even as "" — an optional key is
+    # one a constrained model is free to never write.
+    schema.setdefault("required", []).append("quote")
+
+
 class FindingReply(_Reply):
     """One defect, as structure, methodology and requirements report it."""
+
+    model_config = ConfigDict(json_schema_extra=_quote_is_required)
 
     section: Text
     description: Text
     severity: Severity
     suggestion: str
+    # Verbatim evidence from the thesis, or "" when the defect is an absence.
+    # Defaults to "" so a hosted model that leaves it out is not failed for it.
+    quote: str = ""
 
 
 FINDINGS = TypeAdapter(list[FindingReply])

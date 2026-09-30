@@ -89,11 +89,13 @@ Użytkownik
   → Celery task (broker: Redis) → agent-worker
       status zapisywany do Postgresa: running → completed | failed
   → LangGraph — graf zależny od typu akcji
-      → generate_review:      [Struktura] → [Metodologia] → [Wymogi] → [Recenzja]
+      → generate_review:      [Struktura ∥ Metodologia ∥ Wymogi] → [Weryfikacja] → [Recenzja]
       → propose_topic:        [Propozycja tematu]
       → defence_questions:    [Pytania na obronę]
       → check_progress:       [Porównanie dwóch wersji]
-      → evaluate_methodology: [Metodologia]
+      → evaluate_methodology: [Metodologia] → [Weryfikacja]
+        (Weryfikacja: bez modelu — cytat każdej uwagi musi być w tekście,
+         duplikaty z różnych analiz scalane; `agent/src/application/grounding.py`)
       → draft_meeting_note:   [Szkic notatki]
   → model selector
       → klucz promotora (BYOK), jeśli go zapisał — Claude albo OpenAI;

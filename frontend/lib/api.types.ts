@@ -11,6 +11,9 @@ export interface Finding {
   suggestion: string
   // Which analysis raised it; absent on results stored before 2026-09-24.
   source?: FindingSource | null
+  // The passage of the thesis it rests on, verbatim and checked against the
+  // text by the agent; "" for an absence, missing on older results.
+  quote?: string
 }
 
 export interface Score {

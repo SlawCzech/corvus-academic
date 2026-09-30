@@ -41,6 +41,7 @@ def analyze_methodology(state: ActionState) -> AnalysisUpdate:
                 severity=FindingSeverity(item.severity),
                 suggestion=item.suggestion,
                 source=FindingSource.METHODOLOGY,
+                quote=item.quote.strip(),
             )
             for item in data
         ]
