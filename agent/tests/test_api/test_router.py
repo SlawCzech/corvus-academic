@@ -204,6 +204,8 @@ def test_action_starts_pending(client: TestClient, dispatch: MagicMock) -> None:
     assert body["action_type"] == "propose_topic"
     assert body["action_id"] == _ACTION_BODY["action_id"]
     assert body["result"] is None
+    # Nothing has run yet: no steps to show.
+    assert body["progress"] is None
 
 
 def test_unknown_task_is_404(client: TestClient) -> None:

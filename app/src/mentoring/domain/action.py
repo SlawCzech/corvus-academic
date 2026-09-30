@@ -66,6 +66,10 @@ class AgentAction:
     accepted_at: datetime | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    # How far the agent has got — {"steps": [...], "done": [...]} — read
+    # from it on every refresh of an unfinished action. Not stored: it is
+    # stale the moment it is written, and the agent keeps the durable copy.
+    progress: dict[str, Any] | None = None
 
     @property
     def is_finished(self) -> bool:

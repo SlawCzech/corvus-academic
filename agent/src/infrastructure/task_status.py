@@ -42,6 +42,32 @@ async def _write(
         await engine.dispose()
 
 
+async def _write_progress(task_id: str, progress: dict[str, Any]) -> bool:
+    engine = create_async_engine(settings.database_url, poolclass=NullPool)
+    try:
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        async with factory() as session:
+            return await AgentTaskRepository(session).update_progress(
+                task_id, progress
+            )
+    finally:
+        await engine.dispose()
+
+
+def record_task_progress(task_id: str | None, progress: dict[str, Any]) -> None:
+    """Persist which nodes a running task has finished, swallowing any failure.
+
+    Progress is a courtesy to whoever is watching; a write that fails costs
+    them a checkmark, never the task.
+    """
+    if not task_id:
+        return
+    try:
+        asyncio.run(_write_progress(task_id, progress))
+    except Exception as exc:
+        logger.warning("task_progress_write_failed", task_id=task_id, error=str(exc))
+
+
 def record_task_status(
     task_id: str | None,
     status: str,

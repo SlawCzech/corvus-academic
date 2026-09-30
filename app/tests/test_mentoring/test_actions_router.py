@@ -175,6 +175,38 @@ def test_polling_reflects_the_finished_action(
     assert body["output"]["output"]["topics"][0]["title"] == "Instytucje a wzrost"
 
 
+def test_polling_a_running_action_shows_its_progress(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+    action = _trigger(client, headers, student_id)
+    progress = {"steps": ["propose_topic"], "done": []}
+    agent.runs_with(progress)
+
+    body = client.get(
+        f"/students/{student_id}/actions/{action['id']}", headers=headers
+    ).json()
+
+    assert body["status"] == "running"
+    assert body["progress"] == progress
+
+
+def test_a_finished_action_carries_no_progress(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+    action = _trigger(client, headers, student_id)
+    agent.completes_with(topic_payload("Instytucje a wzrost"))
+
+    body = client.get(
+        f"/students/{student_id}/actions/{action['id']}", headers=headers
+    ).json()
+
+    assert body["progress"] is None
+
+
 def test_list_actions_shows_the_history(
     client: TestClient, agent: FakeAgentClient
 ) -> None:

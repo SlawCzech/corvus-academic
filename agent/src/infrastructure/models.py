@@ -55,6 +55,12 @@ class AgentTaskModel(Base):
         JSONB().with_variant(JSON(), "sqlite"), nullable=True, default=None
     )
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # {"steps": [node, ...], "done": [node, ...]} while the graph runs; the
+    # worker rewrites it after every node. Kept once the task ends, so a
+    # failed run still shows how far it got.
+    progress: Mapped[Any] = mapped_column(  # type: ignore[assignment]
+        JSONB().with_variant(JSON(), "sqlite"), nullable=True, default=None
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

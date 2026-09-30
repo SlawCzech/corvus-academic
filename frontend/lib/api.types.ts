@@ -173,6 +173,12 @@ export interface DashboardSummary {
   recent_activity: RecentActivity[]
 }
 
+// The agent's graph steps for a running action, and those already finished.
+export interface ActionProgress {
+  steps: string[]
+  done: string[]
+}
+
 export interface AgentAction {
   id: string
   student_id: string
@@ -187,6 +193,8 @@ export interface AgentAction {
   accepted_at: string | null
   created_at: string
   updated_at: string
+  // Unfinished actions only.
+  progress?: ActionProgress | null
 }
 
 // ---------- guideline catalog ----------

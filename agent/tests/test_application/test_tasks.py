@@ -39,6 +39,13 @@ def status_writes() -> Any:  # noqa: ANN401
         yield mock
 
 
+@pytest.fixture(autouse=True)
+def progress_writes() -> Any:  # noqa: ANN401
+    """Progress writes too."""
+    with patch("src.application.tasks.record_task_progress") as mock:
+        yield mock
+
+
 def _final_state(**overrides: Any) -> dict[str, Any]:  # noqa: ANN401
     state: dict[str, Any] = {
         "action_id": ACTION_ID,
@@ -55,10 +62,26 @@ def _final_state(**overrides: Any) -> dict[str, Any]:  # noqa: ANN401
     return state
 
 
+def _streams_through_invoke(graph: MagicMock) -> MagicMock:
+    """Make ``stream`` yield what ``invoke`` returns, as its final values.
+
+    The task streams the graph; the tests describe it by its ``invoke`` —
+    return value or side effect — and assert on ``invoke``'s call args.
+    """
+    graph.get_graph.return_value.nodes = {"__start__": 0, "node": 0, "__end__": 0}
+
+    def _stream(state: Any, config: Any = None, stream_mode: Any = None) -> Any:  # noqa: ANN401
+        final = graph.invoke(state, config=config)
+        return iter([("updates", {"node": {}}), ("values", final)])
+
+    graph.stream.side_effect = _stream
+    return graph
+
+
 def _mock_graph(state: dict[str, Any] | None = None) -> MagicMock:
     graph = MagicMock()
     graph.invoke.return_value = state if state is not None else _final_state()
-    return graph
+    return _streams_through_invoke(graph)
 
 
 # ---------- generic action runner ----------
@@ -98,6 +121,39 @@ def test_run_action_invokes_the_graph_with_a_traceable_config() -> None:
     assert config["run_name"] == f"action:{ActionType.PROPOSE_TOPIC}"
     assert config["metadata"]["langfuse_session_id"] == STUDENT_ID
     assert config["metadata"]["task_id"] == "task-trace"
+
+
+def test_progress_is_recorded_as_each_node_finishes(progress_writes: Any) -> None:  # noqa: ANN401
+    """The graph's steps up front, then one write per finished node."""
+    graph = _mock_graph()
+    graph.get_graph.return_value.nodes = {
+        "__start__": 0,
+        "analyze_structure": 0,
+        "verify": 0,
+        "__end__": 0,
+    }
+    graph.stream.side_effect = lambda state, config=None, stream_mode=None: iter(
+        [
+            ("updates", {"analyze_structure": {}}),
+            ("values", _final_state()),
+            ("updates", {"verify": {}}),
+            ("values", _final_state()),
+        ]
+    )
+
+    with patch("src.application.tasks.build_action_graph", return_value=graph):
+        run_action.apply(
+            args=(ACTION_ID, ActionType.GENERATE_REVIEW, STUDENT_ID, {}),
+            task_id="task-progress",
+        )
+
+    written = [c.args[1] for c in progress_writes.call_args_list]
+    steps = ["analyze_structure", "verify"]
+    assert written == [
+        {"steps": steps, "done": []},
+        {"steps": steps, "done": ["analyze_structure"]},
+        {"steps": steps, "done": ["analyze_structure", "verify"]},
+    ]
 
 
 def test_run_action_returns_the_actions_output() -> None:
@@ -329,6 +385,7 @@ def test_credentials_are_in_effect_while_the_graph_runs() -> None:
 
     graph = MagicMock()
     graph.invoke.side_effect = _capture
+    _streams_through_invoke(graph)
 
     with patch("src.application.tasks.build_action_graph", return_value=graph):
         run_action.apply(
@@ -386,6 +443,7 @@ def test_without_a_key_nothing_is_in_effect() -> None:
 
     graph = MagicMock()
     graph.invoke.side_effect = _capture
+    _streams_through_invoke(graph)
 
     with patch("src.application.tasks.build_action_graph", return_value=graph):
         run_action.apply(args=(ACTION_ID, ActionType.PROPOSE_TOPIC, STUDENT_ID, {}))

@@ -132,6 +132,8 @@ class ActionStatusResponse(BaseModel):
     status: str
     result: dict[str, Any] | None
     error: str | None
+    # {"steps": [...], "done": [...]} — the graph's nodes and those finished.
+    progress: dict[str, Any] | None = None
 
 
 class LocalModelResponse(BaseModel):
@@ -363,6 +365,10 @@ def _status_response(record: AgentTaskModel) -> ActionStatusResponse:
     task_id = record.task_id or ""
     stored: Any = record.result
     payload = cast(dict[str, Any], stored) if isinstance(stored, dict) else {}
+    raw_progress: Any = record.progress
+    progress = (
+        cast(dict[str, Any], raw_progress) if isinstance(raw_progress, dict) else None
+    )
     return ActionStatusResponse(
         task_id=task_id,
         action_id=record.action_id,
@@ -370,4 +376,5 @@ def _status_response(record: AgentTaskModel) -> ActionStatusResponse:
         status=record.status,
         result=payload or None,
         error=record.error,
+        progress=progress,
     )

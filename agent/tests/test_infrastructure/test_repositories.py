@@ -210,3 +210,35 @@ async def test_thesis_types_are_ingested_independently(
     )
 
     assert await guidelines.count("master_article", "nomic-embed-text") == 1
+
+
+# ---------- progress ----------
+
+
+async def test_update_progress_while_running(repo: AgentTaskRepository) -> None:
+    await repo.save(_task("task-1", status=TaskStatus.RUNNING))
+    progress = {"steps": ["a", "b"], "done": ["a"]}
+
+    assert await repo.update_progress("task-1", progress)
+
+    found = await repo.find_by_task_id("task-1")
+    assert found is not None
+    assert found.progress == progress
+
+
+async def test_progress_never_touches_a_finished_task(
+    repo: AgentTaskRepository,
+) -> None:
+    """A late progress write must not make a cancelled run look alive."""
+    await repo.save(_task("task-1", status=TaskStatus.CANCELLED))
+
+    assert await repo.update_progress("task-1", {"steps": ["a"], "done": []})
+
+    found = await repo.find_by_task_id("task-1")
+    assert found is not None
+    assert found.progress is None
+    assert found.status == TaskStatus.CANCELLED
+
+
+async def test_update_progress_missing_row(repo: AgentTaskRepository) -> None:
+    assert not await repo.update_progress("nope", {"steps": [], "done": []})

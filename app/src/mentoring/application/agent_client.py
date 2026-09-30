@@ -38,6 +38,8 @@ class AgentActionStatus:
     status: str
     result: dict[str, Any] | None
     error: str | None
+    # The graph's steps and the ones done, while the action runs.
+    progress: dict[str, Any] | None = None
 
 
 class AgentClient:
@@ -79,10 +81,14 @@ class AgentClient:
         data = await self._get(f"/actions/{task_id}", token)
         result: Any = data.get("result")
         error: Any = data.get("error")
+        progress: Any = data.get("progress")
         return AgentActionStatus(
             status=str(data["status"]),
             result=cast(dict[str, Any], result) if isinstance(result, dict) else None,
             error=str(error) if error else None,
+            progress=(
+                cast(dict[str, Any], progress) if isinstance(progress, dict) else None
+            ),
         )
 
     async def cancel_action(self, task_id: str, token: str) -> AgentActionStatus:
