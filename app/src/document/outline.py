@@ -162,18 +162,43 @@ def _drop_false_headings(
     ]
 
 
+def _ends_toc(
+    line: str, heading: tuple[str, str | None] | None, named_in_toc: set[str]
+) -> bool:
+    """Whether this line, read inside a table of contents, is the body instead.
+
+    Two signs, whichever comes first: a section the contents already named
+    turning up again — the body's own "Wstęp" — or a paragraph too long to be
+    an entry. Dot-leader lines are entries however long they run.
+    """
+    if heading is not None:
+        return heading[1] is not None and heading[1] in named_in_toc
+    stripped = line.strip()
+    return len(stripped) > _MAX_HEADING_CHARS and not _DOT_LEADER.search(stripped)
+
+
 def extract_outline(text: str) -> list[Section]:
     """Return the headings of a thesis, in the order they appear.
 
-    Table-of-contents lines are skipped: they carry dot leaders, which running
-    headings never do.
+    Table-of-contents lines are skipped. Dot leaders give most of them away,
+    but not all: a contents block of bare section names, without leaders or
+    page numbers, reads line for line like the headings it lists. So what
+    follows a "Spis treści" heading counts as contents until the body begins.
     """
     found: list[tuple[str, str | None, int]] = []
+    named_in_toc: set[str] | None = None  # None: not inside a contents block
     offset = 0
     for line in text.splitlines(keepends=True):
         heading = _heading_at(line)
-        if heading is not None:
+        if named_in_toc is not None and _ends_toc(line, heading, named_in_toc):
+            named_in_toc = None
+        if named_in_toc is not None:
+            if heading is not None and heading[1] is not None:
+                named_in_toc.add(heading[1])
+        elif heading is not None:
             found.append((heading[0], heading[1], offset))
+            if heading[1] == "toc":
+                named_in_toc = set()
         offset += len(line)
     found = _drop_false_headings(found)
 
