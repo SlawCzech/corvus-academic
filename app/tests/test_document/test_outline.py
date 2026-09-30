@@ -151,3 +151,95 @@ def test_payload_carries_what_the_agent_needs() -> None:
 def test_a_document_without_recognisable_headings_yields_an_empty_map() -> None:
     """Better no map than a wrong one — the nodes fall back to reading only."""
     assert extract_outline("Zwykły tekst bez nagłówków. " * 50) == []
+
+
+# A contents block of bare section names — no dot leaders, no page numbers —
+# the way a thesis typed straight into a word processor lists its chapters.
+# Every "Wstęp" and "Bibliografia" in it looks exactly like a heading.
+BARE_TOC_THESIS = "\n".join(
+    [
+        "Uniwersytet Ekonomiczny",
+        "",
+        "SPIS TREŚCI",
+        "",
+        "Wstęp",
+        "Rozdział 1. Istota kryptowalut",
+        "1.1. Pojęcie kryptowaluty",
+        "Rozdział 2. Badanie własne",
+        "2.1. Wyniki badania",
+        "Zakończenie",
+        "Bibliografia",
+        "",
+        "WSTĘP",
+        "",
+        "Kryptowaluty są jednym z najczęściej omawianych zjawisk. " * 20,
+        "",
+        "1.1. Pojęcie kryptowaluty",
+        "",
+        "Kryptowaluta to cyfrowy środek wymiany. " * 40,
+        "",
+        "2.1. Wyniki badania",
+        "",
+        "Badanie objęło czterdziestu respondentów. " * 40,
+        "",
+        "ZAKOŃCZENIE",
+        "",
+        "Praca pokazała wpływ kryptowalut. " * 10,
+        "",
+        "BIBLIOGRAFIA",
+        "",
+        "1. Kowalczyk, J. (2021). Kryptowaluty. Warszawa: PWN.",
+        "2. Nowak, A. (2022). Blockchain w finansach. Kraków: UEK.",
+    ]
+)
+
+
+def test_a_toc_without_page_numbers_does_not_become_the_body() -> None:
+    """The contents' "Wstęp" and "Bibliografia" are not where the body runs.
+
+    Taken as headings, they bound a 200-character "body" and take every
+    numbered chapter of the real one down with them as table-of-contents lines.
+    """
+    outline = extract_outline(BARE_TOC_THESIS)
+    titles = [s.title for s in outline]
+
+    assert titles == [
+        "SPIS TREŚCI",
+        "WSTĘP",
+        "1.1. Pojęcie kryptowaluty",
+        "2.1. Wyniki badania",
+        "ZAKOŃCZENIE",
+        "BIBLIOGRAFIA",
+    ]
+    body = body_char_count(BARE_TOC_THESIS, outline)
+    introduction = find_section(outline, "introduction")
+    bibliography = find_section(outline, "bibliography")
+    assert introduction is not None
+    assert bibliography is not None
+    assert body == bibliography.start - introduction.start
+    assert count_bibliography_entries(BARE_TOC_THESIS, outline) == 2
+
+
+def test_a_bare_toc_ends_at_the_first_paragraph() -> None:
+    """Without a repeated heading to mark the body, prose marks it."""
+    text = "\n".join(
+        [
+            "Spis treści",
+            "Wstęp",
+            "1.1. Pojęcie kryptowaluty",
+            "",
+            "Kryptowaluty są jednym z najczęściej omawianych zjawisk. " * 5,
+            "Metodyka badań",
+            "1.1. Pojęcie kryptowaluty",
+            "Kryptowaluta to cyfrowy środek wymiany. " * 20,
+            "Bibliografia",
+            "1. Kowalczyk, J. (2021). Kryptowaluty. Warszawa: PWN.",
+        ]
+    )
+
+    assert _titles(text) == [
+        "Spis treści",
+        "Metodyka badań",
+        "1.1. Pojęcie kryptowaluty",
+        "Bibliografia",
+    ]
