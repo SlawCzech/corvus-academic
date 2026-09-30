@@ -33,6 +33,10 @@ describe("getRefreshInterval", () => {
     expect(getRefreshInterval({ ...base, status: "failed" })).toBe(0)
   })
 
+  it("waits without polling while the promoter picks the findings", () => {
+    expect(getRefreshInterval({ ...base, status: "awaiting_input" })).toBe(0)
+  })
+
   it("stops once the promoter has cancelled it", () => {
     expect(getRefreshInterval({ ...base, status: "cancelled" })).toBe(0)
   })

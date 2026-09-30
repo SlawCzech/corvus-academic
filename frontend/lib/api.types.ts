@@ -84,7 +84,14 @@ export type ActionType =
   | "defence_questions"
   | "generate_review"
 
-export type ActionStatus = "pending" | "running" | "completed" | "failed" | "cancelled"
+export type ActionStatus =
+  | "pending"
+  | "running"
+  // A review paused for the promoter to pick the findings it may use.
+  | "awaiting_input"
+  | "completed"
+  | "failed"
+  | "cancelled"
 
 /** One proposed thesis topic. */
 export interface ProposedTopic {

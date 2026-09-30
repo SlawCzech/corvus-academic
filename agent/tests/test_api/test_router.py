@@ -546,3 +546,78 @@ def test_models_lists_ollama_chat_models(client: TestClient) -> None:
     assert body["local"] == [{"name": "gemma4:12b", "parameter_size": None}]
     assert body["local_available"] is True
     assert body["default"] == settings.ollama_model
+
+
+# ---------- resuming a paused run ----------
+
+
+async def test_resume_queues_the_decision_under_the_same_task_id(
+    client: TestClient, db_session: AsyncSession, dispatch: MagicMock
+) -> None:
+    task_id = str(uuid.uuid4())
+    await _store(db_session, task_id, TaskStatus.AWAITING_INPUT, result={"x": 1})
+
+    resp = client.post(
+        f"/actions/{task_id}/resume",
+        json={
+            "decision": {"accepted": [0, 2]},
+            "byok": {"provider": "claude", "api_key": "sk-user"},
+        },
+        headers=_auth(PROMOTOR_ID, "promotor"),
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "pending"
+    sent = dispatch.call_args
+    assert sent.args[0] == "src.application.tasks.resume_action"
+    assert sent.kwargs["task_id"] == task_id
+    assert sent.kwargs["args"] == [ActionType.PROPOSE_TOPIC, {"accepted": [0, 2]}]
+    assert sent.kwargs["kwargs"] == {"provider": "claude", "api_key": "sk-user"}
+
+
+async def test_resume_of_a_run_that_is_not_paused_is_409(
+    client: TestClient, db_session: AsyncSession, dispatch: MagicMock
+) -> None:
+    task_id = str(uuid.uuid4())
+    await _store(db_session, task_id, TaskStatus.RUNNING)
+
+    resp = client.post(
+        f"/actions/{task_id}/resume",
+        json={"decision": {"accepted": []}},
+        headers=_auth(PROMOTOR_ID, "promotor"),
+    )
+
+    assert resp.status_code == 409
+    dispatch.assert_not_called()
+
+
+async def test_resume_that_cannot_be_queued_stays_paused(
+    client: TestClient, db_session: AsyncSession, dispatch: MagicMock
+) -> None:
+    task_id = str(uuid.uuid4())
+    await _store(db_session, task_id, TaskStatus.AWAITING_INPUT)
+    dispatch.side_effect = OSError("broker down")
+    headers = _auth(PROMOTOR_ID, "promotor")
+
+    resp = client.post(
+        f"/actions/{task_id}/resume", json={"decision": {}}, headers=headers
+    )
+
+    assert resp.status_code == 503
+    body = client.get(f"/actions/{task_id}", headers=headers).json()
+    assert body["status"] == "awaiting_input"
+
+
+async def test_cancelling_a_paused_run_deletes_its_checkpoints(
+    client: TestClient, db_session: AsyncSession, revoke: MagicMock
+) -> None:
+    task_id = str(uuid.uuid4())
+    await _store(db_session, task_id, TaskStatus.AWAITING_INPUT)
+
+    with patch("src.infrastructure.api.router.delete_checkpoints") as delete:
+        resp = client.post(
+            f"/actions/{task_id}/cancel", headers=_auth(PROMOTOR_ID, "promotor")
+        )
+
+    assert resp.json()["status"] == "cancelled"
+    delete.assert_called_once_with([task_id])

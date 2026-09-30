@@ -53,3 +53,23 @@ one, given a checkpointer and a stable thread id.
   each for a long thesis) until it ends.
 - The user's own provider key is not in any checkpoint: it never enters the
   state (ADR 0004, `llm_factory`), which is what made this safe to add.
+
+## Addendum — pausing for the promoter (same day)
+
+Checkpoints made a second thing possible: a run that stops on purpose. With
+"Pokaż mi uwagi, zanim powstanie recenzja" ticked, the review graph calls
+`interrupt` in `promoter_review`, between `verify` and the review. The task
+records `awaiting_input` with the findings in its result and keeps its
+checkpoints; `app` shows the findings with a tick each, and
+`POST /students/{id}/actions/{aid}/resume` sends the kept indices on. The
+agent queues `resume_action` **under the paused task's own id**, so the
+thread, the status row and a cancel's revoke keep referring to one run, and
+the graph continues with `Command(resume=…)`.
+
+- The node is in the graph whether or not the promoter asked — a pass-through
+  when they did not — so the graph a run resumes into is the one it paused in.
+- A paused run's checkpoints live until it is resumed, cancelled (which now
+  deletes them) or deleted.
+- The provider key is decrypted again for the resume; it was never stored.
+- Without checkpoints there is nowhere to pause, so the flag is dropped and
+  the review runs straight through.

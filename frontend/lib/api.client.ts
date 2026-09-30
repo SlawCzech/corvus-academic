@@ -210,6 +210,8 @@ export interface ActionOptions {
   language?: string
   /** Only read by generate_review; ignored by every other action type. */
   reviewTone?: string
+  /** generate_review only: pause after the analyses to pick the findings. */
+  reviewFindingsFirst?: boolean
 }
 
 export async function triggerAction(
@@ -227,6 +229,7 @@ export async function triggerAction(
       model: options?.model || null,
       language: options?.language || "pl",
       review_tone: options?.reviewTone || "auto",
+      review_findings_first: options?.reviewFindingsFirst ?? false,
     }),
   })
   if (!res.ok) return fail(res, "Nie udało się uruchomić akcji")
@@ -244,6 +247,21 @@ export function fetchAction(
 }
 
 /** Stop an action that has not finished. 409 when it already has. */
+/** Write a paused review from the findings the promoter kept (their indices). */
+export async function resumeAction(
+  studentId: string,
+  actionId: string,
+  acceptedFindings: number[],
+): Promise<AgentAction> {
+  const res = await request(`/api/students/${studentId}/actions/${actionId}/resume`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ accepted_findings: acceptedFindings }),
+  })
+  if (!res.ok) return fail(res, "Nie udało się wznowić recenzji")
+  return res.json() as Promise<AgentAction>
+}
+
 export async function cancelAction(studentId: string, actionId: string): Promise<AgentAction> {
   const res = await request(`/api/students/${studentId}/actions/${actionId}/cancel`, {
     method: "POST",

@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useSWRConfig } from "swr"
 import { IconChevronDown } from "@tabler/icons-react"
 import ActionProgress from "./ActionProgress"
+import FindingPicker from "./FindingPicker"
 import ModelSelect, { useAvailableModel } from "@/components/ai/ModelSelect"
 import ReviewToneChoice from "@/components/ai/ReviewToneChoice"
 import ActionResultView from "@/components/students/ActionResultView"
@@ -66,6 +67,7 @@ const ACTIONS: ActionSpec[] = [
 const STATUS_LABELS: Record<string, string> = {
   pending: "W kolejce",
   running: "Liczy się…",
+  awaiting_input: "Czeka na Twój wybór uwag",
   completed: "Gotowe",
   failed: "Błąd",
   cancelled: "Przerwano",
@@ -98,7 +100,7 @@ function ActionPanelInner({
   student: Student
   defaults: AiDefaults
 }) {
-  const { action, running, error, run, accept, cancel, dismiss } = useAction(student.id)
+  const { action, running, error, run, accept, cancel, resume, dismiss } = useAction(student.id)
   const { mutate } = useSWRConfig()
   const [selectedType, setSelectedType] = useState<ActionType | null>(null)
   const [detail, setDetail] = useState("")
@@ -108,6 +110,7 @@ function ActionPanelInner({
   const [model, setModel] = useState(defaults.model)
   const [language, setLanguage] = useState(defaults.language)
   const [reviewTone, setReviewTone] = useState(defaults.reviewTone)
+  const [findingsFirst, setFindingsFirst] = useState(false)
   // What actually gets sent: a saved model the admin has since withdrawn
   // falls back to the default rather than getting the action refused.
   const { effective: effectiveModel, withdrawn } = useAvailableModel(model)
@@ -126,6 +129,7 @@ function ActionPanelInner({
       model: effectiveModel || undefined,
       language,
       reviewTone,
+      reviewFindingsFirst: selectedType === "generate_review" && findingsFirst,
     })
   }
 
@@ -189,6 +193,16 @@ function ActionPanelInner({
                 value={reviewTone}
                 onChange={setReviewTone}
               />
+              <label className="mt-3 flex cursor-pointer items-center gap-2 text-[13px] text-muted-strong">
+                <input
+                  type="checkbox"
+                  checked={findingsFirst}
+                  onChange={(e) => setFindingsFirst(e.target.checked)}
+                  data-testid="findings-first"
+                  className="accent-accent"
+                />
+                Pokaż mi uwagi, zanim powstanie recenzja
+              </label>
             </div>
           )}
 
@@ -271,11 +285,18 @@ function ActionPanelInner({
                 <ActionProgress progress={shown.progress} />
               )}
 
-              <ActionResultView
-                action={shown}
-                selected={topicIndex}
-                onSelect={setTopicIndex}
-              />
+              {shown.status === "awaiting_input" ? (
+                <FindingPicker
+                  findings={shown.output?.findings ?? []}
+                  onSubmit={(kept) => void resume(kept)}
+                />
+              ) : (
+                <ActionResultView
+                  action={shown}
+                  selected={topicIndex}
+                  onSelect={setTopicIndex}
+                />
+              )}
 
               {canAccept && (
                 <button

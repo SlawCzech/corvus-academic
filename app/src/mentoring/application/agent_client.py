@@ -91,6 +91,19 @@ class AgentClient:
             ),
         )
 
+    async def resume_action(
+        self,
+        task_id: str,
+        decision: dict[str, Any],
+        token: str,
+        byok: BYOK | None = None,
+    ) -> None:
+        """Continue a run paused for the promoter, with their decision."""
+        payload: dict[str, Any] = {"decision": decision}
+        if byok is not None:
+            payload["byok"] = {"provider": byok.provider, "api_key": byok.api_key}
+        await self._post(f"/actions/{task_id}/resume", payload, token)
+
     async def cancel_action(self, task_id: str, token: str) -> AgentActionStatus:
         """Ask the agent to stop one action; a finished one is left as it is."""
         data = await self._post(f"/actions/{task_id}/cancel", {}, token)
