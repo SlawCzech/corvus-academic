@@ -23,6 +23,7 @@ const ACTION_LABELS: Record<string, string> = {
   evaluate_methodology: "ocena metodologii",
   draft_meeting_note: "szkic notatki",
   generate_review: "recenzja",
+  verify_bibliography: "sprawdzenie bibliografii",
 }
 
 const STATUS_ACTIVITY_LABELS: Record<string, string> = {

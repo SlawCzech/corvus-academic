@@ -83,6 +83,7 @@ export type ActionType =
   | "draft_meeting_note"
   | "defence_questions"
   | "generate_review"
+  | "verify_bibliography"
 
 export type ActionStatus =
   | "pending"
@@ -120,6 +121,22 @@ export interface ProgressChange {
  * The action-specific part of a result. Which keys are present depends on the
  * action that produced it.
  */
+/** What the bibliography check established about one entry. */
+export type ReferenceStatus =
+  | "verified"
+  | "mismatch"
+  | "not_indexed"
+  | "suspicious"
+  | "website"
+  | "unchecked"
+
+export interface CheckedReference {
+  entry: string
+  status: ReferenceStatus
+  note: string
+  doi: string
+}
+
 export interface ActionOutput {
   topics?: ProposedTopic[]
   recommended?: number
@@ -133,6 +150,8 @@ export interface ActionOutput {
   agreed_actions?: string[]
   recommendation?: string
   total_percentage?: number
+  references?: CheckedReference[]
+  counts?: Partial<Record<ReferenceStatus, number>>
 }
 
 /** The agent's whole payload for one finished action. */

@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""
 
+    # The bibliography check asks Crossref whether cited works exist. Only
+    # reference strings leave the machine. The mailto puts requests in
+    # Crossref's "polite pool" — an address of whoever runs this instance.
+    crossref_mailto: str = ""
+    crossref_timeout: float = 10.0
+
     # Graph checkpoints in Postgres, so a run that dies can resume. Off in
     # tests and evals, which have no database.
     checkpoints_enabled: bool = True

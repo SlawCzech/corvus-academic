@@ -139,4 +139,37 @@ describe("ActionResultView", () => {
 
     expect(screen.queryByTestId("partial-analysis")).not.toBeInTheDocument()
   })
+
+  it("groups the checked bibliography, suspicious entries first", () => {
+    const action = {
+      ...base,
+      action_type: "verify_bibliography",
+      status: "completed",
+      output: {
+        findings: [],
+        scores: [],
+        summary: null,
+        recommendation: null,
+        status: "bibliography_checked",
+        error: null,
+        output: {
+          references: [
+            { entry: "Laibson (1997). Golden eggs…", status: "verified", note: "", doi: "10.1162/x" },
+            { entry: "Nowak (2019). Cryptographic…", status: "suspicious", note: "Brak w JME.", doi: "" },
+            { entry: "Bankier.pl (2023)…", status: "website", note: "", doi: "" },
+          ],
+        },
+      },
+    } as unknown as AgentAction
+    render(<ActionResultView action={action} />)
+
+    const check = screen.getByTestId("bibliography-check")
+    const headings = [...check.querySelectorAll("h4")].map((h) => h.textContent)
+    expect(headings).toEqual(["Podejrzana (1)", "Strona www (1)", "Potwierdzona (1)"])
+    expect(screen.getByTestId("references-suspicious")).toHaveTextContent("Brak w JME.")
+    expect(screen.getByRole("link", { name: "doi:10.1162/x" })).toHaveAttribute(
+      "href",
+      "https://doi.org/10.1162/x",
+    )
+  })
 })

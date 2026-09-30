@@ -26,6 +26,7 @@ from src.mentoring.application.context import (
     assemble_evaluate_methodology_context,
     assemble_generate_review_context,
     assemble_propose_topic_context,
+    assemble_verify_bibliography_context,
 )
 from src.mentoring.application.draft_service import to_domain as draft_to_domain
 from src.mentoring.application.exceptions import (
@@ -458,6 +459,14 @@ class ActionService:
                         guidelines=rubric.rubric_md if rubric else None,
                     ),
                     base_ref | self._draft_ref(latest[:1]) | self._rubric_ref(rubric),
+                )
+            case ActionType.VERIFY_BIBLIOGRAPHY:
+                latest = await self._latest_drafts(student.id, 1)
+                return (
+                    assemble_verify_bibliography_context(
+                        student, latest[0] if latest else None
+                    ),
+                    base_ref | self._draft_ref(latest[:1]),
                 )
             case ActionType.CHECK_PROGRESS:
                 latest = await self._latest_drafts(student.id, 2)

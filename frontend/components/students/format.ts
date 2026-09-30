@@ -7,6 +7,7 @@ export const ACTION_LABELS: Record<string, string> = {
   evaluate_methodology: "Ocena metodologii",
   draft_meeting_note: "Szkic notatki",
   generate_review: "Recenzja",
+  verify_bibliography: "Sprawdzenie bibliografii",
 }
 
 export const STUDENT_STATUS_LABELS: Record<StudentStatus, string> = {

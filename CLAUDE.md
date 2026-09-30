@@ -103,6 +103,10 @@ Użytkownik
         (Weryfikacja: bez modelu — cytat każdej uwagi musi być w tekście,
          duplikaty z różnych analiz scalane; `agent/src/application/grounding.py`)
       → draft_meeting_note:   [Szkic notatki]
+      → verify_bibliography:  [Lista pozycji] → [Crossref, bez modelu]
+                              → [Agent ⇄ narzędzia Crossref]* → [Werdykty]
+        (*tylko dla pozycji, których dopasowanie nie rozstrzygnęło; do Crossref
+         idą wyłącznie opisy bibliograficzne, nigdy tekst pracy)
   → model selector
       → klucz promotora (BYOK), jeśli go zapisał — Claude albo OpenAI;
         w przeciwnym razie Ollama (lokalny, domyślny)
