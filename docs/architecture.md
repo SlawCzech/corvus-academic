@@ -473,11 +473,11 @@ bo to jego własne dane statyczne.
 def get_llm(model: str) -> BaseChatModel:
     match settings.model_backend:
         case "claude":
-            return ChatAnthropic(model="claude-sonnet-4-20250514")
+            return ChatAnthropic(model="claude-sonnet-5")
         case "ollama":
             return ChatOllama(model=model, base_url=settings.ollama_base_url)
         case "openai":
-            return ChatOpenAI(model="gpt-4o")
+            return ChatOpenAI(model="gpt-5")
         case _:
             raise ValueError(f"Nieznany MODEL_BACKEND: {settings.model_backend}")
 ```
