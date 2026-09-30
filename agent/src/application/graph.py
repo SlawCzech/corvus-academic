@@ -7,6 +7,7 @@
 
 from typing import Any
 
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
@@ -30,7 +31,9 @@ CompiledActionGraph = CompiledStateGraph[ActionState, None, Any, Any]
 IMPLEMENTED_ACTIONS: frozenset[str] = frozenset(ActionType)
 
 
-def build_analysis_graph(mode: str = "full") -> CompiledActionGraph:
+def build_analysis_graph(
+    mode: str = "full", checkpointer: BaseCheckpointSaver[Any] | None = None
+) -> CompiledActionGraph:
     """Build and compile the full thesis analysis graph for the given mode.
 
     mode="full"        — structure, methodology and requirements in parallel,
@@ -63,22 +66,26 @@ def build_analysis_graph(mode: str = "full") -> CompiledActionGraph:
         builder.add_edge("verify", "generate_review")
         builder.add_edge("generate_review", END)
 
-    return builder.compile()
+    return builder.compile(checkpointer=checkpointer)
 
 
 def _build_single_node_graph(
-    name: str, node: Any  # noqa: ANN401  — LangGraph node callables are untyped
+    name: str,
+    node: Any,  # noqa: ANN401  — LangGraph node callables are untyped
+    checkpointer: BaseCheckpointSaver[Any] | None = None,
 ) -> CompiledActionGraph:
     """Compile a one-node graph — the shape most actions need."""
     builder: StateGraph[ActionState, None, Any, Any] = StateGraph(ActionState)
     builder.add_node(name, node)
     builder.add_edge(START, name)
     builder.add_edge(name, END)
-    return builder.compile()
+    return builder.compile(checkpointer=checkpointer)
 
 
 def _build_checked_analysis_graph(
-    name: str, node: Any  # noqa: ANN401  — LangGraph node callables are untyped
+    name: str,
+    node: Any,  # noqa: ANN401  — LangGraph node callables are untyped
+    checkpointer: BaseCheckpointSaver[Any] | None = None,
 ) -> CompiledActionGraph:
     """One analysis node, its findings verified before they are returned."""
     builder: StateGraph[ActionState, None, Any, Any] = StateGraph(ActionState)
@@ -87,11 +94,13 @@ def _build_checked_analysis_graph(
     builder.add_edge(START, name)
     builder.add_edge(name, "verify")
     builder.add_edge("verify", END)
-    return builder.compile()
+    return builder.compile(checkpointer=checkpointer)
 
 
 def build_action_graph(
-    action_type: str, mode: str = "full"
+    action_type: str,
+    mode: str = "full",
+    checkpointer: BaseCheckpointSaver[Any] | None = None,
 ) -> CompiledActionGraph:
     """Return the compiled graph that runs the given action.
 
@@ -99,26 +108,33 @@ def build_action_graph(
     already *is* the final action. Every other action is one node: that is the
     point of the shared state, and it is why adding an action means adding a
     node and a prompt rather than a pipeline.
+
+    With a checkpointer the graph saves its state after every step and can
+    resume a run under the same ``thread_id`` — see `infrastructure.checkpoints`.
     """
     match action_type:
         case ActionType.GENERATE_REVIEW:
-            return build_analysis_graph(mode=mode)
+            return build_analysis_graph(mode=mode, checkpointer=checkpointer)
         case ActionType.PROPOSE_TOPIC:
-            return _build_single_node_graph("propose_topic", propose_topic)
+            return _build_single_node_graph(
+                "propose_topic", propose_topic, checkpointer
+            )
         case ActionType.EVALUATE_METHODOLOGY:
             # The same node the full review runs, checked the same way.
             return _build_checked_analysis_graph(
-                "analyze_methodology", analyze_methodology
+                "analyze_methodology", analyze_methodology, checkpointer
             )
         case ActionType.CHECK_PROGRESS:
-            return _build_single_node_graph("check_progress", check_progress)
+            return _build_single_node_graph(
+                "check_progress", check_progress, checkpointer
+            )
         case ActionType.DRAFT_MEETING_NOTE:
             return _build_single_node_graph(
-                "draft_meeting_note", draft_meeting_note
+                "draft_meeting_note", draft_meeting_note, checkpointer
             )
         case ActionType.DEFENCE_QUESTIONS:
             return _build_single_node_graph(
-                "defence_questions", defence_questions
+                "defence_questions", defence_questions, checkpointer
             )
         case _:
             raise ValueError(f"No graph for action type: {action_type!r}")

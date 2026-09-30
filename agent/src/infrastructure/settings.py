@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""
 
+    # Graph checkpoints in Postgres, so a run that dies can resume. Off in
+    # tests and evals, which have no database.
+    checkpoints_enabled: bool = True
+
     redis_url: str = "redis://localhost:6379/0"
     database_url: str = Field(
         ...,

@@ -14,7 +14,9 @@ dependencies = [
     "langchain-openai>=1.2.2",
     "langfuse>=4.16.0",
     "langgraph>=1.2.1",
+    "langgraph-checkpoint-postgres>=3.1.2",
     "pgvector>=0.5.0",
+    "psycopg[binary]>=3.3.6",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.14.1",
     "pyjwt>=2.10.0",
@@ -55,6 +57,8 @@ select = ["E", "F", "I", "N", "UP", "ANN", "S", "B"]
 # a line there changes the prompt rather than the formatting.
 "src/application/prompts/*.py" = ["E501"]
 "src/application/nodes/review.py" = ["E501"]
+# The runner sets required settings in the environment before importing `src`.
+"evals/run.py" = ["E402"]
 
 [tool.pyright]
 pythonVersion = "3.12"

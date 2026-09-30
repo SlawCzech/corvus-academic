@@ -13,6 +13,8 @@ from src.application.guidelines import retrieve_relevant_guidelines
 from src.application.state import ActionState
 from src.domain.action import ActionType, TaskStatus
 from src.domain.analysis import ThesisType
+from src.infrastructure.checkpoints import delete as delete_checkpoints
+from src.infrastructure.checkpoints import open_checkpointer
 from src.infrastructure.llm_factory import ModelCredentials, use_credentials
 from src.infrastructure.task_status import record_task_progress, record_task_status
 from src.infrastructure.tracing import flush as flush_traces
@@ -53,9 +55,7 @@ def _with_guidelines(action_type: str, context: dict[str, Any]) -> dict[str, Any
     if action_type not in _ACTIONS_NEEDING_GUIDELINES or "guidelines" in context:
         return context
     thesis_type = str(context.get("thesis_type", ThesisType.BACHELOR))
-    guidelines = retrieve_relevant_guidelines(
-        thesis_type, str(context.get("text", ""))
-    )
+    guidelines = retrieve_relevant_guidelines(thesis_type, str(context.get("text", "")))
     return {**context, "guidelines": guidelines}
 
 
@@ -69,8 +69,7 @@ def _to_json(obj: Any) -> Any:  # noqa: ANN401
         return [_to_json(item) for item in cast(list[Any], obj)]
     if isinstance(obj, dict):
         return {
-            key: _to_json(value)
-            for key, value in cast(dict[str, Any], obj).items()
+            key: _to_json(value) for key, value in cast(dict[str, Any], obj).items()
         }
     return obj
 
@@ -124,9 +123,14 @@ def _initial_state(
 def _run_graph(
     task_id: str | None, state: ActionState, mode: str = "full"
 ) -> dict[str, Any]:
-    """Run the graph for this action, recording status on both sides of it."""
+    """Run the graph for this action, recording status on both sides of it.
+
+    With checkpoints on, the run is thread ``task_id``: a retry or a
+    redelivery of this task finds the steps it already finished and runs
+    only the rest. The checkpoints go once the run has an outcome — they hold
+    the thesis text, and nothing needs them after that.
+    """
     record_task_status(task_id, TaskStatus.RUNNING)
-    graph = build_action_graph(state["action_type"], mode=mode)
     config = run_config(
         action_type=state["action_type"],
         action_id=state["action_id"],
@@ -134,10 +138,20 @@ def _run_graph(
         model=state["model"],
         task_id=task_id,
     )
-    try:
-        result = _stream(graph, state, config, task_id)
-    finally:
-        flush_traces()
+    with open_checkpointer() as saver:
+        graph = build_action_graph(state["action_type"], mode=mode, checkpointer=saver)
+        resuming: tuple[str, ...] = ()
+        if saver is not None and task_id:
+            config["configurable"] = {"thread_id": task_id}
+            resuming = _pending_steps(graph, config)
+        if resuming:
+            logger.info("run_action.resuming", task_id=task_id, next=list(resuming))
+        try:
+            result = _stream(
+                graph, None if resuming else state, config, task_id, resuming
+            )
+        finally:
+            flush_traces()
     payload = _result_payload(result)
 
     # Nodes never raise — they record the problem in state and let the graph
@@ -151,34 +165,48 @@ def _run_graph(
         record_task_status(task_id, TaskStatus.FAILED, result=payload, error=failure)
     else:
         record_task_status(task_id, TaskStatus.COMPLETED, result=payload)
+    if task_id:
+        delete_checkpoints([task_id])
     return payload
+
+
+def _pending_steps(
+    graph: CompiledActionGraph, config: RunnableConfig
+) -> tuple[str, ...]:
+    """The steps an earlier attempt of this thread left unfinished, if any."""
+    snapshot = graph.get_state(config)
+    return tuple(snapshot.next)
 
 
 def _steps(graph: CompiledActionGraph) -> list[str]:
     """The graph's own nodes, in the order they were added."""
     return [
-        name
-        for name in graph.get_graph().nodes
-        if name not in ("__start__", "__end__")
+        name for name in graph.get_graph().nodes if name not in ("__start__", "__end__")
     ]
 
 
 def _stream(
     graph: CompiledActionGraph,
-    state: ActionState,
+    state: ActionState | None,
     config: RunnableConfig,
     task_id: str | None,
+    resuming: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     """Run the graph, recording each node as it finishes; return the final state.
 
     ``updates`` arrive once per finished node — the three parallel analyses
     one at a time, as each returns — and ``values`` carries the whole state
     after each step, the last of which is the result.
+
+    ``state`` is None when resuming: the checkpoint is the input. The steps
+    before the first pending one count as done from the start — the graphs
+    here add their nodes in the order they run.
     """
     steps = _steps(graph)
-    done: list[str] = []
-    final: dict[str, Any] = dict(state)
-    record_task_progress(task_id, {"steps": steps, "done": []})
+    first_pending = min((steps.index(n) for n in resuming if n in steps), default=0)
+    done: list[str] = steps[:first_pending] if resuming else []
+    final: dict[str, Any] = dict(state) if state is not None else {}
+    record_task_progress(task_id, {"steps": steps, "done": list(done)})
     for mode, chunk in graph.stream(  # pyright: ignore[reportUnknownMemberType]
         state,  # type: ignore[arg-type]
         config=config,
@@ -210,6 +238,8 @@ def _record_final_failure(task: Task, task_id: str | None, exc: Exception) -> No
     max_retries: int | None = task.max_retries
     if max_retries is not None and task.request.retries >= max_retries:
         record_task_status(task_id, TaskStatus.FAILED, error=str(exc))
+        if task_id:
+            delete_checkpoints([task_id])
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
