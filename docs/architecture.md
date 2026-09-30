@@ -482,6 +482,20 @@ def get_llm(model: str) -> BaseChatModel:
             raise ValueError(f"Nieznany MODEL_BACKEND: {settings.model_backend}")
 ```
 
+### Tracing — Langfuse, self-hosted
+
+Każdy przebieg grafu idzie z `config` z [`tracing.run_config`](../agent/src/infrastructure/tracing.py):
+nazwa `action:<typ>`, tagi (typ akcji, model), sesja = student. LangGraph podaje ten
+config każdemu węzłowi, a `llm.invoke` w węźle podnosi callback z kontekstu —
+żaden węzeł nie wie, że jest śledzony. W Langfuse widać drzewo
+`action:generate_review` → węzeł → `ChatOllama` z czasem i promptem każdego wywołania.
+
+- Osobny projekt compose ([infra/langfuse/](../infra/langfuse/docker-compose.yml)),
+  `make langfuse-up`, UI na `localhost:3100`. Włączany trzema zmiennymi `LANGFUSE_*`
+  w `.env`; bez nich callbacku po prostu nie ma.
+- Self-hosted, nie LangSmith: prompt niesie tekst pracy studenta.
+- Awaria Langfuse nigdy nie wywraca akcji — brak callbacku, ostrzeżenie w logu.
+
 ---
 
 ## Tooling

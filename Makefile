@@ -4,7 +4,7 @@ COMPOSE = docker compose -f infra/docker-compose.yml
 COMPOSE_DEV = $(COMPOSE) -f infra/docker-compose.override.yml
 
 .PHONY: help up build down down-volumes logs ps restart migrate ingest-guidelines seed-guidelines purge-drafts \
-        dev dev-build \
+        dev dev-build langfuse-up langfuse-down \
         front-up front-down front-restart front-logs front-dev \
         shell-app shell-agent
 
@@ -78,6 +78,16 @@ front-logs:  ## Follow frontend container logs
 
 front-dev:  ## Run the Next.js dev server locally with hot reload (Ctrl+C to stop)
 	cd frontend && npm run dev
+
+# ---------- tracing: self-hosted Langfuse (optional, own compose project) ----------
+
+LANGFUSE = docker compose -f infra/langfuse/docker-compose.yml
+
+langfuse-up:  ## Start Langfuse on http://localhost:3100 (traces of every graph run)
+	$(LANGFUSE) up -d
+
+langfuse-down:  ## Stop Langfuse (traces are kept in its volumes)
+	$(LANGFUSE) down
 
 # ---------- shells ----------
 

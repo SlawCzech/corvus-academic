@@ -27,6 +27,12 @@ class Settings(BaseSettings):
     langchain_tracing_v2: bool = False
     langchain_project: str = "corvus"
 
+    # Self-hosted Langfuse (infra/langfuse). Tracing is on only when all three
+    # are set; an empty base URL is the off switch, not an error.
+    langfuse_base_url: str = ""
+    langfuse_public_key: str = ""
+    langfuse_secret_key: str = ""
+
     redis_url: str = "redis://localhost:6379/0"
     database_url: str = Field(
         ...,
