@@ -8,9 +8,9 @@ import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.application.excerpt import render_document_block
-from src.application.replies import REVIEW
+from src.application.replies import RECOMMENDATIONS, review_reply_for
 from src.application.structured import invoke_structured
-from src.domain.analysis import ReviewTone, ThesisAnalysis
+from src.domain.analysis import Finding, FindingSeverity, ReviewTone, ThesisAnalysis
 from src.domain.evaluation import EvaluationStatus
 from src.domain.review import Review, Score
 from src.infrastructure.llm_factory import get_llm
@@ -317,6 +317,23 @@ must be adapted to their English equivalents in meaning and register.
 }
 
 
+def allowed_recommendations(
+    findings: list[Finding], language: str = "pl"
+) -> tuple[str, ...]:
+    """What the recommendation rules leave open, given the findings.
+
+    Any CRITICAL finding returns the thesis; without one, the choice between
+    admitting it with or without reservations is the reviewer's, from the
+    scores.
+    """
+    admit, admit_with_reservations, return_it = RECOMMENDATIONS.get(
+        language, RECOMMENDATIONS["pl"]
+    )
+    if any(f.severity == FindingSeverity.CRITICAL for f in findings):
+        return (return_it,)
+    return (admit, admit_with_reservations)
+
+
 def generate_review(state: ActionState) -> ReviewUpdate:
     """Generate final review with tone and language control."""
     try:
@@ -334,6 +351,7 @@ def generate_review(state: ActionState) -> ReviewUpdate:
             + _LANGUAGE_OVERRIDES.get(language, "")
         )
 
+        allowed = allowed_recommendations(state["findings"], language)
         findings_summary = "\n".join(
             f"- [{f.severity.upper()}] ({f.source or 'unknown'}) "
             f"{f.section}: {f.description}"
@@ -356,6 +374,8 @@ def generate_review(state: ActionState) -> ReviewUpdate:
             f"Field: {meta.get('field_of_study', 'Unknown')}\n\n"
             f"Guidelines:\n{ctx.get('guidelines', '')}\n\n"
             f"Accumulated findings:\n{findings_summary or 'None'}\n\n"
+            f"Allowed recommendation (decided by the findings): "
+            f"{' | '.join(allowed)}\n\n"
             f"{document}"
         )
 
@@ -366,7 +386,7 @@ def generate_review(state: ActionState) -> ReviewUpdate:
                 SystemMessage(content=system_prompt),
                 HumanMessage(content=user_message),
             ],
-            REVIEW,
+            review_reply_for(allowed),
             node="review",
         )
         scores: list[Score] = [

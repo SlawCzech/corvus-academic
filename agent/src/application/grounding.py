@@ -35,10 +35,16 @@ _MIN_WORDS = 3
 # A near-verbatim quote — a word inflected, a typo fixed — still shares most of
 # its word trigrams with the passage it came from; an invented one shares few.
 _FUZZY_TRIGRAMS = 0.6
-# Two findings whose descriptions share this share of word stems say the same
-# thing. Deliberately high: merging two different defects loses one outright,
+# Two findings say the same thing when this share of the shorter description's
+# word stems is in the longer one. The shorter, not the union: one analysis
+# writes "no research problem", another lists that and three more gaps, and
+# the first is still a duplicate (the evals caught Jaccard missing exactly
+# that). Deliberately high: merging two different defects loses one outright,
 # while leaving a duplicate only makes one weigh double.
-_SAME_DESCRIPTION = 0.5
+_SAME_DESCRIPTION = 0.6
+# Below this many stems a description is too short to be "contained" in
+# another by chance alone; it has to match the union instead.
+_MIN_STEMS = 3
 # Stems, crudely: Polish inflects endings, so "hipotezy", "hipotez" and
 # "hipotezach" should meet at "hipot".
 _STEM = 5
@@ -92,6 +98,14 @@ def _overlap[T](a: set[T], b: set[T]) -> float:
     return len(a & b) / len(a | b) if a and b else 0.0
 
 
+def _contained(a: set[str], b: set[str]) -> float:
+    """Share of the smaller set found in the larger one."""
+    smaller = min(len(a), len(b))
+    if smaller < _MIN_STEMS:
+        return _overlap(a, b)
+    return len(a & b) / smaller
+
+
 def same_problem(a: Finding, b: Finding) -> bool:
     """Whether two findings from different analyses describe one defect.
 
@@ -107,7 +121,7 @@ def same_problem(a: Finding, b: Finding) -> bool:
             return True
         if _overlap(_trigrams(qa.split()), _trigrams(qb.split())) >= 0.5:
             return True
-    return _overlap(_stems(a.description), _stems(b.description)) >= _SAME_DESCRIPTION
+    return _contained(_stems(a.description), _stems(b.description)) >= _SAME_DESCRIPTION
 
 
 @dataclass(frozen=True)

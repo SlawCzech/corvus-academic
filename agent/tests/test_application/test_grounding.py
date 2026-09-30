@@ -109,6 +109,19 @@ def test_findings_saying_the_same_thing_are_one_problem() -> None:
     assert same_problem(a, b)
 
 
+def test_a_short_finding_inside_a_longer_one_is_the_same_problem() -> None:
+    """From an eval run: Jaccard read these two as different."""
+    a = _f("Brak definicji problemu badawczego w wprowadzeniu")
+    b = _f(
+        "Brak definicji problemu badawczego, brak pytania badawczego lub "
+        "hipotezy badawczej, brak opisu metod badawczych, niepełna definicja "
+        "zakresu (brak okresu czasowego)",
+        source=FindingSource.REQUIREMENTS,
+    )
+
+    assert same_problem(a, b)
+
+
 def test_different_problems_stay_apart() -> None:
     a = _f("Brak hipotez badawczych we wstępie")
     b = _f(

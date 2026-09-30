@@ -23,6 +23,7 @@ from pydantic import (
     Field,
     StringConstraints,
     TypeAdapter,
+    create_model,
 )
 
 
@@ -111,6 +112,41 @@ class ReviewReply(_Reply):
 
 
 REVIEW = TypeAdapter(ReviewReply)
+
+# The three recommendations, per review language, strictest last.
+RECOMMENDATIONS: dict[str, tuple[str, str, str]] = {
+    "pl": (
+        "Dopuścić do obrony",
+        "Dopuścić do obrony z zastrzeżeniami",
+        "Zwrócić do poprawy",
+    ),
+    "en": (
+        "Approved for defense",
+        "Approved for defense with reservations",
+        "Returned for revision",
+    ),
+}
+
+
+def review_reply_for(allowed: tuple[str, ...]) -> TypeAdapter[ReviewReply]:
+    """The review's shape with the recommendation narrowed to ``allowed``.
+
+    Which recommendations are possible follows from the findings — a
+    CRITICAL one means "return", none means one of the other two — and a
+    model left to apply that rule from the prompt broke it (the evals caught
+    a sound thesis returned for revision). As a Literal in the schema,
+    Ollama cannot decode anything else, and any other backend gets the
+    allowed values back in the repair turn.
+    """
+    narrowed = create_model(
+        "ConstrainedReviewReply",
+        __base__=ReviewReply,
+        recommendation=(
+            Literal[allowed],  # pyright: ignore[reportInvalidTypeForm]
+            Field(validation_alias=AliasChoices("recommendation", "decision")),
+        ),
+    )
+    return TypeAdapter(narrowed)
 
 
 # ---------- single-node actions ----------
