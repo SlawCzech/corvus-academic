@@ -4,8 +4,9 @@ import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.application.excerpt import render_document_block
-from src.application.json_output import parse_json_array
 from src.application.prompts import methodology as prompts
+from src.application.replies import FINDINGS
+from src.application.structured import invoke_structured
 from src.domain.analysis import Finding, FindingSeverity, FindingSource
 from src.infrastructure.llm_factory import get_llm
 
@@ -32,14 +33,13 @@ def analyze_methodology(state: ActionState) -> AnalysisUpdate:
                 content=(f"{document}\n\nGuidelines:\n{ctx.get('guidelines', '')}")
             ),
         ]
-        response = llm.invoke(messages)
-        data = parse_json_array(response.content)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
+        data = invoke_structured(llm, messages, FINDINGS, node="methodology")
         new_findings: list[Finding] = [
             Finding(
-                section=item["section"],
-                description=item["description"],
-                severity=FindingSeverity(item["severity"]),
-                suggestion=item["suggestion"],
+                section=item.section,
+                description=item.description,
+                severity=FindingSeverity(item.severity),
+                suggestion=item.suggestion,
                 source=FindingSource.METHODOLOGY,
             )
             for item in data

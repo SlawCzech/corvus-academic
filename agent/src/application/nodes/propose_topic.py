@@ -11,8 +11,9 @@ from typing import Any
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from src.application.json_output import as_list, parse_json_object
 from src.application.prompts import propose_topic as prompts
+from src.application.replies import TOPIC_PROPOSAL
+from src.application.structured import invoke_structured
 from src.infrastructure.llm_factory import get_llm
 
 from ..state import ActionState
@@ -45,25 +46,21 @@ def propose_topic(state: ActionState) -> ActionState:
     try:
         ctx = state["context"]
         llm = get_llm(state["model"])
-        response = llm.invoke(
+        reply = invoke_structured(
+            llm,
             [
                 SystemMessage(  # type: ignore[attr-defined]
                     content=prompts.get_system_prompt(state.get("language", "pl"))
                 ),
                 HumanMessage(content=_user_message(ctx)),
-            ]
+            ],
+            TOPIC_PROPOSAL,
+            node="propose_topic",
         )
-        data = parse_json_object(response.content)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
-
-        topics: list[dict[str, Any]] = [
-            t for t in as_list(data.get("topics")) if isinstance(t, dict)
-        ]
-        if not topics:
-            raise ValueError("model returned no topics")
-
-        recommended = data.get("recommended", 0)
-        if not isinstance(recommended, int) or not 0 <= recommended < len(topics):
-            recommended = 0
+        topics = [t.model_dump() for t in reply.topics]
+        recommended = (
+            reply.recommended if 0 <= reply.recommended < len(topics) else 0
+        )
 
         logger.info(
             "propose_topic_complete",

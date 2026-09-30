@@ -5,8 +5,9 @@ from typing import Any
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from src.application.json_output import as_list, parse_json_object
 from src.application.prompts import check_progress as prompts
+from src.application.replies import PROGRESS
+from src.application.structured import invoke_structured
 from src.infrastructure.llm_factory import get_llm
 
 from ..state import ActionState
@@ -48,33 +49,29 @@ def check_progress(state: ActionState) -> ActionState:
             raise ValueError("no current version to compare")
 
         llm = get_llm(state["model"])
-        response = llm.invoke(
+        reply = invoke_structured(
+            llm,
             [
                 SystemMessage(  # type: ignore[attr-defined]
                     content=prompts.get_system_prompt(state.get("language", "pl"))
                 ),
                 HumanMessage(content=_user_message(ctx)),
-            ]
+            ],
+            PROGRESS,
+            node="check_progress",
         )
-        data = parse_json_object(response.content)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
-
-        summary = str(data.get("summary", "")).strip()
-        if not summary:
-            raise ValueError("model returned no progress summary")
 
         logger.info(
             "check_progress_complete",
             action_id=state["action_id"],
-            change_count=len(as_list(data.get("changes"))),
+            change_count=len(reply.changes),
         )
         result: ActionState = state.copy()
         result["output"] = {
-            "summary": summary,
-            "changes": [
-                c for c in as_list(data.get("changes")) if isinstance(c, dict)
-            ],
-            "concerns": [str(c) for c in as_list(data.get("concerns"))],
-            "next_steps": [str(s) for s in as_list(data.get("next_steps"))],
+            "summary": reply.summary,
+            "changes": [c.model_dump() for c in reply.changes],
+            "concerns": reply.concerns,
+            "next_steps": reply.next_steps,
         }
         result["status"] = "progress_checked"
         result["error"] = None

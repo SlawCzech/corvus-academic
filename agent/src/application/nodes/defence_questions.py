@@ -10,8 +10,9 @@ import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.application.excerpt import render_document_block
-from src.application.json_output import as_list, parse_json_object
 from src.application.prompts import defence_questions as prompts
+from src.application.replies import DEFENCE_QUESTIONS
+from src.application.structured import invoke_structured
 from src.infrastructure.llm_factory import get_llm
 
 from ..state import ActionState
@@ -46,21 +47,18 @@ def defence_questions(state: ActionState) -> ActionState:
             raise ValueError("no thesis text to ask questions about")
 
         llm = get_llm(state["model"])
-        response = llm.invoke(
+        reply = invoke_structured(
+            llm,
             [
                 SystemMessage(  # type: ignore[attr-defined]
                     content=prompts.get_system_prompt(state.get("language", "pl"))
                 ),
                 HumanMessage(content=_user_message(ctx)),
-            ]
+            ],
+            DEFENCE_QUESTIONS,
+            node="defence_questions",
         )
-        data = parse_json_object(response.content)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
-
-        questions: list[dict[str, Any]] = [
-            q for q in as_list(data.get("questions")) if isinstance(q, dict)
-        ]
-        if not questions:
-            raise ValueError("model returned no questions")
+        questions = [q.model_dump() for q in reply.questions]
 
         logger.info(
             "defence_questions_complete",
