@@ -62,3 +62,4 @@ zaskakującą liczbę da się przeczytać, zamiast puszczać jeszcze raz.
 | kiedy | co się zmieniło | model | recall | underrated | dup | false flags | failed nodes | czas |
 |---|---|---|---|---|---|---|---|---|
 | 2026-09-30 | punkt wyjścia (przed structured output i weryfikacją cytatów) | qwen3:30b-a3b | 0.61 | 1 | 0 | 0 | 1 | 1552 s |
+| 2026-09-30 | + structured output, cytaty i weryfikacja (punkty 3–4) | qwen3:30b-a3b | 0.67 | 0 | 3 | 0 | 0 | 1846 s |

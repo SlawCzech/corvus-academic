@@ -1,0 +1,201 @@
+{
+  "model": "qwen3:30b-a3b",
+  "judge": "qwen3:30b-a3b",
+  "action": "generate_review",
+  "summary": {
+    "model": "qwen3:30b-a3b",
+    "cases": 3,
+    "recall": 0.67,
+    "underrated": 0,
+    "duplicates": 3,
+    "false_flags": 0,
+    "unmatched": 5,
+    "failed_nodes": 0,
+    "recommendations_ok": "2/3",
+    "seconds": 1846.2
+  },
+  "cases": [
+    {
+      "case_id": "kryptowaluty",
+      "model": "qwen3:30b-a3b",
+      "seconds": 464.2,
+      "node_seconds": {
+        "analyze_structure": 69.7,
+        "analyze_methodology": 93.4,
+        "check_requirements": 319.9,
+        "verify": 320.0,
+        "promoter_review": 320.0,
+        "generate_review": 464.2
+      },
+      "node_errors": [],
+      "error": null,
+      "finding_count": 6,
+      "matched": [
+        "no-hypotheses",
+        "too-few-sources",
+        "no-foreign-sources",
+        "undescribed-survey",
+        "overgeneralised-conclusion",
+        "intro-incomplete"
+      ],
+      "missed": [],
+      "underrated": [],
+      "duplicates": 3,
+      "false_flags": [],
+      "unmatched": 0,
+      "recommendation": "Zwrócić do poprawy",
+      "recommendation_ok": true,
+      "findings": [
+        {
+          "severity": "critical",
+          "source": "methodology",
+          "section": "Wstęp",
+          "description": "Brak definicji problemu badawczego w wprowadzeniu"
+        },
+        {
+          "severity": "critical",
+          "source": "methodology",
+          "section": "Rozdział 3. BADANIE WŁASNE",
+          "description": "Niespełnienie wymogu metodologicznego: nieodpowiednie metody badawcze"
+        },
+        {
+          "severity": "critical",
+          "source": "methodology",
+          "section": "Bibliografia",
+          "description": "Niewystarczająca liczba źródeł zgodnie z wymogami"
+        },
+        {
+          "severity": "major",
+          "source": "structure",
+          "section": "Zakończenie",
+          "description": "W zakończeniu nieprawidłowo stwierdzono, że badanie własne pokazało wpływ kryptowalut, podczas gdy badanie dotyczyło wyłącznie opinii."
+        },
+        {
+          "severity": "critical",
+          "source": "requirements",
+          "section": "1.4 Introduction",
+          "description": "Brak definicji problemu badawczego, brak pytania badawczego lub hipotezy badawczej, brak opisu metod badawczych, niepełna definicja zakresu (brak okresu czasowego)"
+        },
+        {
+          "severity": "critical",
+          "source": "requirements",
+          "section": "1.7 Bibliography",
+          "description": "Brak minimum 25 źródeł bibliograficznych (nie będących netografią; jest 2) oraz brak minimum 4 źródeł obcychjęzycznych (jest 0)"
+        }
+      ],
+      "recall": 1.0
+    },
+    {
+      "case_id": "oszczednosci",
+      "model": "qwen3:30b-a3b",
+      "seconds": 816.4,
+      "node_seconds": {
+        "analyze_structure": 219.0,
+        "check_requirements": 393.1,
+        "analyze_methodology": 672.6,
+        "verify": 672.6,
+        "promoter_review": 672.6,
+        "generate_review": 816.4
+      },
+      "node_errors": [],
+      "error": null,
+      "finding_count": 4,
+      "matched": [
+        "no-list-of-tables"
+      ],
+      "missed": [
+        "bibliography-not-alphabetical"
+      ],
+      "underrated": [],
+      "duplicates": 0,
+      "false_flags": [],
+      "unmatched": 3,
+      "recommendation": "Zwrócić do poprawy",
+      "recommendation_ok": false,
+      "findings": [
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "Rozdział 3",
+          "description": "Metoda regresji liniowej nie uwzględnia ograniczoności zmiennej objaśnianej (stopa oszczędności jest zmienną ograniczoną do przedziału [-1,1]), co może prowadzić do niepoprawnych wniosków."
+        },
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "BIBLIOGRAFIA",
+          "description": "Bibliografia zawiera 27 źródeł, ale tylko 11 zostały cytowane w tekście, co wskazuje na niezgodność i brak zastosowania źródeł w argumencie."
+        },
+        {
+          "severity": "minor",
+          "source": "structure",
+          "section": "ZAKOŃCZENIE",
+          "description": "Wnioski nie uwzględniają wszystkich zmiennych statystycznie istotnych w analizie empirycznej (liczba osób w gospodarstwie), mimo że zostały one uwzględnione w modelu i potwierdzone."
+        },
+        {
+          "severity": "major",
+          "source": "requirements",
+          "section": "1.8 Lists",
+          "description": "Brak spisu tabel, mimo że w pracy znajdują się tabele (Tabela 1, Tabela 2)."
+        }
+      ],
+      "recall": 0.5
+    },
+    {
+      "case_id": "pokolenie-z",
+      "model": "qwen3:30b-a3b",
+      "seconds": 565.6,
+      "node_seconds": {
+        "analyze_structure": 91.3,
+        "analyze_methodology": 301.6,
+        "check_requirements": 427.5,
+        "verify": 427.5,
+        "promoter_review": 427.5,
+        "generate_review": 565.6
+      },
+      "node_errors": [],
+      "error": null,
+      "finding_count": 4,
+      "matched": [
+        "small-sample-generalised",
+        "taylor-chapter-off-topic"
+      ],
+      "missed": [
+        "conclusion-contradicts-results",
+        "hypotheses-not-verified"
+      ],
+      "underrated": [],
+      "duplicates": 0,
+      "false_flags": [],
+      "unmatched": 2,
+      "recommendation": "Zwrócić do poprawy",
+      "recommendation_ok": true,
+      "findings": [
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "Wstęp",
+          "description": "Niejasna koncepcja badawcza: metoda badania nie jest dostosowana do pytania badawczego i hipotez, brak wyjaśnienia, jak metoda będzie testować hipotezy."
+        },
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "Rozdział 3. Motywowanie pokolenia Z — badanie własne",
+          "description": "Metoda badania nie jest odpowiednia dla celu: próbka jest zbyt mała i nie reprezentatywna (23 pracownicy z jednego przedsiębiorstwa w Krakowie), co uniemożliwia uogólnienie wyników na małe przedsiębiorstwa w Polsce."
+        },
+        {
+          "severity": "minor",
+          "source": "methodology",
+          "section": "Rozdział 1. Motywacja w teorii zarządzania",
+          "description": "Źródła dotyczące pokolenia Z są cytowane, ale nie wykorzystane w analizie — brak głębszego wykorzystania nowych badań (Schroth, Twenge) do budowy argumentu na rzecz hipotez."
+        },
+        {
+          "severity": "major",
+          "source": "structure",
+          "section": "Rozdział 2. NAUKOWA ORGANIZACJA PRACY F. W. TAYLORA",
+          "description": "Rozdział 2, poświęcony teorii Taylora, nie jest połączony z tematem pracy i nie spełnia celu badawczego, tworząc lukę w logice rozumowania."
+        }
+      ],
+      "recall": 0.5
+    }
+  ]
+}

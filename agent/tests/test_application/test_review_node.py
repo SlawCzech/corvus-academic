@@ -433,3 +433,42 @@ def test_each_finding_reaches_the_review_labelled_with_its_source() -> None:
     assert "- [CRITICAL] (requirements) Wnioski: Brak wniosków" in user_message
     assert "- [MINOR] (unknown) Wstęp: Cel niejasny" in user_message
     assert "weigh it once" in str(messages[0].content)
+
+
+# ---------------------------------------------------------------------------
+# The recommendation follows from the findings
+# ---------------------------------------------------------------------------
+
+
+def test_a_critical_finding_leaves_only_return_for_revision() -> None:
+    from src.application.nodes.review import allowed_recommendations
+
+    critical = _make_state(with_critical=True)["findings"]
+    major = _make_state(with_major=True)["findings"]
+
+    assert allowed_recommendations(critical) == ("Zwrócić do poprawy",)
+    assert allowed_recommendations(major) == (
+        "Dopuścić do obrony",
+        "Dopuścić do obrony z zastrzeżeniami",
+    )
+    assert allowed_recommendations(critical, "en") == ("Returned for revision",)
+
+
+def test_a_recommendation_the_findings_rule_out_gets_repaired() -> None:
+    """From an eval run: a sound thesis, no CRITICAL finding, "returned"."""
+    wrong = json.loads(_VALID_RESPONSE) | {"recommendation": "Zwrócić do poprawy"}
+    mock_llm = MagicMock()
+    mock_llm.invoke.side_effect = [
+        AIMessage(content=json.dumps(wrong)),
+        AIMessage(content=_VALID_RESPONSE),
+    ]
+
+    with patch("src.application.nodes.review.get_llm", return_value=mock_llm):
+        result = generate_review(_make_state(with_major=True))
+
+    assert result["output"] is not None
+    assert result["output"]["recommendation"] == "Dopuścić do obrony"
+    repair = mock_llm.invoke.call_args_list[1].args[0][-1].content
+    assert "recommendation" in repair
+    first_prompt = mock_llm.invoke.call_args_list[0].args[0][1].content
+    assert "Allowed recommendation (decided by the findings): Dopuścić" in first_prompt
