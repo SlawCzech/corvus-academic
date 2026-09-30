@@ -1,0 +1,73 @@
+{
+  "total_chars": 11572,
+  "body_chars": 7542,
+  "sections": [
+    {
+      "title": "SPIS TREŚCI",
+      "canonical": "toc",
+      "start": 490,
+      "char_count": 677
+    },
+    {
+      "title": "WSTĘP",
+      "canonical": "introduction",
+      "start": 1167,
+      "char_count": 6803
+    },
+    {
+      "title": "1.1. Pojęcie i funkcje oszczędności",
+      "canonical": null,
+      "start": 3510,
+      "char_count": 429
+    },
+    {
+      "title": "1.2. Teorie konsumpcji i oszczędzania",
+      "canonical": null,
+      "start": 3939,
+      "char_count": 884
+    },
+    {
+      "title": "2.1. Stopa oszczędności w Polsce na tle Unii Europejskiej",
+      "canonical": null,
+      "start": 4823,
+      "char_count": 706
+    },
+    {
+      "title": "2.2. Wyniki wcześniejszych badań empirycznych",
+      "canonical": null,
+      "start": 5529,
+      "char_count": 674
+    },
+    {
+      "title": "3.1. Dane i metoda badania",
+      "canonical": null,
+      "start": 6203,
+      "char_count": 678
+    },
+    {
+      "title": "3.2. Wyniki estymacji",
+      "canonical": null,
+      "start": 6881,
+      "char_count": 666
+    },
+    {
+      "title": "3.3. Dyskusja wyników",
+      "canonical": null,
+      "start": 7547,
+      "char_count": 423
+    },
+    {
+      "title": "ZAKOŃCZENIE",
+      "canonical": "conclusions",
+      "start": 7970,
+      "char_count": 739
+    },
+    {
+      "title": "BIBLIOGRAFIA",
+      "canonical": "bibliography",
+      "start": 8709,
+      "char_count": 2863
+    }
+  ],
+  "bibliography_entries": 27
+}

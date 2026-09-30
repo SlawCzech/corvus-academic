@@ -1,11 +1,11 @@
-"""Tests for the division of scope between the review's three analyses."""
+"""Tests for the division of scope between the review's analyses."""
 
 import pytest
 
 from src.application.nodes.requirements import (
     _get_system_prompt,  # pyright: ignore[reportPrivateUsage]
 )
-from src.application.prompts import methodology, structure
+from src.application.prompts import coherence, methodology, structure
 from src.application.prompts.scopes import SCOPES, scope_instruction
 from src.domain.analysis import FindingSource
 
@@ -13,6 +13,7 @@ _PROMPTS = {
     FindingSource.STRUCTURE: structure.get_system_prompt,
     FindingSource.METHODOLOGY: methodology.get_system_prompt,
     FindingSource.REQUIREMENTS: _get_system_prompt,
+    FindingSource.COHERENCE: coherence.coherence_prompt,
 }
 
 

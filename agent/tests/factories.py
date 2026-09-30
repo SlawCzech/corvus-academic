@@ -35,6 +35,7 @@ def make_state(
             "context": context if context is not None else {},
             "findings": findings if findings is not None else [],
             "node_errors": [],
+            "chapter_digests": [],
             "scores": scores if scores is not None else [],
             "verification": None,
             "output": None,

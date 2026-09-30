@@ -5,7 +5,7 @@
 # fully typed — this suppression is scoped to this file only.
 # pyright: reportUnknownMemberType=false
 
-from typing import Any
+from typing import Any, cast
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
@@ -14,6 +14,12 @@ from langgraph.graph.state import CompiledStateGraph
 from src.domain.action import ActionType
 
 from .nodes.check_progress import check_progress
+from .nodes.coherence import (
+    ChapterTask,
+    check_coherence,
+    digest_chapter,
+    route_chapters,
+)
 from .nodes.defence_questions import defence_questions
 from .nodes.draft_meeting_note import draft_meeting_note
 from .nodes.methodology import analyze_methodology
@@ -37,9 +43,11 @@ def build_analysis_graph(
 ) -> CompiledActionGraph:
     """Build and compile the full thesis analysis graph for the given mode.
 
-    mode="full"        — structure, methodology and requirements in parallel,
-                         then `verify` once all three are done, then the
-                         promoter's pick of findings (if asked), then review
+    mode="full"        — structure, methodology and requirements in parallel
+                         with one digest per chapter; the coherence check
+                         once the digests are in; `verify` once all four
+                         analyses are done; the promoter's pick of findings
+                         (if asked); the review
     mode="review_only" — review only (no intermediate finding nodes)
 
     The three analysis nodes read the thesis and the guidelines, never each
@@ -56,12 +64,31 @@ def build_analysis_graph(
         builder.add_node("analyze_structure", analyze_structure)
         builder.add_node("analyze_methodology", analyze_methodology)
         builder.add_node("check_requirements", check_requirements)
+        # Its input is the `Send` payload — one chapter — not the graph state.
+        # (Any: pyright cannot match a TypedDict class to `type[NodeInputT]`.)
+        builder.add_node(
+            "digest_chapter", cast(Any, digest_chapter), input_schema=ChapterTask
+        )
+        builder.add_node("check_coherence", check_coherence)
         builder.add_node("verify", verify)
         builder.add_node("promoter_review", promoter_review)
         builder.add_node("generate_review", generate_review)
-        analysis = ["analyze_structure", "analyze_methodology", "check_requirements"]
-        for node in analysis:
+        prefix_readers = [
+            "analyze_structure",
+            "analyze_methodology",
+            "check_requirements",
+        ]
+        for node in prefix_readers:
             builder.add_edge(START, node)
+        # Map-reduce over the body: one `digest_chapter` per chapter, decided
+        # at run time by `route_chapters` (a `Send` each), then one
+        # `check_coherence` over all the digests. The listed targets are the
+        # places the router may send to.
+        builder.add_conditional_edges(
+            START, route_chapters, ["digest_chapter", "check_coherence"]
+        )
+        builder.add_edge("digest_chapter", "check_coherence")
+        analysis = [*prefix_readers, "check_coherence"]
         # A list as the source makes this a join: `verify` runs once, after
         # every branch has written its findings (or its error) to state —
         # the first point where they can be checked against each other.

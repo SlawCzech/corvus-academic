@@ -4,6 +4,10 @@ Each case is a directory under ``evals/cases/`` holding ``thesis.md`` (the
 text a promoter would upload) and ``case.json`` (what a good review of it has
 to find, and what it must not invent).
 
+Each case may carry ``document_map.json`` — the map `app` would send with the
+text, made with `app`'s ``scripts/document_map.py``. Regenerate it when a
+thesis changes: ``make eval-maps``.
+
 The theses are condensed — 7–12 thousand characters instead of 80–130 — so a
 whole case fits in one node's excerpt and a run takes minutes, not hours. The
 requirements the nodes are judged against are adjusted to match: the length
@@ -28,9 +32,9 @@ CASES_DIR = Path(__file__).parent / "cases"
 # thesis. Replaced verbatim, so a change to the document fails loudly (see
 # `condensed_guidelines`) instead of silently judging 8 kB against 80.
 _LENGTH_RULES = {
-    "80,000 – 130,000 characters": "7,000 – 20,000 characters",
+    "80,000 – 130,000 characters": "5,000 – 20,000 characters",
     "Length significantly below 80,000 characters": (
-        "Length significantly below 7,000 characters"
+        "Length significantly below 5,000 characters"
     ),
 }
 
@@ -56,6 +60,10 @@ class EvalCase:
     expected: tuple[ExpectedIssue, ...]
     must_not_flag: tuple[str, ...]
     acceptable_recommendations: tuple[str, ...]
+    # The map `app` computes over the whole text (scripts/document_map.py in
+    # `app`): what the prefix-reading nodes are told about the rest, and
+    # what the coherence check cuts into chapters.
+    document_map: dict[str, Any] | None = None
 
     def context(self) -> dict[str, Any]:
         """The action context `app` would assemble for this thesis.
@@ -64,13 +72,16 @@ class EvalCase:
         needs Postgres and an embedding model — is skipped exactly as it is
         when `app` sends a guideline set's text along.
         """
-        return {
+        context: dict[str, Any] = {
             "text": self.text,
             "metadata": self.metadata,
             "thesis_type": self.thesis_type,
             "review_tone": self.metadata.get("review_tone", "auto"),
             "guidelines": condensed_guidelines(self.thesis_type),
         }
+        if self.document_map is not None:
+            context["document_map"] = self.document_map
+        return context
 
 
 def condensed_guidelines(thesis_type: str) -> str:
@@ -110,6 +121,14 @@ def load_case(directory: Path) -> EvalCase:
         must_not_flag=tuple(cast(list[str], raw.get("must_not_flag", []))),
         acceptable_recommendations=tuple(
             cast(list[str], raw.get("acceptable_recommendations", []))
+        ),
+        document_map=(
+            cast(
+                dict[str, Any],
+                json.loads((directory / "document_map.json").read_text("utf-8")),
+            )
+            if (directory / "document_map.json").exists()
+            else None
         ),
     )
 
