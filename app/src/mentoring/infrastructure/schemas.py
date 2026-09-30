@@ -141,6 +141,8 @@ class ActionResponse(BaseModel):
     accepted_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    # Unfinished actions only: the agent's steps and those already done.
+    progress: dict[str, Any] | None = None
 
 
 def action_response(action: AgentAction) -> ActionResponse:
@@ -158,6 +160,7 @@ def action_response(action: AgentAction) -> ActionResponse:
         accepted_at=action.accepted_at,
         created_at=action.created_at,
         updated_at=action.updated_at,
+        progress=action.progress,
     )
 
 

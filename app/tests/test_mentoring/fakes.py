@@ -103,6 +103,10 @@ class FakeAgentClient(AgentClient):
         """Arrange the next poll to report a finished action."""
         self.next_status = AgentActionStatus("completed", payload, None)
 
+    def runs_with(self, progress: dict[str, Any]) -> None:
+        """Arrange the next poll to report a running action and how far it got."""
+        self.next_status = AgentActionStatus("running", None, None, progress)
+
     def fails_with(self, message: str) -> None:
         """Arrange the next poll to report a failed action."""
         self.next_status = AgentActionStatus("failed", None, message)

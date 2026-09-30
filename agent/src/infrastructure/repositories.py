@@ -91,6 +91,24 @@ class AgentTaskRepository:
         return True
 
 
+    async def update_progress(self, task_id: str, progress: dict[str, Any]) -> bool:
+        """Record how far a running task has got.
+
+        Written only while the task is still pending or running: a progress
+        write that lands after the final status — or after a cancel — must
+        not make a finished task look like it is still going.
+        """
+        model = await self.find_by_task_id(task_id)
+        if model is None:
+            return False
+        if model.status not in (TaskStatus.PENDING, TaskStatus.RUNNING):
+            return True
+        model.progress = progress
+        model.updated_at = datetime.now(UTC)
+        await self._session.commit()
+        return True
+
+
 class GuidelineChunkRepository:
     """Async store and similarity search for embedded requirement chunks."""
 

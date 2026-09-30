@@ -6,14 +6,15 @@ from uuid import UUID
 
 import structlog
 from celery import Task, shared_task
+from langchain_core.runnables import RunnableConfig
 
-from src.application.graph import build_action_graph
+from src.application.graph import CompiledActionGraph, build_action_graph
 from src.application.guidelines import retrieve_relevant_guidelines
 from src.application.state import ActionState
 from src.domain.action import ActionType, TaskStatus
 from src.domain.analysis import ThesisType
 from src.infrastructure.llm_factory import ModelCredentials, use_credentials
-from src.infrastructure.task_status import record_task_status
+from src.infrastructure.task_status import record_task_progress, record_task_status
 from src.infrastructure.tracing import flush as flush_traces
 from src.infrastructure.tracing import run_config
 
@@ -134,7 +135,7 @@ def _run_graph(
         task_id=task_id,
     )
     try:
-        result: dict[str, Any] = dict(graph.invoke(state, config=config))  # type: ignore[arg-type]
+        result = _stream(graph, state, config, task_id)
     finally:
         flush_traces()
     payload = _result_payload(result)
@@ -151,6 +152,46 @@ def _run_graph(
     else:
         record_task_status(task_id, TaskStatus.COMPLETED, result=payload)
     return payload
+
+
+def _steps(graph: CompiledActionGraph) -> list[str]:
+    """The graph's own nodes, in the order they were added."""
+    return [
+        name
+        for name in graph.get_graph().nodes
+        if name not in ("__start__", "__end__")
+    ]
+
+
+def _stream(
+    graph: CompiledActionGraph,
+    state: ActionState,
+    config: RunnableConfig,
+    task_id: str | None,
+) -> dict[str, Any]:
+    """Run the graph, recording each node as it finishes; return the final state.
+
+    ``updates`` arrive once per finished node — the three parallel analyses
+    one at a time, as each returns — and ``values`` carries the whole state
+    after each step, the last of which is the result.
+    """
+    steps = _steps(graph)
+    done: list[str] = []
+    final: dict[str, Any] = dict(state)
+    record_task_progress(task_id, {"steps": steps, "done": []})
+    for mode, chunk in graph.stream(  # pyright: ignore[reportUnknownMemberType]
+        state,  # type: ignore[arg-type]
+        config=config,
+        stream_mode=["updates", "values"],
+    ):
+        if mode == "values":
+            final = dict(cast(dict[str, Any], chunk))
+            continue
+        finished = [n for n in cast(dict[str, Any], chunk) if n not in done]
+        if finished:
+            done.extend(finished)
+            record_task_progress(task_id, {"steps": steps, "done": list(done)})
+    return final
 
 
 def _failure(result: dict[str, Any]) -> str | None:

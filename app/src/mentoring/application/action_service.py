@@ -502,4 +502,7 @@ class ActionService:
         if remote.error is not None:
             record.error = remote.error
         await self._actions.update(record)
-        return _to_domain(record)
+        action = _to_domain(record)
+        if not action.is_finished:
+            action.progress = remote.progress
+        return action

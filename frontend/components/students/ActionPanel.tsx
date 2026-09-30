@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useSWRConfig } from "swr"
 import { IconChevronDown } from "@tabler/icons-react"
+import ActionProgress from "./ActionProgress"
 import ModelSelect, { useAvailableModel } from "@/components/ai/ModelSelect"
 import ReviewToneChoice from "@/components/ai/ReviewToneChoice"
 import ActionResultView from "@/components/students/ActionResultView"
@@ -265,6 +266,10 @@ function ActionPanelInner({
               >
                 {STATUS_LABELS[shown.status] ?? shown.status}
               </p>
+
+              {shown.progress && (shown.status === "pending" || shown.status === "running") && (
+                <ActionProgress progress={shown.progress} />
+              )}
 
               <ActionResultView
                 action={shown}
