@@ -161,6 +161,27 @@ def assemble_defence_questions_context(
     }
 
 
+def assemble_verify_bibliography_context(
+    student: Student,
+    latest_draft: ThesisDraft | None,
+) -> dict[str, Any]:
+    """Build the context for checking the bibliography against Crossref.
+
+    The whole text and its map: the agent cuts the bibliography out itself,
+    and only the entries — never the text — go on to Crossref.
+    """
+    if latest_draft is None:
+        raise MissingContextError(
+            "The bibliography is checked in a thesis — upload one first"
+        )
+    return {
+        "text": latest_draft.content,
+        "document_map": _document_map(latest_draft),
+        "thesis_type": str(student.thesis_type),
+        "version_number": latest_draft.version_number,
+    }
+
+
 def assemble_generate_review_context(
     student: Student,
     latest_draft: ThesisDraft | None,

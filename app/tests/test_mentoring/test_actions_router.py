@@ -514,6 +514,40 @@ def test_review_tone_reaches_the_assembled_context(
     assert agent.submitted[0]["context"]["review_tone"] == "diplomatic"
 
 
+# ---------- the bibliography check ----------
+
+
+def test_bibliography_check_sends_the_thesis_and_its_map(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+    _upload(client, headers, student_id)
+
+    _trigger(client, headers, student_id, action_type="verify_bibliography")
+
+    context = agent.submitted[0]["context"]
+    assert agent.submitted[0]["action_type"] == "verify_bibliography"
+    assert context["text"]
+    assert "sections" in context["document_map"]
+
+
+def test_bibliography_check_without_a_thesis_is_409(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+
+    resp = client.post(
+        f"/students/{student_id}/actions",
+        json={"action_type": "verify_bibliography"},
+        headers=headers,
+    )
+
+    assert resp.status_code == 409
+    assert agent.submitted == []
+
+
 # ---------- a review paused for the promoter ----------
 
 

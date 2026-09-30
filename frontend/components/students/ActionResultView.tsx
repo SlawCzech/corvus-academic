@@ -1,7 +1,7 @@
 "use client"
 
 import AnalysisResultView from "@/components/AnalysisResult"
-import type { AgentAction } from "@/lib/api.types"
+import type { AgentAction, CheckedReference, ReferenceStatus } from "@/lib/api.types"
 
 const CARD = "rounded-lg border border-line p-3 text-[13px]"
 
@@ -42,6 +42,9 @@ const STAGE_LABELS: Record<string, string> = {
   structure: "struktura",
   methodology: "metodologia",
   requirements: "zgodność z wymogami",
+  coherence: "spójność wniosków",
+  digest: "streszczenia rozdziałów",
+  verify: "weryfikacja uwag",
 }
 
 /**
@@ -52,7 +55,9 @@ const STAGE_LABELS: Record<string, string> = {
 function PartialAnalysisNotice({ errors }: { errors?: string[] }) {
   if (!errors || errors.length === 0) return null
   const stages = errors.map((e) => {
-    const stage = e.split(":")[0] ?? e
+    const head = e.split(":")[0] ?? e
+    // "digest 2.1. Metodyka: …" — one per chapter, reported as one stage.
+    const stage = head.startsWith("digest") ? "digest" : head
     return STAGE_LABELS[stage] ?? stage
   })
   return (
@@ -173,6 +178,9 @@ export default function ActionResultView({ action, selected, onSelect }: Props) 
         </div>
       )
 
+    case "verify_bibliography":
+      return <BibliographyCheck references={output?.references ?? []} />
+
     case "draft_meeting_note":
       return (
         <div data-testid="drafted-note">
@@ -193,4 +201,83 @@ export default function ActionResultView({ action, selected, onSelect }: Props) 
         </>
       )
   }
+}
+
+const REFERENCE_LABELS: Record<ReferenceStatus, string> = {
+  suspicious: "Podejrzana",
+  mismatch: "Niezgodna z rekordem",
+  not_indexed: "Nie w Crossref",
+  unchecked: "Niesprawdzona",
+  website: "Strona www",
+  verified: "Potwierdzona",
+}
+
+const REFERENCE_STYLES: Record<ReferenceStatus, string> = {
+  suspicious: "border-critical-border bg-critical-bg text-critical-text",
+  mismatch: "border-major-border bg-major-bg text-major-text",
+  not_indexed: "border-line text-muted-strong",
+  unchecked: "border-line text-muted",
+  website: "border-line text-muted",
+  verified: "border-line text-muted",
+}
+
+// What needs the promoter's eyes first.
+const REFERENCE_ORDER: ReferenceStatus[] = [
+  "suspicious",
+  "mismatch",
+  "not_indexed",
+  "unchecked",
+  "website",
+  "verified",
+]
+
+/**
+ * The bibliography, grouped by what the check established. "Nie w Crossref"
+ * is not an accusation — Crossref holds few Polish books — while a
+ * "Podejrzana" entry claims a journal Crossref would know, and it does not.
+ */
+function BibliographyCheck({ references }: { references: CheckedReference[] }) {
+  if (references.length === 0) {
+    return <p className="text-[13px] text-muted">Nie znaleziono pozycji do sprawdzenia.</p>
+  }
+  return (
+    <div data-testid="bibliography-check" className="space-y-4">
+      <p className="text-[13px] text-muted-strong">
+        {REFERENCE_ORDER.filter((s) => references.some((r) => r.status === s))
+          .map((s) => `${REFERENCE_LABELS[s]}: ${references.filter((r) => r.status === s).length}`)
+          .join(" · ")}
+      </p>
+      {REFERENCE_ORDER.map((status) => {
+        const group = references.filter((r) => r.status === status)
+        if (group.length === 0) return null
+        return (
+          <div key={status} data-testid={`references-${status}`}>
+            <h4
+              className={`mb-2 inline-block rounded-md border px-2 py-0.5 text-[12px] font-semibold ${REFERENCE_STYLES[status]}`}
+            >
+              {REFERENCE_LABELS[status]} ({group.length})
+            </h4>
+            <ul className="space-y-1.5">
+              {group.map((r, i) => (
+                <li key={i} className={CARD}>
+                  <p className="text-muted-strong">{r.entry}</p>
+                  {r.note && <p className="mt-1 text-[12px] text-muted">{r.note}</p>}
+                  {r.doi && (
+                    <a
+                      href={`https://doi.org/${r.doi}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 inline-block text-[12px] text-accent-hover underline"
+                    >
+                      doi:{r.doi}
+                    </a>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      })}
+    </div>
+  )
 }

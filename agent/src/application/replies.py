@@ -172,3 +172,42 @@ class MeetingNoteReply(_Reply):
 
 
 MEETING_NOTE = TypeAdapter(MeetingNoteReply)
+
+
+# ---------- the bibliography check ----------
+
+
+class ReferenceReply(_Reply):
+    """One entry of the bibliography, as written and taken apart."""
+
+    entry: Text
+    authors: str = ""
+    year: int | None = None
+    title: str = ""
+    venue: str = ""
+
+
+class ReferencesReply(_Reply):
+    references: list[ReferenceReply] = Field(default_factory=list[ReferenceReply])
+
+
+REFERENCES = TypeAdapter(ReferencesReply)
+
+
+class VerdictReply(_Reply):
+    """The agent's conclusion about one reference it investigated."""
+
+    index: int
+    status: Annotated[
+        Literal["found", "mismatch", "not_indexed", "suspicious"],
+        BeforeValidator(_lower),
+    ]
+    note: str = ""
+    doi: str = ""
+
+
+class VerdictsReply(_Reply):
+    verdicts: list[VerdictReply] = Field(default_factory=list[VerdictReply])
+
+
+VERDICTS = TypeAdapter(VerdictsReply)

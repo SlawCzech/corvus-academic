@@ -10,6 +10,7 @@ const ORDER: ActionType[] = [
   "generate_review",
   "defence_questions",
   "evaluate_methodology",
+  "verify_bibliography",
   "check_progress",
   "propose_topic",
   "draft_meeting_note",

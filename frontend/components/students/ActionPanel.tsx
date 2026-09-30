@@ -58,6 +58,11 @@ const ACTIONS: ActionSpec[] = [
     acceptLabel: "Zapisz jako notatkę",
   },
   {
+    type: "verify_bibliography",
+    label: "Sprawdź bibliografię",
+    hint: "Czy cytowane prace istnieją (Crossref)",
+  },
+  {
     type: "generate_review",
     label: "Napisz recenzję",
     hint: "Pełna recenzja ostatniej wersji",

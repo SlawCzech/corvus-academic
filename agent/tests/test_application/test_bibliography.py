@@ -1,0 +1,312 @@
+"""Tests for the bibliography check: matching rules, Crossref, and the agent loop."""
+
+import json
+import logging
+from typing import Any
+from unittest.mock import MagicMock, patch
+
+import httpx
+import pytest
+from langchain_core.messages import AIMessage
+from langgraph.checkpoint.memory import InMemorySaver
+
+from src.application.bibliography import (
+    MISMATCH,
+    UNRESOLVED,
+    VERIFIED,
+    bibliography_section,
+    doi_in,
+    is_website,
+    match,
+)
+from src.application.graph import build_action_graph
+from src.application.nodes import bibliography as nodes
+from src.domain.action import ActionType
+from src.infrastructure.checkpoints import serializer
+from src.infrastructure.crossref import CrossrefClient, CrossrefUnavailableError, Work
+from tests.factories import make_state
+
+_LAIBSON = Work(
+    doi="10.1162/003355397555253",
+    title="Golden Eggs and Hyperbolic Discounting",
+    year=1997,
+    authors=("Laibson",),
+    venue="The Quarterly Journal of Economics",
+    kind="journal-article",
+    score=87.6,
+)
+_LAIBSON_ENTRY = (
+    "Laibson, D. (1997). Golden eggs and hyperbolic discounting. "
+    "Quarterly Journal of Economics, 112(2), 443–477."
+)
+_FAKE_ENTRY = (
+    "Nowak, T. (2019). The cryptographic foundations of monetary sovereignty. "
+    "Journal of Monetary Economics, 104, 12–39."
+)
+_WEB_ENTRY = (
+    "Bankier.pl (2023). Czy kryptowaluty zagrażają bankom? https://www.bankier.pl"
+)
+
+
+# ---------- matching rules ----------
+
+
+def test_a_record_with_the_same_title_year_and_author_verifies() -> None:
+    assert match(_LAIBSON_ENTRY, 1997, [_LAIBSON]).status == VERIFIED
+
+
+def test_the_right_work_with_the_wrong_year_is_a_mismatch() -> None:
+    check = match(_LAIBSON_ENTRY.replace("1997", "2001"), 2001, [_LAIBSON])
+
+    assert check.status == MISMATCH
+    assert "rok 1997 zamiast 2001" in check.note
+    assert check.doi == _LAIBSON.doi
+
+
+def test_an_unrelated_record_leaves_the_entry_open() -> None:
+    assert match(_FAKE_ENTRY, 2019, [_LAIBSON]).status == UNRESOLVED
+    assert match(_FAKE_ENTRY, 2019, []).status == UNRESOLVED
+
+
+def test_websites_and_dois_are_recognised() -> None:
+    assert is_website(_WEB_ENTRY)
+    assert not is_website("Smith (2020). Title. https://doi.org/10.1000/xyz123")
+    assert doi_in("Smith (2020). Title. https://doi.org/10.1000/xyz123.") == (
+        "10.1000/xyz123"
+    )
+
+
+def test_the_bibliography_is_cut_from_its_last_heading() -> None:
+    text = "SPIS\nBibliografia .... 9\nWSTĘP\ntekst\nBIBLIOGRAFIA\n1. A (2020).\n"
+    document_map = {
+        "sections": [
+            {"canonical": "bibliography", "start": text.index("Bibliografia")},
+            {"canonical": "introduction", "start": text.index("WSTĘP")},
+            {"canonical": "bibliography", "start": text.index("BIBLIOGRAFIA")},
+        ]
+    }
+
+    assert bibliography_section(text, document_map) == "BIBLIOGRAFIA\n1. A (2020)."
+    assert bibliography_section(text, {}) == ""
+
+
+# ---------- Crossref client ----------
+
+
+def _client(handler: Any) -> CrossrefClient:  # noqa: ANN401
+    return CrossrefClient(
+        httpx.Client(
+            transport=httpx.MockTransport(handler),
+            base_url="https://api.crossref.org",
+        )
+    )
+
+
+def test_search_sends_the_reference_and_parses_records() -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        item = {
+            "DOI": _LAIBSON.doi,
+            "title": [_LAIBSON.title],
+            "issued": {"date-parts": [[1997, 5, 1]]},
+            "author": [{"family": "Laibson", "given": "D."}],
+            "container-title": [_LAIBSON.venue],
+            "type": "journal-article",
+            "score": 87.6,
+        }
+        return httpx.Response(200, json={"message": {"items": [item]}})
+
+    works = _client(handler).search(_LAIBSON_ENTRY)
+
+    assert works == [_LAIBSON]
+    assert seen[0].url.params["query.bibliographic"] == _LAIBSON_ENTRY
+
+
+def test_lookup_of_an_unknown_doi_is_none_and_an_outage_raises() -> None:
+    assert _client(lambda r: httpx.Response(404)).lookup("10.1/nope") is None
+    with pytest.raises(CrossrefUnavailableError):
+        _client(lambda r: httpx.Response(503)).lookup("10.1/x")
+
+
+# ---------- the whole action ----------
+
+
+def _references_reply() -> str:
+    return json.dumps(
+        {
+            "references": [
+                {"entry": _LAIBSON_ENTRY, "year": 1997},
+                {"entry": _WEB_ENTRY, "year": 2023},
+                {"entry": _FAKE_ENTRY, "year": 2019},
+            ]
+        }
+    )
+
+
+def _state() -> Any:  # noqa: ANN401
+    entries = [_LAIBSON_ENTRY, _WEB_ENTRY, _FAKE_ENTRY]
+    listing = "".join(f"{i}. {e}\n" for i, e in enumerate(entries, start=1))
+    text = f"WSTĘP\n...\nBIBLIOGRAFIA\n{listing}"
+    document_map = {
+        "sections": [
+            {"canonical": "introduction", "start": 0},
+            {"canonical": "bibliography", "start": text.index("BIBLIOGRAFIA")},
+        ]
+    }
+    return make_state(
+        action_type=ActionType.VERIFY_BIBLIOGRAPHY,
+        context={"text": text, "document_map": document_map},
+    )
+
+
+def _llm(agent_turns: list[AIMessage], seen: list[list[Any]]) -> MagicMock:
+    turns = iter(agent_turns)
+
+    def _answer(messages: list[Any], **_: Any) -> AIMessage:  # noqa: ANN401
+        system = str(messages[0].content)
+        if "List every entry" in system:
+            return AIMessage(content=_references_reply())
+        if "Give a verdict for each reference" in system:
+            seen.append(messages)
+            return AIMessage(
+                content='{"verdicts": [{"index": 2, "status": "suspicious", '
+                '"note": "Brak takiego artykułu w JME."}]}'
+            )
+        seen.append(messages)
+        return next(turns)
+
+    llm = MagicMock()
+    llm.invoke.side_effect = _answer
+    llm.bind_tools.return_value = llm
+    return llm
+
+
+def _crossref() -> MagicMock:
+    client = MagicMock()
+    client.search.side_effect = lambda q, rows=3: [_LAIBSON] if "Laibson" in q else []
+    return client
+
+
+def test_only_what_matching_left_open_reaches_the_agent() -> None:
+    seen: list[list[Any]] = []
+    agent_turns = [
+        AIMessage(
+            content="",
+            tool_calls=[
+                {
+                    "name": "search_crossref",
+                    "args": {"query": "cryptographic foundations of monetary"},
+                    "id": "call-1",
+                }
+            ],
+        ),
+        AIMessage(content="Done."),
+    ]
+    llm = _llm(agent_turns, seen)
+
+    with (
+        patch("src.application.nodes.bibliography.get_llm", return_value=llm),
+        patch(
+            "src.application.nodes.bibliography.CrossrefClient",
+            return_value=_crossref(),
+        ),
+    ):
+        final = build_action_graph(ActionType.VERIFY_BIBLIOGRAPHY).invoke(_state())
+
+    # The agent was shown the one open entry, by its index, and nothing else.
+    listing = str(seen[0][1].content)
+    assert "[2] Nowak" in listing
+    assert "Laibson" not in listing and "bankier" not in listing
+    # Its tool ran, and the result came back into the conversation.
+    assert "RESULT no records" in str(seen[-1][1].content)
+
+    rows = final["output"]["references"]
+    assert [r["status"] for r in rows] == ["verified", "website", "suspicious"]
+    assert rows[0]["doi"] == _LAIBSON.doi
+    assert final["output"]["suspicious"] == 1
+    assert final["status"] == "bibliography_checked"
+
+
+def test_a_bibliography_matching_settles_skips_the_agent() -> None:
+    seen: list[list[Any]] = []
+    llm = _llm([], seen)
+    crossref = MagicMock()
+    crossref.search.return_value = [_LAIBSON]
+    one = json.dumps({"references": [{"entry": _LAIBSON_ENTRY, "year": 1997}]})
+    llm.invoke.side_effect = lambda messages, **_: AIMessage(content=one)
+
+    with (
+        patch("src.application.nodes.bibliography.get_llm", return_value=llm),
+        patch(
+            "src.application.nodes.bibliography.CrossrefClient", return_value=crossref
+        ),
+    ):
+        final = build_action_graph(ActionType.VERIFY_BIBLIOGRAPHY).invoke(_state())
+
+    llm.bind_tools.assert_not_called()
+    assert final["output"]["counts"] == {"verified": 1}
+
+
+def test_the_agent_stops_asking_for_tools_when_its_budget_is_spent() -> None:
+    seen: list[list[Any]] = []
+    calls = [
+        AIMessage(
+            content="",
+            tool_calls=[
+                {"name": "search_crossref", "args": {"query": f"q{i}"}, "id": f"c{i}"}
+            ],
+        )
+        for i in range(nodes.TOOL_BUDGET)
+    ]
+    llm = _llm([*calls, AIMessage(content="Out of budget.")], seen)
+
+    with (
+        patch("src.application.nodes.bibliography.get_llm", return_value=llm),
+        patch(
+            "src.application.nodes.bibliography.CrossrefClient",
+            return_value=_crossref(),
+        ),
+    ):
+        build_action_graph(ActionType.VERIFY_BIBLIOGRAPHY).invoke(
+            _state(), {"recursion_limit": 100}
+        )
+
+    assert llm.bind_tools.call_count == nodes.TOOL_BUDGET
+
+
+def test_no_bibliography_is_an_error() -> None:
+    state = make_state(
+        action_type=ActionType.VERIFY_BIBLIOGRAPHY, context={"text": "WSTĘP\n"}
+    )
+
+    final = build_action_graph(ActionType.VERIFY_BIBLIOGRAPHY).invoke(state)
+
+    assert final["error"] == "no bibliography found in the thesis"
+    assert final["output"] is None
+
+
+def test_the_agents_conversation_checkpoints_without_unregistered_types(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A resumed check must load the agent's messages back — and nothing else."""
+    seen: list[list[Any]] = []
+    llm = _llm([AIMessage(content="Done.")], seen)
+    saver = InMemorySaver(serde=serializer())
+    config = {"configurable": {"thread_id": "bib"}}
+
+    with (
+        patch("src.application.nodes.bibliography.get_llm", return_value=llm),
+        patch(
+            "src.application.nodes.bibliography.CrossrefClient",
+            return_value=_crossref(),
+        ),
+        caplog.at_level(logging.WARNING),
+    ):
+        graph = build_action_graph(ActionType.VERIFY_BIBLIOGRAPHY, checkpointer=saver)
+        graph.invoke(_state(), config)
+        messages = graph.get_state(config).values["messages"]
+
+    assert any(isinstance(m, AIMessage) for m in messages)
+    assert "unregistered type" not in caplog.text

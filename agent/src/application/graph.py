@@ -13,6 +13,16 @@ from langgraph.graph.state import CompiledStateGraph
 
 from src.domain.action import ActionType
 
+from .nodes.bibliography import (
+    BibliographyState,
+    after_investigating,
+    after_matching,
+    extract_references,
+    investigate,
+    match_references,
+    report,
+    tools,
+)
 from .nodes.check_progress import check_progress
 from .nodes.coherence import (
     ChapterTask,
@@ -130,6 +140,43 @@ def _build_checked_analysis_graph(
     return builder.compile(checkpointer=checkpointer)
 
 
+def _after_extracting(state: BibliographyState) -> str:
+    return END if state.get("error") else "match_references"
+
+
+def build_bibliography_graph(
+    checkpointer: BaseCheckpointSaver[Any] | None = None,
+) -> CompiledActionGraph:
+    """Extract, match deterministically, let the agent take what is left, report.
+
+    The agent is two nodes and a conditional edge — `investigate` asks for a
+    tool or stops, `tools` runs it and hands the result back. That cycle is
+    the whole of what "an agent" is here; see `nodes/bibliography.py`.
+    """
+    builder: StateGraph[BibliographyState, None, Any, Any] = StateGraph(
+        BibliographyState
+    )
+    builder.add_node("extract_references", extract_references)
+    builder.add_node("match_references", match_references)
+    builder.add_node("investigate", investigate)
+    builder.add_node("tools", tools)
+    builder.add_node("report", report)
+    builder.add_edge(START, "extract_references")
+    builder.add_conditional_edges(
+        "extract_references", _after_extracting, ["match_references", END]
+    )
+    builder.add_conditional_edges(
+        "match_references", after_matching, ["investigate", "report"]
+    )
+    builder.add_conditional_edges(
+        "investigate", after_investigating, ["tools", "report"]
+    )
+    builder.add_edge("tools", "investigate")
+    builder.add_edge("report", END)
+    # The action state is a subset of this one; callers only read those keys.
+    return cast(CompiledActionGraph, builder.compile(checkpointer=checkpointer))
+
+
 def build_action_graph(
     action_type: str,
     mode: str = "full",
@@ -165,6 +212,8 @@ def build_action_graph(
             return _build_single_node_graph(
                 "draft_meeting_note", draft_meeting_note, checkpointer
             )
+        case ActionType.VERIFY_BIBLIOGRAPHY:
+            return build_bibliography_graph(checkpointer)
         case ActionType.DEFENCE_QUESTIONS:
             return _build_single_node_graph(
                 "defence_questions", defence_questions, checkpointer
