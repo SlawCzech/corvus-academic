@@ -3,6 +3,7 @@
 import operator
 from typing import Annotated, Any
 
+from langgraph.types import Overwrite
 from typing_extensions import TypedDict
 
 from src.domain.analysis import Finding
@@ -47,6 +48,9 @@ class ActionState(TypedDict):
     # later node succeeding must not erase that an earlier one failed.
     node_errors: Annotated[list[str], operator.add]
     scores: list[Score]
+    # What `verify` did to the findings: how many it kept, which it dropped
+    # as ungrounded, how many it merged. None when no verification ran.
+    verification: dict[str, Any] | None
     output: dict[str, Any] | None
     status: str
     # The failure of the node that produces the action's result — a
@@ -68,10 +72,21 @@ class AnalysisUpdate(TypedDict, total=False):
     node_errors: list[str]
 
 
+class VerifyUpdate(TypedDict, total=False):
+    """What `verify` hands back: the findings it kept, replacing the list."""
+
+    findings: Overwrite
+    verification: dict[str, Any]
+    node_errors: list[str]
+
+
 class ReviewUpdate(TypedDict, total=False):
     """What the review node hands back after the analysis branches join."""
 
     scores: list[Score]
+    # What `verify` did to the findings: how many it kept, which it dropped
+    # as ungrounded, how many it merged. None when no verification ran.
+    verification: dict[str, Any] | None
     output: dict[str, Any] | None
     status: str
     error: str | None

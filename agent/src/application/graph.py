@@ -20,6 +20,7 @@ from .nodes.propose_topic import propose_topic
 from .nodes.requirements import check_requirements
 from .nodes.review import generate_review
 from .nodes.structure import analyze_structure
+from .nodes.verify import verify
 from .state import ActionState
 
 CompiledActionGraph = CompiledStateGraph[ActionState, None, Any, Any]
@@ -33,7 +34,7 @@ def build_analysis_graph(mode: str = "full") -> CompiledActionGraph:
     """Build and compile the full thesis analysis graph for the given mode.
 
     mode="full"        — structure, methodology and requirements in parallel,
-                         then review once all three are done
+                         then `verify` once all three are done, then review
     mode="review_only" — review only (no intermediate finding nodes)
 
     The three analysis nodes read the thesis and the guidelines, never each
@@ -50,13 +51,16 @@ def build_analysis_graph(mode: str = "full") -> CompiledActionGraph:
         builder.add_node("analyze_structure", analyze_structure)
         builder.add_node("analyze_methodology", analyze_methodology)
         builder.add_node("check_requirements", check_requirements)
+        builder.add_node("verify", verify)
         builder.add_node("generate_review", generate_review)
         analysis = ["analyze_structure", "analyze_methodology", "check_requirements"]
         for node in analysis:
             builder.add_edge(START, node)
-        # A list as the source makes this a join: the review runs once, after
-        # every branch has written its findings (or its error) to state.
-        builder.add_edge(analysis, "generate_review")
+        # A list as the source makes this a join: `verify` runs once, after
+        # every branch has written its findings (or its error) to state —
+        # the first point where they can be checked against each other.
+        builder.add_edge(analysis, "verify")
+        builder.add_edge("verify", "generate_review")
         builder.add_edge("generate_review", END)
 
     return builder.compile()
@@ -70,6 +74,19 @@ def _build_single_node_graph(
     builder.add_node(name, node)
     builder.add_edge(START, name)
     builder.add_edge(name, END)
+    return builder.compile()
+
+
+def _build_checked_analysis_graph(
+    name: str, node: Any  # noqa: ANN401  — LangGraph node callables are untyped
+) -> CompiledActionGraph:
+    """One analysis node, its findings verified before they are returned."""
+    builder: StateGraph[ActionState, None, Any, Any] = StateGraph(ActionState)
+    builder.add_node(name, node)
+    builder.add_node("verify", verify)
+    builder.add_edge(START, name)
+    builder.add_edge(name, "verify")
+    builder.add_edge("verify", END)
     return builder.compile()
 
 
@@ -89,8 +106,8 @@ def build_action_graph(
         case ActionType.PROPOSE_TOPIC:
             return _build_single_node_graph("propose_topic", propose_topic)
         case ActionType.EVALUATE_METHODOLOGY:
-            # The same node the full review runs, on its own.
-            return _build_single_node_graph(
+            # The same node the full review runs, checked the same way.
+            return _build_checked_analysis_graph(
                 "analyze_methodology", analyze_methodology
             )
         case ActionType.CHECK_PROGRESS:

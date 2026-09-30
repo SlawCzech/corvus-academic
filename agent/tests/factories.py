@@ -36,6 +36,7 @@ def make_state(
             "findings": findings if findings is not None else [],
             "node_errors": [],
             "scores": scores if scores is not None else [],
+            "verification": None,
             "output": None,
             "status": status,
             "error": None,

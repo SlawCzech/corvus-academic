@@ -33,6 +33,20 @@ SCOPES: dict[FindingSource, str] = {
 }
 
 
+# Every finding carries its evidence, and `verify_findings` checks it against
+# the text before the review reads it: a quote the thesis does not contain is a
+# finding about a thesis nobody wrote.
+EVIDENCE_INSTRUCTION = (
+    "\nEVIDENCE — every finding also has a `quote` field: a short passage "
+    "(one sentence, at most about 200 characters) copied WORD FOR WORD from "
+    "the thesis text you were given, showing the problem. Copy it exactly — "
+    "do not translate, paraphrase, shorten words or fix typos; use \"...\" "
+    "only to skip words inside it. When the problem is that something is "
+    "absent, and there is no passage that shows it, set `quote` to \"\". "
+    "A finding whose quote cannot be found in the thesis is discarded.\n"
+)
+
+
 def scope_instruction(own: FindingSource) -> str:
     """The scope paragraph for one analysis: what it judges, what it leaves."""
     others = "\n".join(
@@ -48,4 +62,5 @@ def scope_instruction(own: FindingSource) -> str:
         "it will be reported there, and reporting it twice distorts the "
         "review. Report each problem once: one finding per problem, not one "
         "per place where it shows.\n"
+        + EVIDENCE_INSTRUCTION
     )

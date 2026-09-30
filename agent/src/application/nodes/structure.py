@@ -42,6 +42,7 @@ def analyze_structure(state: ActionState) -> AnalysisUpdate:
                 severity=FindingSeverity(item.severity),
                 suggestion=item.suggestion,
                 source=FindingSource.STRUCTURE,
+                quote=item.quote.strip(),
             )
             for item in data
         ]
