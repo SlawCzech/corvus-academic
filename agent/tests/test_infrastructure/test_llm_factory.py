@@ -134,7 +134,7 @@ def test_model_override_does_not_apply_to_a_users_provider() -> None:
         mock_settings.model_backend = "ollama"
         get_llm("qwen3:30b-a3b", credentials=_byok())
 
-    assert anthropic.call_args.kwargs["model"] == "claude-sonnet-4-20250514"
+    assert anthropic.call_args.kwargs["model"] == "claude-sonnet-5"
 
 
 def test_unsupported_provider_is_rejected() -> None:

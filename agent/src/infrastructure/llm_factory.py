@@ -27,8 +27,8 @@ from src.infrastructure.settings import settings
 # caller's `model` argument: that names an Ollama tag, and handing "qwen3:30b"
 # to Anthropic would just fail.
 _BYOK_MODELS: dict[str, str] = {
-    "claude": "claude-sonnet-4-20250514",
-    "openai": "gpt-4o",
+    "claude": "claude-sonnet-5",
+    "openai": "gpt-5",
 }
 
 
