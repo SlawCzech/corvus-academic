@@ -55,6 +55,9 @@ class AgentTaskModel(Base):
         JSONB().with_variant(JSON(), "sqlite"), nullable=True, default=None
     )
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # An `ActionErrorCode` when the promoter can act on the failure (top up
+    # the account, fix the key); None for everything else.
+    error_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
     # {"steps": [node, ...], "done": [node, ...]} while the graph runs; the
     # worker rewrites it after every node. Kept once the task ends, so a
     # failed run still shows how far it got.

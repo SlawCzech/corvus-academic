@@ -9,11 +9,13 @@ from fastapi.testclient import TestClient
 os.environ.setdefault("JWT_SECRET", "test-secret-key-that-is-long-enough-32ch")
 os.environ.setdefault("FERNET_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
 
+from src.identity.application.key_check import KeyVerdict  # noqa: E402
 from tests.test_identity.conftest import (  # noqa: E402
     ADMIN_EMAIL,
     ADMIN_PASSWORD,
     PROMOTOR_EMAIL,
     PROMOTOR_PASSWORD,
+    FakeKeyChecker,
 )
 
 
@@ -195,7 +197,7 @@ def test_promotor_can_set_their_own_key(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 200
-    assert resp.json() == {"configured": True, "provider": "openai"}
+    assert resp.json() == {"configured": True, "provider": "openai", "verified": True}
 
 
 def test_set_api_key_promotor_success(client: TestClient) -> None:
@@ -206,7 +208,62 @@ def test_set_api_key_promotor_success(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 200
-    assert resp.json() == {"configured": True, "provider": "claude"}
+    assert resp.json() == {"configured": True, "provider": "claude", "verified": True}
+
+
+def test_key_is_checked_with_the_provider_before_it_is_stored(
+    client: TestClient, key_checker: FakeKeyChecker
+) -> None:
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    client.patch(
+        "/settings/api-key",
+        json={"api_key": "sk-ant-test-key", "provider": "claude"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert key_checker.checked == [("claude", "sk-ant-test-key")]
+
+
+def test_a_key_the_provider_rejects_is_not_stored(
+    client: TestClient, key_checker: FakeKeyChecker
+) -> None:
+    """A typo is caught at the save button, not on the next AI action."""
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    headers = {"Authorization": f"Bearer {token}"}
+    client.patch(
+        "/settings/api-key",
+        json={"api_key": "sk-ant-working-key", "provider": "claude"},
+        headers=headers,
+    )
+    key_checker.verdict = KeyVerdict.REJECTED
+
+    resp = client.patch(
+        "/settings/api-key",
+        json={"api_key": "sk-openai-typo", "provider": "openai"},
+        headers=headers,
+    )
+
+    assert resp.status_code == 422
+    assert resp.json()["detail"] == "The provider rejected this key"
+    # The key that worked is still the one in use.
+    status_now = client.get("/settings/api-key/status", headers=headers).json()
+    assert status_now == {"configured": True, "provider": "claude"}
+
+
+def test_a_key_that_could_not_be_checked_is_stored_unverified(
+    client: TestClient, key_checker: FakeKeyChecker
+) -> None:
+    """Offline is not a verdict on the key: save it, and say it is unchecked."""
+    key_checker.verdict = KeyVerdict.UNCHECKED
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+
+    resp = client.patch(
+        "/settings/api-key",
+        json={"api_key": "sk-ant-test-key", "provider": "claude"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert resp.status_code == 200
+    assert resp.json() == {"configured": True, "provider": "claude", "verified": False}
 
 
 def test_admin_has_no_api_key_settings(client: TestClient) -> None:

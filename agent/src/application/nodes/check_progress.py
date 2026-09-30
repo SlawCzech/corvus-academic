@@ -9,6 +9,7 @@ from src.application.prompts import check_progress as prompts
 from src.application.replies import PROGRESS
 from src.application.structured import invoke_structured
 from src.infrastructure.llm_factory import get_llm
+from src.infrastructure.provider_errors import raise_if_provider_error
 
 from ..state import ActionState
 
@@ -77,6 +78,7 @@ def check_progress(state: ActionState) -> ActionState:
         result["error"] = None
         return result
     except Exception as exc:
+        raise_if_provider_error(exc)
         logger.error("check_progress_failed", error=str(exc))
         result = state.copy()
         result["error"] = str(exc)

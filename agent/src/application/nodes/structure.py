@@ -9,6 +9,7 @@ from src.application.replies import FINDINGS
 from src.application.structured import invoke_structured
 from src.domain.analysis import Finding, FindingSeverity, FindingSource
 from src.infrastructure.llm_factory import get_llm
+from src.infrastructure.provider_errors import raise_if_provider_error
 
 from ..state import ActionState, AnalysisUpdate
 
@@ -49,5 +50,6 @@ def analyze_structure(state: ActionState) -> AnalysisUpdate:
         logger.info("structure_analysis_complete", finding_count=len(new_findings))
         return {"findings": new_findings}
     except Exception as exc:
+        raise_if_provider_error(exc)
         logger.error("structure_analysis_failed", error=str(exc))
         return {"node_errors": [f"structure: {exc}"]}

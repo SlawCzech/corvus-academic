@@ -3,10 +3,12 @@
 import { useState } from "react"
 import useSWR from "swr"
 import { fetcher } from "@/lib/api.client"
-import type { ApiKeyStatus } from "@/lib/api.types"
+import type { ApiKeySaved, ApiKeyStatus } from "@/lib/api.types"
 
 type Provider = "claude" | "openai"
-type SaveStatus = "idle" | "saving" | "saved" | "error"
+// "rejected": the provider refused the key, so it was not stored.
+// "unverified": stored, but the provider could not be asked (offline, down).
+type SaveStatus = "idle" | "saving" | "saved" | "unverified" | "rejected" | "error"
 
 const PROVIDER_LABELS: Record<string, string> = {
   claude: "Claude (Anthropic)",
@@ -36,11 +38,14 @@ export default function ApiKeySection() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ api_key: apiKey, provider }),
     })
-    setSaveStatus(res.ok ? "saved" : "error")
-    if (res.ok) {
-      setApiKey("")
-      void mutate()
+    if (!res.ok) {
+      setSaveStatus(res.status === 422 ? "rejected" : "error")
+      return
     }
+    const saved = (await res.json()) as Partial<ApiKeySaved>
+    setSaveStatus(saved.verified === false ? "unverified" : "saved")
+    setApiKey("")
+    void mutate()
   }
 
   async function remove(): Promise<void> {
@@ -132,7 +137,18 @@ export default function ApiKeySection() {
 
         {saveStatus === "saved" && (
           <span data-testid="save-ok" className="text-[13px] text-muted">
-            Zapisano
+            Zapisano — dostawca przyjął klucz
+          </span>
+        )}
+        {saveStatus === "unverified" && (
+          <span data-testid="save-unverified" className="text-[13px] text-major-text">
+            Zapisano, ale nie udało się połączyć z dostawcą, żeby sprawdzić klucz
+          </span>
+        )}
+        {saveStatus === "rejected" && (
+          <span data-testid="save-rejected" className="text-[13px] text-critical-text">
+            Dostawca odrzucił ten klucz, więc nie został zapisany. Sprawdź, czy klucz
+            został skopiowany w całości.
           </span>
         )}
         {saveStatus === "error" && (

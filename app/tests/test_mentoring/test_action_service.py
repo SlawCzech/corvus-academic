@@ -775,3 +775,16 @@ async def test_the_key_is_not_written_to_the_action_row(env: _Fixture) -> None:
         {"detail": stored.detail, "output": stored.output, "error": stored.error},
         default=str,
     )
+
+
+async def test_a_failure_the_promoter_can_fix_keeps_its_code(env: _Fixture) -> None:
+    student = await _student(env)
+    action = await env.actions.trigger(
+        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+    )
+    env.agent.fails_with("anthropic: credit balance too low", "provider_no_credits")
+
+    refreshed = await env.actions.get_action(PROMOTOR, student.id, action.id, TOKEN)
+
+    assert refreshed.status is ActionStatus.FAILED
+    assert refreshed.error_code == "provider_no_credits"

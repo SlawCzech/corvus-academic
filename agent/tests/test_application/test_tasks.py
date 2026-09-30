@@ -8,10 +8,11 @@ import pytest
 from celery.exceptions import Retry
 
 from src.application.tasks import _result_payload, run_action
-from src.domain.action import ActionType, TaskStatus
+from src.domain.action import ActionErrorCode, ActionType, TaskStatus
 from src.domain.analysis import Finding, FindingSeverity, FindingSource
 from src.infrastructure.celery_app import celery_app
 from src.infrastructure.llm_factory import current_credentials
+from src.infrastructure.provider_errors import ProviderAccountError
 from tests.factories import ACTION_ID, STUDENT_ID
 
 _TEXT = "Chapter 1: Introduction. Chapter 2: Methodology."
@@ -449,3 +450,77 @@ def test_without_a_key_nothing_is_in_effect() -> None:
         run_action.apply(args=(ACTION_ID, ActionType.PROPOSE_TOPIC, STUDENT_ID, {}))
 
     assert seen == [None]
+
+
+# ---------- the provider's account ----------
+
+
+def _account_problem(code: ActionErrorCode, retry_after: float | None = None) -> Any:  # noqa: ANN401
+    return ProviderAccountError(code, "anthropic", "the provider said no", retry_after)
+
+
+def test_no_credits_fails_at_once_without_retrying(status_writes: MagicMock) -> None:
+    """Every retry would fail the same way; the promoter should know now."""
+    with patch("src.application.tasks.build_action_graph") as builder:
+        builder.side_effect = _account_problem(ActionErrorCode.PROVIDER_NO_CREDITS)
+        with pytest.raises(ProviderAccountError):
+            run_action.apply(
+                args=(ACTION_ID, ActionType.GENERATE_REVIEW, STUDENT_ID, {}),
+                throw=True,
+            )
+
+    last = status_writes.call_args_list[-1]
+    assert last.args[1] == TaskStatus.FAILED
+    assert last.kwargs["error_code"] == ActionErrorCode.PROVIDER_NO_CREDITS
+    assert "the provider said no" in last.kwargs["error"]
+
+
+def test_refused_key_fails_at_once_without_retrying(status_writes: MagicMock) -> None:
+    with patch("src.application.tasks.build_action_graph") as builder:
+        builder.side_effect = _account_problem(ActionErrorCode.PROVIDER_KEY_REJECTED)
+        with pytest.raises(ProviderAccountError):
+            run_action.apply(
+                args=(ACTION_ID, ActionType.GENERATE_REVIEW, STUDENT_ID, {}),
+                throw=True,
+            )
+
+    last = status_writes.call_args_list[-1]
+    assert last.kwargs["error_code"] == ActionErrorCode.PROVIDER_KEY_REJECTED
+
+
+def test_rate_limit_is_retried_after_what_the_provider_asked(
+    status_writes: MagicMock,
+) -> None:
+    with (
+        patch("src.application.tasks.build_action_graph") as builder,
+        patch.object(run_action, "retry", side_effect=Retry()) as retry,
+    ):
+        builder.side_effect = _account_problem(
+            ActionErrorCode.PROVIDER_RATE_LIMITED, retry_after=30.0
+        )
+        with pytest.raises(Retry):
+            run_action.apply(
+                args=(ACTION_ID, ActionType.GENERATE_REVIEW, STUDENT_ID, {}),
+                throw=True,
+            )
+
+    assert retry.call_args.kwargs["countdown"] == 30.0
+    statuses = [call.args[1] for call in status_writes.call_args_list]
+    assert statuses == [TaskStatus.RUNNING]
+
+
+def test_rate_limit_that_outlasts_the_retries_keeps_its_code(
+    status_writes: MagicMock,
+) -> None:
+    with patch("src.application.tasks.build_action_graph") as builder:
+        builder.side_effect = _account_problem(ActionErrorCode.PROVIDER_RATE_LIMITED)
+        with pytest.raises(ProviderAccountError):
+            run_action.apply(
+                args=(ACTION_ID, ActionType.GENERATE_REVIEW, STUDENT_ID, {}),
+                retries=3,
+                throw=True,
+            )
+
+    last = status_writes.call_args_list[-1]
+    assert last.args[1] == TaskStatus.FAILED
+    assert last.kwargs["error_code"] == ActionErrorCode.PROVIDER_RATE_LIMITED

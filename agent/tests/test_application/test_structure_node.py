@@ -3,11 +3,16 @@
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import anthropic
+import httpx
+import pytest
 from langchain_core.messages import AIMessage
 
 from src.application.nodes.structure import analyze_structure
 from src.application.state import ActionState
+from src.domain.action import ActionErrorCode
 from src.domain.analysis import Finding, FindingSeverity, FindingSource
+from src.infrastructure.provider_errors import ProviderAccountError
 from tests.factories import make_state
 
 _VALID_RESPONSE = (
@@ -105,3 +110,28 @@ def test_the_guidelines_stay_out_of_the_structure_prompt() -> None:
     sent = "".join(str(m.content) for m in messages)
     assert "at least five chapters" not in sent
     assert "Chapter 1: Introduction" in sent
+
+
+def test_a_dead_provider_account_ends_the_run() -> None:
+    """No credits is not one branch's bad luck: every later call fails too."""
+    request = httpx.Request("POST", "https://api.anthropic.test/v1/messages")
+    mock_llm = MagicMock()
+    mock_llm.invoke.side_effect = anthropic.BadRequestError(
+        "Error code: 400",
+        response=httpx.Response(400, request=request),
+        body={
+            "type": "error",
+            "error": {
+                "type": "invalid_request_error",
+                "message": "Your credit balance is too low to access the API.",
+            },
+        },
+    )
+
+    with (
+        patch("src.application.nodes.structure.get_llm", return_value=mock_llm),
+        pytest.raises(ProviderAccountError) as raised,
+    ):
+        analyze_structure(_make_state())
+
+    assert raised.value.code is ActionErrorCode.PROVIDER_NO_CREDITS

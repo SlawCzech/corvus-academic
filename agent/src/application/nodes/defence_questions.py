@@ -14,6 +14,7 @@ from src.application.prompts import defence_questions as prompts
 from src.application.replies import DEFENCE_QUESTIONS
 from src.application.structured import invoke_structured
 from src.infrastructure.llm_factory import get_llm
+from src.infrastructure.provider_errors import raise_if_provider_error
 
 from ..state import ActionState
 
@@ -72,6 +73,7 @@ def defence_questions(state: ActionState) -> ActionState:
         result["error"] = None
         return result
     except Exception as exc:
+        raise_if_provider_error(exc)
         logger.error("defence_questions_failed", error=str(exc))
         result = state.copy()
         result["error"] = str(exc)

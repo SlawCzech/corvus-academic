@@ -34,6 +34,7 @@ from src.application.replies import DIGEST, FINDINGS
 from src.application.structured import invoke_structured
 from src.domain.analysis import Finding, FindingSeverity, FindingSource
 from src.infrastructure.llm_factory import get_llm
+from src.infrastructure.provider_errors import raise_if_provider_error
 
 from ..state import ActionState, AnalysisUpdate
 
@@ -95,6 +96,7 @@ def digest_chapter(task: ChapterTask) -> DigestUpdate:
             node="digest_chapter",
         )
     except Exception as exc:
+        raise_if_provider_error(exc)
         logger.error("chapter_digest_failed", chapter=task["title"], error=str(exc))
         return {"node_errors": [f"digest {task['title']}: {exc}"]}
     return {
@@ -149,6 +151,7 @@ def check_coherence(state: ActionState) -> AnalysisUpdate:
             node="check_coherence",
         )
     except Exception as exc:
+        raise_if_provider_error(exc)
         logger.error("coherence_check_failed", error=str(exc))
         return {"node_errors": [f"coherence: {exc}"]}
 

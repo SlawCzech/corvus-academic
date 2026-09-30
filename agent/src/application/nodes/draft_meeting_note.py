@@ -15,6 +15,7 @@ from src.application.prompts import draft_meeting_note as prompts
 from src.application.replies import MEETING_NOTE
 from src.application.structured import invoke_structured
 from src.infrastructure.llm_factory import get_llm
+from src.infrastructure.provider_errors import raise_if_provider_error
 
 from ..state import ActionState
 
@@ -63,6 +64,7 @@ def draft_meeting_note(state: ActionState) -> ActionState:
         result["error"] = None
         return result
     except Exception as exc:
+        raise_if_provider_error(exc)
         logger.error("draft_meeting_note_failed", error=str(exc))
         result = state.copy()
         result["error"] = str(exc)

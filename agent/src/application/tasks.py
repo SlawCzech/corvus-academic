@@ -1,7 +1,7 @@
 """Celery task: run one AI action for one student."""
 
 import dataclasses
-from typing import Any, cast
+from typing import Any, NoReturn, cast
 from uuid import UUID
 
 import structlog
@@ -18,6 +18,7 @@ from src.domain.analysis import ThesisType
 from src.infrastructure.checkpoints import delete as delete_checkpoints
 from src.infrastructure.checkpoints import open_checkpointer
 from src.infrastructure.llm_factory import ModelCredentials, use_credentials
+from src.infrastructure.provider_errors import classify as classify_provider_error
 from src.infrastructure.task_status import record_task_progress, record_task_status
 from src.infrastructure.tracing import flush as flush_traces
 from src.infrastructure.tracing import run_config
@@ -287,9 +288,37 @@ def _record_final_failure(task: Task, task_id: str | None, exc: Exception) -> No
     """Persist a failure only when no retry is coming."""
     max_retries: int | None = task.max_retries
     if max_retries is not None and task.request.retries >= max_retries:
-        record_task_status(task_id, TaskStatus.FAILED, error=str(exc))
+        problem = classify_provider_error(exc)
+        record_task_status(
+            task_id,
+            TaskStatus.FAILED,
+            error=str(problem or exc),
+            error_code=problem.code if problem else None,
+        )
         if task_id:
             delete_checkpoints([task_id])
+
+
+def _fail_or_retry(task: Task, task_id: str | None, exc: Exception) -> NoReturn:  # type: ignore[type-arg]
+    """Retry a failed run, unless retrying cannot help.
+
+    No credits and a refused key fail the same way on every attempt, so the
+    task fails at once and the promoter learns why in seconds, not after
+    three retries a minute apart. A rate limit is worth waiting out, for as
+    long as the provider asked; the checkpoints mean the retry picks up
+    after the last finished step.
+    """
+    problem = classify_provider_error(exc)
+    if problem is not None and not problem.retryable:
+        record_task_status(
+            task_id, TaskStatus.FAILED, error=str(problem), error_code=problem.code
+        )
+        if task_id:
+            delete_checkpoints([task_id])
+        raise problem
+    _record_final_failure(task, task_id, exc)
+    countdown = problem.retry_after if problem is not None else None
+    raise task.retry(exc=exc, countdown=countdown)
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
@@ -346,8 +375,7 @@ def run_action(
         return payload
     except Exception as exc:
         logger.error("run_action.failed", action_id=action_id, error=str(exc))
-        _record_final_failure(self, task_id, exc)
-        raise self.retry(exc=exc)  # noqa: B904
+        _fail_or_retry(self, task_id, exc)
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
@@ -376,5 +404,4 @@ def resume_action(
             return _run_graph(task_id, None, action_type=action_type, decision=decision)
     except Exception as exc:
         logger.error("resume_action.failed", task_id=task_id, error=str(exc))
-        _record_final_failure(self, task_id, exc)
-        raise self.retry(exc=exc)  # noqa: B904
+        _fail_or_retry(self, task_id, exc)

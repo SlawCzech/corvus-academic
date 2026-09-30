@@ -14,6 +14,7 @@ from src.domain.analysis import Finding, FindingSeverity, ReviewTone, ThesisAnal
 from src.domain.evaluation import EvaluationStatus
 from src.domain.review import Review, Score
 from src.infrastructure.llm_factory import get_llm
+from src.infrastructure.provider_errors import raise_if_provider_error
 
 from ..state import ActionState, ReviewUpdate
 
@@ -435,5 +436,6 @@ def generate_review(state: ActionState) -> ReviewUpdate:
             "status": final_status.value,
         }
     except Exception as exc:
+        raise_if_provider_error(exc)
         logger.error("review_generation_failed", error=str(exc))
         return {"error": str(exc)}

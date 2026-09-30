@@ -66,6 +66,9 @@ class AgentActionModel(Base):
         DateTime(timezone=True), nullable=True
     )
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # The agent's code for a failure the promoter can act on; see the agent's
+    # `ActionErrorCode`.
+    error_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )

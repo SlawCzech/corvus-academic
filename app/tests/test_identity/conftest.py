@@ -12,6 +12,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from main import app
+from src.identity.application.key_check import KeyVerdict
+from src.identity.infrastructure.dependencies import get_key_checker
 from src.identity.infrastructure.limiter import login_rate_limit
 from src.identity.infrastructure.models import Base, UserModel
 from src.shared.database import get_db_session
@@ -68,8 +70,25 @@ async def _noop_rate_limit() -> None:
     """No-op rate limiter for tests."""
 
 
+class FakeKeyChecker:
+    """Answers for the provider without asking it; set `verdict` per test."""
+
+    def __init__(self) -> None:
+        self.verdict = KeyVerdict.ACCEPTED
+        self.checked: list[tuple[str, str]] = []
+
+    async def check(self, provider: str, api_key: str) -> KeyVerdict:
+        self.checked.append((provider, api_key))
+        return self.verdict
+
+
 @pytest.fixture
-def client(db_session: AsyncSession) -> TestClient:
+def key_checker() -> FakeKeyChecker:
+    return FakeKeyChecker()
+
+
+@pytest.fixture
+def client(db_session: AsyncSession, key_checker: FakeKeyChecker) -> TestClient:
     """TestClient with the DB session dependency pointing to in-memory SQLite."""
 
     async def _override() -> AsyncGenerator[AsyncSession, None]:
@@ -77,7 +96,9 @@ def client(db_session: AsyncSession) -> TestClient:
 
     app.dependency_overrides[get_db_session] = _override
     app.dependency_overrides[login_rate_limit] = _noop_rate_limit
+    app.dependency_overrides[get_key_checker] = lambda: key_checker
     tc = TestClient(app, raise_server_exceptions=True)
     yield tc
     app.dependency_overrides.pop(get_db_session, None)
     app.dependency_overrides.pop(login_rate_limit, None)
+    app.dependency_overrides.pop(get_key_checker, None)

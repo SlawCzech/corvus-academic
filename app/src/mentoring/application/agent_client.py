@@ -40,6 +40,9 @@ class AgentActionStatus:
     error: str | None
     # The graph's steps and the ones done, while the action runs.
     progress: dict[str, Any] | None = None
+    # Set when the promoter can fix the failure themselves — no credits on
+    # the provider account, a refused key. Opaque here: the frontend reads it.
+    error_code: str | None = None
 
 
 class AgentClient:
@@ -82,6 +85,7 @@ class AgentClient:
         result: Any = data.get("result")
         error: Any = data.get("error")
         progress: Any = data.get("progress")
+        error_code: Any = data.get("error_code")
         return AgentActionStatus(
             status=str(data["status"]),
             result=cast(dict[str, Any], result) if isinstance(result, dict) else None,
@@ -89,6 +93,7 @@ class AgentClient:
             progress=(
                 cast(dict[str, Any], progress) if isinstance(progress, dict) else None
             ),
+            error_code=str(error_code) if error_code else None,
         )
 
     async def resume_action(

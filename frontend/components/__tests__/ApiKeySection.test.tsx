@@ -13,6 +13,32 @@ function renderSection(): void {
   )
 }
 
+function mockSave(response: { ok: boolean; status: number; body?: unknown }): void {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (_url: string, init?: RequestInit) => {
+      if (!init || init.method === undefined) {
+        return {
+          ok: true,
+          json: async () => ({ configured: false, provider: null }),
+        } as Response
+      }
+      return {
+        ok: response.ok,
+        status: response.status,
+        json: async () => response.body,
+      } as Response
+    }),
+  )
+}
+
+async function saveKey(): Promise<void> {
+  const user = userEvent.setup()
+  renderSection()
+  await user.type(screen.getByTestId("api-key-input"), "sk-ant-test-key")
+  await user.click(screen.getByTestId("save-api-key"))
+}
+
 function mockStatus(configured: boolean, provider: string | null = null): void {
   vi.stubGlobal(
     "fetch",
@@ -84,6 +110,36 @@ describe("ApiKeySection", () => {
         provider: "openai",
       })
     })
+  })
+
+  it("says the provider accepted the key", async () => {
+    mockSave({
+      ok: true,
+      status: 200,
+      body: { configured: true, provider: "claude", verified: true },
+    })
+    await saveKey()
+    await waitFor(() => expect(screen.getByTestId("save-ok")).toBeInTheDocument())
+  })
+
+  it("says so when the provider rejects the key", async () => {
+    mockSave({ ok: false, status: 422, body: { detail: "The provider rejected this key" } })
+    await saveKey()
+    await waitFor(() =>
+      expect(screen.getByTestId("save-rejected")).toHaveTextContent("nie został zapisany"),
+    )
+    // The typed key stays, so a typo can be fixed in place.
+    expect(screen.getByTestId("api-key-input")).toHaveValue("sk-ant-test-key")
+  })
+
+  it("says the key is stored unchecked when the provider could not be asked", async () => {
+    mockSave({
+      ok: true,
+      status: 200,
+      body: { configured: true, provider: "claude", verified: false },
+    })
+    await saveKey()
+    await waitFor(() => expect(screen.getByTestId("save-unverified")).toBeInTheDocument())
   })
 
   it("offers removal only when a key is stored", async () => {
