@@ -14,6 +14,8 @@ from src.domain.action import ActionType, TaskStatus
 from src.domain.analysis import ThesisType
 from src.infrastructure.llm_factory import ModelCredentials, use_credentials
 from src.infrastructure.task_status import record_task_status
+from src.infrastructure.tracing import flush as flush_traces
+from src.infrastructure.tracing import run_config
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -122,7 +124,17 @@ def _run_graph(
     """Run the graph for this action, recording status on both sides of it."""
     record_task_status(task_id, TaskStatus.RUNNING)
     graph = build_action_graph(state["action_type"], mode=mode)
-    result: dict[str, Any] = dict(graph.invoke(state))  # type: ignore[arg-type]
+    config = run_config(
+        action_type=state["action_type"],
+        action_id=state["action_id"],
+        student_id=state["student_id"],
+        model=state["model"],
+        task_id=task_id,
+    )
+    try:
+        result: dict[str, Any] = dict(graph.invoke(state, config=config))  # type: ignore[arg-type]
+    finally:
+        flush_traces()
     payload = _result_payload(result)
 
     # Nodes never raise — they record the problem in state and let the graph

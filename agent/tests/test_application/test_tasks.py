@@ -84,6 +84,22 @@ def test_run_action_builds_state_from_its_arguments() -> None:
     assert call_state["error"] is None
 
 
+def test_run_action_invokes_the_graph_with_a_traceable_config() -> None:
+    """The run is named and grouped by student, so traces can be found."""
+    graph = _mock_graph()
+
+    with patch("src.application.tasks.build_action_graph", return_value=graph):
+        run_action.apply(
+            args=(ACTION_ID, ActionType.PROPOSE_TOPIC, STUDENT_ID, {}),
+            task_id="task-trace",
+        )
+
+    config: dict[str, Any] = graph.invoke.call_args.kwargs["config"]
+    assert config["run_name"] == f"action:{ActionType.PROPOSE_TOPIC}"
+    assert config["metadata"]["langfuse_session_id"] == STUDENT_ID
+    assert config["metadata"]["task_id"] == "task-trace"
+
+
 def test_run_action_returns_the_actions_output() -> None:
     proposal = {"topics": [{"title": "Instytucje a wzrost"}], "recommended": 0}
     graph = _mock_graph(
@@ -307,7 +323,7 @@ def test_credentials_are_in_effect_while_the_graph_runs() -> None:
     """Nodes call get_llm() with no arguments, so the key travels out of band."""
     seen: list[Any] = []
 
-    def _capture(state: dict[str, Any]) -> dict[str, Any]:
+    def _capture(state: dict[str, Any], config: Any = None) -> dict[str, Any]:  # noqa: ANN401
         seen.append(current_credentials())
         return _final_state()
 
@@ -364,7 +380,7 @@ def test_without_a_key_nothing_is_in_effect() -> None:
     """Ollama is the fallback: no key, no credentials, no change of model."""
     seen: list[Any] = []
 
-    def _capture(state: dict[str, Any]) -> dict[str, Any]:
+    def _capture(state: dict[str, Any], config: Any = None) -> dict[str, Any]:  # noqa: ANN401
         seen.append(current_credentials())
         return _final_state()
 
