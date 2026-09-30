@@ -1,0 +1,45 @@
+{
+  "id": "pokolenie-z",
+  "description": "Mid thesis whose conclusions contradict its own results: 39% name salary first, the conclusions say 70% value non-financial factors most. A 23-person sample from one shop generalised to all small firms; a chapter on Taylor unconnected to the problem; hypotheses never verified.",
+  "thesis_type": "bachelor",
+  "metadata": {
+    "author": "Julia Wróbel",
+    "title": "Motywowanie pracowników z pokolenia Z w małych przedsiębiorstwach",
+    "year": 2026,
+    "field_of_study": "Zarządzanie",
+    "thesis_type": "bachelor",
+    "review_tone": "auto"
+  },
+  "acceptable_recommendations": [
+    "Zwrócić do poprawy",
+    "Dopuścić do obrony z zastrzeżeniami"
+  ],
+  "expected": [
+    {
+      "id": "conclusion-contradicts-results",
+      "issue": "The conclusions contradict the results: the results show salary as the most frequent first choice (39%, 19 top-three mentions), but the conclusions claim about 70% value non-financial factors most.",
+      "severity": "major"
+    },
+    {
+      "id": "small-sample-generalised",
+      "issue": "A sample of 23 employees from a single company (where the author did an internship) is generalised to generation Z in Poland and to all small firms.",
+      "severity": "major"
+    },
+    {
+      "id": "hypotheses-not-verified",
+      "issue": "The conclusions never state whether H1 and H2 were confirmed or rejected — and the data actually contradict both (salary ranks first; remote work ranks eighth).",
+      "severity": "critical"
+    },
+    {
+      "id": "taylor-chapter-off-topic",
+      "issue": "Chapter 2 on Taylor's biography and scientific management is not connected to the research problem about generation Z and is not used later in the thesis.",
+      "severity": "major"
+    }
+  ],
+  "must_not_flag": [
+    "The introduction has no hypotheses or no research question.",
+    "The bibliography has fewer than 25 sources.",
+    "There are fewer than four foreign-language sources.",
+    "The thesis has no conclusions chapter."
+  ]
+}

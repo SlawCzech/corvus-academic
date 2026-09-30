@@ -1,0 +1,37 @@
+{
+  "id": "oszczednosci",
+  "description": "Sound thesis: complete introduction, hypotheses answered in the conclusions, 27 sources with 11 foreign. Planted: bibliography out of alphabetical order from entry 14, and tables without a list of tables. Mostly a test of what a model invents.",
+  "thesis_type": "bachelor",
+  "metadata": {
+    "author": "Anna Kowalczyk",
+    "title": "Determinanty oszczędzania gospodarstw domowych w Polsce w latach 2010–2022",
+    "year": 2026,
+    "field_of_study": "Ekonomia",
+    "thesis_type": "bachelor",
+    "review_tone": "auto"
+  },
+  "acceptable_recommendations": [
+    "Dopuścić do obrony",
+    "Dopuścić do obrony z zastrzeżeniami"
+  ],
+  "expected": [
+    {
+      "id": "bibliography-not-alphabetical",
+      "issue": "The bibliography is not in alphabetical order: entries 14 onwards (Attanasio, Bańbuła, Carroll…) restart the alphabet after Thaler.",
+      "severity": "minor"
+    },
+    {
+      "id": "no-list-of-tables",
+      "issue": "The thesis contains tables (Tabela 1, Tabela 2) but has no list of tables.",
+      "severity": "major"
+    }
+  ],
+  "must_not_flag": [
+    "The introduction has no research question or no hypotheses.",
+    "The research methods are not described.",
+    "The bibliography has fewer than 25 sources.",
+    "There are fewer than four foreign-language sources.",
+    "The conclusions do not say whether the hypotheses were confirmed.",
+    "The empirical sample is too small or not described."
+  ]
+}
