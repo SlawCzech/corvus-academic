@@ -8,7 +8,8 @@ import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.application.excerpt import render_document_block
-from src.application.json_output import parse_json_object
+from src.application.replies import REVIEW
+from src.application.structured import invoke_structured
 from src.domain.analysis import ReviewTone, ThesisAnalysis
 from src.domain.evaluation import EvaluationStatus
 from src.domain.review import Review, Score
@@ -359,32 +360,18 @@ def generate_review(state: ActionState) -> ReviewUpdate:
         )
 
         llm = get_llm(state["model"])
-        response = llm.invoke(
+        reply = invoke_structured(
+            llm,
             [
                 SystemMessage(content=system_prompt),
                 HumanMessage(content=user_message),
-            ]
+            ],
+            REVIEW,
+            node="review",
         )
-        data: dict[str, object] = parse_json_object(response.content)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
-
-        scores_data: list[dict[str, object]] = data["scores"]  # type: ignore[assignment]
         scores: list[Score] = [
-            Score(
-                criteria=str(
-                    s.get("criteria")
-                    or s.get("criterion")
-                    or s.get("name")
-                    or s.get("category")
-                    or "Unknown"
-                ),
-                points=int(
-                    str(s.get("points") or s.get("score") or s.get("value") or 0)
-                ),
-                max_points=int(
-                    str(s.get("max_points") or s.get("max") or s.get("maximum") or 10)
-                ),
-            )
-            for s in scores_data
+            Score(criteria=s.criteria, points=s.points, max_points=s.max_points)
+            for s in reply.scores
         ]
 
         action_uuid = UUID(state["action_id"])
@@ -392,15 +379,8 @@ def generate_review(state: ActionState) -> ReviewUpdate:
             review_id=action_uuid,
             thesis_id=action_uuid,
             scores=scores,
-            summary=str(
-                data.get("review_text")
-                or data.get("summary")
-                or data.get("review")
-                or ""
-            ),
-            recommendation=str(
-                data.get("recommendation") or data.get("decision") or ""
-            ),
+            summary=reply.review_text,
+            recommendation=reply.recommendation,
         )
 
         analysis = ThesisAnalysis(

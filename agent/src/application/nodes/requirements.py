@@ -4,8 +4,9 @@ import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.application.excerpt import render_document_block
-from src.application.json_output import parse_json_array
 from src.application.prompts.scopes import scope_instruction
+from src.application.replies import FINDINGS
+from src.application.structured import invoke_structured
 from src.domain.analysis import Finding, FindingSeverity, FindingSource
 from src.infrastructure.llm_factory import get_llm
 
@@ -69,24 +70,22 @@ def check_requirements(state: ActionState) -> AnalysisUpdate:
     try:
         ctx = state["context"]
         llm = get_llm(state["model"])
-        response = llm.invoke(
-            [
-                SystemMessage(content=_get_system_prompt(state.get("language", "pl"))),  # type: ignore[attr-defined]
-                HumanMessage(
-                    content=(
-                        f"University requirements:\n{ctx.get('guidelines', '')}\n\n"
-                        f"{render_document_block(ctx, head_chars=_HEAD_CHARS)}"
-                    )
-                ),
-            ]
-        )
-        data = parse_json_array(response.content)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
+        messages = [
+            SystemMessage(content=_get_system_prompt(state.get("language", "pl"))),  # type: ignore[attr-defined]
+            HumanMessage(
+                content=(
+                    f"University requirements:\n{ctx.get('guidelines', '')}\n\n"
+                    f"{render_document_block(ctx, head_chars=_HEAD_CHARS)}"
+                )
+            ),
+        ]
+        data = invoke_structured(llm, messages, FINDINGS, node="requirements")
         new_findings: list[Finding] = [
             Finding(
-                section=item["section"],
-                description=item["description"],
-                severity=FindingSeverity(item["severity"]),
-                suggestion=item["suggestion"],
+                section=item.section,
+                description=item.description,
+                severity=FindingSeverity(item.severity),
+                suggestion=item.suggestion,
                 source=FindingSource.REQUIREMENTS,
             )
             for item in data

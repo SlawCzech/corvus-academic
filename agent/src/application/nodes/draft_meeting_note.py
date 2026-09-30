@@ -11,8 +11,9 @@ from typing import Any
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from src.application.json_output import as_list, parse_json_object
 from src.application.prompts import draft_meeting_note as prompts
+from src.application.replies import MEETING_NOTE
+from src.application.structured import invoke_structured
 from src.infrastructure.llm_factory import get_llm
 
 from ..state import ActionState
@@ -39,30 +40,24 @@ def draft_meeting_note(state: ActionState) -> ActionState:
             raise ValueError("no rough notes to write up")
 
         llm = get_llm(state["model"])
-        response = llm.invoke(
+        reply = invoke_structured(
+            llm,
             [
                 SystemMessage(  # type: ignore[attr-defined]
                     content=prompts.get_system_prompt(state.get("language", "pl"))
                 ),
                 HumanMessage(content=_user_message(ctx)),
-            ]
+            ],
+            MEETING_NOTE,
+            node="draft_meeting_note",
         )
-        data = parse_json_object(response.content)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
-
-        content = str(data.get("content", "")).strip()
-        if not content:
-            raise ValueError("model returned an empty note")
 
         logger.info("draft_meeting_note_complete", action_id=state["action_id"])
         result: ActionState = state.copy()
         result["output"] = {
-            "content": content,
-            "topics_discussed": [
-                str(t) for t in as_list(data.get("topics_discussed"))
-            ],
-            "agreed_actions": [
-                str(a) for a in as_list(data.get("agreed_actions"))
-            ],
+            "content": reply.content,
+            "topics_discussed": reply.topics_discussed,
+            "agreed_actions": reply.agreed_actions,
         }
         result["status"] = "drafted"
         result["error"] = None
