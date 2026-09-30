@@ -146,6 +146,8 @@ class ActionStatusResponse(BaseModel):
     status: str
     result: dict[str, Any] | None
     error: str | None
+    # An `ActionErrorCode` when the promoter can act on the failure.
+    error_code: str | None = None
     # {"steps": [...], "done": [...]} — the graph's nodes and those finished.
     progress: dict[str, Any] | None = None
 
@@ -451,5 +453,6 @@ def _status_response(record: AgentTaskModel) -> ActionStatusResponse:
         status=record.status,
         result=payload or None,
         error=record.error,
+        error_code=record.error_code,
         progress=progress,
     )

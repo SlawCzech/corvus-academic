@@ -88,6 +88,12 @@ class ApiKeyStatusResponse(BaseModel):
     provider: str | None = None
 
 
+class ApiKeySavedResponse(ApiKeyStatusResponse):
+    # False when the provider could not be asked (offline, down): the key is
+    # stored, but nobody has seen it work yet.
+    verified: bool
+
+
 # ---------- admin ----------
 
 

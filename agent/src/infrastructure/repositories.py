@@ -65,6 +65,7 @@ class AgentTaskRepository:
         status: str,
         result: dict[str, Any] | None = None,
         error: str | None = None,
+        error_code: str | None = None,
     ) -> bool:
         """Write a task's status (and outcome) to its row.
 
@@ -86,10 +87,11 @@ class AgentTaskRepository:
             model.result = result
         if error is not None:
             model.error = error
+        if error_code is not None:
+            model.error_code = error_code
         model.updated_at = datetime.now(UTC)
         await self._session.commit()
         return True
-
 
     async def update_progress(self, task_id: str, progress: dict[str, Any]) -> bool:
         """Record how far a running task has got.

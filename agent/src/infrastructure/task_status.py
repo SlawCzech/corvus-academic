@@ -29,6 +29,7 @@ async def _write(
     status: str,
     result: dict[str, Any] | None,
     error: str | None,
+    error_code: str | None = None,
 ) -> bool:
     engine = create_async_engine(settings.database_url, poolclass=NullPool)
     try:
@@ -36,7 +37,7 @@ async def _write(
         async with factory() as session:
             repo = AgentTaskRepository(session)
             return await repo.update_status(
-                task_id, status, result=result, error=error
+                task_id, status, result=result, error=error, error_code=error_code
             )
     finally:
         await engine.dispose()
@@ -73,13 +74,14 @@ def record_task_status(
     status: str,
     result: dict[str, Any] | None = None,
     error: str | None = None,
+    error_code: str | None = None,
 ) -> None:
     """Persist a task's status to Postgres, swallowing any failure."""
     if not task_id:
         logger.warning("task_status_skipped_no_task_id", status=status)
         return
     try:
-        found = asyncio.run(_write(task_id, status, result, error))
+        found = asyncio.run(_write(task_id, status, result, error, error_code))
     except Exception as exc:
         logger.error(
             "task_status_write_failed",

@@ -56,6 +56,7 @@ from src.application.replies import REFERENCES, VERDICTS
 from src.application.structured import invoke_structured
 from src.infrastructure.crossref import CrossrefClient, CrossrefUnavailableError
 from src.infrastructure.llm_factory import get_llm
+from src.infrastructure.provider_errors import raise_if_provider_error
 
 from ..state import ActionState
 
@@ -129,6 +130,7 @@ def extract_references(state: BibliographyState) -> dict[str, Any]:
             node="extract_references",
         )
     except Exception as exc:
+        raise_if_provider_error(exc)
         logger.error("reference_extraction_failed", error=str(exc))
         return {"error": str(exc)}
     references = [r.model_dump() for r in reply.references]
@@ -201,6 +203,7 @@ def investigate(state: BibliographyState) -> dict[str, Any]:
     try:
         reply = model.invoke(messages)
     except Exception as exc:
+        raise_if_provider_error(exc)
         logger.error("bibliography_agent_failed", error=str(exc))
         reply = AIMessage(content=f"(the investigation stopped: {exc})")
     return {"messages": [*new, reply]}
@@ -253,6 +256,7 @@ def report(state: BibliographyState) -> dict[str, Any]:
             )
             by_index = {v.index: v for v in reply.verdicts}
         except Exception as exc:
+            raise_if_provider_error(exc)
             logger.error("bibliography_verdicts_failed", error=str(exc))
             by_index = {}
         for index, _ in open_refs:

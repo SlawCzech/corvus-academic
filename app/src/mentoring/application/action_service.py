@@ -67,6 +67,7 @@ def _to_domain(model: AgentActionModel) -> AgentAction:
         detail=model.detail,
         output=output,
         error=model.error,
+        error_code=model.error_code,
         accepted=model.accepted,
         accepted_at=model.accepted_at,
         created_at=model.created_at,
@@ -556,6 +557,8 @@ class ActionService:
             record.output = remote.result
         if remote.error is not None:
             record.error = remote.error
+        if remote.error_code is not None:
+            record.error_code = remote.error_code
         await self._actions.update(record)
         action = _to_domain(record)
         if not action.is_finished:

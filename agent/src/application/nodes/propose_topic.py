@@ -15,6 +15,7 @@ from src.application.prompts import propose_topic as prompts
 from src.application.replies import TOPIC_PROPOSAL
 from src.application.structured import invoke_structured
 from src.infrastructure.llm_factory import get_llm
+from src.infrastructure.provider_errors import raise_if_provider_error
 
 from ..state import ActionState
 
@@ -73,9 +74,11 @@ def propose_topic(state: ActionState) -> ActionState:
         result["error"] = None
         return result
     except Exception as exc:
-        # Same contract as every other node: never raise, record the error and
-        # let the graph finish so the task can persist a failure the promoter
-        # can actually see.
+        # Same contract as every other node: record the error and let the
+        # graph finish so the task can persist a failure the promoter can
+        # actually see. The one exception is the provider's account — no
+        # credits, a refused key — which ends the run: see `provider_errors`.
+        raise_if_provider_error(exc)
         logger.error("propose_topic_failed", error=str(exc))
         result = state.copy()
         result["error"] = str(exc)

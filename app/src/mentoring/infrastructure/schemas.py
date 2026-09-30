@@ -145,6 +145,9 @@ class ActionResponse(BaseModel):
     detail: str | None
     output: dict[str, Any] | None
     error: str | None
+    # Set when the promoter can fix the failure: `provider_no_credits`,
+    # `provider_key_rejected`, `provider_rate_limited`.
+    error_code: str | None = None
     accepted: bool
     accepted_at: datetime | None
     created_at: datetime
@@ -164,6 +167,7 @@ def action_response(action: AgentAction) -> ActionResponse:
         detail=action.detail,
         output=action.output,
         error=action.error,
+        error_code=action.error_code,
         accepted=action.accepted,
         accepted_at=action.accepted_at,
         created_at=action.created_at,

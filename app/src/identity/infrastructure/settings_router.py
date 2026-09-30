@@ -3,12 +3,21 @@
 from typing import Annotated
 
 import structlog
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.identity.application.api_keys import get_api_key_status
+from src.identity.application.key_check import KeyVerdict
 from src.identity.domain.user import User
-from src.identity.infrastructure.dependencies import UserRepoDep, require_ai_user
-from src.identity.infrastructure.schemas import ApiKeyRequest, ApiKeyStatusResponse
+from src.identity.infrastructure.dependencies import (
+    KeyCheckerDep,
+    UserRepoDep,
+    require_ai_user,
+)
+from src.identity.infrastructure.schemas import (
+    ApiKeyRequest,
+    ApiKeySavedResponse,
+    ApiKeyStatusResponse,
+)
 from src.identity.infrastructure.secrets import get_secret_service
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
@@ -19,22 +28,40 @@ router = APIRouter(prefix="/settings", tags=["settings"])
 AiUserDep = Annotated[User, Depends(require_ai_user)]
 
 
-@router.patch("/api-key", response_model=ApiKeyStatusResponse)
+@router.patch("/api-key", response_model=ApiKeySavedResponse)
 async def set_api_key(
     body: ApiKeyRequest,
     user: AiUserDep,
     repo: UserRepoDep,
-) -> ApiKeyStatusResponse:
-    """Store the caller's own provider key, encrypted.
+    checker: KeyCheckerDep,
+) -> ApiKeySavedResponse:
+    """Store the caller's own provider key, encrypted — if the provider takes it.
 
     Every promoter, each with their own: the key is billed to their account
-    and used only for the actions they trigger.
+    and used only for the actions they trigger. A key the provider refuses is
+    not stored, so the one already saved keeps working.
     """
+    verdict = await checker.check(body.provider, body.api_key)
+    if verdict is KeyVerdict.REJECTED:
+        logger.info("api_key_rejected", user_id=str(user.id), provider=body.provider)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="The provider rejected this key",
+        )
     encrypted = get_secret_service().encrypt(body.api_key)
     await repo.update_api_key(user.id, encrypted, provider=body.provider)
     # The provider is worth an audit line; the key is never logged.
-    logger.info("api_key_stored", user_id=str(user.id), provider=body.provider)
-    return ApiKeyStatusResponse(configured=True, provider=body.provider)
+    logger.info(
+        "api_key_stored",
+        user_id=str(user.id),
+        provider=body.provider,
+        verdict=str(verdict),
+    )
+    return ApiKeySavedResponse(
+        configured=True,
+        provider=body.provider,
+        verified=verdict is KeyVerdict.ACCEPTED,
+    )
 
 
 @router.delete("/api-key", response_model=ApiKeyStatusResponse)

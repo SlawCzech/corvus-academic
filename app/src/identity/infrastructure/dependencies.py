@@ -8,13 +8,16 @@ see ``mentoring/infrastructure/dependencies.py``.
 
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+import httpx
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.identity.application.auth import verify_access_token
+from src.identity.application.key_check import KeyChecker
 from src.identity.application.user_service import UserService
 from src.identity.domain.user import Permission, User
+from src.identity.infrastructure.key_checker import HttpKeyChecker
 from src.identity.infrastructure.repositories import (
     AccessRequestRepository,
     LoginEventRepository,
@@ -97,6 +100,12 @@ def get_refresh_token_store() -> RefreshTokenStore:
     return RefreshTokenStore()
 
 
+def get_key_checker(request: Request) -> KeyChecker:
+    """Check provider keys over the process-wide HTTP client."""
+    client: httpx.AsyncClient = request.app.state.http_client
+    return HttpKeyChecker(client)
+
+
 # ---------- Annotated aliases — what every endpoint actually types ----------
 
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
@@ -108,3 +117,4 @@ AccessRequestRepoDep = Annotated[
 ]
 UserServiceDep = Annotated[UserService, Depends(get_user_service)]
 RefreshTokenStoreDep = Annotated[RefreshTokenStore, Depends(get_refresh_token_store)]
+KeyCheckerDep = Annotated[KeyChecker, Depends(get_key_checker)]

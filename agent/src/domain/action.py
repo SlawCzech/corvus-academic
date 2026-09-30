@@ -47,3 +47,20 @@ class TaskStatus(StrEnum):
     def is_terminal(self) -> bool:
         """Return True when no further status change is expected."""
         return self in (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED)
+
+
+class ActionErrorCode(StrEnum):
+    """Why a failed task failed, when the promoter can do something about it.
+
+    Travels next to the free-text error, which stays whatever the provider
+    said. `app` stores the code and the frontend turns it into advice; a
+    failure without a code is one the promoter can only retry.
+    """
+
+    # The account behind the key has no money left: top it up, or remove
+    # the key and run on the self-hosted model.
+    PROVIDER_NO_CREDITS = "provider_no_credits"
+    # The provider refused the key itself — revoked, mistyped, no access.
+    PROVIDER_KEY_REJECTED = "provider_key_rejected"
+    # Too many requests for the account's tier, and the retries ran out.
+    PROVIDER_RATE_LIMITED = "provider_rate_limited"

@@ -94,6 +94,36 @@ describe("ActionResultView", () => {
     )
   })
 
+  it("tells the promoter the provider account ran out of credits", () => {
+    const action: AgentAction = {
+      ...base,
+      status: "failed",
+      error: "anthropic: Your credit balance is too low",
+      error_code: "provider_no_credits",
+    }
+    render(<ActionResultView action={action} selected={0} onSelect={vi.fn()} />)
+
+    expect(screen.getByTestId("action-error")).toHaveTextContent("Skończyły się środki")
+    expect(screen.getByTestId("action-error-fix")).toHaveAttribute("href", "/profile")
+    // The provider's own words stay, for whoever needs the detail.
+    expect(screen.getByTestId("action-error-detail")).toHaveTextContent(
+      "credit balance is too low",
+    )
+  })
+
+  it("sends nobody to the profile for a rate limit", () => {
+    const action: AgentAction = {
+      ...base,
+      status: "failed",
+      error: "openai: Rate limit reached",
+      error_code: "provider_rate_limited",
+    }
+    render(<ActionResultView action={action} selected={0} onSelect={vi.fn()} />)
+
+    expect(screen.getByTestId("action-error")).toHaveTextContent("za kilka minut")
+    expect(screen.queryByTestId("action-error-fix")).not.toBeInTheDocument()
+  })
+
   it("falls back to the review renderer for findings-based actions", () => {
     const action: AgentAction = {
       ...base,

@@ -205,6 +205,11 @@ export interface ActionProgress {
   done: string[]
 }
 
+export type ActionErrorCode =
+  | "provider_no_credits"
+  | "provider_key_rejected"
+  | "provider_rate_limited"
+
 export interface AgentAction {
   id: string
   student_id: string
@@ -215,6 +220,8 @@ export interface AgentAction {
   detail: string | null
   output: ActionResult | null
   error: string | null
+  // Set when the promoter can fix the failure themselves.
+  error_code?: ActionErrorCode | null
   accepted: boolean
   accepted_at: string | null
   created_at: string
@@ -321,4 +328,9 @@ export interface AdminModelCatalog {
 export interface ApiKeyStatus {
   configured: boolean
   provider: string | null
+}
+
+export interface ApiKeySaved extends ApiKeyStatus {
+  // False when the provider could not be asked; the key is stored unchecked.
+  verified: boolean
 }

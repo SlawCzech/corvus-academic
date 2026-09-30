@@ -1,7 +1,13 @@
 "use client"
 
+import Link from "next/link"
 import AnalysisResultView from "@/components/AnalysisResult"
-import type { AgentAction, CheckedReference, ReferenceStatus } from "@/lib/api.types"
+import type {
+  ActionErrorCode,
+  AgentAction,
+  CheckedReference,
+  ReferenceStatus,
+} from "@/lib/api.types"
 
 const CARD = "rounded-lg border border-line p-3 text-[13px]"
 
@@ -17,6 +23,60 @@ function Bullets({ title, items }: { title: string; items?: string[] }) {
           <li key={i}>{item}</li>
         ))}
       </ul>
+    </div>
+  )
+}
+
+interface Failure {
+  title: string
+  advice: string
+  // Whether the fix is in the promoter's profile, where the key is set.
+  fixInProfile: boolean
+}
+
+/**
+ * Failures of the provider's account rather than of the model's answer.
+ * The agent names them with a code; the provider's own words go underneath.
+ */
+const PROVIDER_FAILURES: Record<ActionErrorCode, Failure> = {
+  provider_no_credits: {
+    title: "Skończyły się środki na koncie u dostawcy modelu.",
+    advice:
+      "Doładuj konto u dostawcy albo usuń swój klucz API — akcje pójdą wtedy na modelu lokalnym.",
+    fixInProfile: true,
+  },
+  provider_key_rejected: {
+    title: "Dostawca modelu odrzucił klucz API.",
+    advice: "Klucz mógł zostać unieważniony albo wygasnąć. Wpisz nowy w profilu.",
+    fixInProfile: true,
+  },
+  provider_rate_limited: {
+    title: "Dostawca modelu ograniczył liczbę zapytań.",
+    advice: "Ponowienia nie pomogły. Uruchom akcję ponownie za kilka minut.",
+    fixInProfile: false,
+  },
+}
+
+function ProviderFailure({ failure, detail }: { failure: Failure; detail: string | null }) {
+  return (
+    <div
+      data-testid="action-error"
+      className="rounded-lg border border-critical-border bg-critical-bg px-3.5 py-2.5 text-[13px] text-critical-text"
+    >
+      <p className="font-semibold">{failure.title}</p>
+      <p className="mt-1">
+        {failure.advice}{" "}
+        {failure.fixInProfile && (
+          <Link href="/profile" data-testid="action-error-fix" className="underline">
+            Przejdź do profilu
+          </Link>
+        )}
+      </p>
+      {detail && (
+        <p data-testid="action-error-detail" className="mt-2 font-mono text-[12px] opacity-75">
+          {detail}
+        </p>
+      )}
     </div>
   )
 }
@@ -76,6 +136,8 @@ export default function ActionResultView({ action, selected, onSelect }: Props) 
   const output = result?.output
 
   if (action.status === "failed") {
+    const known = action.error_code ? PROVIDER_FAILURES[action.error_code] : undefined
+    if (known) return <ProviderFailure failure={known} detail={action.error} />
     return (
       <p data-testid="action-error" className="text-[13px] text-critical-text">
         {action.error ?? "Akcja zakończyła się błędem."}
