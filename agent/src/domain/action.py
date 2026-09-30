@@ -33,6 +33,9 @@ class TaskStatus(StrEnum):
 
     PENDING = "pending"
     RUNNING = "running"
+    # Paused inside the graph for the promoter's decision (an `interrupt`):
+    # nothing runs, the checkpoint holds the state, and a resume continues it.
+    AWAITING_INPUT = "awaiting_input"
     COMPLETED = "completed"
     FAILED = "failed"
     # Stopped by the promoter. Final: a worker finishing late does not

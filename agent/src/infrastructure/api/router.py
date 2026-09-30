@@ -35,6 +35,7 @@ router = APIRouter()
 _bearer = HTTPBearer()
 
 _ACTION_TASK = "src.application.tasks.run_action"
+_RESUME_TASK = "src.application.tasks.resume_action"
 
 # ---------- dependencies ----------
 
@@ -115,6 +116,17 @@ class ActionRequest(BaseModel):
                 f"action_type must be one of {sorted(IMPLEMENTED_ACTIONS)}, got {v!r}"
             )
         return v
+
+
+class ResumeRequest(BaseModel):
+    """The promoter's answer to a paused run, and their key if they have one.
+
+    ``decision`` is what the paused node asked for — for the review, the
+    indices of the findings it may use: ``{"accepted": [0, 2, 3]}``.
+    """
+
+    decision: dict[str, Any]
+    byok: BYOKConfig | None = None
 
 
 class ActionTaskResponse(BaseModel):
@@ -275,6 +287,51 @@ async def get_action_status(
     return _status_response(await _require_task(repo, user, task_id))
 
 
+@router.post("/actions/{task_id}/resume", response_model=ActionStatusResponse)
+async def resume_action(
+    task_id: str,
+    body: ResumeRequest,
+    user: CurrentUserDep,
+    repo: TaskRepoDep,
+) -> ActionStatusResponse:
+    """Continue a run paused for the promoter's decision.
+
+    Queued under the paused task's own id: the checkpoint thread, the status
+    row and a later cancel's revoke all keep referring to one run.
+    """
+    record = await _require_task(repo, user, task_id)
+    if record.status != TaskStatus.AWAITING_INPUT:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The action is not waiting for a decision",
+        )
+
+    kwargs: dict[str, Any] = {}
+    if body.byok is not None:
+        kwargs["provider"] = body.byok.provider
+        kwargs["api_key"] = body.byok.api_key
+    await repo.update_status(task_id, TaskStatus.PENDING)
+    try:
+        celery_app.send_task(
+            _RESUME_TASK,
+            args=[record.action_type, body.decision],
+            kwargs=kwargs,
+            task_id=task_id,
+        )
+    except Exception as exc:
+        logger.error("action_resume_failed", task_id=task_id, error=str(exc))
+        # Still paused: the checkpoint is intact and the promoter can retry.
+        await repo.update_status(task_id, TaskStatus.AWAITING_INPUT)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Could not queue the action",
+        ) from exc
+
+    logger.info("action_resumed", task_id=task_id, user_id=str(user.id))
+    refreshed = await repo.find_by_task_id(task_id)
+    return _status_response(refreshed or record)
+
+
 @router.post("/actions/{task_id}/cancel", response_model=ActionStatusResponse)
 async def cancel_action(
     task_id: str,
@@ -293,6 +350,9 @@ async def cancel_action(
         return _status_response(record)
 
     await repo.update_status(task_id, TaskStatus.CANCELLED)
+    # A run paused for the promoter keeps its state in checkpoints until it
+    # is resumed; cancelled, it never will be.
+    await _delete_checkpoints([record])
     try:
         celery_app.control.revoke(task_id, terminate=True)
     except Exception as exc:

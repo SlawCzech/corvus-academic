@@ -6,6 +6,7 @@ import {
   acceptAction,
   cancelAction,
   fetchAction,
+  resumeAction,
   triggerAction,
   type ActionOptions,
 } from "@/lib/api.client"
@@ -17,10 +18,13 @@ function isFinished(action: AgentAction): boolean {
   return action.status === "completed" || action.status === "failed" || action.status === "cancelled"
 }
 
-/** Stop polling once the agent has finished with the action — or was stopped. */
+/**
+ * Stop polling once the agent has finished with the action — or was stopped,
+ * or is waiting for the promoter: nothing changes until they answer.
+ */
 export function getRefreshInterval(action: AgentAction | undefined): number {
   if (!action) return POLL_MS
-  return isFinished(action) ? 0 : POLL_MS
+  return isFinished(action) || action.status === "awaiting_input" ? 0 : POLL_MS
 }
 
 export interface UseActionReturn {
@@ -33,6 +37,8 @@ export interface UseActionReturn {
   accept: (topicIndex?: number) => Promise<void>
   /** Stop the watched action — a wrong request, or one that runs forever. */
   cancel: () => Promise<void>
+  /** Continue a paused review with the findings the promoter kept. */
+  resume: (acceptedFindings: number[]) => Promise<void>
   watch: (actionId: string) => void
   dismiss: () => void
 }
@@ -109,6 +115,21 @@ export function useAction(studentId: string): UseActionReturn {
     }
   }, [studentId, actionId, mutate])
 
+  const resume = useCallback(
+    async (acceptedFindings: number[]) => {
+      if (!actionId) return
+      setError(null)
+      try {
+        const resumed = await resumeAction(studentId, actionId, acceptedFindings)
+        // Pending again: the refresh interval picks polling back up.
+        void mutate(`action:${studentId}:${actionId}`, resumed, { revalidate: false })
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Nie udało się wznowić recenzji")
+      }
+    },
+    [studentId, actionId, mutate],
+  )
+
   const watch = useCallback((id: string) => {
     setError(null)
     setActionId(id)
@@ -129,6 +150,7 @@ export function useAction(studentId: string): UseActionReturn {
     run,
     accept,
     cancel,
+    resume,
     watch,
     dismiss,
   }

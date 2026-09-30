@@ -39,17 +39,44 @@ function json(body: unknown, status = 200): Promise<Response> {
 describe("ActionPanel", () => {
   const fetchMock = vi.fn()
   let cancelled = false
+  let paused = false
+  let resumed = false
+
+  const PAUSED = {
+    ...RUNNING,
+    status: "awaiting_input",
+    output: {
+      findings: [
+        { section: "Wstęp", description: "Brak hipotez", severity: "critical", suggestion: "-", quote: "" },
+        { section: "3.1", description: "Próba nieopisana", severity: "major", suggestion: "-", quote: "ankieta wśród znajomych" },
+      ],
+      scores: [],
+      summary: null,
+      recommendation: null,
+      status: "running",
+      error: null,
+    },
+  }
 
   beforeEach(() => {
     cancelled = false
+    paused = false
+    resumed = false
     fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+      if (url.endsWith("/resume")) {
+        resumed = true
+        return json({ ...RUNNING, status: "pending" })
+      }
       if (url.endsWith("/cancel")) {
         cancelled = true
         return json({ ...RUNNING, status: "cancelled" })
       }
       if (url === "/api/students/s1/actions" && init?.method === "POST") return json(RUNNING)
-      if (url === "/api/students/s1/actions/a1")
-        return json(cancelled ? { ...RUNNING, status: "cancelled" } : RUNNING)
+      if (url === "/api/students/s1/actions/a1") {
+        if (cancelled) return json({ ...RUNNING, status: "cancelled" })
+        if (paused && !resumed) return json(PAUSED)
+        return json(RUNNING)
+      }
       if (url.startsWith("/api/guidelines/")) return json([])
       if (url === "/api/models")
         return json({ backend: "ollama", default: "m", local: [], local_available: true, byok: {} })
@@ -100,5 +127,26 @@ describe("ActionPanel", () => {
     expect(fetchMock.mock.calls.some(([url]) => url === "/api/students/s1/actions/a1/cancel")).toBe(
       true,
     )
+  })
+
+  it("asks for the findings first, then writes the review from the ones kept", async () => {
+    paused = true
+    renderPanel()
+    await userEvent.click(screen.getByRole("button", { name: "Napisz recenzję" }))
+    await userEvent.click(screen.getByTestId("findings-first"))
+    await userEvent.click(screen.getByTestId("run-action"))
+
+    const trigger = fetchMock.mock.calls.find(
+      ([url, init]) => url === "/api/students/s1/actions" && init?.method === "POST",
+    )
+    expect(JSON.parse(String(trigger?.[1]?.body)).review_findings_first).toBe(true)
+
+    const toggles = await screen.findAllByTestId("finding-toggle")
+    expect(toggles).toHaveLength(2)
+    await userEvent.click(toggles[0])
+    await userEvent.click(screen.getByTestId("resume-action"))
+
+    const resume = fetchMock.mock.calls.find(([url]) => String(url).endsWith("/resume"))
+    expect(JSON.parse(String(resume?.[1]?.body))).toEqual({ accepted_findings: [1] })
   })
 })

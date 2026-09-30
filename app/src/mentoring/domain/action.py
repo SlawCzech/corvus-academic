@@ -33,6 +33,9 @@ class ActionStatus(StrEnum):
 
     PENDING = "pending"
     RUNNING = "running"
+    # A review paused for the promoter to pick the findings it may use. Not
+    # finished: `resume` continues it, `cancel` ends it.
+    AWAITING_INPUT = "awaiting_input"
     COMPLETED = "completed"
     FAILED = "failed"
     # Stopped by the promoter — a mistake in the request, or a run that died
@@ -132,6 +135,12 @@ class AgentAction:
             raise ValueError(f"Action in status {self.status} cannot be accepted")
         self.accepted = True
         self.accepted_at = at or datetime.now(UTC)
+
+    def resume(self) -> None:
+        """Hand the promoter's decision back. Only a paused action takes one."""
+        if self.status is not ActionStatus.AWAITING_INPUT:
+            raise ValueError(f"Action in status {self.status} is not waiting")
+        self.status = ActionStatus.PENDING
 
     def cancel(self) -> None:
         """Stop the action. Only one the agent has not finished can be stopped."""

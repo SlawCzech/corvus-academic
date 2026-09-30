@@ -7,9 +7,11 @@ from uuid import UUID
 import structlog
 from celery import Task, shared_task
 from langchain_core.runnables import RunnableConfig
+from langgraph.types import Command
 
 from src.application.graph import CompiledActionGraph, build_action_graph
 from src.application.guidelines import retrieve_relevant_guidelines
+from src.application.nodes.promoter_review import PROMOTER_REVIEWS_FINDINGS
 from src.application.state import ActionState
 from src.domain.action import ActionType, TaskStatus
 from src.domain.analysis import ThesisType
@@ -121,7 +123,12 @@ def _initial_state(
 
 
 def _run_graph(
-    task_id: str | None, state: ActionState, mode: str = "full"
+    task_id: str | None,
+    state: ActionState | None,
+    mode: str = "full",
+    *,
+    action_type: str | None = None,
+    decision: Any = None,  # noqa: ANN401 — whatever the paused node asked for
 ) -> dict[str, Any]:
     """Run the graph for this action, recording status on both sides of it.
 
@@ -129,30 +136,56 @@ def _run_graph(
     redelivery of this task finds the steps it already finished and runs
     only the rest. The checkpoints go once the run has an outcome — they hold
     the thesis text, and nothing needs them after that.
+
+    A run that pauses for the promoter (`interrupt`) is not an outcome: it is
+    recorded as ``awaiting_input`` with what it has so far, its checkpoints
+    stay, and a later call with ``state=None`` and the promoter's
+    ``decision`` resumes it.
     """
     record_task_status(task_id, TaskStatus.RUNNING)
-    config = run_config(
-        action_type=state["action_type"],
-        action_id=state["action_id"],
-        student_id=state["student_id"],
-        model=state["model"],
-        task_id=task_id,
-    )
+    kind = state["action_type"] if state is not None else action_type
+    if kind is None:
+        raise ValueError("a resumed run needs its action type")
+
     with open_checkpointer() as saver:
-        graph = build_action_graph(state["action_type"], mode=mode, checkpointer=saver)
-        resuming: tuple[str, ...] = ()
-        if saver is not None and task_id:
-            config["configurable"] = {"thread_id": task_id}
-            resuming = _pending_steps(graph, config)
-        if resuming:
-            logger.info("run_action.resuming", task_id=task_id, next=list(resuming))
+        if saver is None and state is not None:
+            state = _without_pause(state)
+        graph = build_action_graph(kind, mode=mode, checkpointer=saver)
+        thread: RunnableConfig = (
+            {"configurable": {"thread_id": task_id}} if saver and task_id else {}
+        )
+        saved = cast(dict[str, Any], graph.get_state(thread).values) if thread else {}
+        if state is None and not saved:
+            raise ValueError(f"nothing to resume for task {task_id}")
+        meta = cast(dict[str, Any], state) if state is not None else saved
+        config = run_config(
+            action_type=kind,
+            action_id=str(meta["action_id"]),
+            student_id=str(meta["student_id"]),
+            model=str(meta["model"]),
+            task_id=task_id,
+        )
+        config.update(thread)
+
+        pending = _pending_steps(graph, config) if thread else ()
+        graph_input: Any
+        if state is None:
+            graph_input = Command(resume=decision)
+        elif pending:
+            logger.info("run_action.resuming", task_id=task_id, next=list(pending))
+            graph_input = None
+        else:
+            graph_input = state
         try:
-            result = _stream(
-                graph, None if resuming else state, config, task_id, resuming
-            )
+            result = _stream(graph, graph_input, config, task_id, pending)
+            paused = bool(thread) and bool(graph.get_state(config).interrupts)
         finally:
             flush_traces()
     payload = _result_payload(result)
+
+    if paused:
+        record_task_status(task_id, TaskStatus.AWAITING_INPUT, result=payload)
+        return payload
 
     # Nodes never raise — they record the problem in state and let the graph
     # finish. The task failed when the node that produces the result did
@@ -168,6 +201,19 @@ def _run_graph(
     if task_id:
         delete_checkpoints([task_id])
     return payload
+
+
+def _without_pause(state: ActionState) -> ActionState:
+    """Drop the promoter's pause from a run that cannot be resumed.
+
+    Without a checkpointer there is nowhere to keep the paused state; the
+    run goes straight through, as it would have before the pause existed.
+    """
+    if not state["context"].get(PROMOTER_REVIEWS_FINDINGS):
+        return state
+    logger.warning("promoter_review_skipped_no_checkpointer")
+    context = {**state["context"], PROMOTER_REVIEWS_FINDINGS: False}
+    return cast(ActionState, {**state, "context": context})
 
 
 def _pending_steps(
@@ -187,7 +233,7 @@ def _steps(graph: CompiledActionGraph) -> list[str]:
 
 def _stream(
     graph: CompiledActionGraph,
-    state: ActionState | None,
+    state: Any,  # noqa: ANN401 — a fresh state, None, or a resume Command
     config: RunnableConfig,
     task_id: str | None,
     resuming: tuple[str, ...] = (),
@@ -198,14 +244,17 @@ def _stream(
     one at a time, as each returns — and ``values`` carries the whole state
     after each step, the last of which is the result.
 
-    ``state`` is None when resuming: the checkpoint is the input. The steps
-    before the first pending one count as done from the start — the graphs
-    here add their nodes in the order they run.
+    ``state`` is None or a resume ``Command`` when continuing a thread: the
+    checkpoint is the input. The steps before the first pending one count as
+    done from the start — the graphs here add their nodes in the order they
+    run.
     """
     steps = _steps(graph)
     first_pending = min((steps.index(n) for n in resuming if n in steps), default=0)
     done: list[str] = steps[:first_pending] if resuming else []
-    final: dict[str, Any] = dict(state) if state is not None else {}
+    final: dict[str, Any] = (
+        dict(cast(dict[str, Any], state)) if isinstance(state, dict) else {}
+    )
     record_task_progress(task_id, {"steps": steps, "done": list(done)})
     for mode, chunk in graph.stream(  # pyright: ignore[reportUnknownMemberType]
         state,  # type: ignore[arg-type]
@@ -296,5 +345,35 @@ def run_action(
         return payload
     except Exception as exc:
         logger.error("run_action.failed", action_id=action_id, error=str(exc))
+        _record_final_failure(self, task_id, exc)
+        raise self.retry(exc=exc)  # noqa: B904
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def resume_action(
+    self: Task,  # type: ignore[type-arg]
+    action_type: str,
+    decision: dict[str, Any],
+    provider: str | None = None,
+    api_key: str | None = None,
+) -> dict[str, Any]:
+    """Continue a run paused for the promoter, with their decision.
+
+    Sent under the paused task's own id, so the thread, the status row and a
+    cancel's revoke all still refer to the same thing. The key, when the
+    promoter brought one, comes again: it was never stored.
+    """
+    task_id: str | None = self.request.id
+    credentials = (
+        ModelCredentials(provider=provider, api_key=api_key)
+        if provider and api_key
+        else None
+    )
+    logger.info("resume_action.started", task_id=task_id, action_type=action_type)
+    try:
+        with use_credentials(credentials):
+            return _run_graph(task_id, None, action_type=action_type, decision=decision)
+    except Exception as exc:
+        logger.error("resume_action.failed", task_id=task_id, error=str(exc))
         _record_final_failure(self, task_id, exc)
         raise self.retry(exc=exc)  # noqa: B904

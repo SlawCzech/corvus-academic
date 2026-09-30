@@ -29,6 +29,7 @@ class FakeAgentClient(AgentClient):
         self.submitted: list[dict[str, Any]] = []
         self.polls: list[str] = []
         self.cancelled: list[str] = []
+        self.resumed: list[dict[str, Any]] = []
         self.deleted: list[str] = []
         self.deleted_students: list[UUID] = []
         self.unavailable = False
@@ -77,6 +78,23 @@ class FakeAgentClient(AgentClient):
             raise AgentUnavailableError("connection refused")
         self.polls.append(task_id)
         return self.next_status
+
+    async def resume_action(
+        self,
+        task_id: str,
+        decision: dict[str, Any],
+        token: str,
+        byok: BYOK | None = None,
+    ) -> None:
+        if self.unavailable:
+            raise AgentUnavailableError("connection refused")
+        self.resumed.append({"task_id": task_id, "decision": decision, "byok": byok})
+
+    def pauses_with(self, payload: dict[str, Any]) -> None:
+        """Arrange the next poll to report a review paused for the promoter."""
+        self.next_status = AgentActionStatus(
+            "awaiting_input", payload, None, {"steps": [], "done": []}
+        )
 
     async def cancel_action(self, task_id: str, token: str) -> AgentActionStatus:
         if self.unavailable:

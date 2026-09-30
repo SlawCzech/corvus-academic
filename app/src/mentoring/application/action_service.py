@@ -113,12 +113,16 @@ class ActionService:
         language: str = "pl",
         review_tone: str = "auto",
         byok: BYOK | None = None,
+        review_findings_first: bool = False,
     ) -> AgentAction:
         """Record and dispatch one action for a student the caller can see.
 
         `byok` is the caller's own provider key when they have set one. It is
         forwarded and never written to the action row — the row is what the
         promoter can read back later.
+
+        `review_findings_first` pauses a review after its analyses, for the
+        promoter to pick the findings the review may use (see `resume`).
         """
         student = await self._students.get(caller, student_id)
         if byok is not None:
@@ -131,6 +135,8 @@ class ActionService:
         context, input_ref = await self._assemble(
             caller, student, action_type, detail, review_tone
         )
+        if review_findings_first and action_type is ActionType.GENERATE_REVIEW:
+            context["promoter_reviews_findings"] = True
 
         now = datetime.now(UTC)
         record = AgentActionModel(
@@ -289,6 +295,46 @@ class ActionService:
         record.status = str(action.status)
         await self._actions.update(record)
         logger.info("action_cancelled", action_id=str(record.id))
+        return _to_domain(record)
+
+    # ---------- resume ----------
+
+    async def resume(
+        self,
+        caller: Caller,
+        student_id: UUID,
+        action_id: UUID,
+        accepted_findings: list[int],
+        token: str,
+        byok: BYOK | None = None,
+    ) -> AgentAction:
+        """Continue a review paused for the promoter, with the findings they kept.
+
+        `accepted_findings` are indices into the findings the paused action
+        returned. The key, when the promoter has one, is decrypted again for
+        this call — it was never stored with the paused run.
+
+        Raises ValueError for an action that is not waiting for a decision.
+        """
+        record = await self._require_record(caller, student_id, action_id)
+        action = _to_domain(record)
+        action.resume()
+        if record.task_id is None:  # pragma: no cover — a paused run has one
+            raise ValueError("Action has no run to resume")
+
+        await self._agent.resume_action(
+            record.task_id,
+            {"accepted": sorted(set(accepted_findings))},
+            token,
+            byok=byok,
+        )
+        record.status = str(action.status)
+        await self._actions.update(record)
+        logger.info(
+            "action_resumed",
+            action_id=str(record.id),
+            accepted=len(set(accepted_findings)),
+        )
         return _to_domain(record)
 
     # ---------- delete ----------

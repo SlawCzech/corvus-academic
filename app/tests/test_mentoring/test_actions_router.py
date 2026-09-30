@@ -514,6 +514,113 @@ def test_review_tone_reaches_the_assembled_context(
     assert agent.submitted[0]["context"]["review_tone"] == "diplomatic"
 
 
+# ---------- a review paused for the promoter ----------
+
+
+def _paused_review(
+    client: TestClient, agent: FakeAgentClient, headers: dict[str, str]
+) -> tuple[str, str]:
+    student_id = _new_student(client, headers)
+    _upload(client, headers, student_id)
+    action = _trigger(
+        client,
+        headers,
+        student_id,
+        action_type="generate_review",
+        review_findings_first=True,
+    )
+    agent.pauses_with(
+        {
+            "findings": [
+                {"section": "Wstęp", "description": "Brak hipotez"},
+                {"section": "Bibliografia", "description": "Za mało źródeł"},
+            ]
+        }
+    )
+    body = client.get(
+        f"/students/{student_id}/actions/{action['id']}", headers=headers
+    ).json()
+    assert body["status"] == "awaiting_input"
+    return student_id, action["id"]
+
+
+def test_asking_to_see_findings_first_reaches_the_review_context(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    _paused_review(client, agent, headers)
+
+    assert agent.submitted[0]["context"]["promoter_reviews_findings"] is True
+
+
+def test_other_actions_never_pause(client: TestClient, agent: FakeAgentClient) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+
+    _trigger(client, headers, student_id, review_findings_first=True)
+
+    assert "promoter_reviews_findings" not in agent.submitted[0]["context"]
+
+
+def test_resuming_sends_the_kept_findings_and_the_key_again(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    _store_key(client, headers, "claude", "sk-ant-user-key")
+    student_id, action_id = _paused_review(client, agent, headers)
+
+    resp = client.post(
+        f"/students/{student_id}/actions/{action_id}/resume",
+        json={"accepted_findings": [1, 1]},
+        headers=headers,
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "pending"
+    sent = agent.resumed[0]
+    assert sent["task_id"] == agent.task_id
+    assert sent["decision"] == {"accepted": [1]}
+    assert sent["byok"].api_key == "sk-ant-user-key"
+
+
+def test_resuming_an_action_that_is_not_paused_is_409(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+    action = _trigger(client, headers, student_id)
+
+    resp = client.post(
+        f"/students/{student_id}/actions/{action['id']}/resume",
+        json={"accepted_findings": []},
+        headers=headers,
+    )
+
+    assert resp.status_code == 409
+    assert agent.resumed == []
+
+
+def test_resuming_without_the_agent_is_503_and_stays_paused(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id, action_id = _paused_review(client, agent, headers)
+    agent.unavailable = True
+
+    resp = client.post(
+        f"/students/{student_id}/actions/{action_id}/resume",
+        json={"accepted_findings": [0]},
+        headers=headers,
+    )
+
+    assert resp.status_code == 503
+    agent.unavailable = False
+    body = client.get(
+        f"/students/{student_id}/actions/{action_id}", headers=headers
+    ).json()
+    assert body["status"] == "awaiting_input"
+
+
 # ---------- the promoter's own key ----------
 
 

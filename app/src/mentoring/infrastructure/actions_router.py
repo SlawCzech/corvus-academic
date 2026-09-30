@@ -25,6 +25,7 @@ from src.mentoring.infrastructure.errors import not_found
 from src.mentoring.infrastructure.schemas import (
     ActionAcceptRequest,
     ActionResponse,
+    ActionResumeRequest,
     ActionTriggerRequest,
     action_response,
 )
@@ -65,6 +66,7 @@ async def trigger_action(
             language=body.language,
             review_tone=body.review_tone,
             byok=byok,
+            review_findings_first=body.review_findings_first,
         )
     except StudentNotFoundError as exc:
         raise not_found(exc) from exc
@@ -143,6 +145,41 @@ async def accept_action(
         # topic index the model never proposed.
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+    return action_response(action)
+
+
+@router.post("/{student_id}/actions/{action_id}/resume", response_model=ActionResponse)
+async def resume_action(
+    student_id: uuid.UUID,
+    action_id: uuid.UUID,
+    body: ActionResumeRequest,
+    caller: CallerDep,
+    token: TokenDep,
+    byok: BYOKDep,
+    svc: ActionServiceDep,
+) -> ActionResponse:
+    """Write the paused review from the findings the promoter kept."""
+    try:
+        action = await svc.resume(
+            caller,
+            student_id,
+            action_id,
+            accepted_findings=body.accepted_findings,
+            token=token,
+            byok=byok,
+        )
+    except (StudentNotFoundError, ActionNotFoundError) as exc:
+        raise not_found(exc) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+    except AgentUnavailableError as exc:
+        # Still paused on the agent's side; the promoter can try again.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The analysis service is unavailable",
         ) from exc
     return action_response(action)
 

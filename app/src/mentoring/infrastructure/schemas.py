@@ -119,6 +119,14 @@ class ActionTriggerRequest(BaseModel):
     # Only read by generate_review; ignored by every other action type. An
     # unrecognized value falls back to "auto" on the agent side.
     review_tone: str = "auto"
+    # generate_review only: pause after the analyses so the promoter can
+    # untick the findings the review must not use.
+    review_findings_first: bool = False
+
+
+class ActionResumeRequest(BaseModel):
+    # Indices into the findings of the paused review — the ones it may use.
+    accepted_findings: list[int] = Field(default_factory=list[int])
 
 
 class ActionAcceptRequest(BaseModel):

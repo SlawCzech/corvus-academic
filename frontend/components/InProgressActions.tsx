@@ -13,6 +13,7 @@ const STALE_AFTER_MS = 60 * 60 * 1000
 const STATUS_LABELS: Record<string, string> = {
   pending: "w kolejce",
   running: "w toku",
+  awaiting_input: "czeka na Ciebie",
 }
 
 function since(iso: string, now: number): string {
@@ -85,7 +86,10 @@ export default function InProgressActions({ onChange }: { onChange: () => void }
       {data && data.length > 0 && (
         <div className="flex flex-col">
           {data.map((item) => {
-            const stale = now - new Date(item.created_at).getTime() > STALE_AFTER_MS
+            // A review waiting for the promoter is not dead, however long it waits.
+            const stale =
+              item.status !== "awaiting_input" &&
+              now - new Date(item.created_at).getTime() > STALE_AFTER_MS
             return (
               <div
                 key={item.id}
