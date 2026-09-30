@@ -4,7 +4,7 @@ COMPOSE = docker compose -f infra/docker-compose.yml
 COMPOSE_DEV = $(COMPOSE) -f infra/docker-compose.override.yml
 
 .PHONY: help up build down down-volumes logs ps restart migrate ingest-guidelines seed-guidelines purge-drafts \
-        dev dev-build langfuse-up langfuse-down \
+        dev dev-build eval langfuse-up langfuse-down \
         front-up front-down front-restart front-logs front-dev \
         shell-app shell-agent
 
@@ -78,6 +78,14 @@ front-logs:  ## Follow frontend container logs
 
 front-dev:  ## Run the Next.js dev server locally with hot reload (Ctrl+C to stop)
 	cd frontend && npm run dev
+
+# ---------- evals: synthetic theses with planted defects (agent/evals) ----------
+# Runs on the host against the host's Ollama, not in a container: an eval is a
+# tool for whoever changes a prompt or a model, and it needs no stack.
+
+eval:  ## Score a model on the eval cases (MODEL=qwen3:30b-a3b JUDGE=… CASES="a b")
+	cd agent && uv run python -m evals.run --model $(or $(MODEL),qwen3:30b-a3b) \
+		$(if $(JUDGE),--judge $(JUDGE)) $(if $(CASES),--cases $(CASES))
 
 # ---------- tracing: self-hosted Langfuse (optional, own compose project) ----------
 

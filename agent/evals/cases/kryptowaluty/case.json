@@ -1,0 +1,53 @@
+{
+  "id": "kryptowaluty",
+  "description": "Weak thesis: aim without problem, question or hypotheses; nine sources, mostly websites, none foreign; a convenience survey generalised to all Poles.",
+  "thesis_type": "bachelor",
+  "metadata": {
+    "author": "Marek Zieliński",
+    "title": "Wpływ kryptowalut na system finansowy w Polsce",
+    "year": 2026,
+    "field_of_study": "Finanse i rachunkowość",
+    "thesis_type": "bachelor",
+    "review_tone": "auto"
+  },
+  "acceptable_recommendations": [
+    "Zwrócić do poprawy"
+  ],
+  "expected": [
+    {
+      "id": "no-hypotheses",
+      "issue": "The introduction states only a general aim: there is no research problem, no research question and no hypothesis.",
+      "severity": "critical"
+    },
+    {
+      "id": "too-few-sources",
+      "issue": "The bibliography has far fewer than the 25 required sources; most entries are websites (netography), which do not count.",
+      "severity": "critical"
+    },
+    {
+      "id": "no-foreign-sources",
+      "issue": "There are no foreign-language sources; at least four are required.",
+      "severity": "critical"
+    },
+    {
+      "id": "undescribed-survey",
+      "issue": "The survey is not described as a research method: no sample size, no selection criteria, no questionnaire, no numbers in the results — only 'znajomi autora' via social media.",
+      "severity": "major"
+    },
+    {
+      "id": "overgeneralised-conclusion",
+      "issue": "The conclusion generalises from a convenience sample of the author's acquaintances to 'Polacy' as a whole, and claims more than the vague results show.",
+      "severity": "major"
+    },
+    {
+      "id": "intro-incomplete",
+      "issue": "The introduction is missing required elements: scope (subject, time, place), description of the methods, and a characterisation of the literature.",
+      "severity": "major"
+    }
+  ],
+  "must_not_flag": [
+    "The thesis has no conclusions chapter (Zakończenie) at all.",
+    "The thesis has no table of contents.",
+    "The thesis has no independence statement (oświadczenie)."
+  ]
+}

@@ -1,0 +1,188 @@
+{
+  "model": "qwen3:30b-a3b",
+  "judge": "qwen3:30b-a3b",
+  "action": "generate_review",
+  "summary": {
+    "model": "qwen3:30b-a3b",
+    "cases": 3,
+    "recall": 0.61,
+    "underrated": 1,
+    "duplicates": 0,
+    "false_flags": 0,
+    "unmatched": 6,
+    "failed_nodes": 1,
+    "recommendations_ok": "3/3",
+    "seconds": 1552.0
+  },
+  "cases": [
+    {
+      "case_id": "kryptowaluty",
+      "model": "qwen3:30b-a3b",
+      "seconds": 430.0,
+      "node_seconds": {
+        "analyze_methodology": 42.0,
+        "analyze_structure": 128.2,
+        "check_requirements": 223.7,
+        "generate_review": 430.0
+      },
+      "node_errors": [
+        "methodology: 'suggestion'"
+      ],
+      "error": null,
+      "finding_count": 4,
+      "matched": [
+        "no-hypotheses",
+        "too-few-sources",
+        "no-foreign-sources",
+        "undescribed-survey",
+        "intro-incomplete"
+      ],
+      "missed": [
+        "overgeneralised-conclusion"
+      ],
+      "underrated": [],
+      "duplicates": 0,
+      "false_flags": [],
+      "unmatched": 1,
+      "recommendation": "Zwrócić do poprawy",
+      "recommendation_ok": true,
+      "findings": [
+        {
+          "severity": "major",
+          "source": "structure",
+          "section": "Rozdział 3. Badanie własne",
+          "description": "Badanie własne, oparte na małej grupie znajomych, nie analizuje rzeczywistego wpływu kryptowalut na system finansowy, lecz jedynie opinii publicznych, co uniemożliwia spełnienie celu pracy."
+        },
+        {
+          "severity": "minor",
+          "source": "structure",
+          "section": "Rozdział 2. Kryptowaluty a system finansowy",
+          "description": "Podrozdział 2.2. Regulacje prawne przedstawia normy prawne bez łączenia ich z wpływem kryptowalut, co tworzy lukę w logice rozdziału."
+        },
+        {
+          "severity": "critical",
+          "source": "requirements",
+          "section": "1.4 Introduction",
+          "description": "Brak sformułowania pytania badawczego lub hipotezy badawczej, brak opisu metod badawczych oraz charakterystyki literatury wstępnej"
+        },
+        {
+          "severity": "critical",
+          "source": "requirements",
+          "section": "1.7 Bibliography",
+          "description": "Mniejsza liczba źródeł liczących się wliczając w 25 (2) niż wymagana (25) oraz brak źródeł w języku obcym (0 zamiast 4)"
+        }
+      ],
+      "recall": 0.8333333333333334
+    },
+    {
+      "case_id": "oszczednosci",
+      "model": "qwen3:30b-a3b",
+      "seconds": 588.4,
+      "node_seconds": {
+        "analyze_structure": 178.6,
+        "analyze_methodology": 343.3,
+        "check_requirements": 467.3,
+        "generate_review": 588.4
+      },
+      "node_errors": [],
+      "error": null,
+      "finding_count": 3,
+      "matched": [
+        "no-list-of-tables"
+      ],
+      "missed": [
+        "bibliography-not-alphabetical"
+      ],
+      "underrated": [
+        "no-list-of-tables"
+      ],
+      "duplicates": 0,
+      "false_flags": [],
+      "unmatched": 2,
+      "recommendation": "Dopuścić do obrony",
+      "recommendation_ok": true,
+      "findings": [
+        {
+          "severity": "minor",
+          "source": "methodology",
+          "section": "3.1. Dane i metoda badania",
+          "description": "Brak specyfikacji metody obliczania rzeczywistej stopy procentowej (np. wykorzystany wskaźnik inflacji), co ogranicza przejrzystość metody i wiarygodność analizy."
+        },
+        {
+          "severity": "minor",
+          "source": "structure",
+          "section": "Rozdział 3",
+          "description": "Rozdział 3 zawiera analizę z użyciem zmiennej 'liczba osób w gospodarstwie', która nie została uwzględniona w celach szczegółowych i hipotezach pracy, powodując niespójność z zadaną tematyką."
+        },
+        {
+          "severity": "minor",
+          "source": "requirements",
+          "section": "1.8 Lists",
+          "description": "Brak spisu tabel, mimo że w pracy znajdują się tabele (Tabela 1 i Tabela 2)."
+        }
+      ],
+      "recall": 0.5
+    },
+    {
+      "case_id": "pokolenie-z",
+      "model": "qwen3:30b-a3b",
+      "seconds": 533.6,
+      "node_seconds": {
+        "check_requirements": 153.2,
+        "analyze_methodology": 333.8,
+        "analyze_structure": 389.8,
+        "generate_review": 533.6
+      },
+      "node_errors": [],
+      "error": null,
+      "finding_count": 5,
+      "matched": [
+        "small-sample-generalised",
+        "taylor-chapter-off-topic"
+      ],
+      "missed": [
+        "conclusion-contradicts-results",
+        "hypotheses-not-verified"
+      ],
+      "underrated": [],
+      "duplicates": 0,
+      "false_flags": [],
+      "unmatched": 3,
+      "recommendation": "Dopuścić do obrony z zastrzeżeniami",
+      "recommendation_ok": true,
+      "findings": [
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "Rozdział 3. MOTYWOWANIE POKOLENIA Z — BADANIE WŁASNE",
+          "description": "Próba badawcza obejmuje tylko 23 respondentów z jednego przedsiębiorstwa w Krakowie, co uniemożliwia uogólnienie wyników na małe przedsiębiorstwa w całej Polsce, mimo że cel pracy dotyczy całej Polski."
+        },
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "Rozdział 3. MOTYWOWANIE POKOLENIA Z — BADANIE WŁASNE",
+          "description": "Lista 12 czynników motywacyjnych w ankiecie nie została wywiedziona z literatury, mimo że literatura wskazuje na kluczowe czynniki dla pokolenia Z (np. 'sens wykonywanej pracy'), które nie zostały uwzględnione w badaniu."
+        },
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "Rozdział 3. MOTYWOWANIE POKOLENIA Z — BADANIE WŁASNE",
+          "description": "Brak omówienia ograniczeń badania (niewystarczająca reprezentatywność próbki, brak wielu przedsiębiorstw) w metodologii, co prowadzi do nieuzasadnionego przedstawienia wyników."
+        },
+        {
+          "severity": "major",
+          "source": "structure",
+          "section": "Rozdział 2. NAUKOWA ORGANIZACJA PRACY F. W. TAYLORA",
+          "description": "Rozdział 2 przedstawia historię teorii Taylora, która nie jest związana z cechami motywacji dla pokolenia Z i nie służy celowi badania, co narusza spójność struktury i logiczną przepływ pracy."
+        },
+        {
+          "severity": "minor",
+          "source": "requirements",
+          "section": "1.7",
+          "description": "Bibliografia nie jest w pełni w porządku alfabetycznym (Kozioł powinien być przed Koźmińskim)"
+        }
+      ],
+      "recall": 0.5
+    }
+  ]
+}
