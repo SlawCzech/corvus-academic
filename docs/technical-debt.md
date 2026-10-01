@@ -122,7 +122,7 @@
   i pozwolić workerowi odszyfrować go samodzielnie.
 
 - [ ] **Nie można wybrać modelu u dostawcy** — BYOK używa stałych domyślnych
-  (`claude-sonnet-5`, `gpt-5`); parametr `model` dotyczy tylko Ollamy, bo to
+  (`claude-sonnet-5-5`, `gpt-5`); parametr `model` dotyczy tylko Ollamy, bo to
   tag lokalnego modelu. Do wystawienia razem z listą modeli per dostawca.
 
 - [x] ~~**Brak walidacji klucza przy zapisie**~~ — `PATCH /settings/api-key` pyta

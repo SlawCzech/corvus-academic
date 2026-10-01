@@ -24,11 +24,11 @@ model *why* a field is there.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, cast
 
 import structlog
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_ollama import ChatOllama
 from pydantic import TypeAdapter, ValidationError
 
@@ -83,6 +83,11 @@ def invoke_structured[T](
     last_error: Exception | None = None
     for attempt in range(1, _ATTEMPTS + 1):
         response = llm.invoke(conversation, **kwargs)
+        metadata = cast(dict[str, Any], response.response_metadata)  # pyright: ignore[reportUnknownMemberType]
+        if metadata.get("stop_reason") == "refusal":
+            # A hosted model's safety classifier declined; asking again with
+            # "fix your JSON" would only be declined again.
+            raise StructuredOutputError("the model declined to answer this request")
         raw = message_text(response.content)  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
         try:
             return shape.validate_json(extract_json(raw))
@@ -94,9 +99,12 @@ def invoke_structured[T](
                 attempt=attempt,
                 error=_format_error(exc)[:500],
             )
+            # The reply goes back exactly as it came, reasoning parts and
+            # all: Claude checks that a turn it is shown again is the turn it
+            # wrote, and a copy rebuilt from the text alone is not.
             conversation = [
                 *conversation,
-                AIMessage(content=raw),
+                response,
                 HumanMessage(content=_REPAIR_PROMPT.format(error=_format_error(exc))),
             ]
     raise StructuredOutputError(

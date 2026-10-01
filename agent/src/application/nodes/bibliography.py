@@ -14,7 +14,9 @@ tools — earns its place. The graph around it keeps it small:
   edge — the model either asks for a tool (the edge goes to `tools`, whose
   result comes back to `investigate`) or stops (the edge goes on). It only
   sees what the deterministic step left, and it has a budget of tool calls:
-  when it is spent, the model is asked once more without tools.
+  when it is spent, the model is told so and the loop ends whatever it says.
+  The tools stay bound for that last turn — the conversation is only ever
+  added to, which is what lets a model replay its own reasoning.
 - `report`: one structured call turns the investigation into a verdict per
   reference, and the output is assembled.
 
@@ -195,13 +197,11 @@ def investigate(state: BibliographyState) -> dict[str, Any]:
             SystemMessage(content=prompts.INVESTIGATE.format(budget=TOOL_BUDGET)),
             HumanMessage(content=f"References to check:\n{listing}"),
         ]
-        messages = new
-    used = sum(isinstance(m, ToolMessage) for m in messages)
-    llm = get_llm(state["model"])
-    # Out of budget: the same model, without tools, has to wrap up.
-    model = llm if used >= TOOL_BUDGET else llm.bind_tools(TOOLS)  # pyright: ignore[reportUnknownMemberType]
+    if _budget_spent(messages):
+        new.append(HumanMessage(content=prompts.BUDGET_SPENT))
+    model = get_llm(state["model"]).bind_tools(TOOLS)  # pyright: ignore[reportUnknownMemberType]
     try:
-        reply = model.invoke(messages)
+        reply = model.invoke([*messages, *new])
     except Exception as exc:
         raise_if_provider_error(exc)
         logger.error("bibliography_agent_failed", error=str(exc))
@@ -209,12 +209,19 @@ def investigate(state: BibliographyState) -> dict[str, Any]:
     return {"messages": [*new, reply]}
 
 
+def _budget_spent(messages: list[AnyMessage]) -> bool:
+    return sum(isinstance(m, ToolMessage) for m in messages) >= TOOL_BUDGET
+
+
 def after_investigating(state: BibliographyState) -> Literal["tools", "report"]:
-    """The ReAct edge: a tool call goes to the tools, anything else ends the loop."""
+    """The ReAct edge: a tool call goes to the tools, anything else ends the loop.
+
+    So does a spent budget — a call asked for after it is not run.
+    """
     messages = state.get("messages") or []
     last = messages[-1] if messages else None
     if isinstance(last, AIMessage) and last.tool_calls:
-        return "tools"
+        return "report" if _budget_spent(messages) else "tools"
     return "report"
 
 

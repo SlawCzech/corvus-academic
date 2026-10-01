@@ -51,6 +51,32 @@ def test_an_invalid_reply_gets_one_repair_turn_with_the_error() -> None:
     assert "0.suggestion" in repair[-1].content
 
 
+def test_the_reply_goes_back_into_the_repair_turn_unchanged() -> None:
+    """Claude's reasoning parts stay with the turn that is shown to it again."""
+    parts: list[str | dict[str, Any]] = [
+        {"type": "thinking", "thinking": "", "signature": "EvEC"},
+        {"type": "text", "text": "not json"},
+    ]
+    first = AIMessage(content=parts)
+    llm = MagicMock()
+    llm.invoke.side_effect = [first, AIMessage(content=_FINDING)]
+
+    invoke_structured(llm, [HumanMessage("x")], FINDINGS, node="t")
+
+    assert llm.invoke.call_args_list[1].args[0][-2] is first
+
+
+def test_a_refusal_is_not_asked_to_fix_its_json() -> None:
+    declined = AIMessage(content="", response_metadata={"stop_reason": "refusal"})
+    llm = MagicMock()
+    llm.invoke.return_value = declined
+
+    with pytest.raises(StructuredOutputError, match="declined"):
+        invoke_structured(llm, [HumanMessage("x")], FINDINGS, node="t")
+
+    assert llm.invoke.call_count == 1
+
+
 def test_broken_json_is_repaired_too() -> None:
     llm = _llm('[{"section": "Wstęp"', _FINDING)
 

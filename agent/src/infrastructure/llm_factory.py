@@ -27,9 +27,14 @@ from src.infrastructure.settings import settings
 # caller's `model` argument: that names an Ollama tag, and handing "qwen3:30b"
 # to Anthropic would just fail.
 _BYOK_MODELS: dict[str, str] = {
-    "claude": "claude-sonnet-5",
+    "claude": "claude-sonnet-5-5",
     "openai": "gpt-5",
 }
+
+# Thinking counts toward the limit even though its text is not returned, and
+# a review is the longest reply any action asks for. Left unset, LangChain
+# falls back to 4096 for a model it has no profile for — a truncated JSON.
+_CLAUDE_MAX_TOKENS = 16000
 
 
 def byok_models() -> dict[str, str]:
@@ -90,10 +95,7 @@ def get_llm(
 
     match settings.model_backend:
         case "claude":
-            return ChatAnthropic(  # pyright: ignore[reportCallIssue]
-                model=_BYOK_MODELS["claude"],  # pyright: ignore[reportCallIssue]
-                anthropic_api_key=settings.anthropic_api_key,  # pyright: ignore[reportCallIssue]
-            )
+            return _claude(settings.anthropic_api_key)
         case "ollama":
             return ChatOllama(  # pyright: ignore[reportCallIssue]
                 model=model_override or settings.ollama_model,
@@ -105,14 +107,25 @@ def get_llm(
             raise ValueError(f"Unknown MODEL_BACKEND: {settings.model_backend!r}")
 
 
+def _claude(api_key: str) -> BaseChatModel:
+    """Claude, with the two things this model needs said out loud.
+
+    Thinking cannot be switched off on Sonnet 5.5; how much of it there is
+    follows `effort`, so that is the latency and cost dial (ANTHROPIC_EFFORT).
+    """
+    return ChatAnthropic(  # pyright: ignore[reportCallIssue]
+        model=_BYOK_MODELS["claude"],  # pyright: ignore[reportCallIssue]
+        anthropic_api_key=api_key,  # pyright: ignore[reportCallIssue]
+        max_tokens=_CLAUDE_MAX_TOKENS,  # pyright: ignore[reportCallIssue]
+        effort=settings.anthropic_effort,
+    )
+
+
 def _byok_model(credentials: ModelCredentials) -> BaseChatModel:
     """Build a model on the user's own account."""
     match credentials.provider:
         case "claude":
-            return ChatAnthropic(  # pyright: ignore[reportCallIssue]
-                model=_BYOK_MODELS["claude"],  # pyright: ignore[reportCallIssue]
-                anthropic_api_key=credentials.api_key,  # pyright: ignore[reportCallIssue]
-            )
+            return _claude(credentials.api_key)
         case _:
             return ChatOpenAI(  # pyright: ignore[reportCallIssue]
                 model=_BYOK_MODELS["openai"],

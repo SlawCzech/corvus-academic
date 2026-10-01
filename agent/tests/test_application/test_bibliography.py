@@ -249,7 +249,7 @@ def test_a_bibliography_matching_settles_skips_the_agent() -> None:
     assert final["output"]["counts"] == {"verified": 1}
 
 
-def test_the_agent_stops_asking_for_tools_when_its_budget_is_spent() -> None:
+def test_the_loop_ends_when_the_budget_is_spent_whatever_the_agent_asks() -> None:
     seen: list[list[Any]] = []
     calls = [
         AIMessage(
@@ -258,9 +258,10 @@ def test_the_agent_stops_asking_for_tools_when_its_budget_is_spent() -> None:
                 {"name": "search_crossref", "args": {"query": f"q{i}"}, "id": f"c{i}"}
             ],
         )
-        for i in range(nodes.TOOL_BUDGET)
+        # One more than the budget: the last call is asked for and not run.
+        for i in range(nodes.TOOL_BUDGET + 1)
     ]
-    llm = _llm([*calls, AIMessage(content="Out of budget.")], seen)
+    llm = _llm(calls, seen)
 
     with (
         patch("src.application.nodes.bibliography.get_llm", return_value=llm),
@@ -269,11 +270,23 @@ def test_the_agent_stops_asking_for_tools_when_its_budget_is_spent() -> None:
             return_value=_crossref(),
         ),
     ):
-        build_action_graph(ActionType.VERIFY_BIBLIOGRAPHY).invoke(
-            _state(), {"recursion_limit": 100}
-        )
+        crossref = _crossref()
+        with patch(
+            "src.application.nodes.bibliography.CrossrefClient", return_value=crossref
+        ):
+            final = build_action_graph(ActionType.VERIFY_BIBLIOGRAPHY).invoke(
+                _state(), {"recursion_limit": 100}
+            )
 
-    assert llm.bind_tools.call_count == nodes.TOOL_BUDGET
+    # The tools stay bound on every turn, the last included: the conversation
+    # a model is shown again must be the one it wrote in, tools and all.
+    assert llm.bind_tools.call_count == nodes.TOOL_BUDGET + 1
+    last_turn = seen[-2]
+    assert "used up" in str(last_turn[-1].content)
+    # One search to match the entries, then the budget — and not one more.
+    agent_searches = [c for c in crossref.search.call_args_list if c.kwargs]
+    assert len(agent_searches) == nodes.TOOL_BUDGET
+    assert final["status"] == "bibliography_checked"
 
 
 def test_no_bibliography_is_an_error() -> None:

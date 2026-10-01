@@ -125,7 +125,7 @@ Przełączanie modelu przez zmienną środowiskową lub klucz API w UI:
 # agent/infrastructure/llm_factory.py
 match settings.model_backend:
     case "ollama":   return ChatOllama(model=settings.ollama_model)
-    case "claude":   return ChatAnthropic(model="claude-sonnet-5")
+    case "claude":   return ChatAnthropic(model="claude-sonnet-5-5")
     case "openai":   return ChatOpenAI(model="gpt-5")
 ```
 

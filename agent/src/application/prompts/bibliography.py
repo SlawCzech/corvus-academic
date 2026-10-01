@@ -26,6 +26,11 @@ INVESTIGATE = (
     "from this conversation."
 )
 
+BUDGET_SPENT = (
+    "Your tool calls are used up. Do not call a tool again — say in one "
+    "sentence that you are done."
+)
+
 VERDICTS = (
     "Below is an investigation of references that an automatic check could "
     "not settle, with the tool results. Give a verdict for each reference by "
