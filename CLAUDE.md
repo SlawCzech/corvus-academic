@@ -108,8 +108,9 @@ Użytkownik
         (*tylko dla pozycji, których dopasowanie nie rozstrzygnęło; do Crossref
          idą wyłącznie opisy bibliograficzne, nigdy tekst pracy)
   → model selector
-      → klucz promotora (BYOK), jeśli go zapisał — Claude albo OpenAI;
-        w przeciwnym razie Ollama (lokalny, domyślny)
+      → promotor wybiera przy akcji: własny klucz (BYOK) do Claude albo
+        OpenAI — po jednym na dostawcę — albo Ollama (lokalny, domyślny);
+        zapisany klucz nie jest używany, dopóki akcja o niego nie poprosi
         klucz jedzie osobnym argumentem taska i żyje w ContextVar tylko na
         czas przebiegu grafu — nigdy w stanie, który trafia do bazy
   → Postgres (zapis raportu)
@@ -419,7 +420,8 @@ Zasady:
 - `.env` zawsze w `.gitignore`
 - Klucze produkcyjne wyłącznie w GitHub Secrets i Jenkins Credentials
 - Klucze API użytkowników w Postgres jako zaszyfrowany `text`, nigdy plain text
-- Klucz usera (BYOK) odszyfrowywany wyłącznie w żądaniu, które go zaraz użyje;
+- Klucz usera (BYOK) odszyfrowywany wyłącznie w żądaniu, które go zaraz użyje,
+  i tylko ten jeden, którego dostawcę wybrano dla akcji;
   do agenta jedzie osobnym argumentem taska, nigdy w kontekście ani w stanie grafu
 - `FERNET_KEY` generowany raz: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
 
@@ -459,6 +461,10 @@ Każdy przebieg grafu ma checkpointy w Postgresie (wątek = id taska), taski są
 potwierdzane po zakończeniu — padnięty worker wznawia recenzję od ostatniego
 kroku, a checkpointy znikają, gdy przebieg ma wynik —
 [ADR 0010](docs/adr/0010-graph-checkpoints-and-late-acks.md).
+Promotor trzyma po jednym kluczu na dostawcę (`identity.user_api_keys`) i przy
+każdej akcji wybiera, na czym ona pójdzie; brak wyboru to model lokalny, a
+dostawca bez klucza to 409, nie cichy fallback —
+[ADR 0011](docs/adr/0011-a-key-per-provider-chosen-per-action.md).
 
 ---
 

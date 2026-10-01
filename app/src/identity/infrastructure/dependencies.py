@@ -20,6 +20,7 @@ from src.identity.domain.user import Permission, User
 from src.identity.infrastructure.key_checker import HttpKeyChecker
 from src.identity.infrastructure.repositories import (
     AccessRequestRepository,
+    ApiKeyRepository,
     LoginEventRepository,
     UserRepository,
 )
@@ -72,6 +73,12 @@ def get_user_repo(
     return UserRepository(session)
 
 
+def get_api_key_repo(
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> ApiKeyRepository:
+    return ApiKeyRepository(session)
+
+
 def get_login_event_repo(
     session: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> LoginEventRepository:
@@ -111,6 +118,7 @@ def get_key_checker(request: Request) -> KeyChecker:
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
 AdminDep = Annotated[User, Depends(require_admin)]
 UserRepoDep = Annotated[UserRepository, Depends(get_user_repo)]
+ApiKeyRepoDep = Annotated[ApiKeyRepository, Depends(get_api_key_repo)]
 LoginEventRepoDep = Annotated[LoginEventRepository, Depends(get_login_event_repo)]
 AccessRequestRepoDep = Annotated[
     AccessRequestRepository, Depends(get_access_request_repo)

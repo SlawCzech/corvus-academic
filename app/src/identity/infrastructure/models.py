@@ -7,7 +7,7 @@ data is physically isolated from other bounded contexts.
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, Index, String, Text, Uuid
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, Uuid
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 _SCHEMA = "identity"
@@ -29,15 +29,31 @@ class UserModel(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     role: Mapped[str] = mapped_column(String(50), nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
-    # The user's own provider key (BYOK), Fernet-encrypted. The provider is
-    # stored alongside it because a key alone does not say who to call.
-    api_key_encrypted: Mapped[str | None] = mapped_column(
-        String(500), nullable=True, default=None
-    )
-    api_key_provider: Mapped[str | None] = mapped_column(
-        String(50), nullable=True, default=None
-    )
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+    )
+
+
+class UserApiKeyModel(Base):
+    """One provider key of one user (BYOK), Fernet-encrypted.
+
+    A row per provider, so a promoter can keep an Anthropic key and an OpenAI
+    key side by side and choose between them per action.
+    """
+
+    __tablename__ = "user_api_keys"
+    __table_args__ = {"schema": _SCHEMA}
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey(f"{_SCHEMA}.users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    provider: Mapped[str] = mapped_column(String(50), primary_key=True)
+    key_encrypted: Mapped[str] = mapped_column(String(500), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         default=lambda: datetime.now(UTC),

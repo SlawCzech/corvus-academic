@@ -5,13 +5,14 @@ import { useSWRConfig } from "swr"
 import { IconChevronDown } from "@tabler/icons-react"
 import ActionProgress from "./ActionProgress"
 import FindingPicker from "./FindingPicker"
-import ModelSelect, { useAvailableModel } from "@/components/ai/ModelSelect"
+import ModelSelect, { useModelChoice } from "@/components/ai/ModelSelect"
 import ReviewToneChoice from "@/components/ai/ReviewToneChoice"
 import ActionResultView from "@/components/students/ActionResultView"
 import GuidelinePicker from "@/components/students/GuidelinePicker"
 import { useAction } from "@/hooks/useAction"
 import { useAiDefaults, type AiDefaults } from "@/lib/aiDefaults"
 import type { ActionType, Student } from "@/lib/api.types"
+import { PROVIDER_LABELS } from "@/lib/modelChoice"
 
 interface ActionSpec {
   type: ActionType
@@ -116,9 +117,10 @@ function ActionPanelInner({
   const [language, setLanguage] = useState(defaults.language)
   const [reviewTone, setReviewTone] = useState(defaults.reviewTone)
   const [findingsFirst, setFindingsFirst] = useState(false)
-  // What actually gets sent: a saved model the admin has since withdrawn
-  // falls back to the default rather than getting the action refused.
-  const { effective: effectiveModel, withdrawn } = useAvailableModel(model)
+  // What actually gets sent: a saved model the admin has since withdrawn, or
+  // a provider whose key was removed, falls back to the default local model
+  // rather than getting the action refused.
+  const { provider, model: effectiveModel, withdrawn, missingKey } = useModelChoice(model)
 
   const spec = ACTIONS.find((a) => a.type === selectedType) ?? null
   const shown = action && action.action_type === selectedType ? action : null
@@ -131,7 +133,8 @@ function ActionPanelInner({
     if (!selectedType) return
     setTopicIndex(0)
     await run(selectedType, detail.trim() || undefined, {
-      model: effectiveModel || undefined,
+      provider,
+      model: effectiveModel,
       language,
       reviewTone,
       reviewFindingsFirst: selectedType === "generate_review" && findingsFirst,
@@ -228,6 +231,17 @@ function ActionPanelInner({
             <p className="mt-1.5 text-[12px] text-major-text">
               Model {withdrawn} z Twoich ustawień nie jest już dostępny — użyję
               domyślnego.
+            </p>
+          )}
+          {missingKey && !optionsOpen && (
+            <p className="mt-1.5 text-[12px] text-major-text">
+              Klucz {PROVIDER_LABELS[missingKey]} z Twoich ustawień został usunięty —
+              użyję domyślnego modelu lokalnego.
+            </p>
+          )}
+          {provider && !optionsOpen && (
+            <p data-testid="runs-on-key" className="mt-1.5 text-[12px] text-muted">
+              Akcja pójdzie na Twój klucz {PROVIDER_LABELS[provider]}.
             </p>
           )}
 

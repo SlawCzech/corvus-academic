@@ -21,7 +21,7 @@ const CATALOG = {
   byok: { claude: "claude-sonnet-4-20250514", openai: "gpt-4o" },
 }
 
-function stubApi(keyStatus: { configured: boolean; provider: string | null }): void {
+function stubApi(keyStatus: { configured: boolean; providers: string[] }): void {
   vi.stubGlobal(
     "fetch",
     vi.fn((url: string) => {
@@ -55,7 +55,7 @@ describe("ModelSelect", () => {
   afterEach(() => vi.unstubAllGlobals())
 
   it("offers the installed models, with the server default first", async () => {
-    stubApi({ configured: false, provider: null })
+    stubApi({ configured: false, providers: [] })
     render(<Model />)
 
     const select = await screen.findByTestId("model-select")
@@ -69,22 +69,54 @@ describe("ModelSelect", () => {
   })
 
   it("falls back to the default when a saved model was withdrawn, and says so", async () => {
-    stubApi({ configured: false, provider: null })
+    stubApi({ configured: false, providers: [] })
     render(<Model initial="llama2:7b" />)
 
     expect(await screen.findByTestId("model-withdrawn")).toHaveTextContent(
       "Model llama2:7b z Twoich ustawień nie jest już dostępny",
     )
-    expect(screen.getByTestId("model-select")).toHaveValue("")
+    expect(screen.getByTestId("model-select")).toHaveValue("local")
     expect(screen.queryByRole("option", { name: /llama2/ })).not.toBeInTheDocument()
   })
 
-  it("names the provider's model instead of a list when the promoter has a key", async () => {
-    stubApi({ configured: true, provider: "openai" })
+  it("starts on the promoter's key when they have one and chose nothing", async () => {
+    stubApi({ configured: true, providers: ["openai"] })
     render(<Model />)
 
-    expect(await screen.findByTestId("model-byok")).toHaveTextContent("OpenAI · gpt-4o")
-    expect(screen.queryByTestId("model-select")).not.toBeInTheDocument()
+    expect(await screen.findByRole("option", { name: "OpenAI · gpt-4o" })).toBeInTheDocument()
+    expect(screen.getByTestId("model-select")).toHaveValue("byok:openai")
+    expect(screen.getByTestId("model-byok")).toBeInTheDocument()
+    // The other provider is not offered without a key for it.
+    expect(screen.queryByRole("option", { name: /Claude/ })).not.toBeInTheDocument()
+  })
+
+  it("offers both keys and the local models, and lets the promoter pick", async () => {
+    stubApi({ configured: true, providers: ["claude", "openai"] })
+    render(<Model />)
+
+    const select = await screen.findByTestId("model-select")
+    await screen.findByRole("option", { name: /Claude \(Anthropic\)/ })
+    expect(select).toHaveValue("byok:claude")
+
+    await userEvent.selectOptions(select, "byok:openai")
+    expect(screen.getByTestId("value")).toHaveTextContent("byok:openai")
+
+    await userEvent.selectOptions(select, "gemma4:12b")
+    expect(screen.getByTestId("value")).toHaveTextContent("gemma4:12b")
+    expect(screen.queryByTestId("model-byok")).not.toBeInTheDocument()
+
+    await userEvent.selectOptions(select, "local")
+    expect(screen.getByTestId("value")).toHaveTextContent("local")
+  })
+
+  it("says so when the chosen key was removed, and falls back to the local model", async () => {
+    stubApi({ configured: true, providers: ["claude"] })
+    render(<Model initial="byok:openai" />)
+
+    expect(await screen.findByTestId("model-key-missing")).toHaveTextContent(
+      "Klucz OpenAI z Twoich ustawień został usunięty",
+    )
+    expect(screen.getByTestId("model-select")).toHaveValue("local")
   })
 })
 

@@ -4,24 +4,20 @@ import { useState } from "react"
 import useSWR from "swr"
 import { fetcher } from "@/lib/api.client"
 import type { ApiKeySaved, ApiKeyStatus } from "@/lib/api.types"
+import { PROVIDER_LABELS, PROVIDERS, type Provider } from "@/lib/modelChoice"
 
-type Provider = "claude" | "openai"
 // "rejected": the provider refused the key, so it was not stored.
 // "unverified": stored, but the provider could not be asked (offline, down).
 type SaveStatus = "idle" | "saving" | "saved" | "unverified" | "rejected" | "error"
 
-const PROVIDER_LABELS: Record<string, string> = {
-  claude: "Claude (Anthropic)",
-  openai: "OpenAI",
-}
-
 const STATUS_KEY = "/api/settings/api-key/status"
 
 /**
- * The promoter's own provider key.
+ * The promoter's own provider keys — one per provider.
  *
- * Set one and your actions run on your account; leave it empty and they run
- * on the self-hosted model. The key is stored encrypted and never sent back.
+ * A stored key is used only for the actions the promoter runs on it; which
+ * one, if any, is picked per action. Keys are stored encrypted and never
+ * sent back.
  */
 export default function ApiKeySection() {
   const { data: status, mutate } = useSWR<ApiKeyStatus>(STATUS_KEY, fetcher)
@@ -48,32 +44,46 @@ export default function ApiKeySection() {
     void mutate()
   }
 
-  async function remove(): Promise<void> {
+  async function remove(which: Provider): Promise<void> {
     setSaveStatus("saving")
-    const res = await fetch("/api/settings/api-key", { method: "DELETE" })
+    const res = await fetch(`/api/settings/api-key/${which}`, { method: "DELETE" })
     setSaveStatus(res.ok ? "idle" : "error")
     if (res.ok) void mutate()
   }
 
+  const stored = PROVIDERS.filter((p) => status?.providers?.includes(p))
+  const replacing = stored.includes(provider)
+
   return (
     <section data-testid="api-key-section">
       <p className="mb-4 text-[13px] text-muted">
-        Bez własnego klucza akcje AI liczą się na modelu uruchomionym lokalnie.
-        Klucz jest przechowywany zaszyfrowany i nigdy nie wraca w odpowiedzi.
+        Możesz zapisać po jednym kluczu dla każdego dostawcy. Przy każdej akcji
+        wybierasz, czy idzie na któryś z nich, czy na model uruchomiony
+        lokalnie. Klucze są przechowywane zaszyfrowane i nigdy nie wracają w
+        odpowiedzi.
       </p>
 
-      <p data-testid="api-key-status" className="mb-4 text-[13px]">
-        {status?.configured ? (
-          <span className="text-foreground">
-            Klucz zapisany
-            {status.provider
-              ? ` — ${PROVIDER_LABELS[status.provider] ?? status.provider}`
-              : ""}
-          </span>
+      <div data-testid="api-key-status" className="mb-4 text-[13px]">
+        {stored.length === 0 ? (
+          <span className="text-muted">Brak kluczy — akcje idą na model lokalny</span>
         ) : (
-          <span className="text-muted">Brak klucza — model lokalny</span>
+          <ul className="space-y-1.5">
+            {stored.map((p) => (
+              <li key={p} data-testid={`stored-key-${p}`} className="flex items-center gap-3">
+                <span className="text-foreground">Klucz zapisany — {PROVIDER_LABELS[p]}</span>
+                <button
+                  type="button"
+                  onClick={() => void remove(p)}
+                  data-testid={`remove-api-key-${p}`}
+                  className="rounded-lg border border-line px-2.5 py-1 text-[12px] text-muted-strong hover:bg-surface-alt transition-colors"
+                >
+                  Usuń
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
-      </p>
+      </div>
 
       <div className="space-y-3">
         <label className="block">
@@ -84,8 +94,11 @@ export default function ApiKeySection() {
             data-testid="provider-select"
             className="rounded-lg border border-line bg-surface px-3 py-1.5 text-[14px] text-foreground"
           >
-            <option value="claude">Claude (Anthropic)</option>
-            <option value="openai">OpenAI</option>
+            {PROVIDERS.map((p) => (
+              <option key={p} value={p}>
+                {PROVIDER_LABELS[p]}
+              </option>
+            ))}
           </select>
         </label>
 
@@ -121,19 +134,12 @@ export default function ApiKeySection() {
           data-testid="save-api-key"
           className="h-9 rounded-lg bg-accent px-4 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors disabled:opacity-40"
         >
-          {saveStatus === "saving" ? "Zapisywanie…" : "Zapisz klucz"}
+          {saveStatus === "saving"
+            ? "Zapisywanie…"
+            : replacing
+              ? "Zastąp klucz"
+              : "Zapisz klucz"}
         </button>
-
-        {status?.configured && (
-          <button
-            type="button"
-            onClick={() => void remove()}
-            data-testid="remove-api-key"
-            className="h-9 rounded-lg border border-line px-4 text-[13px] text-muted-strong hover:bg-surface-alt transition-colors"
-          >
-            Usuń klucz
-          </button>
-        )}
 
         {saveStatus === "saved" && (
           <span data-testid="save-ok" className="text-[13px] text-muted">

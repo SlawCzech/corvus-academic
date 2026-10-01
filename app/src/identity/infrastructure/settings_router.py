@@ -1,16 +1,16 @@
-"""Per-user provider-key settings — BYOK."""
+"""Per-user provider-key settings — BYOK, one key per provider."""
 
 from typing import Annotated
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from src.identity.application.api_keys import get_api_key_status
+from src.identity.application.api_keys import SUPPORTED_PROVIDERS, get_api_key_status
 from src.identity.application.key_check import KeyVerdict
 from src.identity.domain.user import User
 from src.identity.infrastructure.dependencies import (
+    ApiKeyRepoDep,
     KeyCheckerDep,
-    UserRepoDep,
     require_ai_user,
 )
 from src.identity.infrastructure.schemas import (
@@ -28,28 +28,36 @@ router = APIRouter(prefix="/settings", tags=["settings"])
 AiUserDep = Annotated[User, Depends(require_ai_user)]
 
 
+async def _status(repo: ApiKeyRepoDep, user: User) -> ApiKeyStatusResponse:
+    result = await get_api_key_status(repo, user.id)
+    return ApiKeyStatusResponse(
+        configured=result.configured, providers=list(result.providers)
+    )
+
+
 @router.patch("/api-key", response_model=ApiKeySavedResponse)
 async def set_api_key(
     body: ApiKeyRequest,
     user: AiUserDep,
-    repo: UserRepoDep,
+    repo: ApiKeyRepoDep,
     checker: KeyCheckerDep,
 ) -> ApiKeySavedResponse:
-    """Store the caller's own provider key, encrypted — if the provider takes it.
+    """Store the caller's key for one provider, encrypted — if the provider takes it.
 
-    Every promoter, each with their own: the key is billed to their account
-    and used only for the actions they trigger. A key the provider refuses is
-    not stored, so the one already saved keeps working.
+    Every promoter, each with their own: a key is billed to their account
+    and used only for the actions they run on it. It replaces an earlier key
+    for the same provider and leaves the other provider's key alone. A key
+    the provider refuses is not stored, so the one already saved keeps working.
     """
     verdict = await checker.check(body.provider, body.api_key)
     if verdict is KeyVerdict.REJECTED:
         logger.info("api_key_rejected", user_id=str(user.id), provider=body.provider)
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="The provider rejected this key",
         )
     encrypted = get_secret_service().encrypt(body.api_key)
-    await repo.update_api_key(user.id, encrypted, provider=body.provider)
+    await repo.upsert(user.id, body.provider, encrypted)
     # The provider is worth an audit line; the key is never logged.
     logger.info(
         "api_key_stored",
@@ -57,27 +65,35 @@ async def set_api_key(
         provider=body.provider,
         verdict=str(verdict),
     )
+    current = await _status(repo, user)
     return ApiKeySavedResponse(
-        configured=True,
-        provider=body.provider,
+        configured=current.configured,
+        providers=current.providers,
         verified=verdict is KeyVerdict.ACCEPTED,
     )
 
 
-@router.delete("/api-key", response_model=ApiKeyStatusResponse)
+@router.delete("/api-key/{provider}", response_model=ApiKeyStatusResponse)
 async def delete_api_key(
-    user: AiUserDep, repo: UserRepoDep
+    provider: str, user: AiUserDep, repo: ApiKeyRepoDep
 ) -> ApiKeyStatusResponse:
-    """Remove the caller's key — actions fall back to the self-hosted model."""
-    await repo.update_api_key(user.id, None)
-    logger.info("api_key_removed", user_id=str(user.id))
-    return ApiKeyStatusResponse(configured=False)
+    """Remove the caller's key for one provider; idempotent.
+
+    Actions that asked for that provider are refused from now on; the other
+    provider's key, and the self-hosted model, are unaffected.
+    """
+    if provider not in SUPPORTED_PROVIDERS:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Unknown provider"
+        )
+    if await repo.delete(user.id, provider):
+        logger.info("api_key_removed", user_id=str(user.id), provider=provider)
+    return await _status(repo, user)
 
 
 @router.get("/api-key/status", response_model=ApiKeyStatusResponse)
 async def read_api_key_status(
-    user: AiUserDep, repo: UserRepoDep
+    user: AiUserDep, repo: ApiKeyRepoDep
 ) -> ApiKeyStatusResponse:
-    """Return whether the caller has a key configured, and for which provider."""
-    result = await get_api_key_status(repo, user.id)
-    return ApiKeyStatusResponse(configured=result.configured, provider=result.provider)
+    """Return which providers the caller has a key for."""
+    return await _status(repo, user)

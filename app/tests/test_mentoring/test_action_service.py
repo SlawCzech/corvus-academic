@@ -20,6 +20,7 @@ from src.mentoring.application.exceptions import (
     ActionNotFoundError,
     AgentUnavailableError,
     MissingContextError,
+    ProviderKeyMissingError,
     StudentNotFoundError,
 )
 from src.mentoring.application.student_service import Caller, StudentService
@@ -729,20 +730,65 @@ async def test_review_context_carries_the_student_as_metadata(env: _Fixture) -> 
 # ---------- the promoter's own key ----------
 
 
+async def _keys(provider: str) -> BYOK | None:
+    """A promoter holding a Claude key and no other."""
+    if provider == "claude":
+        return BYOK(provider="claude", api_key="sk-user-key")
+    return None
+
+
 async def test_the_users_key_is_forwarded_to_the_agent(env: _Fixture) -> None:
     student = await _student(env)
 
-    await env.actions.trigger(
+    action = await env.actions.trigger(
         PROMOTOR,
         student.id,
         action_type=ActionType.PROPOSE_TOPIC,
         token=TOKEN,
-        byok=BYOK(provider="claude", api_key="sk-user-key"),
+        provider="claude",
+        keys=_keys,
     )
 
     sent = env.agent.submitted[0]["byok"]
     assert sent is not None
     assert sent.provider == "claude"
+    assert action.provider == "claude"
+
+
+async def test_a_provider_without_a_key_is_refused_before_anything_is_recorded(
+    env: _Fixture,
+) -> None:
+    student = await _student(env)
+
+    with pytest.raises(ProviderKeyMissingError):
+        await env.actions.trigger(
+            PROMOTOR,
+            student.id,
+            action_type=ActionType.PROPOSE_TOPIC,
+            token=TOKEN,
+            provider="openai",
+            keys=_keys,
+        )
+
+    assert env.agent.submitted == []
+    assert await env.actions.list_actions(PROMOTOR, student.id, TOKEN) == []
+
+
+async def test_a_held_key_is_not_used_when_no_provider_is_asked_for(
+    env: _Fixture,
+) -> None:
+    student = await _student(env)
+
+    action = await env.actions.trigger(
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.PROPOSE_TOPIC,
+        token=TOKEN,
+        keys=_keys,
+    )
+
+    assert env.agent.submitted[0]["byok"] is None
+    assert action.provider is None
 
 
 async def test_without_a_key_nothing_is_forwarded(env: _Fixture) -> None:
@@ -766,7 +812,8 @@ async def test_the_key_is_not_written_to_the_action_row(env: _Fixture) -> None:
         action_type=ActionType.PROPOSE_TOPIC,
         token=TOKEN,
         detail="coś ilościowego",
-        byok=BYOK(provider="claude", api_key="sk-user-key"),
+        provider="claude",
+        keys=_keys,
     )
 
     stored = (await env.actions.list_actions(PROMOTOR, student.id, TOKEN))[0]

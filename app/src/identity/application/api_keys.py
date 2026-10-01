@@ -1,7 +1,8 @@
-"""Reading back a user's own provider key.
+"""Reading back a user's own provider keys.
 
-The key is stored Fernet-encrypted and only ever decrypted for the request
-that is about to use it. Nothing here caches it, and nothing logs it.
+A user may keep one key per provider. Each is stored Fernet-encrypted and
+only ever decrypted for the request that is about to use it. Nothing here
+caches a key, and nothing logs one.
 """
 
 from dataclasses import dataclass
@@ -10,7 +11,7 @@ from uuid import UUID
 import structlog
 from cryptography.fernet import InvalidToken
 
-from src.identity.infrastructure.repositories import UserRepository
+from src.identity.infrastructure.repositories import ApiKeyRepository
 from src.identity.infrastructure.secrets import get_secret_service
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
@@ -30,39 +31,39 @@ class ApiKey:
 
 @dataclass(frozen=True)
 class ApiKeyStatus:
-    """What the owner may know about their stored key: that it exists."""
+    """What the owner may know about their stored keys: which ones exist."""
 
-    configured: bool
-    provider: str | None = None
+    providers: tuple[str, ...] = ()
+
+    @property
+    def configured(self) -> bool:
+        return bool(self.providers)
 
 
-async def load_api_key(repo: UserRepository, user_id: UUID) -> ApiKey | None:
-    """Return the user's decrypted key, or None if they have not set one.
+async def load_api_key(
+    repo: ApiKeyRepository, user_id: UUID, provider: str
+) -> ApiKey | None:
+    """Return the user's decrypted key for one provider, or None without one.
 
     A key that cannot be decrypted (FERNET_KEY rotated, row corrupted) is
-    treated as absent: the action still runs, on the self-hosted model.
+    treated as absent; the caller decides what a missing key means.
     """
-    user = await repo.find_by_id(user_id)
-    if user is None or user.api_key_encrypted is None:
+    if provider not in SUPPORTED_PROVIDERS:
         return None
-    if user.api_key_provider not in SUPPORTED_PROVIDERS:
-        logger.warning(
-            "api_key_without_usable_provider",
-            user_id=str(user_id),
-            provider=user.api_key_provider,
-        )
+    stored = await repo.find(user_id, provider)
+    if stored is None:
         return None
     try:
-        plain = get_secret_service().decrypt(user.api_key_encrypted)
+        plain = get_secret_service().decrypt(stored.key_encrypted)
     except InvalidToken:
-        logger.error("api_key_undecryptable", user_id=str(user_id))
+        logger.error("api_key_undecryptable", user_id=str(user_id), provider=provider)
         return None
-    return ApiKey(provider=user.api_key_provider, key=plain)
+    return ApiKey(provider=provider, key=plain)
 
 
-async def get_api_key_status(repo: UserRepository, user_id: UUID) -> ApiKeyStatus:
-    """Return whether a key is configured, and for which provider."""
-    user = await repo.find_by_id(user_id)
-    if user is None or user.api_key_encrypted is None:
-        return ApiKeyStatus(configured=False)
-    return ApiKeyStatus(configured=True, provider=user.api_key_provider)
+async def get_api_key_status(repo: ApiKeyRepository, user_id: UUID) -> ApiKeyStatus:
+    """Return the providers the user has a key for."""
+    stored = await repo.list_for_user(user_id)
+    return ApiKeyStatus(
+        providers=tuple(k.provider for k in stored if k.provider in SUPPORTED_PROVIDERS)
+    )

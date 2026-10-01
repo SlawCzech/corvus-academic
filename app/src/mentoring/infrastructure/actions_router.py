@@ -10,6 +10,7 @@ from src.mentoring.application.exceptions import (
     ActionNotFoundError,
     AgentUnavailableError,
     MissingContextError,
+    ProviderKeyMissingError,
     StudentNotFoundError,
     UnsupportedActionError,
 )
@@ -17,8 +18,8 @@ from src.mentoring.domain.action import ActionType
 from src.mentoring.domain.model_policy import ModelNotAllowedError
 from src.mentoring.infrastructure.dependencies import (
     ActionServiceDep,
-    BYOKDep,
     CallerDep,
+    KeyLoaderDep,
     TokenDep,
 )
 from src.mentoring.infrastructure.errors import not_found
@@ -35,6 +36,13 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/students", tags=["mentoring"])
 
 
+def _no_key(exc: ProviderKeyMissingError) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail=f"No API key stored for provider {exc}",
+    )
+
+
 @router.post(
     "/{student_id}/actions",
     response_model=ActionResponse,
@@ -45,15 +53,15 @@ async def trigger_action(
     body: ActionTriggerRequest,
     caller: CallerDep,
     token: TokenDep,
-    byok: BYOKDep,
+    keys: KeyLoaderDep,
     svc: ActionServiceDep,
 ) -> ActionResponse:
     """Run one AI action for a student and return the queued action record.
 
     Returns immediately: the work happens in the agent's Celery worker, and
-    the caller polls the action's own endpoint for the outcome. When the
-    promoter has stored their own provider key, the run goes on their
-    account; otherwise it goes to the self-hosted model.
+    the caller polls the action's own endpoint for the outcome. The run goes
+    on the provider the promoter picked, with their own key for it, or — with
+    no provider — on the self-hosted model.
     """
     try:
         action = await svc.trigger(
@@ -65,7 +73,8 @@ async def trigger_action(
             model=body.model,
             language=body.language,
             review_tone=body.review_tone,
-            byok=byok,
+            provider=body.provider,
+            keys=keys,
             review_findings_first=body.review_findings_first,
         )
     except StudentNotFoundError as exc:
@@ -78,6 +87,9 @@ async def trigger_action(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc
+    except ProviderKeyMissingError as exc:
+        # Asked to run on a provider there is no stored key for.
+        raise _no_key(exc) from exc
     except MissingContextError as exc:
         # The student's record does not hold what this action needs yet —
         # no draft uploaded, only one version, no rough notes to write up.
@@ -156,7 +168,7 @@ async def resume_action(
     body: ActionResumeRequest,
     caller: CallerDep,
     token: TokenDep,
-    byok: BYOKDep,
+    keys: KeyLoaderDep,
     svc: ActionServiceDep,
 ) -> ActionResponse:
     """Write the paused review from the findings the promoter kept."""
@@ -167,10 +179,13 @@ async def resume_action(
             action_id,
             accepted_findings=body.accepted_findings,
             token=token,
-            byok=byok,
+            keys=keys,
         )
     except (StudentNotFoundError, ActionNotFoundError) as exc:
         raise not_found(exc) from exc
+    except ProviderKeyMissingError as exc:
+        # The key the review started on has been removed since.
+        raise _no_key(exc) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)

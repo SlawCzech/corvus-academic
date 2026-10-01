@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import ModelSelect, { useAvailableModel } from "@/components/ai/ModelSelect"
+import ModelSelect, { useModelChoice } from "@/components/ai/ModelSelect"
 import ReviewToneChoice from "@/components/ai/ReviewToneChoice"
 import { useAiDefaults, writeAiDefaults, type AiDefaults } from "@/lib/aiDefaults"
 
@@ -25,12 +25,12 @@ function ProfileAiDefaultsForm({ saved }: { saved: AiDefaults }) {
   const [draft, setDraft] = useState<AiDefaults>(saved)
   const [justSaved, setJustSaved] = useState(false)
 
-  const { effective: effectiveModel } = useAvailableModel(draft.model)
+  const { preference } = useModelChoice(draft.model)
 
   function save(): void {
-    // Saving drops a withdrawn model instead of keeping a preference that
-    // can no longer be honoured.
-    writeAiDefaults({ ...draft, model: effectiveModel })
+    // Saving drops a withdrawn model, or a provider whose key is gone,
+    // instead of keeping a preference that can no longer be honoured.
+    writeAiDefaults({ ...draft, model: preference })
     setJustSaved(true)
     setTimeout(() => setJustSaved(false), 2000)
   }

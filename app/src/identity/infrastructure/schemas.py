@@ -85,7 +85,8 @@ class ApiKeyRequest(BaseModel):
 
 class ApiKeyStatusResponse(BaseModel):
     configured: bool
-    provider: str | None = None
+    # Every provider the caller has a key for — one key per provider.
+    providers: list[str] = Field(default_factory=list[str])
 
 
 class ApiKeySavedResponse(ApiKeyStatusResponse):

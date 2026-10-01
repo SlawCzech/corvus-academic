@@ -222,6 +222,8 @@ export interface AgentAction {
   error: string | null
   // Set when the promoter can fix the failure themselves.
   error_code?: ActionErrorCode | null
+  /** The provider whose account ran it; null for a local model. */
+  provider?: string | null
   accepted: boolean
   accepted_at: string | null
   created_at: string
@@ -327,7 +329,8 @@ export interface AdminModelCatalog {
 
 export interface ApiKeyStatus {
   configured: boolean
-  provider: string | null
+  /** Every provider the promoter has a key for — one key per provider. */
+  providers: string[]
 }
 
 export interface ApiKeySaved extends ApiKeyStatus {

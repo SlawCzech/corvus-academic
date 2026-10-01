@@ -197,7 +197,11 @@ def test_promotor_can_set_their_own_key(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 200
-    assert resp.json() == {"configured": True, "provider": "openai", "verified": True}
+    assert resp.json() == {
+        "configured": True,
+        "providers": ["openai"],
+        "verified": True,
+    }
 
 
 def test_set_api_key_promotor_success(client: TestClient) -> None:
@@ -208,7 +212,33 @@ def test_set_api_key_promotor_success(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 200
-    assert resp.json() == {"configured": True, "provider": "claude", "verified": True}
+    assert resp.json() == {
+        "configured": True,
+        "providers": ["claude"],
+        "verified": True,
+    }
+
+
+def test_a_second_providers_key_is_kept_next_to_the_first(client: TestClient) -> None:
+    """One key per provider: saving OpenAI must not overwrite Claude."""
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    headers = {"Authorization": f"Bearer {token}"}
+    client.patch(
+        "/settings/api-key",
+        json={"api_key": "sk-ant-test-key", "provider": "claude"},
+        headers=headers,
+    )
+
+    resp = client.patch(
+        "/settings/api-key",
+        json={"api_key": "sk-openai-test-key", "provider": "openai"},
+        headers=headers,
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["providers"] == ["claude", "openai"]
+    status_now = client.get("/settings/api-key/status", headers=headers).json()
+    assert status_now == {"configured": True, "providers": ["claude", "openai"]}
 
 
 def test_key_is_checked_with_the_provider_before_it_is_stored(
@@ -246,7 +276,7 @@ def test_a_key_the_provider_rejects_is_not_stored(
     assert resp.json()["detail"] == "The provider rejected this key"
     # The key that worked is still the one in use.
     status_now = client.get("/settings/api-key/status", headers=headers).json()
-    assert status_now == {"configured": True, "provider": "claude"}
+    assert status_now == {"configured": True, "providers": ["claude"]}
 
 
 def test_a_key_that_could_not_be_checked_is_stored_unverified(
@@ -263,7 +293,11 @@ def test_a_key_that_could_not_be_checked_is_stored_unverified(
     )
 
     assert resp.status_code == 200
-    assert resp.json() == {"configured": True, "provider": "claude", "verified": False}
+    assert resp.json() == {
+        "configured": True,
+        "providers": ["claude"],
+        "verified": False,
+    }
 
 
 def test_admin_has_no_api_key_settings(client: TestClient) -> None:
@@ -307,7 +341,7 @@ def test_get_status_not_configured(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 200
-    assert resp.json() == {"configured": False, "provider": None}
+    assert resp.json() == {"configured": False, "providers": []}
 
 
 def test_status_reports_the_provider(client: TestClient) -> None:
@@ -322,7 +356,7 @@ def test_status_reports_the_provider(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 200
-    assert resp.json() == {"configured": True, "provider": "claude"}
+    assert resp.json() == {"configured": True, "providers": ["claude"]}
 
 
 def test_key_can_be_removed(client: TestClient) -> None:
@@ -335,12 +369,38 @@ def test_key_can_be_removed(client: TestClient) -> None:
         headers=headers,
     )
 
-    resp = client.delete("/settings/api-key", headers=headers)
+    resp = client.delete("/settings/api-key/openai", headers=headers)
 
     assert resp.status_code == 200
-    assert resp.json() == {"configured": False, "provider": None}
+    assert resp.json() == {"configured": False, "providers": []}
     status = client.get("/settings/api-key/status", headers=headers).json()
     assert status["configured"] is False
+
+
+def test_removing_one_key_leaves_the_other(client: TestClient) -> None:
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    headers = {"Authorization": f"Bearer {token}"}
+    for provider, key in (("claude", "sk-ant-key"), ("openai", "sk-openai-key")):
+        client.patch(
+            "/settings/api-key",
+            json={"api_key": key, "provider": provider},
+            headers=headers,
+        )
+
+    resp = client.delete("/settings/api-key/openai", headers=headers)
+
+    assert resp.json() == {"configured": True, "providers": ["claude"]}
+    # Removing it again is not an error.
+    again = client.delete("/settings/api-key/openai", headers=headers)
+    assert again.status_code == 200
+
+
+def test_removing_a_key_for_an_unknown_provider_is_404(client: TestClient) -> None:
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    resp = client.delete(
+        "/settings/api-key/deepmind", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert resp.status_code == 404
 
 
 def test_status_requires_auth(client: TestClient) -> None:

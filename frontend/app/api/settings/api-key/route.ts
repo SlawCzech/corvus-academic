@@ -6,7 +6,3 @@ export async function PATCH(request: Request): Promise<Response> {
     json: await request.json(),
   })
 }
-
-export async function DELETE(): Promise<Response> {
-  return proxy("/settings/api-key", { method: "DELETE" })
-}

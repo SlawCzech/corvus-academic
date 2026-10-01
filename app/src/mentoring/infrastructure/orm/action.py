@@ -53,6 +53,9 @@ class AgentActionModel(Base):
     status: Mapped[str] = mapped_column(String(50), nullable=False)
     task_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # The BYOK provider the run was sent to, or None for the self-hosted
+    # model. The name only, never the key: a paused review resumes on it.
+    provider: Mapped[str | None] = mapped_column(String(50), nullable=True)
     # IDs only — never the assembled prompt context, which can be large and
     # is reproducible from the referenced rows.
     input_ref: Mapped[Any] = mapped_column(  # type: ignore[assignment]

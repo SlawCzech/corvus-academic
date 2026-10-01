@@ -36,9 +36,10 @@ wygasającego backendu Celery w Redisie.
 (`POST /students/{id}/drafts`, ekstrakcja in-process) i frontend mentoringowy
 (`/students`, `/students/[id]`). Przejściowe endpointy (`POST /extract`, proxy
 `/analysis/*`, `POST/GET /analysis` w agencie) **usunięte**.
-**Zrobione (Faza 4):** BYOK — promotor zapisuje własny klucz (Claude/OpenAI)
-w profilu, akcja jedzie na jego konto; bez klucza wszystko liczy się na
-lokalnym Ollamie. Klucz jest szyfrowany Fernetem, odszyfrowywany tylko w
+**Zrobione (Faza 4):** BYOK — promotor zapisuje własne klucze (Claude i/lub
+OpenAI, po jednym na dostawcę) w profilu i przy każdej akcji wybiera, czy
+jedzie ona na któryś z nich, czy na lokalną Ollamę; bez wyboru liczy się
+lokalnie ([ADR 0011](adr/0011-a-key-per-provider-chosen-per-action.md)). Klucz jest szyfrowany Fernetem, odszyfrowywany tylko w
 żądaniu, które go użyje, i nigdy nie trafia do stanu grafu ani do bazy akcji.
 **Zrobione (Faza 5):** wytyczne uczelniane nie są już wklejane w całości do
 promptu — leżą w `analysis.guideline_chunks` pocięte na sekcje i podsekcje,
@@ -184,8 +185,8 @@ app :8000
          zapisuje status do Postgresa: running → completed | failed
          │
          ▼
-       model selector (llm_factory): klucz promotora (ContextVar, tylko na czas
-       tego przebiegu) → Claude/OpenAI; brak klucza → Ollama
+       model selector (llm_factory): klucz wybranego dostawcy (ContextVar,
+       tylko na czas tego przebiegu) → Claude/OpenAI; bez dostawcy → Ollama
          │
          ▼
        LangGraph — graf zależny od typu akcji (build_action_graph):

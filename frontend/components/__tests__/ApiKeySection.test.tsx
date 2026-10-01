@@ -20,7 +20,7 @@ function mockSave(response: { ok: boolean; status: number; body?: unknown }): vo
       if (!init || init.method === undefined) {
         return {
           ok: true,
-          json: async () => ({ configured: false, provider: null }),
+          json: async () => ({ configured: false, providers: [] }),
         } as Response
       }
       return {
@@ -39,14 +39,14 @@ async function saveKey(): Promise<void> {
   await user.click(screen.getByTestId("save-api-key"))
 }
 
-function mockStatus(configured: boolean, provider: string | null = null): void {
+function mockStatus(providers: string[]): void {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (_url: string, init?: RequestInit) => {
       if (!init || init.method === undefined) {
         return {
           ok: true,
-          json: async () => ({ configured, provider }),
+          json: async () => ({ configured: providers.length > 0, providers }),
         } as Response
       }
       return { ok: true, json: async () => ({ configured: true }) } as Response
@@ -56,7 +56,7 @@ function mockStatus(configured: boolean, provider: string | null = null): void {
 
 describe("ApiKeySection", () => {
   beforeEach(() => {
-    mockStatus(false)
+    mockStatus([])
   })
 
   it("says the local model is used when no key is stored", async () => {
@@ -69,13 +69,46 @@ describe("ApiKeySection", () => {
   })
 
   it("names the provider once a key is stored", async () => {
-    mockStatus(true, "claude")
+    mockStatus(["claude"])
     renderSection()
     await waitFor(() =>
       expect(screen.getByTestId("api-key-status")).toHaveTextContent(
         "Claude (Anthropic)",
       ),
     )
+    expect(screen.queryByTestId("stored-key-openai")).not.toBeInTheDocument()
+  })
+
+  it("lists both keys when both providers have one", async () => {
+    mockStatus(["claude", "openai"])
+    renderSection()
+    await waitFor(() => expect(screen.getByTestId("stored-key-claude")).toBeInTheDocument())
+    expect(screen.getByTestId("stored-key-openai")).toHaveTextContent("OpenAI")
+  })
+
+  it("removes one provider's key and leaves the other", async () => {
+    const user = userEvent.setup()
+    mockStatus(["claude", "openai"])
+    renderSection()
+
+    await user.click(await screen.findByTestId("remove-api-key-openai"))
+
+    await waitFor(() => {
+      const calls = vi.mocked(fetch).mock.calls
+      const removal = calls.find(([, init]) => init?.method === "DELETE")
+      expect(removal?.[0]).toBe("/api/settings/api-key/openai")
+    })
+  })
+
+  it("says it will replace the key when that provider already has one", async () => {
+    const user = userEvent.setup()
+    mockStatus(["openai"])
+    renderSection()
+    await screen.findByTestId("stored-key-openai")
+
+    expect(screen.getByTestId("save-api-key")).toHaveTextContent("Zapisz klucz")
+    await user.selectOptions(screen.getByTestId("provider-select"), "openai")
+    expect(screen.getByTestId("save-api-key")).toHaveTextContent("Zastąp klucz")
   })
 
   it("keeps the key hidden until asked", async () => {
@@ -116,7 +149,7 @@ describe("ApiKeySection", () => {
     mockSave({
       ok: true,
       status: 200,
-      body: { configured: true, provider: "claude", verified: true },
+      body: { configured: true, providers: ["claude"], verified: true },
     })
     await saveKey()
     await waitFor(() => expect(screen.getByTestId("save-ok")).toBeInTheDocument())
@@ -136,17 +169,18 @@ describe("ApiKeySection", () => {
     mockSave({
       ok: true,
       status: 200,
-      body: { configured: true, provider: "claude", verified: false },
+      body: { configured: true, providers: ["claude"], verified: false },
     })
     await saveKey()
     await waitFor(() => expect(screen.getByTestId("save-unverified")).toBeInTheDocument())
   })
 
-  it("offers removal only when a key is stored", async () => {
-    mockStatus(true, "openai")
+  it("offers removal only for a provider with a stored key", async () => {
+    mockStatus(["openai"])
     renderSection()
     await waitFor(() =>
-      expect(screen.getByTestId("remove-api-key")).toBeInTheDocument(),
+      expect(screen.getByTestId("remove-api-key-openai")).toBeInTheDocument(),
     )
+    expect(screen.queryByTestId("remove-api-key-claude")).not.toBeInTheDocument()
   })
 })

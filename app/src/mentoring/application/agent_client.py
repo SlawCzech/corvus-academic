@@ -5,6 +5,7 @@ calls `agent` explicitly, with a context it assembled itself, instead of
 forwarding a request it does not understand.
 """
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any, cast
 from uuid import UUID
@@ -29,6 +30,12 @@ class BYOK:
 
     provider: str
     api_key: str
+
+
+# Decrypts the caller's stored key for one provider, or returns None when
+# they have none. Called only once it is known which provider a run needs,
+# so nobody's key is decrypted for a run that will not use it.
+KeyLoader = Callable[[str], Awaitable[BYOK | None]]
 
 
 @dataclass(frozen=True)

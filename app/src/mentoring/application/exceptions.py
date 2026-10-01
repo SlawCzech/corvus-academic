@@ -31,6 +31,15 @@ class UnsupportedActionError(Exception):
     """Raised for an action type `app` cannot assemble a context for."""
 
 
+class ProviderKeyMissingError(Exception):
+    """The promoter asked for a provider they have no stored key for.
+
+    Raised before anything is dispatched. There is no quiet fallback to the
+    self-hosted model: which account pays for a run is the promoter's
+    choice, and a different model answering is not what they asked for.
+    """
+
+
 class MissingContextError(Exception):
     """The student's record does not yet hold what this action needs.
 
