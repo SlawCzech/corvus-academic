@@ -16,8 +16,10 @@ from src.application.bibliography import (
     VERIFIED,
     bibliography_section,
     doi_in,
+    first_surname,
     is_website,
     match,
+    search_title,
 )
 from src.application.graph import build_action_graph
 from src.application.nodes import bibliography as nodes
@@ -132,6 +134,30 @@ def test_an_article_known_only_from_reprints_is_not_a_wrong_year() -> None:
     ]
 
     assert match(entry, 1972, reprints).status == VERIFIED
+
+
+def test_a_book_found_in_a_catalogue_says_which() -> None:
+    entry = "Wyczański, A. (1960). Studia nad folwarkiem szlacheckim w Polsce. PWN."
+    # Spelled the way a foreign catalogue might: no diacritics.
+    record = _record(
+        "Studia nad folwarkiem szlacheckim w Polsce", "Wyczanski", 1960, "book"
+    )
+
+    check = match(entry, 1960, [record], "Biblioteka Narodowa")
+
+    assert check.status == VERIFIED
+    assert check.note == "Katalog: Biblioteka Narodowa."
+
+
+def test_a_reference_is_searched_by_surname_and_main_title() -> None:
+    assert first_surname("North, D. C., i Thomas, R. P.") == "North"
+    assert first_surname("Hagen, W. W.") == "Hagen"
+    assert search_title("Ordinary Prussians: Brandenburg Junkers and villagers") == (
+        "Ordinary Prussians"
+    )
+    assert search_title("Gospodarka polska a europejska w XVI–XVIII wieku") == (
+        "Gospodarka polska a europejska w XVI-XVIII wieku"
+    )
 
 
 def test_an_unrelated_record_leaves_the_entry_open() -> None:
@@ -300,6 +326,59 @@ def test_only_what_matching_left_open_reaches_the_agent() -> None:
     assert rows[0]["doi"] == _LAIBSON.doi
     assert final["output"]["suspicious"] == 1
     assert final["status"] == "bibliography_checked"
+
+
+def test_a_book_crossref_does_not_have_is_settled_by_a_catalogue() -> None:
+    """No model, no agent: the National Library knows the book."""
+    entry = "Topolski, J. (1977). Gospodarka polska a europejska w XVI–XVIII wieku. WP."
+    listed = json.dumps(
+        {
+            "references": [
+                {
+                    "entry": entry,
+                    "authors": "Topolski, J.",
+                    "year": 1977,
+                    "title": "Gospodarka polska a europejska w XVI–XVIII wieku",
+                }
+            ]
+        }
+    )
+    llm = _llm([], [])
+    llm.invoke.side_effect = lambda messages, **_: AIMessage(content=listed)
+    crossref = MagicMock()
+    crossref.search.return_value = []
+    library = MagicMock()
+    library.name = "Biblioteka Narodowa"
+    library.search.return_value = [
+        _record(
+            "Gospodarka polska a europejska w XVI-XVIII wieku",
+            "Topolski",
+            1977,
+            "książka",
+        )
+    ]
+
+    with (
+        patch("src.application.nodes.bibliography.get_llm", return_value=llm),
+        patch(
+            "src.application.nodes.bibliography.CrossrefClient", return_value=crossref
+        ),
+        patch(
+            "src.application.nodes.bibliography.NationalLibraryClient",
+            return_value=library,
+        ),
+        patch("src.application.nodes.bibliography.OpenLibraryClient") as open_library,
+    ):
+        final = build_action_graph(ActionType.VERIFY_BIBLIOGRAPHY).invoke(_state())
+
+    library.search.assert_called_once_with(
+        "Gospodarka polska a europejska w XVI-XVIII wieku", "Topolski"
+    )
+    # Found in the first catalogue: the second is not asked, nor is the agent.
+    open_library.return_value.search.assert_not_called()
+    llm.bind_tools.assert_not_called()
+    row = final["output"]["references"][0]
+    assert (row["status"], row["note"]) == ("verified", "Katalog: Biblioteka Narodowa.")
 
 
 def test_a_bibliography_matching_settles_skips_the_agent() -> None:

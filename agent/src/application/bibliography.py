@@ -1,20 +1,23 @@
-"""Checking a bibliography against Crossref — the part that needs no model.
+"""Checking a bibliography against the catalogues — the part that needs no model.
 
-Most references settle without judgement: Crossref's best match has the same
-title, year and first author, or the entry is a web page that Crossref was
-never going to know. Only what is left — no confident match — goes to the
-agent, which can search again with other queries, resolve a DOI, and tell a
-Polish monograph Crossref does not index from an "article" in an
-international journal that nobody can find.
+Most references settle without judgement: a record has the same title and
+first author, or the entry is a web page no catalogue was ever going to
+know. Articles are looked for in Crossref; what it does not have — books,
+mostly — in the library catalogues. Only what is left goes to the agent,
+which can search again with other queries, resolve a DOI, and tell an old
+print no catalogue indexes from an "article" in an international journal
+that nobody can find.
 """
 
 from __future__ import annotations
 
 import re
+import unicodedata
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, cast
 
+from src.application.excerpt import within_budget
 from src.application.grounding import normalize
 from src.infrastructure.crossref import Work
 
@@ -65,7 +68,7 @@ def bibliography_section(text: str, document_map: Mapping[str, Any]) -> str:
         if s.get("canonical") and int(s.get("start") or 0) > start
     ]
     end = min(after) if after else len(text)
-    return text[start:end].strip()[:_SECTION_CHARS]
+    return within_budget(text[start:end].strip(), _SECTION_CHARS)
 
 
 def is_website(entry: str) -> bool:
@@ -87,18 +90,40 @@ def _title_matches(work: Work, entry: str) -> bool:
     return sum(f" {w} " in flat for w in words) / len(words) >= _TITLE_MATCH
 
 
+def _fold(text: str) -> str:
+    """Without diacritics: catalogues spell Wyczański as Wyczanski, or worse."""
+    decomposed = unicodedata.normalize("NFKD", text.replace("ł", "l").replace("Ł", "L"))
+    return "".join(c for c in decomposed if not unicodedata.combining(c))
+
+
 def _author_matches(work: Work, entry: str) -> bool:
     if not work.authors or not work.authors[0]:
         return True  # institutional or anonymous record: nothing to compare
-    return normalize(work.authors[0]) in normalize(entry)
+    return normalize(_fold(work.authors[0])) in normalize(_fold(entry))
+
+
+def first_surname(authors: str) -> str:
+    """The first author's surname, from "Hagen, W. W." or "North, D. C., i …"."""
+    return authors.split(",")[0].split(" i ")[0].strip()
+
+
+def search_title(title: str) -> str:
+    """A title as a catalogue wants it: no subtitle, plain hyphens."""
+    main = re.split(r"[:.?!] ", title.strip())[0]
+    return main.replace("–", "-").replace("—", "-").strip(" .")
 
 
 def _same_year(work: Work, year: int | None) -> bool:
     return year is None or work.year is None or abs(work.year - year) <= 1
 
 
-def match(entry: str, year: int | None, works: Sequence[Work]) -> Check:
-    """Settle a reference from Crossref's candidates, or leave it unresolved.
+def match(
+    entry: str, year: int | None, works: Sequence[Work], source: str = "Crossref"
+) -> Check:
+    """Settle a reference from a source's candidates, or leave it unresolved.
+
+    `source` is named in the note when the record is not in Crossref: a DOI
+    says where a work was found, a book in a library catalogue has none.
 
     Every candidate is looked at, not the first whose title fits: for a
     well-known book the best-scoring records are its reviews — same title,
@@ -114,9 +139,10 @@ def match(entry: str, year: int | None, works: Sequence[Work]) -> Check:
     same_work = [
         w for w in works if _title_matches(w, entry) and _author_matches(w, entry)
     ]
+    found_in = "" if source == "Crossref" else f"Katalog: {source}."
     for work in same_work:
         if _same_year(work, year):
-            return Check(VERIFIED, doi=work.doi)
+            return Check(VERIFIED, note=found_in, doi=work.doi)
     if not same_work:
         return Check(UNRESOLVED)
     work = same_work[0]
@@ -129,8 +155,9 @@ def match(entry: str, year: int | None, works: Sequence[Work]) -> Check:
             note=f"Crossref zna tę pracę, ale: rok {work.year} zamiast {year}",
             doi=work.doi,
         )
+    where = "W Crossref" if source == "Crossref" else f"Katalog: {source},"
     return Check(
         VERIFIED,
-        note=f"W Crossref jako wydanie lub przedruk z {work.year} r.",
+        note=f"{where} jako wydanie lub przedruk z {work.year} r.",
         doi=work.doi,
     )

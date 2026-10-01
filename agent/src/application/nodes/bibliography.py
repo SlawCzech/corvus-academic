@@ -8,8 +8,10 @@ tools — earns its place. The graph around it keeps it small:
 
 - `extract_references`: the model lists the entries (structured output).
 - `match_references`: no model. Each entry goes to Crossref once; a match on
-  title, year and first author settles it, a URL marks netography. Most of
-  a bibliography ends here.
+  title and first author settles it, a URL marks netography. What Crossref
+  does not have — books, mostly — is then looked up in the library
+  catalogues: the National Library, and Open Library after it. Most of a
+  bibliography ends here.
 - `investigate` ⇄ `tools`: the ReAct loop, as two nodes and a conditional
   edge — the model either asks for a tool (the edge goes to `tools`, whose
   result comes back to `investigate`) or stops (the edge goes on). It only
@@ -20,7 +22,8 @@ tools — earns its place. The graph around it keeps it small:
 - `report`: one structured call turns the investigation into a verdict per
   reference, and the output is assembled.
 
-Only reference strings reach Crossref; the thesis text never leaves.
+Only what a reference says of itself reaches Crossref and the catalogues; the
+thesis text never leaves.
 """
 
 from __future__ import annotations
@@ -40,6 +43,7 @@ from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 
 from src.application.bibliography import (
+    MISMATCH,
     NOT_INDEXED,
     SUSPICIOUS,
     UNCHECKED,
@@ -49,15 +53,22 @@ from src.application.bibliography import (
     Check,
     bibliography_section,
     doi_in,
+    first_surname,
     is_website,
     match,
+    search_title,
 )
 from src.application.json_output import message_text
 from src.application.prompts import bibliography as prompts
 from src.application.replies import REFERENCES, VERDICTS
 from src.application.structured import invoke_structured
+from src.infrastructure.book_catalogues import (
+    NationalLibraryClient,
+    OpenLibraryClient,
+)
 from src.infrastructure.crossref import CrossrefClient, CrossrefUnavailableError
 from src.infrastructure.llm_factory import get_llm
+from src.infrastructure.paced_http import SourceUnavailableError
 from src.infrastructure.provider_errors import raise_if_provider_error
 
 from ..state import ActionState
@@ -110,7 +121,38 @@ def lookup_doi(doi: str) -> str:
     return work.describe() if work else f"no Crossref record for DOI {doi}"
 
 
-TOOLS = [search_crossref, lookup_doi]
+def _catalogue(
+    client: NationalLibraryClient | OpenLibraryClient, title: str, author: str
+) -> str:
+    try:
+        works = client.search(title, author)
+    except SourceUnavailableError as exc:
+        return f"{client.name} unavailable: {exc}"
+    return "\n".join(w.describe() for w in works) or "no records"
+
+
+@tool
+def search_national_library(title: str, author: str = "") -> str:
+    """Search the catalogue of the National Library of Poland for a book.
+
+    Holds nearly every book published in Poland and many foreign ones. Give
+    the title without its subtitle, and the author's surname. Returns up to
+    five records, one per line: year, author, title, publisher.
+    """
+    return _catalogue(NationalLibraryClient(), title, author)
+
+
+@tool
+def search_open_library(title: str, author: str = "") -> str:
+    """Search Open Library for a book published anywhere.
+
+    Give the title without its subtitle, and the author's surname. Returns up
+    to five records, one per line: year, author, title, publisher.
+    """
+    return _catalogue(OpenLibraryClient(), title, author)
+
+
+TOOLS = [search_crossref, lookup_doi, search_national_library, search_open_library]
 tools = ToolNode(TOOLS)
 
 
@@ -143,30 +185,57 @@ def extract_references(state: BibliographyState) -> dict[str, Any]:
     return {"references": references}
 
 
+def _in_catalogues(ref: dict[str, Any], entry: str, year: int | None) -> Check:
+    """Look a reference Crossref does not have up in the library catalogues.
+
+    The National Library first — it answers in a tenth of a second and holds
+    what a thesis written in Poland mostly cites — then Open Library. A
+    catalogue that does not answer is skipped: the entry stays open for the
+    agent rather than being called unchecked over a second opinion.
+    """
+    title = search_title(str(ref.get("title") or ""))
+    if not title:
+        return Check(UNRESOLVED)
+    author = first_surname(str(ref.get("authors") or ""))
+    for client in (NationalLibraryClient(), OpenLibraryClient()):
+        try:
+            check = match(entry, year, client.search(title, author), client.name)
+        except SourceUnavailableError as exc:
+            logger.warning("catalogue_skipped", catalogue=client.name, error=str(exc))
+            continue
+        # A catalogue holds editions, not the one true year: only a find counts.
+        if check.status == VERIFIED:
+            return check
+    return Check(UNRESOLVED)
+
+
 def match_references(state: BibliographyState) -> dict[str, Any]:
-    """Settle what Crossref can settle without judgement."""
+    """Settle what the catalogues can settle without judgement."""
     references = state.get("references") or []
     client = CrossrefClient()
     checks: list[dict[str, str]] = []
+    in_catalogues = 0
     for index, ref in enumerate(references):
         entry = str(ref.get("entry", ""))
+        year = cast(int | None, ref.get("year"))
         if index >= _MAX_REFERENCES:
             check = Check(UNCHECKED, note="poza limitem sprawdzanych pozycji")
         elif is_website(entry):
             check = Check(WEBSITE)
         else:
             try:
-                check = match(
-                    entry,
-                    cast(int | None, ref.get("year")),
-                    client.search(entry, rows=_CANDIDATES),
-                )
+                check = match(entry, year, client.search(entry, rows=_CANDIDATES))
             except CrossrefUnavailableError as exc:
                 check = Check(UNCHECKED, note=f"Crossref niedostępny: {exc}")
+            if check.status == UNRESOLVED:
+                check = _in_catalogues(ref, entry, year)
+                in_catalogues += check.status == VERIFIED
         checks.append({"status": check.status, "note": check.note, "doi": check.doi})
     logger.info(
         "references_matched",
         verified=sum(c["status"] == VERIFIED for c in checks),
+        in_catalogues=in_catalogues,
+        mismatch=sum(c["status"] == MISMATCH for c in checks),
         unresolved=sum(c["status"] == UNRESOLVED for c in checks),
     )
     return {"checks": checks}

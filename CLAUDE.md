@@ -103,9 +103,10 @@ Użytkownik
         (Weryfikacja: bez modelu — cytat każdej uwagi musi być w tekście,
          duplikaty z różnych analiz scalane; `agent/src/application/grounding.py`)
       → draft_meeting_note:   [Szkic notatki]
-      → verify_bibliography:  [Lista pozycji] → [Crossref, bez modelu]
-                              → [Agent ⇄ narzędzia Crossref]* → [Werdykty]
-        (*tylko dla pozycji, których dopasowanie nie rozstrzygnęło; do Crossref
+      → verify_bibliography:  [Lista pozycji] → [Crossref, potem katalogi bibliotek
+                              (Biblioteka Narodowa, Open Library), bez modelu]
+                              → [Agent ⇄ narzędzia tych źródeł]* → [Werdykty]
+        (*tylko dla pozycji, których dopasowanie nie rozstrzygnęło; na zewnątrz
          idą wyłącznie opisy bibliograficzne, nigdy tekst pracy)
   → model selector
       → promotor wybiera przy akcji: własny klucz (BYOK) do Claude albo
