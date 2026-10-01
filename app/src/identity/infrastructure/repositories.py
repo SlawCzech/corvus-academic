@@ -1,13 +1,15 @@
 """Async repositories for persisting identity domain data."""
 
 import uuid
+from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.identity.infrastructure.models import (
     AccessRequestModel,
     LoginEventModel,
+    UserApiKeyModel,
     UserModel,
 )
 
@@ -46,26 +48,13 @@ class UserRepository:
         """Delete the user with the given id if it exists."""
         user = await self._session.get(UserModel, user_id)
         if user is not None:
+            # Their keys go with them — said here rather than left to the
+            # foreign key's cascade, so it holds on every database.
+            await self._session.execute(
+                delete(UserApiKeyModel).where(UserApiKeyModel.user_id == user_id)
+            )
             await self._session.delete(user)
             await self._session.commit()
-
-    async def update_api_key(
-        self,
-        user_id: uuid.UUID,
-        encrypted: str | None,
-        provider: str | None = None,
-    ) -> None:
-        """Store (or clear) the user's encrypted API key and its provider.
-
-        Key and provider move together: a key with no provider is unusable,
-        and a provider with no key is a lie about what will run.
-        """
-        user = await self._session.get(UserModel, user_id)
-        if user is None:
-            return
-        user.api_key_encrypted = encrypted
-        user.api_key_provider = provider if encrypted is not None else None
-        await self._session.commit()
 
     async def update_password(self, user_id: uuid.UUID, hashed: str) -> None:
         """Replace the hashed password on the user record and commit."""
@@ -74,6 +63,50 @@ class UserRepository:
             return
         user.hashed_password = hashed
         await self._session.commit()
+
+
+class ApiKeyRepository:
+    """Async store for users' own provider keys — one per user and provider."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def find(self, user_id: uuid.UUID, provider: str) -> UserApiKeyModel | None:
+        return await self._session.get(UserApiKeyModel, (user_id, provider))
+
+    async def list_for_user(self, user_id: uuid.UUID) -> list[UserApiKeyModel]:
+        result = await self._session.execute(
+            select(UserApiKeyModel)
+            .where(UserApiKeyModel.user_id == user_id)
+            .order_by(UserApiKeyModel.provider)
+        )
+        return list(result.scalars().all())
+
+    async def upsert(self, user_id: uuid.UUID, provider: str, encrypted: str) -> None:
+        """Store the user's key for one provider, replacing an earlier one.
+
+        The user's key for any other provider is left alone.
+        """
+        existing = await self.find(user_id, provider)
+        if existing is None:
+            self._session.add(
+                UserApiKeyModel(
+                    user_id=user_id, provider=provider, key_encrypted=encrypted
+                )
+            )
+        else:
+            existing.key_encrypted = encrypted
+            existing.updated_at = datetime.now(UTC)
+        await self._session.commit()
+
+    async def delete(self, user_id: uuid.UUID, provider: str) -> bool:
+        """Remove the user's key for one provider; False if there was none."""
+        existing = await self.find(user_id, provider)
+        if existing is None:
+            return False
+        await self._session.delete(existing)
+        await self._session.commit()
+        return True
 
 
 class LoginEventRepository:

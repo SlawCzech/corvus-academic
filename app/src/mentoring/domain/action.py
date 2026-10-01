@@ -67,6 +67,8 @@ class AgentAction:
     output: dict[str, Any] | None = None
     error: str | None = None
     error_code: str | None = None
+    # Whose account ran it — a BYOK provider — or None for the self-hosted model.
+    provider: str | None = None
     accepted: bool = False
     accepted_at: datetime | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))

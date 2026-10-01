@@ -3,36 +3,46 @@
 import useSWR from "swr"
 import { fetcher } from "@/lib/api.client"
 import type { ApiKeyStatus, ModelCatalog } from "@/lib/api.types"
+import {
+  byokValue,
+  LOCAL_DEFAULT,
+  PROVIDER_LABELS,
+  PROVIDERS,
+  resolveModel,
+  type Provider,
+  type ResolvedModel,
+} from "@/lib/modelChoice"
 
-const PROVIDER_LABELS: Record<string, string> = {
-  claude: "Claude",
-  openai: "OpenAI",
+export interface ModelChoice extends ResolvedModel {
+  /**
+   * The choice worth saving: what was given, unless it named something that
+   * is gone — then what it fell back to.
+   */
+  preference: string
+  catalog: ModelCatalog | undefined
+  /** Providers the promoter has a key for, in display order. */
+  keys: Provider[]
+  error: unknown
 }
 
 /**
- * The model to actually send, given a saved preference.
- *
- * A preference can outlive its model — the admin withdraws it, or it is
- * removed from the server. Sending it anyway would only get the action
- * refused, so it falls back to the default ("") and says which model it was.
+ * What to actually send, given a saved choice (see `lib/modelChoice`).
  */
-export function useAvailableModel(value: string): {
-  effective: string
-  withdrawn: string | null
-  catalog: ModelCatalog | undefined
-  error: unknown
-} {
+export function useModelChoice(value: string): ModelChoice {
   const { data: catalog, error } = useSWR<ModelCatalog>("/api/models", fetcher)
-  if (!value || !catalog) return { effective: value, withdrawn: null, catalog, error }
-  if (value === catalog.default) return { effective: "", withdrawn: null, catalog, error }
-  if (catalog.available.some((m) => m.name === value)) {
-    return { effective: value, withdrawn: null, catalog, error }
+  const { data: status } = useSWR<ApiKeyStatus>("/api/settings/api-key/status", fetcher)
+  const resolved = resolveModel(value, catalog, status?.providers)
+  return {
+    ...resolved,
+    preference: resolved.withdrawn || resolved.missingKey ? resolved.selected : value,
+    catalog,
+    keys: PROVIDERS.filter((p) => status?.providers?.includes(p)),
+    error,
   }
-  return { effective: "", withdrawn: value, catalog, error }
 }
 
 interface ModelSelectProps {
-  /** A model tag, or "" for the default. */
+  /** A saved choice — see `lib/modelChoice` for what the string can hold. */
   value: string
   onChange: (value: string) => void
   className: string
@@ -40,11 +50,8 @@ interface ModelSelectProps {
 }
 
 /**
- * Picks the model an action runs on, from what the admin has made available.
- *
- * With a stored provider key the choice is not the promoter's to make here —
- * the run goes to that provider's model — so the picker says so instead of
- * offering local models that would be ignored.
+ * Picks what an action runs on: one of the promoter's own provider keys, or
+ * a local model from those the admin has made available.
  */
 export default function ModelSelect({
   value,
@@ -52,48 +59,66 @@ export default function ModelSelect({
   className,
   labelClassName,
 }: ModelSelectProps) {
-  const { effective, withdrawn, catalog, error } = useAvailableModel(value)
-  const { data: key } = useSWR<ApiKeyStatus>("/api/settings/api-key/status", fetcher)
+  const { selected, provider, withdrawn, missingKey, catalog, keys, error } =
+    useModelChoice(value)
 
-  if (key?.configured && key.provider) {
-    const model = catalog?.byok[key.provider]
-    return (
-      <div className="block">
-        <span className={labelClassName}>Model</span>
-        <p data-testid="model-byok" className={`${className} bg-surface-alt text-muted-strong`}>
-          {PROVIDER_LABELS[key.provider] ?? key.provider}
-          {model ? ` · ${model}` : ""}
-          <span className="text-muted"> — Twój klucz API</span>
-        </p>
-      </div>
-    )
-  }
+  const unreachable =
+    provider === undefined && (error !== undefined || catalog?.local_available === false)
 
-  const unreachable = error !== undefined || catalog?.local_available === false
+  const localOptions = (
+    <>
+      <option value={LOCAL_DEFAULT}>Domyślny{catalog ? ` (${catalog.default})` : ""}</option>
+      {(catalog?.available ?? [])
+        .filter((m) => m.name !== catalog?.default)
+        .map((m) => (
+          <option key={m.name} value={m.name}>
+            {m.name}
+            {m.parameter_size ? ` · ${m.parameter_size}` : ""}
+          </option>
+        ))}
+    </>
+  )
 
   return (
     <label className="block">
       <span className={labelClassName}>Model</span>
       <select
-        value={effective}
+        value={selected}
         onChange={(e) => onChange(e.target.value)}
         className={className}
         data-testid="model-select"
       >
-        <option value="">Domyślny{catalog ? ` (${catalog.default})` : ""}</option>
-        {(catalog?.available ?? [])
-          .filter((m) => m.name !== catalog?.default)
-          .map((m) => (
-            <option key={m.name} value={m.name}>
-              {m.name}
-              {m.parameter_size ? ` · ${m.parameter_size}` : ""}
-            </option>
-          ))}
+        {keys.length === 0 ? (
+          localOptions
+        ) : (
+          <>
+            <optgroup label="Twoje klucze API">
+              {keys.map((p) => (
+                <option key={p} value={byokValue(p)}>
+                  {PROVIDER_LABELS[p]}
+                  {catalog?.byok[p] ? ` · ${catalog.byok[p]}` : ""}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Modele lokalne">{localOptions}</optgroup>
+          </>
+        )}
       </select>
+      {provider && (
+        <span data-testid="model-byok" className="mt-1 block text-[11.5px] text-muted">
+          Akcja pójdzie na Twoje konto u dostawcy.
+        </span>
+      )}
       {withdrawn && (
         <span data-testid="model-withdrawn" className="mt-1 block text-[11.5px] text-major-text">
           Model {withdrawn} z Twoich ustawień nie jest już dostępny — używam
           domyślnego.
+        </span>
+      )}
+      {missingKey && (
+        <span data-testid="model-key-missing" className="mt-1 block text-[11.5px] text-major-text">
+          Klucz {PROVIDER_LABELS[missingKey]} z Twoich ustawień został usunięty —
+          używam domyślnego modelu lokalnego.
         </span>
       )}
       {unreachable && (

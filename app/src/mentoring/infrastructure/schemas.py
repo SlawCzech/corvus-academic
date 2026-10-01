@@ -7,7 +7,7 @@ other is exactly the mistake this pairing exists to make obvious.
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -115,6 +115,10 @@ class ActionTriggerRequest(BaseModel):
     action_type: ActionType
     detail: str | None = Field(default=None, max_length=4000)
     model: str | None = None
+    # Whose account the run goes on: a provider the caller has a key for, or
+    # None for the self-hosted model (`model` then picks which one). Never
+    # guessed from the stored keys — nobody is billed without asking for it.
+    provider: Literal["claude", "openai"] | None = None
     language: str = "pl"
     # Only read by generate_review; ignored by every other action type. An
     # unrecognized value falls back to "auto" on the agent side.
@@ -148,6 +152,8 @@ class ActionResponse(BaseModel):
     # Set when the promoter can fix the failure: `provider_no_credits`,
     # `provider_key_rejected`, `provider_rate_limited`.
     error_code: str | None = None
+    # The provider whose account ran it; None for the self-hosted model.
+    provider: str | None = None
     accepted: bool
     accepted_at: datetime | None
     created_at: datetime
@@ -168,6 +174,7 @@ def action_response(action: AgentAction) -> ActionResponse:
         output=action.output,
         error=action.error,
         error_code=action.error_code,
+        provider=action.provider,
         accepted=action.accepted,
         accepted_at=action.accepted_at,
         created_at=action.created_at,

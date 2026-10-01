@@ -24,9 +24,9 @@ from src.guidelines.infrastructure.dependencies import get_catalog
 from src.identity.application.api_keys import load_api_key
 from src.identity.domain.user import Permission, User
 from src.identity.infrastructure.dependencies import get_current_user
-from src.identity.infrastructure.repositories import UserRepository
+from src.identity.infrastructure.repositories import ApiKeyRepository
 from src.mentoring.application.action_service import ActionService
-from src.mentoring.application.agent_client import BYOK, AgentClient
+from src.mentoring.application.agent_client import BYOK, AgentClient, KeyLoader
 from src.mentoring.application.dashboard_service import DashboardService
 from src.mentoring.application.draft_service import DraftService
 from src.mentoring.application.model_service import ModelService
@@ -91,19 +91,26 @@ def get_bearer_token(
     return credentials.credentials
 
 
-async def get_byok(
+def get_key_loader(
     user: Annotated[User, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_db_session)],
-) -> BYOK | None:
-    """Decrypt the caller's own provider key, for this request only.
+) -> KeyLoader:
+    """A loader for the caller's own provider keys, for this request only.
 
-    Resolved on the endpoint that dispatches work and nowhere else: listing
-    students has no business decrypting anybody's key.
+    Nothing is decrypted here: the service calls the loader once it knows
+    which provider the run needs, and only for that one. Injected on the
+    endpoints that dispatch work and nowhere else — listing students has no
+    business decrypting anybody's key.
     """
-    api_key = await load_api_key(UserRepository(session), user.id)
-    if api_key is None:
-        return None
-    return BYOK(provider=api_key.provider, api_key=api_key.key)
+    repo = ApiKeyRepository(session)
+
+    async def load(provider: str) -> BYOK | None:
+        api_key = await load_api_key(repo, user.id, provider)
+        if api_key is None:
+            return None
+        return BYOK(provider=api_key.provider, api_key=api_key.key)
+
+    return load
 
 
 def get_agent_client(request: Request) -> AgentClient:
@@ -183,7 +190,7 @@ def get_dashboard_service(
 
 CallerDep = Annotated[Caller, Depends(get_caller)]
 TokenDep = Annotated[str, Depends(get_bearer_token)]
-BYOKDep = Annotated[BYOK | None, Depends(get_byok)]
+KeyLoaderDep = Annotated[KeyLoader, Depends(get_key_loader)]
 AgentClientDep = Annotated[AgentClient, Depends(get_agent_client)]
 StudentServiceDep = Annotated[StudentService, Depends(get_student_service)]
 ActionServiceDep = Annotated[ActionService, Depends(get_action_service)]

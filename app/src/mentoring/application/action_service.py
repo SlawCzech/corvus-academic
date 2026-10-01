@@ -18,6 +18,7 @@ from src.mentoring.application.agent_client import (
     BYOK,
     AgentClient,
     AgentUnavailableError,
+    KeyLoader,
 )
 from src.mentoring.application.context import (
     assemble_check_progress_context,
@@ -31,6 +32,7 @@ from src.mentoring.application.context import (
 from src.mentoring.application.draft_service import to_domain as draft_to_domain
 from src.mentoring.application.exceptions import (
     ActionNotFoundError,
+    ProviderKeyMissingError,
     UnsupportedActionError,
 )
 from src.mentoring.application.guidelines_port import (
@@ -54,6 +56,16 @@ from src.mentoring.infrastructure.repositories import (
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
+async def _key_for(provider: str | None, keys: KeyLoader | None) -> BYOK | None:
+    """The key a run on `provider` needs; None for the self-hosted model."""
+    if provider is None:
+        return None
+    byok = await keys(provider) if keys is not None else None
+    if byok is None:
+        raise ProviderKeyMissingError(provider)
+    return byok
+
+
 def _to_domain(model: AgentActionModel) -> AgentAction:
     stored: Any = model.output
     output = cast(dict[str, Any], stored) if isinstance(stored, dict) else None
@@ -68,6 +80,7 @@ def _to_domain(model: AgentActionModel) -> AgentAction:
         output=output,
         error=model.error,
         error_code=model.error_code,
+        provider=model.provider,
         accepted=model.accepted,
         accepted_at=model.accepted_at,
         created_at=model.created_at,
@@ -114,19 +127,26 @@ class ActionService:
         model: str | None = None,
         language: str = "pl",
         review_tone: str = "auto",
-        byok: BYOK | None = None,
+        provider: str | None = None,
+        keys: KeyLoader | None = None,
         review_findings_first: bool = False,
     ) -> AgentAction:
         """Record and dispatch one action for a student the caller can see.
 
-        `byok` is the caller's own provider key when they have set one. It is
-        forwarded and never written to the action row — the row is what the
-        promoter can read back later.
+        `provider` is whose account the run goes on: one of the providers the
+        promoter has a key for, or None for the self-hosted model. The key is
+        fetched through `keys`, forwarded, and never written to the action
+        row — the row keeps only the provider's name, which is what a resume
+        needs and what the promoter can read back later.
 
         `review_findings_first` pauses a review after its analyses, for the
         promoter to pick the findings the review may use (see `resume`).
+
+        Raises ProviderKeyMissingError when `provider` names a provider the
+        promoter has no key for.
         """
         student = await self._students.get(caller, student_id)
+        byok = await _key_for(provider, keys)
         if byok is not None:
             # The provider's own model runs; a local tag would be ignored.
             model = None
@@ -148,6 +168,7 @@ class ActionService:
             action_type=str(action_type),
             status=str(ActionStatus.PENDING),
             detail=detail,
+            provider=byok.provider if byok else None,
             # IDs only: the context itself is reproducible from these rows,
             # and the prompt can be large.
             input_ref=input_ref,
@@ -308,21 +329,24 @@ class ActionService:
         action_id: UUID,
         accepted_findings: list[int],
         token: str,
-        byok: BYOK | None = None,
+        keys: KeyLoader | None = None,
     ) -> AgentAction:
         """Continue a review paused for the promoter, with the findings they kept.
 
         `accepted_findings` are indices into the findings the paused action
-        returned. The key, when the promoter has one, is decrypted again for
-        this call — it was never stored with the paused run.
+        returned. The run continues on the provider it started on: that key
+        is decrypted again for this call — it was never stored with the
+        paused run.
 
-        Raises ValueError for an action that is not waiting for a decision.
+        Raises ValueError for an action that is not waiting for a decision,
+        and ProviderKeyMissingError when the key it started on is gone.
         """
         record = await self._require_record(caller, student_id, action_id)
         action = _to_domain(record)
         action.resume()
         if record.task_id is None:  # pragma: no cover — a paused run has one
             raise ValueError("Action has no run to resume")
+        byok = await _key_for(record.provider, keys)
 
         await self._agent.resume_action(
             record.task_id,

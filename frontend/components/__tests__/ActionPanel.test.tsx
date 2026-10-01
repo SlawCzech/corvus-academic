@@ -41,6 +41,7 @@ describe("ActionPanel", () => {
   let cancelled = false
   let paused = false
   let resumed = false
+  let keys: string[] = []
 
   const PAUSED = {
     ...RUNNING,
@@ -62,6 +63,7 @@ describe("ActionPanel", () => {
     cancelled = false
     paused = false
     resumed = false
+    keys = []
     fetchMock.mockImplementation((url: string, init?: RequestInit) => {
       if (url.endsWith("/resume")) {
         resumed = true
@@ -78,6 +80,8 @@ describe("ActionPanel", () => {
         return json(RUNNING)
       }
       if (url.startsWith("/api/guidelines/")) return json([])
+      if (url === "/api/settings/api-key/status")
+        return json({ configured: keys.length > 0, providers: keys })
       if (url === "/api/models")
         return json({ backend: "ollama", default: "m", local: [], local_available: true, byok: {} })
       return json({})
@@ -113,6 +117,34 @@ describe("ActionPanel", () => {
     await userEvent.click(screen.getByRole("button", { name: "Zaproponuj temat" }))
 
     expect(screen.queryByRole("combobox", { name: "Zestaw wytycznych" })).not.toBeInTheDocument()
+  })
+
+  function triggerBody(): Record<string, unknown> {
+    const trigger = fetchMock.mock.calls.find(
+      ([url, init]) => url === "/api/students/s1/actions" && init?.method === "POST",
+    )
+    return JSON.parse(String(trigger?.[1]?.body)) as Record<string, unknown>
+  }
+
+  it("runs on the local model when the promoter has no key", async () => {
+    renderPanel()
+    await userEvent.click(screen.getByRole("button", { name: "Zaproponuj temat" }))
+    await userEvent.click(screen.getByTestId("run-action"))
+
+    await waitFor(() => expect(triggerBody().provider).toBeNull())
+    expect(screen.queryByTestId("runs-on-key")).not.toBeInTheDocument()
+  })
+
+  it("says the run goes on the promoter's key, and sends that provider", async () => {
+    keys = ["openai"]
+    renderPanel()
+    await userEvent.click(screen.getByRole("button", { name: "Zaproponuj temat" }))
+
+    expect(await screen.findByTestId("runs-on-key")).toHaveTextContent("OpenAI")
+    await userEvent.click(screen.getByTestId("run-action"))
+
+    await waitFor(() => expect(triggerBody().provider).toBe("openai"))
+    expect(triggerBody().model).toBeNull()
   })
 
   it("stops a running action", async () => {

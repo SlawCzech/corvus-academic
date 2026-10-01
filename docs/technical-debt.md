@@ -125,12 +125,14 @@
   (`claude-sonnet-5`, `gpt-5`); parametr `model` dotyczy tylko Ollamy, bo to
   tag lokalnego modelu. Do wystawienia razem z listą modeli per dostawca.
 
-- [ ] **Brak walidacji klucza przy zapisie** — zapisujemy, co przyszło; użytkownik
-  dowiaduje się o błędnym kluczu dopiero z nieudanej akcji (401 od dostawcy). Naprawka:
-  lekki „ping" do dostawcy przy `PATCH /settings/api-key`.
+- [x] ~~**Brak walidacji klucza przy zapisie**~~ — `PATCH /settings/api-key` pyta
+  dostawcę o listę modeli; odrzucony klucz to 422 i nie jest zapisywany (2026-09-30).
+  Sprawdza sam klucz, nie saldo — brak środków wychodzi przy akcji, z kodem
+  `provider_no_credits`.
 
-- [ ] **Brak śladu kosztów** — nie zapisujemy, ile tokenów zużyła akcja ani na czyim
-  koncie. Przy BYOK to informacja, którą promotor chciałby widzieć.
+- [ ] **Brak śladu kosztów** — nie zapisujemy, ile tokenów zużyła akcja. Na czyim
+  koncie poszła, widać od 2026-10-01 (`agent_actions.provider`, ADR 0011); ile
+  kosztowała — nadal nie. Przy BYOK to informacja, którą promotor chciałby widzieć.
 
 ---
 

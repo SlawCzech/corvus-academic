@@ -205,6 +205,11 @@ export function draftFileUrl(studentId: string, draftId: string): string {
 // ---------- AI actions ----------
 
 export interface ActionOptions {
+  /**
+   * Run on the promoter's own key for this provider. Left out, the action
+   * runs on a local model — a stored key is never used unless asked for.
+   */
+  provider?: string
   /** Ollama model tag override; empty/undefined lets the server pick its default. */
   model?: string
   language?: string
@@ -226,6 +231,7 @@ export async function triggerAction(
     body: JSON.stringify({
       action_type: actionType,
       detail: detail || null,
+      provider: options?.provider || null,
       model: options?.model || null,
       language: options?.language || "pl",
       review_tone: options?.reviewTone || "auto",
