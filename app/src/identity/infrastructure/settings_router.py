@@ -4,6 +4,7 @@ from typing import Annotated
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 
 from src.identity.application.api_keys import SUPPORTED_PROVIDERS, get_api_key_status
 from src.identity.application.key_check import KeyVerdict
@@ -41,20 +42,27 @@ async def set_api_key(
     user: AiUserDep,
     repo: ApiKeyRepoDep,
     checker: KeyCheckerDep,
-) -> ApiKeySavedResponse:
+) -> ApiKeySavedResponse | JSONResponse:
     """Store the caller's key for one provider, encrypted — if the provider takes it.
 
     Every promoter, each with their own: a key is billed to their account
     and used only for the actions they run on it. It replaces an earlier key
     for the same provider and leaves the other provider's key alone. A key
-    the provider refuses is not stored, so the one already saved keeps working.
+    the provider refuses is not stored, so the one already saved keeps working;
+    the refusal carries the provider's own message, when it gave one.
     """
-    verdict = await checker.check(body.provider, body.api_key)
+    check = await checker.check(body.provider, body.api_key)
+    verdict = check.verdict
     if verdict is KeyVerdict.REJECTED:
+        # The provider's message is for the promoter, not the log: a provider
+        # may quote part of the key back in it.
         logger.info("api_key_rejected", user_id=str(user.id), provider=body.provider)
-        raise HTTPException(
+        return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail="The provider rejected this key",
+            content={
+                "detail": "The provider rejected this key",
+                "provider_message": check.provider_message,
+            },
         )
     encrypted = get_secret_service().encrypt(body.api_key)
     await repo.upsert(user.id, body.provider, encrypted)

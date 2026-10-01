@@ -25,16 +25,25 @@ export default function ApiKeySection() {
   const [apiKey, setApiKey] = useState("")
   const [showKey, setShowKey] = useState(false)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle")
+  // What the provider itself said about a key it refused, when it said anything.
+  const [providerMessage, setProviderMessage] = useState<string | null>(null)
 
   async function save(): Promise<void> {
     if (!apiKey.trim()) return
     setSaveStatus("saving")
+    setProviderMessage(null)
     const res = await fetch("/api/settings/api-key", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ api_key: apiKey, provider }),
     })
     if (!res.ok) {
+      if (res.status === 422) {
+        const refusal = (await res.json().catch(() => null)) as {
+          provider_message?: string | null
+        } | null
+        setProviderMessage(refusal?.provider_message ?? null)
+      }
       setSaveStatus(res.status === 422 ? "rejected" : "error")
       return
     }
@@ -148,13 +157,20 @@ export default function ApiKeySection() {
         )}
         {saveStatus === "unverified" && (
           <span data-testid="save-unverified" className="text-[13px] text-major-text">
-            Zapisano, ale nie udało się połączyć z dostawcą, żeby sprawdzić klucz
+            Zapisano, ale dostawca nie odpowiedział, więc klucz nie został sprawdzony
           </span>
         )}
         {saveStatus === "rejected" && (
           <span data-testid="save-rejected" className="text-[13px] text-critical-text">
-            Dostawca odrzucił ten klucz, więc nie został zapisany. Sprawdź, czy klucz
-            został skopiowany w całości.
+            Dostawca odrzucił ten klucz, więc nie został zapisany.{" "}
+            {providerMessage ? (
+              <>
+                Odpowiedź dostawcy:{" "}
+                <span data-testid="provider-message">„{providerMessage}”</span>
+              </>
+            ) : (
+              "Sprawdź, czy klucz został skopiowany w całości."
+            )}
           </span>
         )}
         {saveStatus === "error" && (

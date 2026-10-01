@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from main import app
 from src.guidelines.infrastructure.orm import Base as GuidelinesBase
-from src.identity.application.key_check import KeyVerdict
+from src.identity.application.key_check import KeyCheck, KeyVerdict
 from src.identity.infrastructure.dependencies import get_key_checker
 from src.identity.infrastructure.limiter import login_rate_limit
 from src.identity.infrastructure.models import Base as IdentityBase
@@ -93,8 +93,8 @@ async def _noop_rate_limit() -> None:
 class _AcceptingKeyChecker:
     """Takes every key without asking a provider — tests stay off the network."""
 
-    async def check(self, provider: str, api_key: str) -> KeyVerdict:
-        return KeyVerdict.ACCEPTED
+    async def check(self, provider: str, api_key: str) -> KeyCheck:
+        return KeyCheck(KeyVerdict.ACCEPTED)
 
 
 @pytest.fixture

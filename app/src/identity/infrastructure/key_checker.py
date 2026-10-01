@@ -1,15 +1,18 @@
 """`KeyChecker` over HTTP: list the provider's models with the key.
 
 Listing models is free on both providers and needs nothing but a valid key,
-so a 401 or 403 means the key itself is wrong. It says nothing about the
+so a refusal is about the key: a 401 or 403 means it is wrong, any other 4xx
+that it cannot be used as sent. It says nothing about the
 balance — an account with no credits still lists models; running out is
 reported by the action that hits it (see the agent's `provider_errors`).
 """
 
+from typing import Any, cast
+
 import httpx
 import structlog
 
-from src.identity.application.key_check import KeyVerdict
+from src.identity.application.key_check import KeyCheck, KeyVerdict
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -19,6 +22,9 @@ _OPENAI_MODELS = "https://api.openai.com/v1/models"
 
 # Short: the promoter is waiting on the save button.
 _TIMEOUT = 10.0
+# A 4xx that is the provider asking for patience, not refusing the key.
+_NOT_ABOUT_THE_KEY = {408, 429}
+_MESSAGE_CHARS = 400
 
 
 class HttpKeyChecker:
@@ -27,7 +33,7 @@ class HttpKeyChecker:
     def __init__(self, client: httpx.AsyncClient) -> None:
         self._client = client
 
-    async def check(self, provider: str, api_key: str) -> KeyVerdict:
+    async def check(self, provider: str, api_key: str) -> KeyCheck:
         url, headers = _request_for(provider, api_key)
         try:
             response = await self._client.get(url, headers=headers, timeout=_TIMEOUT)
@@ -38,17 +44,35 @@ class HttpKeyChecker:
                 provider=provider,
                 error=type(exc).__name__,
             )
-            return KeyVerdict.UNCHECKED
+            return KeyCheck(KeyVerdict.UNCHECKED)
         if response.is_success:
-            return KeyVerdict.ACCEPTED
-        if response.status_code in (401, 403):
-            return KeyVerdict.REJECTED
-        logger.warning(
-            "api_key_check_inconclusive",
-            provider=provider,
-            status=response.status_code,
-        )
-        return KeyVerdict.UNCHECKED
+            return KeyCheck(KeyVerdict.ACCEPTED)
+        status = response.status_code
+        if 400 <= status < 500 and status not in _NOT_ABOUT_THE_KEY:
+            return KeyCheck(KeyVerdict.REJECTED, _provider_message(response, api_key))
+        logger.warning("api_key_check_inconclusive", provider=provider, status=status)
+        return KeyCheck(KeyVerdict.UNCHECKED)
+
+
+def _provider_message(response: httpx.Response, api_key: str) -> str | None:
+    """What the provider said was wrong, if it said so in the usual place.
+
+    Both providers answer ``{"error": {"message": …}}``. The key is cut out in
+    case the provider quotes it back.
+    """
+    try:
+        body: Any = response.json()
+    except ValueError:
+        return None
+    if not isinstance(body, dict):
+        return None
+    error = cast(dict[str, Any], body).get("error")
+    if not isinstance(error, dict):
+        return None
+    message = cast(dict[str, Any], error).get("message")
+    if not isinstance(message, str) or not message.strip():
+        return None
+    return message.replace(api_key, "…").strip()[:_MESSAGE_CHARS]
 
 
 def _request_for(provider: str, api_key: str) -> tuple[str, dict[str, str]]:

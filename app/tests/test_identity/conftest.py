@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from main import app
-from src.identity.application.key_check import KeyVerdict
+from src.identity.application.key_check import KeyCheck, KeyVerdict
 from src.identity.infrastructure.dependencies import get_key_checker
 from src.identity.infrastructure.limiter import login_rate_limit
 from src.identity.infrastructure.models import Base, UserModel
@@ -75,11 +75,12 @@ class FakeKeyChecker:
 
     def __init__(self) -> None:
         self.verdict = KeyVerdict.ACCEPTED
+        self.provider_message: str | None = None
         self.checked: list[tuple[str, str]] = []
 
-    async def check(self, provider: str, api_key: str) -> KeyVerdict:
+    async def check(self, provider: str, api_key: str) -> KeyCheck:
         self.checked.append((provider, api_key))
-        return self.verdict
+        return KeyCheck(self.verdict, self.provider_message)
 
 
 @pytest.fixture

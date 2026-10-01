@@ -165,6 +165,24 @@ describe("ApiKeySection", () => {
     expect(screen.getByTestId("api-key-input")).toHaveValue("sk-ant-test-key")
   })
 
+  it("shows what the provider said about a key it refused", async () => {
+    mockSave({
+      ok: false,
+      status: 422,
+      body: {
+        detail: "The provider rejected this key",
+        provider_message: "This API key is not scoped to a workspace",
+      },
+    })
+    await saveKey()
+    await waitFor(() =>
+      expect(screen.getByTestId("provider-message")).toHaveTextContent(
+        "This API key is not scoped to a workspace",
+      ),
+    )
+    expect(screen.getByTestId("save-rejected")).not.toHaveTextContent("skopiowany")
+  })
+
   it("says the key is stored unchecked when the provider could not be asked", async () => {
     mockSave({
       ok: true,

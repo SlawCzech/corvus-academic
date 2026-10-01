@@ -273,10 +273,36 @@ def test_a_key_the_provider_rejects_is_not_stored(
     )
 
     assert resp.status_code == 422
-    assert resp.json()["detail"] == "The provider rejected this key"
+    assert resp.json() == {
+        "detail": "The provider rejected this key",
+        "provider_message": None,
+    }
     # The key that worked is still the one in use.
     status_now = client.get("/settings/api-key/status", headers=headers).json()
     assert status_now == {"configured": True, "providers": ["claude"]}
+
+
+def test_a_rejection_carries_what_the_provider_said(
+    client: TestClient, key_checker: FakeKeyChecker
+) -> None:
+    """"Rejected" alone sends the promoter looking for a typo that is not there."""
+    key_checker.verdict = KeyVerdict.REJECTED
+    key_checker.provider_message = "This API key is not scoped to a workspace"
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    resp = client.patch(
+        "/settings/api-key",
+        json={"api_key": "sk-ant-test-key", "provider": "claude"},
+        headers=headers,
+    )
+
+    assert resp.status_code == 422
+    assert resp.json()["provider_message"] == (
+        "This API key is not scoped to a workspace"
+    )
+    status_now = client.get("/settings/api-key/status", headers=headers).json()
+    assert status_now == {"configured": False, "providers": []}
 
 
 def test_a_key_that_could_not_be_checked_is_stored_unverified(
