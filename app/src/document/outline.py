@@ -221,11 +221,26 @@ def extract_outline(text: str) -> list[Section]:
     """
     found: list[tuple[str, str | None, int]] = []
     named_in_toc: set[str] | None = None  # None: not inside a contents block
+    leaders_seen = False
     offset = 0
     for line in text.splitlines(keepends=True):
         heading = _heading_at(line)
-        if named_in_toc is not None and _ends_toc(line, heading, named_in_toc):
-            named_in_toc = None
+        if named_in_toc is not None:
+            if _DOT_LEADER.search(line):
+                # "Wstęp .......... 3" is an entry, and it names its section:
+                # the body's own "Wstęp" is then the end of the contents. Left
+                # unnamed, that heading was swallowed as one more entry and
+                # the thesis came out with no introduction and no chapters.
+                leaders_seen = True
+                entry = _heading_at(_DOT_LEADER.split(line)[0])
+                if entry is not None and entry[1] is not None:
+                    named_in_toc.add(entry[1])
+            elif (leaders_seen and heading is not None) or _ends_toc(
+                line, heading, named_in_toc
+            ):
+                # In contents written with leaders, a heading without them is
+                # not an entry.
+                named_in_toc = None
         if named_in_toc is not None:
             if heading is not None and heading[1] is not None:
                 named_in_toc.add(heading[1])
@@ -233,6 +248,7 @@ def extract_outline(text: str) -> list[Section]:
             found.append((heading[0], heading[1], offset))
             if heading[1] == "toc":
                 named_in_toc = set()
+                leaders_seen = False
         offset += len(line)
     found = _drop_false_headings(found)
 

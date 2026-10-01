@@ -12,7 +12,13 @@
       "title": "WSTĘP",
       "canonical": "introduction",
       "start": 840,
-      "char_count": 5389
+      "char_count": 701
+    },
+    {
+      "title": "ROZDZIAŁ 1. ISTOTA I RODZAJE KRYPTOWALUT",
+      "canonical": null,
+      "start": 1541,
+      "char_count": 42
     },
     {
       "title": "1.1. Pojęcie kryptowaluty",
@@ -24,7 +30,13 @@
       "title": "1.2. Bitcoin i inne kryptowaluty",
       "canonical": null,
       "start": 2758,
-      "char_count": 1096
+      "char_count": 1051
+    },
+    {
+      "title": "ROZDZIAŁ 2. KRYPTOWALUTY A SYSTEM FINANSOWY",
+      "canonical": null,
+      "start": 3809,
+      "char_count": 45
     },
     {
       "title": "2.1. Kryptowaluty a banki",
@@ -36,7 +48,13 @@
       "title": "2.2. Regulacje prawne",
       "canonical": null,
       "start": 4774,
-      "char_count": 656
+      "char_count": 628
+    },
+    {
+      "title": "ROZDZIAŁ 3. BADANIE WŁASNE",
+      "canonical": null,
+      "start": 5402,
+      "char_count": 28
     },
     {
       "title": "3.1. Opis badania",

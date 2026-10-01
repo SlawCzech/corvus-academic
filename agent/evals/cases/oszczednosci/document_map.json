@@ -12,7 +12,13 @@
       "title": "WSTĘP",
       "canonical": "introduction",
       "start": 1167,
-      "char_count": 6803
+      "char_count": 2277
+    },
+    {
+      "title": "ROZDZIAŁ 1. TEORETYCZNE UJĘCIE OSZCZĘDZANIA GOSPODARSTW DOMOWYCH",
+      "canonical": null,
+      "start": 3444,
+      "char_count": 66
     },
     {
       "title": "1.1. Pojęcie i funkcje oszczędności",
@@ -24,7 +30,13 @@
       "title": "1.2. Teorie konsumpcji i oszczędzania",
       "canonical": null,
       "start": 3939,
-      "char_count": 884
+      "char_count": 802
+    },
+    {
+      "title": "ROZDZIAŁ 2. OSZCZĘDZANIE GOSPODARSTW DOMOWYCH W POLSCE — PRZEGLĄD BADAŃ I DANYCH",
+      "canonical": null,
+      "start": 4741,
+      "char_count": 82
     },
     {
       "title": "2.1. Stopa oszczędności w Polsce na tle Unii Europejskiej",
@@ -36,7 +48,13 @@
       "title": "2.2. Wyniki wcześniejszych badań empirycznych",
       "canonical": null,
       "start": 5529,
-      "char_count": 674
+      "char_count": 614
+    },
+    {
+      "title": "ROZDZIAŁ 3. DETERMINANTY OSZCZĘDZANIA — ANALIZA EMPIRYCZNA",
+      "canonical": null,
+      "start": 6143,
+      "char_count": 60
     },
     {
       "title": "3.1. Dane i metoda badania",

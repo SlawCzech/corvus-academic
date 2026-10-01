@@ -318,3 +318,36 @@ def test_a_sentence_about_a_chapter_is_not_a_heading() -> None:
     text = "Wstęp\nRozdział 3 zawiera opis badań własnych.\nZakończenie\nKoniec.\n"
 
     assert [s.title for s in extract_outline(text)] == ["Wstęp", "Zakończenie"]
+
+
+def test_contents_with_dot_leaders_end_at_the_bodys_first_heading() -> None:
+    """The common PDF shape. With the entries unnamed, the body's "WSTĘP" was
+    read as one more of them: no introduction, no body length, no chapters."""
+    text = (
+        "SPIS TREŚCI\n\n"
+        "Wstęp .......... 3\n"
+        "Rozdział 1. Motywacja w teorii zarządzania .......... 5\n"
+        "1.1. Pojęcie motywacji .......... 7\n"
+        "Zakończenie .......... 25\n"
+        "Bibliografia .......... 27\n"
+        "Spis wykresów .......... 29\n\n"
+        "WSTĘP\n\n"
+        "Na rynek pracy wchodzi pokolenie Z.\n\n"
+        "ROZDZIAŁ 1. MOTYWACJA W TEORII ZARZĄDZANIA\n\n"
+        "1.1. Pojęcie motywacji\n\n"
+        "Motywacja to gotowość do działania.\n\n"
+        "ZAKOŃCZENIE\n\nCel pracy został osiągnięty.\n\n"
+        "BIBLIOGRAFIA\n\n1. Borkowska, S. (2013). Motywowanie. C.H. Beck.\n"
+    )
+
+    outline = extract_outline(text)
+
+    assert [(s.canonical, s.title) for s in outline] == [
+        ("toc", "SPIS TREŚCI"),
+        ("introduction", "WSTĘP"),
+        (None, "ROZDZIAŁ 1. MOTYWACJA W TEORII ZARZĄDZANIA"),
+        (None, "1.1. Pojęcie motywacji"),
+        ("conclusions", "ZAKOŃCZENIE"),
+        ("bibliography", "BIBLIOGRAFIA"),
+    ]
+    assert outline_payload(text)["body_chars"] is not None
