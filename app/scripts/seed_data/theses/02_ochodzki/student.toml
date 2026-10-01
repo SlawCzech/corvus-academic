@@ -1,0 +1,21 @@
+full_name = "Ryszard Ochódzki"
+index_number = "070512"
+field_of_study = "Zarządzanie"
+thesis_type = "bachelor"
+topic = "Model zarządzania klubem sportowym na przykładzie KS „Tęcza”"
+
+[[timeline]]
+date = 2025-10-16
+note = """Pierwsze spotkanie, spóźniony 40 minut – wracał z Londynu. Chce opisać „model czterech filarów”, który sam wdrożył w klubie jako prezes. Zwróciłem uwagę, że opisuje i ocenia własne dzieło, więc potrzebne są dane, a nie deklaracje: finanse, liczba członków, wyniki sportowe, i to w szeregach czasowych. Obiecał, że „wszystko jest w klubie”. Hipoteza „model jest efektywny i nowoczesny” do przeformułowania – nie da się jej sfalsyfikować."""
+
+[[timeline]]
+date = 2026-01-15
+note = """Przyniósł dwa rozdziały teorii. To streszczenie podręczników zarządzania (Fayol, Taylor, Maslow), bez związku z klubem. Analiza SWOT przypisana Porterowi – do poprawy. Prosiłem o literaturę o zarządzaniu klubami sportowymi i o dane finansowe. Na pytanie o koszty odpowiedział, że to tajemnica klubu. Wywiady zamierza przeprowadzić sam, ze swoimi pracownikami, u siebie w gabinecie – odradzałem."""
+
+[[timeline]]
+date = 2026-04-09
+note = """Rozdziały 3 i 4. Tabele mówią co innego niż tekst: liczba członków spada, udział dotacji rośnie do 61%, drużyna spadła z ligi – a w tekście „systematyczny rozwój”, „dywersyfikacja” i „restrukturyzacja sportowa”. Wywiady przeprowadził jednak sam; wszyscy rozmówcy ocenili model pozytywnie. Uwagi trenera młodzieży o zaległych wypłatach pominął jako „operacyjne”. Prosiłem o ograniczenia badania i o stonowanie wniosków. Powiedział, że się zastanowi."""
+
+[[timeline]]
+date = 2026-05-28
+draft = "ochodzki_praca_licencjacka.docx"

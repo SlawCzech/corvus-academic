@@ -3,7 +3,7 @@ COMPOSE = docker compose -f infra/docker-compose.yml
 # sets DEBUG=true, which the entrypoints turn into uvicorn --reload.
 COMPOSE_DEV = $(COMPOSE) -f infra/docker-compose.override.yml
 
-.PHONY: help up build down down-volumes logs ps restart migrate ingest-guidelines seed-guidelines purge-drafts \
+.PHONY: help up build down down-volumes logs ps restart migrate ingest-guidelines seed-guidelines seed-demo demo-reset purge-drafts \
         dev dev-build eval eval-maps langfuse-up langfuse-down \
         front-up front-down front-restart front-logs front-dev \
         shell-app shell-agent
@@ -45,6 +45,12 @@ ingest-guidelines:  ## Embed the university requirements into the vector store
 
 seed-guidelines:  ## Fill the guideline catalog (UPDATE=1 publishes changed seed data as a new version)
 	$(COMPOSE) run --rm app python scripts/seed_guidelines.py $(if $(UPDATE),--update)
+
+seed-demo:  ## Give a promoter the demo students, notes and theses (PROMOTOR=<e-mail>, required; AS_OF=today moves the dates)
+	$(COMPOSE) run --rm app python scripts/seed_demo.py --promotor $(PROMOTOR) $(if $(AS_OF),--as-of $(AS_OF))
+
+demo-reset:  ## Delete the demo students from a promoter's roster and seed them again (PROMOTOR=<e-mail>, required)
+	$(COMPOSE) run --rm app python scripts/seed_demo.py --promotor $(PROMOTOR) --reset $(if $(AS_OF),--as-of $(AS_OF))
 
 purge-drafts:  ## Run the thesis-version retention sweep once (NOW=<iso> to shift the clock)
 	$(COMPOSE) run --rm app python scripts/purge_drafts.py $(if $(NOW),--now $(NOW))

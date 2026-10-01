@@ -151,7 +151,8 @@ corvus/
 │   ├── alembic_identity/     # lineage migracji schematu `identity`
 │   ├── alembic_mentoring/    # lineage migracji schematu `mentoring`
 │   ├── alembic_guidelines/   # lineage migracji schematu `guidelines`
-│   ├── scripts/              # seed_admin, seed_guidelines, purge_drafts
+│   ├── scripts/              # seed_admin, seed_guidelines, seed_demo, purge_drafts,
+│   │                           build_thesis_docx (fikstury prac na demo)
 │   ├── src/
 │   │   ├── identity/
 │   │   │   ├── domain/       # Role, Permission, User, UserRegistration

@@ -1,0 +1,21 @@
+full_name = "Ferdynand Kiepski"
+index_number = "071337"
+field_of_study = "Ekonomia"
+thesis_type = "bachelor"
+topic = "Problem bezrobocia osób wykształconych w Polsce i na świecie na przykładzie Wrocławia"
+
+[[timeline]]
+date = 2025-10-23
+note = """Pierwsze spotkanie po trzech nieobecnościach. Temat wybrał sam: bezrobocie osób wykształconych. Twierdzi, że zna problem z autopsji. Prosiłem o zawężenie – „w Polsce i na świecie na przykładzie Wrocławia” to trzy różne prace. Ma przygotować konspekt, pytanie badawcze i wstępną bibliografię. Zapytał, czy Wikipedia się liczy."""
+
+[[timeline]]
+date = 2026-02-05
+note = """Konspektu nie ma. Przyniósł osiem stron o bezrobociu w starożytnym Egipcie i w Rzymie. Brak celu pracy, brak pytania badawczego, źródła: „internet”. Wyjaśniłem wymogi zarządzenia: 25 pozycji literatury, w tym 4 obcojęzyczne, przypisy w stylu APA. Część empiryczną chce oprzeć na rozmowach z sąsiadami z kamienicy. Zapytałem, czy są to osoby wykształcone. Odpowiedział, że „życiowo – bardzo”."""
+
+[[timeline]]
+date = 2026-05-14
+note = """Zapowiedział, że praca jest skończona i że złoży ją w przyszłym tygodniu. Nie pokazał rozdziału empirycznego. Uprzedziłem, że bez pytania badawczego, metody i literatury praca nie spełni wymogów. Stwierdził, że nie ma pracy dla ludzi z jego wykształceniem, więc i wymagania powinny być inne."""
+
+[[timeline]]
+date = 2026-05-22
+draft = "kiepski_praca_licencjacka.docx"

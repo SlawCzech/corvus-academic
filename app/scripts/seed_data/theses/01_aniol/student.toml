@@ -1,0 +1,25 @@
+full_name = "Stanisław Anioł"
+index_number = "070481"
+field_of_study = "Zarządzanie"
+thesis_type = "bachelor"
+topic = "Efektywność zarządzania zasobem mieszkaniowym spółdzielni"
+
+[[timeline]]
+date = 2025-10-09
+note = """Pierwsze spotkanie. Pan Anioł przyszedł z gotowym konspektem na czterech stronach i z teczką dokumentów spółdzielni. Chce pisać o efektywności zarządzania budynkiem, w którym jest gospodarzem domu. Zwróciłem uwagę na ryzyko stronniczości – ma to opisać w metodyce i pokazać, jak je ograniczy. Uzgodniliśmy: wskaźniki kosztowe za lata 2019–2024 na tle inflacji plus ankieta wśród mieszkańców. Rozważał DEA; odradziłem przy jednej nieruchomości i trzech spółdzielniach do porównania."""
+
+[[timeline]]
+date = 2025-12-04
+note = """Przegląd rozdziałów 1 i 2. Literatura instytucjonalna dobrze dobrana (Hansmann, Ostrom, Olson), przegląd metod pomiaru efektywności rzetelny. Do poprawy: polskiej literatury o spółdzielczości mieszkaniowej jest mało i jest stara – ma poszukać nowszych pozycji. Kwestionariusz po pilotażu, jedno pytanie przeformułowane. Ankiety mają być zbierane do zamkniętej urny, bez jego udziału."""
+
+[[timeline]]
+date = 2026-03-12
+note = """Wyniki gotowe: koszty rosły wolniej niż ceny (39,4% wobec 43,5%), zadowolenie mieszkańców silniej wiąże się z szybkością usuwania awarii niż z wysokością opłat. Dopytałem o fundusz remontowy – saldo nie wystarczy na termomodernizację, ma to napisać wprost. Zakończenie na razie za krótkie: brakuje ograniczeń i kierunków dalszych badań. Na marginesie: mieszkańcy skarżą się w ankiecie na nadmiar ogłoszeń na klatkach. Pan Anioł przyjął to z godnością."""
+
+[[timeline]]
+date = 2026-05-21
+draft = "aniol_praca_licencjacka.docx"
+
+[[timeline]]
+date = 2026-05-28
+accepted = true

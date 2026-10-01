@@ -1,0 +1,21 @@
+full_name = "Jan Paweł Adamczewski"
+index_number = "081670"
+field_of_study = "Ekonomia"
+thesis_type = "master_article"
+topic = "Folwark pańszczyźniany jako optymalny model organizacji produkcji rolnej"
+
+[[timeline]]
+date = 2025-10-21
+note = """Pierwsze spotkanie. Przyszedł z tezą: folwark pańszczyźniany był i jest optymalną formą organizacji rolnictwa. Ma rodzinne księgi rachunkowe folwarku z lat 1668–1672 – źródło potencjalnie bardzo ciekawe. Uprzedziłem, że praca ma odpowiadać na pytanie, a nie dowodzić z góry przyjętej tezy, i że musi zmierzyć się z literaturą krytyczną, zaczynając od Kuli. Oświadczył, że Kulę zna i że się z nim nie zgadza. Zapowiedział, że praca przejdzie do historii."""
+
+[[timeline]]
+date = 2026-01-13
+note = """Przegląd literatury. Dużo dobrych nazwisk (Domar, North i Thomas, Fogel i Engerman), ale czytanych pod tezę. Kuli nadal nie ma. Brenner i Acemoglu z Robinsonem zbyci jednym zdaniem jako „ideologiczni”. W rachunku dochodowości praca pańszczyźniana wyceniona na zero – prosiłem o wariant z wyceną pracy. Odmówił: „kosztem jest to, za co się płaci”. Wprowadził „twierdzenie Adamczewskiego”. Odradzałem nazywanie twierdzeń własnym nazwiskiem w pracy magisterskiej."""
+
+[[timeline]]
+date = 2026-04-14
+note = """Wyniki. Z jego własnych tabel wynika, że plony spadały, chłopi uciekali (część do sąsiada), a gospodarstwa chłopskie miały wyższe plony niż folwark – wszystko to jest w uwagach pod tabelami i wyjaśnione na korzyść tezy. Porównania z folwarkiem sąsiada, który miał dwa dni pańszczyzny i lepsze wyniki, nie chce przeprowadzić. Abstrakt ma ponad 200 słów, słów kluczowych jest osiem. Rekomendacje dla współczesnej polityki rolnej (umowy bez prawa wypowiedzenia) są nie do przyjęcia – powiedziałem to wprost. Odpowiedział, że wielkie idee zawsze budziły opór."""
+
+[[timeline]]
+date = 2026-06-09
+draft = "adamczewski_praca_magisterska.docx"

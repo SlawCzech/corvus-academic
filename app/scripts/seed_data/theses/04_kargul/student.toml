@@ -1,0 +1,21 @@
+full_name = "Władysław Kargul"
+index_number = "081204"
+field_of_study = "Ekonomia"
+thesis_type = "master_article"
+topic = "Konflikty o prawa własności gruntów rolnych w świetle twierdzenia Coase'a"
+
+[[timeline]]
+date = 2025-10-07
+note = """Pierwsze spotkanie. Bardzo dobrze oczytany w ekonomii instytucjonalnej – Coase, Demsetz, Ellickson z pamięci. Chce zbadać spór o miedzę między swoją rodziną a sąsiadami jako test twierdzenia Coase'a. Pomysł ciekawy, ale jest stroną sporu i ma jeden przypadek. Prosiłem, żeby od początku myślał o tym, co z jednego przypadku wolno wnioskować, i żeby spróbował dotrzeć do drugiej strony."""
+
+[[timeline]]
+date = 2025-12-16
+note = """Przegląd literatury bardzo dobry, do drobnych poprawek. Metodyka: powołuje się na Flyvbjerga i „przypadek krytyczny”. Zapytałem, dlaczego akurat dwie rodziny skłócone od pokoleń mają być przypadkiem, w którym negocjacje powinny się udać najłatwiej – nie przekonał mnie. Sąsiad odmówił udziału w badaniu. Zasugerowałem dobranie kilku innych sporów granicznych we wsi dla porównania; geodeta podobno zna kilkanaście takich rozbieżności."""
+
+[[timeline]]
+date = 2026-03-24
+note = """Wyniki: rachunek kosztów sporu rzetelny i ciekawy (41 tys. zł przy wartości pasa 1,8 tys.). Porównawczych przypadków nie dobrał – „nie zdążył”. Wnioski idą za daleko: z jednego sporu wyprowadza, że twierdzenie Coase'a „nie znajduje potwierdzenia” na polskim rynku ziemi. Tłumaczyłem, że wysokie koszty transakcyjne to dokładnie świat, o którym pisał Coase, a nie jego zaprzeczenie. Nie ustalił też, komu sporny pas jest bardziej potrzebny. Na koniec spotkania zapytał, czy Pawlak też u mnie pisze."""
+
+[[timeline]]
+date = 2026-06-02
+draft = "kargul_praca_magisterska.docx"

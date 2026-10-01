@@ -116,11 +116,13 @@ class DraftService:
         filename: str,
         data: bytes,
         content_type: str = "",
+        uploaded_at: datetime | None = None,
     ) -> DraftView:
         """Extract an uploaded PDF/DOCX; store file and text as the next version.
 
         A new version supersedes an accepted one: the thesis came back, so no
-        version is final any more.
+        version is final any more. ``uploaded_at`` is for seeding a history;
+        the HTTP upload never passes it, so a real version is dated now.
 
         Raises ValueError for an unsupported or unreadable file, and
         StudentNotFoundError when the caller may not see the student.
@@ -143,7 +145,7 @@ class DraftService:
             pages=document.pages,
             format=document.format,
             uploaded_by=caller.user_id,
-            created_at=datetime.now(UTC),
+            created_at=uploaded_at or datetime.now(UTC),
             file_id=stored.id,
             file_sha256=stored.sha256,
             file_size=stored.size,
@@ -187,9 +189,15 @@ class DraftService:
         return found
 
     async def accept(
-        self, caller: Caller, student_id: UUID, draft_id: UUID
+        self,
+        caller: Caller,
+        student_id: UUID,
+        draft_id: UUID,
+        at: datetime | None = None,
     ) -> list[DraftView]:
         """Mark one version as final; the others start their purge countdown.
+
+        ``at`` dates the acceptance when seeding a history; it is now otherwise.
 
         Raises DraftNotFoundError for a version that is not this student's or
         has already been purged — there is nothing left to accept.
@@ -198,7 +206,7 @@ class DraftService:
         model = await self._require_draft(student, draft_id)
         if model.purged_at is not None:
             raise DraftNotFoundError(str(draft_id))
-        await self._students.set_draft_acceptance(caller, student.id, model.id)
+        await self._students.set_draft_acceptance(caller, student.id, model.id, at)
         logger.info(
             "draft_accepted", student_id=str(student.id), version=model.version_number
         )

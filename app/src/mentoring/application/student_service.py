@@ -127,12 +127,15 @@ class StudentService:
         field_of_study: str,
         thesis_type: ThesisType,
         index_number: str | None = None,
+        created_at: datetime | None = None,
     ) -> Student:
         """Add a student to the caller's roster.
 
         The domain entity is built first so its validation runs before
-        anything reaches the database.
+        anything reaches the database. ``created_at`` is for seeding a
+        history; a student added through the API is dated now.
         """
+        added = created_at or datetime.now(UTC)
         student = Student(
             id=uuid.uuid4(),
             promotor_id=caller.user_id,
@@ -140,6 +143,8 @@ class StudentService:
             field_of_study=field_of_study,
             thesis_type=thesis_type,
             index_number=index_number,
+            created_at=added,
+            updated_at=added,
         )
         model = _to_orm(student)
         await self._students.save(model)
@@ -176,6 +181,7 @@ class StudentService:
         index_number: str | None = None,
         set_index_number: bool = False,
         clear_topic: bool = False,
+        topic_set_at: datetime | None = None,
     ) -> Student:
         """Edit the student: details, topic, lifecycle status, guideline set.
 
@@ -184,6 +190,7 @@ class StudentService:
         when it was set, a new thesis type drops a guideline set chosen for
         the old one. The ``set_*`` flags say a clearable field was given at
         all: with them, ``None`` clears it. ``clear_topic`` reopens the topic.
+        ``topic_set_at`` dates the topic when seeding a history.
 
         Raises ValueError for a blank name, field, index number or topic, and
         for a guideline set that does not exist, has nothing published, or is
@@ -200,7 +207,7 @@ class StudentService:
         if clear_topic:
             student.clear_topic()
         elif current_topic is not None:
-            student.set_topic(current_topic)
+            student.set_topic(current_topic, topic_set_at)
         # Checked against the thesis type as it is after this change.
         if set_guidelines:
             if guideline_set_id is not None:
@@ -235,9 +242,15 @@ class StudentService:
             )
 
     async def set_draft_acceptance(
-        self, caller: Caller, student_id: UUID, draft_id: UUID | None
+        self,
+        caller: Caller,
+        student_id: UUID,
+        draft_id: UUID | None,
+        at: datetime | None = None,
     ) -> Student:
         """Mark a version as final, or clear the mark with ``draft_id=None``.
+
+        ``at`` dates the acceptance when seeding a history; it is now otherwise.
 
         That the version belongs to this student is the caller's check to make
         — the draft service holds the drafts.
@@ -247,7 +260,7 @@ class StudentService:
         if draft_id is None:
             student.clear_draft_acceptance()
         else:
-            student.accept_draft(draft_id)
+            student.accept_draft(draft_id, at)
         model.accepted_draft_id = student.accepted_draft_id
         model.draft_accepted_at = student.draft_accepted_at
         await self._students.update(model)

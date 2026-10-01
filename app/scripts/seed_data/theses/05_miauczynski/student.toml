@@ -1,0 +1,25 @@
+full_name = "Adam Miauczyński"
+index_number = "081377"
+field_of_study = "Ekonomia"
+thesis_type = "master_article"
+topic = "Wypalenie zawodowe nauczycieli a efektywność systemu edukacji"
+
+[[timeline]]
+date = 2025-10-14
+note = """Pierwsze spotkanie. Polonista z dwudziestopięcioletnim stażem, drugi kierunek. Chce pisać o wypaleniu nauczycieli i jego kosztach dla systemu edukacji. Proponuje dziennik własnych obserwacji jako metodę. Uprzedziłem, że dziennik jednej osoby nie uniesie wniosków o systemie – potrzebna będzie próba nauczycieli i literatura z ekonomii edukacji, nie tylko psychologiczna. Spotkanie przerwała kosiarka za oknem; pan Miauczyński poprosił o chwilę i policzył do siedmiu."""
+
+[[timeline]]
+date = 2026-02-10
+draft = "v1/miauczynski_praca_magisterska_v1.docx"
+
+[[timeline]]
+date = 2026-02-19
+note = """Uwagi do pierwszej wersji. Braki formalne: nie ma dyskusji, załączników ani ograniczeń badania; abstrakt bez wyników; 17 pozycji literatury na wymagane 40; metodyka bez zakresu czasowego i przestrzennego; objętość to jedna trzecia wymaganej. Merytorycznie: wniosek o systemie edukacji z dziennika jednej osoby; „efektywność” mierzona własną oceną realizacji planu lekcji; brak ekonomii edukacji (Hanushek, Rivkin, Chetty). Do usunięcia dygresje o poprawności językowej i o hałasie sąsiadów. Zalecenie: ankieta wśród nauczycieli sprawdzonym narzędziem (np. OLBI), przeformułowanie hipotez. Przyjął uwagi z widocznym wysiłkiem."""
+
+[[timeline]]
+date = 2026-04-21
+note = """Krótka konsultacja przed złożeniem drugiej wersji. Ankietę przeprowadził w dwóch liceach, 43 osoby. Literatura uzupełniona. Zapytałem o dobór próby – rozdał kwestionariusze kolegom w pokoju nauczycielskim. Wspomniał, że oszacował straty systemu w miliardach złotych; prosiłem o ostrożność. Wątek hałasu zamierza zostawić, bo „to jest istotne naukowo”."""
+
+[[timeline]]
+date = 2026-05-05
+draft = "v2/miauczynski_praca_magisterska_v2.docx"
