@@ -2,6 +2,16 @@
 
 import { useState } from "react"
 import useSWR, { useSWRConfig } from "swr"
+import {
+  IconBooks,
+  IconBulb,
+  IconFileText,
+  IconGitCompare,
+  IconLayoutGrid,
+  IconMessageQuestion,
+  IconMicroscope,
+  IconNotes,
+} from "@tabler/icons-react"
 import ActionProgress from "./ActionProgress"
 import FindingPicker from "./FindingPicker"
 import ModelSelect, { useModelChoice } from "@/components/ai/ModelSelect"
@@ -17,6 +27,7 @@ interface ActionSpec {
   type: ActionType
   label: string
   hint: string
+  icon: typeof IconBulb
   /** What the promoter types before running it, if anything. */
   detailLabel?: string
   /** True when accepting writes something back to the student's record. */
@@ -24,48 +35,56 @@ interface ActionSpec {
   acceptLabel?: string
 }
 
+// In the order a thesis goes through them: a topic, the meetings, the
+// versions as they come, and at the end the review and the defence.
 const ACTIONS: ActionSpec[] = [
   {
     type: "propose_topic",
     label: "Zaproponuj temat",
     hint: "Trzy propozycje na podstawie kierunku i notatek",
+    icon: IconBulb,
     detailLabel: "Wskazówki dla modelu (opcjonalnie)",
     acceptable: true,
     acceptLabel: "Ustaw jako temat pracy",
   },
   {
-    type: "defence_questions",
-    label: "Pytania na obronę",
-    hint: "Trzy pytania z ostatniej wersji pracy",
-    detailLabel: "Na co zwrócić uwagę (opcjonalnie)",
-  },
-  {
-    type: "check_progress",
-    label: "Sprawdź postęp",
-    hint: "Porównanie dwóch ostatnich wersji",
-  },
-  {
-    type: "evaluate_methodology",
-    label: "Oceń metodologię",
-    hint: "Uwagi do metody i bibliografii",
-  },
-  {
     type: "draft_meeting_note",
     label: "Spisz notatkę",
     hint: "Notatka ze spotkania z twoich skrótów",
+    icon: IconNotes,
     detailLabel: "Skrócone punkty ze spotkania",
     acceptable: true,
     acceptLabel: "Zapisz jako notatkę",
   },
   {
+    type: "check_progress",
+    label: "Sprawdź postęp",
+    hint: "Porównanie dwóch ostatnich wersji",
+    icon: IconGitCompare,
+  },
+  {
+    type: "evaluate_methodology",
+    label: "Oceń metodologię",
+    hint: "Uwagi do metody i doboru źródeł",
+    icon: IconMicroscope,
+  },
+  {
     type: "verify_bibliography",
     label: "Sprawdź bibliografię",
-    hint: "Czy cytowane prace istnieją (Crossref)",
+    hint: "Czy cytowane prace istnieją — Crossref i katalogi bibliotek",
+    icon: IconBooks,
   },
   {
     type: "generate_review",
     label: "Napisz recenzję",
     hint: "Pełna recenzja ostatniej wersji",
+    icon: IconFileText,
+  },
+  {
+    type: "defence_questions",
+    label: "Pytania na obronę",
+    hint: "Trzy pytania z ostatniej wersji pracy",
+    icon: IconMessageQuestion,
   },
 ]
 
@@ -85,7 +104,14 @@ const optionInputClass =
   "w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[13.5px] " +
   "text-foreground focus:border-accent focus:outline-none"
 
-export default function ActionPanel({ student }: { student: Student }) {
+export default function ActionPanel({
+  student,
+  initialType,
+}: {
+  student: Student
+  /** Open on this action — a suggestion elsewhere on the page led here. */
+  initialType?: ActionType
+}) {
   const defaults = useAiDefaults()
   const { data: actions } = useSWR<AgentAction[]>(
     `/api/students/${student.id}/actions`,
@@ -101,6 +127,11 @@ export default function ActionPanel({ student }: { student: Student }) {
       student={student}
       defaults={defaults}
       unfinished={unfinished}
+      bibliographyChecked={
+        Array.isArray(actions) &&
+        actions.some((a) => a.action_type === "verify_bibliography" && a.status === "completed")
+      }
+      initialType={initialType}
     />
   )
 }
@@ -109,17 +140,22 @@ function ActionPanelInner({
   student,
   defaults,
   unfinished,
+  bibliographyChecked,
+  initialType,
 }: {
   student: Student
   defaults: AiDefaults
   /** Actions still queued, running or waiting for the promoter, newest first. */
   unfinished: AgentAction[]
+  /** Whether the student's references were ever checked against the catalogues. */
+  bibliographyChecked: boolean
+  initialType?: ActionType
 }) {
   const { action, running, error, run, accept, cancel, resume, watch, dismiss } = useAction(
     student.id,
   )
   const { mutate } = useSWRConfig()
-  const [selectedType, setSelectedType] = useState<ActionType | null>(null)
+  const [selectedType, setSelectedType] = useState<ActionType | null>(initialType ?? null)
   // Coming back to the page while something runs: open on it, not on nothing.
   // Only while nothing is chosen — the list of actions may arrive after the
   // promoter's first click, and that click wins. Set during render, the way
@@ -162,39 +198,86 @@ function ActionPanelInner({
     })
   }
 
+  function choose(type: ActionType): void {
+    setSelectedType(type)
+    setDetail("")
+    // One of this kind still going: show it, rather than a blank form.
+    const going = unfinished.find((u) => u.action_type === type)
+    if (going) watch(going.id)
+    else dismiss()
+  }
+
+  const goingDot = (type: ActionType) =>
+    unfinished.some((u) => u.action_type === type) && (
+      <span
+        data-testid={`unfinished-${type}`}
+        title="W toku"
+        className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-accent"
+      />
+    )
+
   return (
     <section>
-      <div className="flex flex-wrap gap-2">
-        {ACTIONS.map((a) => (
+      {selectedType === null ? (
+        // Nothing chosen: the whole catalogue, with room to say what each does.
+        <div data-testid="action-tiles" className="grid grid-cols-3 gap-3">
+          {ACTIONS.map((a) => (
+            <button
+              key={a.type}
+              type="button"
+              aria-label={a.label}
+              onClick={() => choose(a.type)}
+              className="group rounded-xl border border-line bg-surface p-4 text-left transition-colors hover:border-accent"
+            >
+              <span className="mb-2.5 flex items-center justify-between">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-soft text-accent-hover">
+                  <a.icon size={18} stroke={1.75} />
+                </span>
+                {goingDot(a.type)}
+              </span>
+              <span className="block text-[14px] font-semibold text-foreground group-hover:text-accent-hover">
+                {a.label}
+              </span>
+              <span className="mt-0.5 block text-[12.5px] leading-snug text-muted-strong">
+                {a.hint}
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        // One chosen: the catalogue shrinks to a strip, out of the work's way.
+        <div className="flex flex-wrap items-center gap-2">
           <button
-            key={a.type}
             type="button"
-            title={a.hint}
+            aria-label="Wszystkie akcje"
+            title="Wszystkie akcje"
             onClick={() => {
-              setSelectedType(a.type)
-              setDetail("")
-              // One of this kind still going: show it, rather than a blank form.
-              const going = unfinished.find((u) => u.action_type === a.type)
-              if (going) watch(going.id)
-              else dismiss()
+              setSelectedType(null)
+              dismiss()
             }}
-            className={`flex h-9 items-center gap-2 rounded-lg border px-3.5 text-[13px] font-medium transition-colors ${
-              selectedType === a.type
-                ? "border-accent bg-accent-soft text-accent-hover"
-                : "border-line text-muted-strong hover:text-foreground"
-            }`}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-line text-muted-strong hover:text-foreground"
           >
-            {a.label}
-            {unfinished.some((u) => u.action_type === a.type) && (
-              <span
-                data-testid={`unfinished-${a.type}`}
-                title="W toku"
-                className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent"
-              />
-            )}
+            <IconLayoutGrid size={16} stroke={1.75} />
           </button>
-        ))}
-      </div>
+          {ACTIONS.map((a) => (
+            <button
+              key={a.type}
+              type="button"
+              title={a.hint}
+              onClick={() => choose(a.type)}
+              className={`flex h-9 items-center gap-2 rounded-lg border px-3 text-[13px] font-medium transition-colors ${
+                selectedType === a.type
+                  ? "border-accent bg-accent-soft text-accent-hover"
+                  : "border-line text-muted-strong hover:text-foreground"
+              }`}
+            >
+              <a.icon size={15} stroke={1.75} />
+              {a.label}
+              {goingDot(a.type)}
+            </button>
+          ))}
+        </div>
+      )}
 
       {spec && (
         <div className="mt-4 rounded-xl border border-line bg-surface p-5">
@@ -330,6 +413,28 @@ function ActionPanelInner({
               {shown.accepted && (
                 <p className="mt-3 text-[13px] text-muted">Zaakceptowano.</p>
               )}
+
+              {shown.action_type === "generate_review" &&
+                shown.status === "completed" &&
+                !bibliographyChecked && (
+                  <div
+                    data-testid="suggest-bibliography"
+                    className="mt-5 flex items-center justify-between gap-4 rounded-lg border border-line bg-surface-alt p-3.5"
+                  >
+                    <p className="text-[13px] text-muted-strong">
+                      Recenzja ocenia dobór źródeł, ale nie sprawdza, czy cytowane
+                      prace istnieją. To osobny krok.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => choose("verify_bibliography")}
+                      className="flex h-9 shrink-0 items-center gap-2 rounded-lg border border-accent px-3.5 text-[13px] font-semibold text-accent-hover hover:bg-accent-soft transition-colors"
+                    >
+                      <IconBooks size={15} stroke={1.75} />
+                      Sprawdź bibliografię
+                    </button>
+                  </div>
+                )}
             </div>
           )}
 

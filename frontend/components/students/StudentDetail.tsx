@@ -16,7 +16,13 @@ import { ACTION_LABELS } from "@/components/students/format"
 import { isUnfinished } from "@/hooks/useAction"
 import { IconTrash } from "@tabler/icons-react"
 import { createMeetingNote, deleteAction, fetcher, uploadDraft } from "@/lib/api.client"
-import type { AgentAction, MeetingNote, Student, ThesisDraft } from "@/lib/api.types"
+import type {
+  ActionType,
+  AgentAction,
+  MeetingNote,
+  Student,
+  ThesisDraft,
+} from "@/lib/api.types"
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "w kolejce",
@@ -63,6 +69,8 @@ export default function StudentDetail({
   const { data: actions, mutate: mutateActions } = useSWR<AgentAction[]>(actionsKey, fetcher)
 
   const [section, setSection] = useState<Section>(initialSection)
+  // Which action the AI section opens on, when a suggestion led there.
+  const [actionToOpen, setActionToOpen] = useState<ActionType | undefined>(undefined)
   const [openActionId, setOpenActionId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -128,6 +136,16 @@ export default function StudentDetail({
   // Newest first. The way back to an action started before leaving the page.
   const unfinished = (actions ?? []).filter(isUnfinished)
   const reviewGoing = unfinished.some((a) => a.action_type === "generate_review")
+  const bibliographyTouched = (actions ?? []).some(
+    (a) =>
+      a.action_type === "verify_bibliography" &&
+      (a.status === "completed" || isUnfinished(a)),
+  )
+
+  function openAction(type: ActionType): void {
+    setActionToOpen(type)
+    setSection("actions")
+  }
 
   return (
     <div className="flex min-h-screen">
@@ -180,10 +198,34 @@ export default function StudentDetail({
                   </span>
                 </div>
                 <button
-                  onClick={() => setSection("actions")}
+                  onClick={() => openAction("generate_review")}
                   className="h-9 shrink-0 rounded-lg bg-accent px-4 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"
                 >
                   Napisz recenzję
+                </button>
+              </div>
+            )}
+
+            {/* The review judges the choice of sources, not whether they exist. */}
+            {latestDraft && hasReview && !bibliographyTouched && (
+              <div
+                data-testid="suggest-bibliography"
+                className="mb-5 flex items-center justify-between rounded-xl border border-major-border bg-major-bg p-5"
+              >
+                <div>
+                  <span className="mb-0.5 block text-[13px] font-semibold text-major-text">
+                    Sugerowany następny krok
+                  </span>
+                  <span className="text-[13px] text-muted-strong">
+                    Recenzja jest gotowa, ale nikt nie sprawdził, czy cytowane prace
+                    istnieją.
+                  </span>
+                </div>
+                <button
+                  onClick={() => openAction("verify_bibliography")}
+                  className="h-9 shrink-0 rounded-lg bg-accent px-4 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"
+                >
+                  Sprawdź bibliografię
                 </button>
               </div>
             )}
@@ -246,7 +288,7 @@ export default function StudentDetail({
         {section === "actions" && (
           <div>
             <h1 className="mb-5 text-[24px] font-semibold text-foreground">Akcje AI</h1>
-            <ActionPanel student={student} />
+            <ActionPanel student={student} initialType={actionToOpen} />
           </div>
         )}
 

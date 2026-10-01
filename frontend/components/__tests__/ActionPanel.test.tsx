@@ -44,6 +44,8 @@ describe("ActionPanel", () => {
   let keys: string[] = []
   // What the student's action list holds when the panel opens.
   let listed: unknown[] = []
+  // Resolved when the list may arrive; by default it arrives at once.
+  let listGate: Promise<void> = Promise.resolve()
 
   const PAUSED = {
     ...RUNNING,
@@ -67,6 +69,7 @@ describe("ActionPanel", () => {
     resumed = false
     keys = []
     listed = []
+    listGate = Promise.resolve()
     fetchMock.mockImplementation((url: string, init?: RequestInit) => {
       if (url.endsWith("/resume")) {
         resumed = true
@@ -82,7 +85,7 @@ describe("ActionPanel", () => {
         if (paused && !resumed) return json(PAUSED)
         return json(RUNNING)
       }
-      if (url === "/api/students/s1/actions") return json(listed)
+      if (url === "/api/students/s1/actions") return listGate.then(() => json(listed))
       if (url.startsWith("/api/guidelines/")) return json([])
       if (url === "/api/settings/api-key/status")
         return json({ configured: keys.length > 0, providers: keys })
@@ -218,12 +221,75 @@ describe("ActionPanel", () => {
 
   it("leaves the promoter's own choice alone when the list arrives late", async () => {
     listed = [RUNNING]
+    let arrive: () => void = () => {}
+    listGate = new Promise((resolve) => {
+      arrive = resolve
+    })
     renderPanel()
     await userEvent.click(screen.getByRole("button", { name: "Zaproponuj temat" }))
+    arrive()
 
     await screen.findByTestId("unfinished-generate_review")
     // Still on what they picked, not pulled over to the running review.
     expect(screen.getByTestId("run-action")).toBeEnabled()
     expect(screen.queryByTestId("action-status")).not.toBeInTheDocument()
+  })
+
+  it("offers every action as a tile, and shrinks them to a strip once one is chosen", async () => {
+    renderPanel()
+
+    expect(screen.getByTestId("action-tiles")).toHaveTextContent(
+      "Czy cytowane prace istnieją",
+    )
+    await userEvent.click(screen.getByRole("button", { name: "Sprawdź bibliografię" }))
+
+    expect(screen.queryByTestId("action-tiles")).not.toBeInTheDocument()
+    expect(screen.getByTestId("run-action")).toBeInTheDocument()
+    // And back to the whole catalogue.
+    await userEvent.click(screen.getByRole("button", { name: "Wszystkie akcje" }))
+    expect(screen.getByTestId("action-tiles")).toBeInTheDocument()
+  })
+
+  it("opens on the action a suggestion elsewhere led to", () => {
+    render(
+      <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+        <ActionPanel student={STUDENT} initialType="verify_bibliography" />
+      </SWRConfig>,
+    )
+
+    expect(screen.queryByTestId("action-tiles")).not.toBeInTheDocument()
+    expect(screen.getByTestId("run-action")).toBeInTheDocument()
+  })
+
+  it("says after a review that the references were not checked, and leads there", async () => {
+    const REVIEWED = {
+      ...RUNNING,
+      status: "completed",
+      output: { findings: [], scores: [], summary: "ok", recommendation: "Dopuścić" },
+    }
+    listed = [REVIEWED]
+    fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+      if (url === "/api/students/s1/actions" && init?.method === "POST") return json(REVIEWED)
+      if (url === "/api/students/s1/actions") return json(listed)
+      if (url === "/api/students/s1/actions/a1") return json(REVIEWED)
+      if (url === "/api/settings/api-key/status") return json({ configured: false, providers: [] })
+      if (url === "/api/models")
+        return json({ backend: "ollama", default: "m", local: [], local_available: true, byok: {} })
+      if (url.startsWith("/api/guidelines/")) return json([])
+      return json({})
+    })
+    render(
+      <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+        <ActionPanel student={STUDENT} initialType="generate_review" />
+      </SWRConfig>,
+    )
+    await userEvent.click(screen.getByTestId("run-action"))
+
+    const hint = await screen.findByTestId("suggest-bibliography")
+    expect(hint).toHaveTextContent("nie sprawdza, czy cytowane prace istnieją")
+    await userEvent.click(
+      screen.getAllByRole("button", { name: "Sprawdź bibliografię" }).at(-1)!,
+    )
+    expect(screen.queryByTestId("suggest-bibliography")).not.toBeInTheDocument()
   })
 })
