@@ -62,12 +62,24 @@ bibliography, which length requirements exclude.
 - Report only defects you can see in the text you were given."""
 
 
-def _format_map(document_map: Mapping[str, Any]) -> str:
-    """Render the outline `app` computed over the whole document."""
+def _format_map(document_map: Mapping[str, Any], with_sections: bool = True) -> str:
+    """Render what `app` computed over the whole document.
+
+    With the excerpt goes the whole outline: it is how a node knows what lies
+    past the part it was shown. With the complete thesis only the counts go —
+    a model reads headings for itself, but it does not count characters, and
+    it miscounts a bibliography.
+    """
     raw = document_map.get("sections")
-    sections = cast(Sequence[Mapping[str, Any]], raw) if isinstance(raw, list) else ()
+    sections = (
+        cast(Sequence[Mapping[str, Any]], raw)
+        if with_sections and isinstance(raw, list)
+        else ()
+    )
     lines = [
-        "## Document map (computed from the COMPLETE thesis, not from the excerpt)",
+        "## Document map (computed from the COMPLETE thesis, not from the excerpt)"
+        if with_sections
+        else "## Counted from the thesis by code — use these numbers, do not recount",
         "",
     ]
 
@@ -145,7 +157,7 @@ def render_document_block(
 
     parts: list[str] = []
     if document_map:
-        parts.append(_format_map(document_map))
+        parts.append(_format_map(document_map, with_sections=truncated))
     parts.append(f"{header}\n\n{text[:shown]}")
     if truncated and include_bibliography and document_map:
         tail = _bibliography_tail(text, document_map, shown)

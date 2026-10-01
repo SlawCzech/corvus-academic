@@ -131,8 +131,13 @@ def test_a_hosted_model_is_shown_the_thesis_complete() -> None:
 
     assert f"## Thesis, complete ({len(_THESIS):,} characters)" in block
     assert _THESIS in block
-    # The map still travels with it: the counts in it are computed, not read.
+    # The counts still travel with it: they are computed, not read.
     assert "Bibliography entries counted: 41." in block
+    assert "Length of the thesis body: 28,000 characters" in block
+    # The outline does not: with the text complete, a list of headings and
+    # offsets is only one more thing that can be wrong.
+    assert "Sections present, in order" not in block
+    assert "Metodyka badań (char" not in block
     # No excerpt, so nothing to warn about — and no second copy of the list.
     assert "What this excerpt does and does not prove" not in block
     assert "NOT shown" not in block
