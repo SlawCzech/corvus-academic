@@ -12,6 +12,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from src.domain.action import ActionType
+from src.infrastructure.settings import settings
 
 from .nodes.bibliography import (
     BibliographyState,
@@ -94,11 +95,13 @@ def build_analysis_graph(
         # at run time by `route_chapters` (a `Send` each), then one
         # `check_coherence` over all the digests. The listed targets are the
         # places the router may send to.
-        builder.add_conditional_edges(
-            START, route_chapters, ["digest_chapter", "check_coherence"]
-        )
-        builder.add_edge("digest_chapter", "check_coherence")
-        analysis = [*prefix_readers, "check_coherence"]
+        analysis = list(prefix_readers)
+        if settings.review_chapter_digests:
+            builder.add_conditional_edges(
+                START, route_chapters, ["digest_chapter", "check_coherence"]
+            )
+            builder.add_edge("digest_chapter", "check_coherence")
+            analysis.append("check_coherence")
         # A list as the source makes this a join: `verify` runs once, after
         # every branch has written its findings (or its error) to state —
         # the first point where they can be checked against each other.

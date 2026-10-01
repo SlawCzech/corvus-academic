@@ -1,0 +1,412 @@
+{
+  "model": "claude-sonnet-5-5",
+  "judge": "claude-sonnet-5-5",
+  "action": "generate_review",
+  "summary": {
+    "model": "claude-sonnet-5-5",
+    "cases": 3,
+    "recall": 0.83,
+    "underrated": 0,
+    "duplicates": 10,
+    "false_flags": 1,
+    "unmatched": 27,
+    "failed_nodes": 0,
+    "recommendations_ok": "2/3",
+    "seconds": 97.4
+  },
+  "cases": [
+    {
+      "case_id": "kryptowaluty",
+      "model": "claude-sonnet-5-5",
+      "seconds": 31.1,
+      "node_seconds": {
+        "digest_chapter": 8.6,
+        "check_requirements": 11.1,
+        "analyze_structure": 12.5,
+        "analyze_methodology": 15.4,
+        "check_coherence": 24.2,
+        "verify": 24.2,
+        "promoter_review": 24.2,
+        "generate_review": 31.1
+      },
+      "node_errors": [],
+      "error": null,
+      "finding_count": 19,
+      "matched": [
+        "no-hypotheses",
+        "too-few-sources",
+        "no-foreign-sources",
+        "undescribed-survey",
+        "overgeneralised-conclusion",
+        "intro-incomplete"
+      ],
+      "missed": [],
+      "underrated": [],
+      "duplicates": 5,
+      "false_flags": [],
+      "unmatched": 9,
+      "recommendation": "Zwrócić do poprawy",
+      "recommendation_ok": true,
+      "findings": [
+        {
+          "severity": "critical",
+          "source": "methodology",
+          "section": "Wstęp – problem i cel badawczy",
+          "description": "Praca nie formułuje problemu badawczego, pytań badawczych ani hipotez. Cel („przedstawienie wpływu”) jest opisowy i nieoperacjonalizowany: nie wskazano, jak wpływ będzie mierzony, jakie wskaźniki systemu finansowego zostaną analizowane, ani jaki jest zakres czasowy i przedmiotowy."
+        },
+        {
+          "severity": "critical",
+          "source": "methodology",
+          "section": "Rozdział 3.1 – Metodyka badania",
+          "description": "Badanie ankietowe przeprowadzono wśród znajomych autora, z udostępnieniem w mediach społecznościowych. Jest to próba dogodnościowa, nielosowa i niereprezentatywna. Brak liczebności próby, charakterystyki respondentów, narzędzia, okresu badania i uzasadnienia metody. Ankieta o opiniach nie pozwala zbadać wpływu na system finansowy."
+        },
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "Rozdział 3.2 – Wyniki badania",
+          "description": "Wyniki podano jedynie słownie („większość”, „spora część”, „niewielu”), bez liczb, procentów, tabel, wykresów i analizy. Nie da się ich zweryfikować ani powiązać z celem pracy. Brak interpretacji i odniesienia do literatury."
+        },
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "Zakończenie – wnioski z badania",
+          "description": "Wnioski wykraczają poza dane: ankieta wśród znajomych nie uprawnia do twierdzeń o „Polakach”, ich dobrej orientacji ani o wpływie na system finansowy i konieczności dostosowania się banków. Wyniki opisują zresztą ryzyko i niewielką wiarę w zastąpienie pieniądza, a nie znajomość tematu; brak danych o poziomie wiedzy."
+        },
+        {
+          "severity": "critical",
+          "source": "methodology",
+          "section": "Bibliografia",
+          "description": "Baza źródeł jest bardzo wąska i słabej jakości: 9 pozycji, z czego większość to portale internetowe i serwisy komercyjne (Bankier, Money.pl, Comparic, Kryptowaluty.pl), brak publikacji naukowych, artykułów recenzowanych, raportów NBP/KNF/EBC/BIS i źródeł zagranicznych. Brak źródeł dla Polski o skali rynku."
+        },
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "Rozdział 2 – wykorzystanie źródeł",
+          "description": "Kluczowe twierdzenia o wpływie na banki i system finansowy oparte są na ogólnych serwisach internetowych i bez danych liczbowych. Brak dowodów empirycznych (skala obrotu kryptowalutami w Polsce, liczba użytkowników, udział w płatnościach). Fragmenty o blokowaniu przelewów przez banki i o bankach na świecie nie mają przypisów."
+        },
+        {
+          "severity": "minor",
+          "source": "methodology",
+          "section": "Wstęp / Rozdział 1 – aktualność i rzetelność danych",
+          "description": "Dane o wartości bitcoina podano nieprecyzyjnie („kilkadziesiąt tysięcy dolarów”) bez źródła; źródła są z lat 2020–2023, a praca z 2026 r. nie uwzględnia aktualnego stanu regulacji (MiCA opisano jako dopiero wchodzące w życie)."
+        },
+        {
+          "severity": "critical",
+          "source": "coherence",
+          "section": "Zakończenie / Rozdział 2",
+          "description": "Teza, że kryptowaluty mają coraz większy wpływ na system finansowy w Polsce i że banki będą musiały się do nich dostosować, nie ma oparcia w treści pracy. Rozdział 2 jest opisowy i bez danych, a pokazuje raczej ostrożność banków i instytucji nadzorczych oraz to, że kryptowaluty korzystają z pośredników. Ankieta nie dotyczyła systemu finansowego. Cel pracy, czyli przedstawienie wpływu, nie został więc zrealizowany."
+        },
+        {
+          "severity": "major",
+          "source": "structure",
+          "section": "Rozdział 2. Kryptowaluty a system finansowy",
+          "description": "Rozdział kluczowy dla celu pracy jest płytki i ogranicza się do banków i regulacji. Pomija inne elementy systemu finansowego (rynek kapitałowy, płatności, polityka pieniężna, stabilność finansowa, skala rynku w Polsce). Brak danych o skali zjawiska w Polsce, więc wpływ nie jest wykazany. Proporcje: część ogólna o kryptowalutach jest równie obszerna jak część o wpływie."
+        },
+        {
+          "severity": "minor",
+          "source": "structure",
+          "section": "Wstęp",
+          "description": "Wstęp jest ubogi: cel jest podany jednym zdaniem, bez uzasadnienia wyboru, zakresu, pytań badawczych i przejrzystego opisu logiki układu pracy. Opis struktury jest czysto wyliczeniowy, nie wyjaśnia, jak rozdziały prowadzą do celu."
+        },
+        {
+          "severity": "minor",
+          "source": "structure",
+          "section": "Rozdział 1. Istota i rodzaje kryptowalut",
+          "description": "Część podrozdziału 1.2 (zmienność, upadek FTX) należy do problematyki ryzyka i wpływu na system finansowy, a nie do opisu rodzajów kryptowalut; wątek ryzyka nie jest podjęty w rozdziale 2. Brak też zdań przejściowych między rozdziałami."
+        },
+        {
+          "severity": "critical",
+          "source": "requirements",
+          "section": "2.2 Wymogi dotyczące bibliografii",
+          "description": "Bibliografia zawiera tylko 9 pozycji, przy wymaganym minimum 25. Większość to strony internetowe (netografia), które nie wliczają się do limitu."
+        },
+        {
+          "severity": "critical",
+          "source": "requirements",
+          "section": "2.2 Wymogi dotyczące bibliografii",
+          "description": "Brak źródeł obcojęzycznych; wymagane są minimum 4. Wszystkie pozycje są polskie."
+        },
+        {
+          "severity": "major",
+          "source": "requirements",
+          "section": "1.4 Wstęp",
+          "description": "Wstęp nie zawiera zakresu pracy (przedmiotowego, czasowego, geograficznego), opisu metod badawczych ani charakterystyki wykorzystanej literatury. Cele szczegółowe są pominięte, a uzasadnienie aktualności jest powierzchowne."
+        },
+        {
+          "severity": "major",
+          "source": "requirements",
+          "section": "1.6 Zakończenie",
+          "description": "Zakończenie nie odnosi się do problemu badawczego ani hipotez i nie podsumowuje wyników w sposób wystarczający. Zawiera tezy niepokryte badaniem, a wyniki ankiety nie mają danych liczbowych."
+        },
+        {
+          "severity": "minor",
+          "source": "requirements",
+          "section": "2.3 Styl cytowania",
+          "description": "Cytowania nie są zgodne z APA: źródła internetowe cytowane są nazwą serwisu bez autora, a w bibliografii brak dat dostępu i pełnych adresów. Bibliografia nie jest ponumerowana alfabetycznie w pełnym standardzie APA. Część twierdzeń nie ma przypisów (np. Satoshi Nakamoto, FTX, banki w Polsce)."
+        },
+        {
+          "severity": "minor",
+          "source": "requirements",
+          "section": "2.1 Długość",
+          "description": "Treść pracy liczy 5756 znaków, więc spełnia minimum, ale tuż nad dolną granicą. Praca jest bardzo krótka i powierzchowna."
+        },
+        {
+          "severity": "major",
+          "source": "coherence",
+          "section": "Zakończenie / Rozdział 3",
+          "description": "Wniosek, że większość uważa kryptowaluty za przyszłość finansów, jest sprzeczny z wynikami albo nie wynika z nich. Najczęstsza opinia brzmiała „ryzykowne, ale mają przyszłość”, a niewielu respondentów sądziło, że kryptowaluty zastąpią tradycyjne pieniądze. Ankieta nie badała też „dobrej orientacji” w temacie, a jedynie to, czy respondenci słyszeli o kryptowalutach."
+        },
+        {
+          "severity": "minor",
+          "source": "coherence",
+          "section": "Zakończenie / Rozdział 2",
+          "description": "Prognoza, że MiCA sprawi, iż rynek stanie się bezpieczniejszy, jest nieuzasadniona. Rozdział 2 tylko opisuje wymogi rozporządzenia i nie ocenia jego skutków, a rozdział 1 wskazuje ryzyka (zmienność, upadek FTX), których regulacja nie eliminuje."
+        }
+      ],
+      "recall": 1.0
+    },
+    {
+      "case_id": "oszczednosci",
+      "model": "claude-sonnet-5-5",
+      "seconds": 34.4,
+      "node_seconds": {
+        "digest_chapter": 7.5,
+        "check_requirements": 5.6,
+        "analyze_structure": 11.5,
+        "analyze_methodology": 17.1,
+        "check_coherence": 27.8,
+        "verify": 27.8,
+        "promoter_review": 27.8,
+        "generate_review": 34.4
+      },
+      "node_errors": [],
+      "error": null,
+      "finding_count": 14,
+      "matched": [
+        "bibliography-not-alphabetical"
+      ],
+      "missed": [
+        "no-list-of-tables"
+      ],
+      "underrated": [],
+      "duplicates": 0,
+      "false_flags": [
+        "The empirical sample is too small or not described."
+      ],
+      "unmatched": 12,
+      "recommendation": "Zwrócić do poprawy",
+      "recommendation_ok": false,
+      "findings": [
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "Rozdział 3.1. Dane i metoda badania",
+          "description": "Hipoteza H1 mówi o wzroście stopy oszczędności wraz z dochodem. Zmienna objaśniana (oszczędności = dochód − wydatki) jest mechanicznie związana z dochodem, a w BBGD dochód i wydatki są mierzone z błędem. Pojawia się endogeniczność i błąd pomiaru, które mogą zawyżać dodatni związek. Nie omówiono tego ani nie zastosowano zmiennych instrumentalnych, a także nie sprawdzono odporności wyników."
+        },
+        {
+          "severity": "critical",
+          "source": "methodology",
+          "section": "Rozdział 3.1. Dane i metoda badania",
+          "description": "Realna stopa procentowa jest zmienną czysto szeregową (jedna wartość na rok), a model zawiera jednocześnie efekty stałe dla lat. Efekty te absorbują całą zmienność stopy procentowej, więc jej współczynnik nie jest identyfikowalny. Przedstawiony wynik dla stopy procentowej (0,006) jest metodologicznie niespójny. Weryfikacja H2 opiera się na 13 obserwacjach czasowych, a błędy standardowe nie uwzględniają klastrowania na poziomie lat."
+        },
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "Rozdział 3.1–3.2. Dane i wyniki",
+          "description": "Cel i H1 dotyczą wpływu wieku i wykształcenia oraz zmiennych z zakresu cyklu życia. Specyfikacja jest liniowa względem wieku (brak wyrazu kwadratowego), więc nie można testować hipotezy cyklu życia. Wykształcenie jest uwzględnione tylko jako zmienna zerojedynkowa (wyższe), bez opisu kategorii bazowej. Brak statystyk opisowych, opisu próby, wagi próby, braków danych i definicji zmiennych, a liczba obserwacji (ok. 450 tys.) nie zgadza się ze wstępem (ok. 35 tys. rocznie × 13 lat ≈ 455 tys., ale bez wyjaśnienia). R² = 0,21 nie jest skomentowane."
+        },
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "Rozdział 3.3 i Zakończenie",
+          "description": "Wniosek, że dochód ma największy wpływ, a wiek i wykształcenie mniejszy, porównuje współczynniki zmiennych o różnych skalach (logarytm, lata, zmienna zerojedynkowa) bez standaryzacji. Interpretacje są kauzalne, mimo że model jest korelacyjny i przekrojowy. Wiek zinterpretowano jako zgodny z cyklem życia, choć dodatni liniowy efekt tego nie dowodzi. Dane nie obejmują majątku i oczekiwań, co zaznaczono jako ograniczenie, ale nie wyciągnięto z niego wniosków dla interpretacji."
+        },
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "Rozdział 2.2. Wyniki wcześniejszych badań",
+          "description": "Przegląd badań dla Polski jest bardzo skromny i powierzchowny: kilka zdań, a większość pozycji z bibliografii (np. Grabowski i Welfe, Bańbuła, Szczepańska, Wójcik, Kotowska, Carroll, Attanasio i Weber) nie jest w ogóle cytowana w tekście. Bibliografia jest więc częściowo „dopełnieniem”, a nie podstawą argumentacji. Brakuje literatury dotyczącej pandemii i inflacji, mimo że wstęp wskazuje je jako uzasadnienie aktualności. Zakres analizy do 2022 r. nie jest też skonfrontowany z literaturą."
+        },
+        {
+          "severity": "minor",
+          "source": "methodology",
+          "section": "Rozdział 2.1. Stopa oszczędności w Polsce na tle UE",
+          "description": "Dane Eurostatu dotyczą stopy oszczędności brutto z rachunków narodowych, a analiza empiryczna używa mikrodanych BBGD i innej definicji. Różnice w miarach nie są omówione. Tabela 1 podaje tylko wybrane lata, a dane z roku 2020 i 2022 nie są powiązane z estymacją, w której nie uwzględniono wstrząsów pandemii i inflacji poza efektami stałymi lat. Źródło GUS (2023) jest w bibliografii, ale nie jest cytowane."
+        },
+        {
+          "severity": "major",
+          "source": "structure",
+          "section": "Rozdział 1. Teoretyczne ujęcie oszczędzania gospodarstw domowych",
+          "description": "Rozdział teoretyczny jest bardzo krótki (dwa akapity). Teorie omówione są zbyt skrótowo i bez powiązania z hipotezami. Brakuje teoretycznego uzasadnienia roli stopy procentowej, wykształcenia i wielkości gospodarstwa, które wchodzą do modelu. Proporcje wobec rozdziału empirycznego są zaburzone."
+        },
+        {
+          "severity": "minor",
+          "source": "structure",
+          "section": "Zakończenie",
+          "description": "Zakończenie nie podsumowuje wniosków z poszczególnych rozdziałów (teoria, porównanie z UE). Rekomendacje polityczne wykraczają poza przeprowadzoną analizę, bo nie badano efektywności instrumentów polityki."
+        },
+        {
+          "severity": "minor",
+          "source": "requirements",
+          "section": "1.7 Bibliografia / 2.3 Styl cytowania",
+          "description": "Bibliografia nie jest ułożona alfabetycznie. Pozycje 1–13 są uporządkowane alfabetycznie, a pozycje 14–27 (od Attanasio do Zalega) tworzą drugi, osobny ciąg alfabetyczny. Wymóg alfabetycznej kolejności nie jest spełniony."
+        },
+        {
+          "severity": "minor",
+          "source": "requirements",
+          "section": "2.3 Styl cytowania",
+          "description": "W tekście pracy nie cytowano wielu pozycji z bibliografii, m.in. Deaton (1992), Attanasio i Weber (2010), Carroll (1997), Mankiw i Taylor (2016), Bańbuła (2016), Kotowska (2019), Wójcik (2021). Bibliografia zawiera więc źródła bez odniesień w tekście, a to utrudnia identyfikację wykorzystanych źródeł."
+        },
+        {
+          "severity": "minor",
+          "source": "requirements",
+          "section": "1.7 Bibliografia / 2.3 Styl cytowania",
+          "description": "Odwołanie do Begg i in. (2014) w tekście jest niespójne z zapisem w bibliografii, gdzie wymieniono czterech autorów. Wpisy dla Eurostatu i GUS nie zawierają pełnych adresów ani informacji o dostępie."
+        },
+        {
+          "severity": "major",
+          "source": "coherence",
+          "section": "Zakończenie",
+          "description": "Wniosek o 'największym wpływie' dochodu, a 'w mniejszym stopniu' wieku i wykształcenia, nie wynika z tabeli. Porównano surowe współczynniki zmiennych w różnych skalach (log dochodu, lata, zmienna zerojedynkowa). Wykształcenie wyższe (0,041) ma większy współczynnik niż wiek (0,003). Nie policzono współczynników standaryzowanych. Pominięto też liczbę osób w gospodarstwie."
+        },
+        {
+          "severity": "major",
+          "source": "coherence",
+          "section": "Zakończenie / Rozdział 3",
+          "description": "Hipoteza H2 jest uznana za potwierdzoną, chociaż współczynnik przy stopie procentowej (0,006, błąd 0,002) pochodzi z modelu z efektami stałymi dla lat. Realna stopa procentowa jest wspólna dla wszystkich gospodarstw w danym roku. Efekty stałe lat powinny więc ją w dużej mierze absorbować, a identyfikacja efektu jest wątpliwa. Wniosek o potwierdzeniu jest zbyt mocny. Dodatkowo wniosek o polityce 'nie na zmianach oprocentowania' wykracza poza wyniki."
+        },
+        {
+          "severity": "minor",
+          "source": "coherence",
+          "section": "Zakończenie",
+          "description": "Cel szczegółowy (2), czyli ocena poziomu oszczędności w Polsce na tle UE, nie jest podsumowany w zakończeniu. Brakuje tam wniosków z danych Eurostatu (2–5% wobec 11–12%, skok w 2020 r.) oraz z przeglądu teorii. Zakończenie omawia tylko wyniki regresji."
+        }
+      ],
+      "recall": 0.5
+    },
+    {
+      "case_id": "pokolenie-z",
+      "model": "claude-sonnet-5-5",
+      "seconds": 31.9,
+      "node_seconds": {
+        "digest_chapter": 6.0,
+        "check_requirements": 10.6,
+        "analyze_structure": 12.1,
+        "analyze_methodology": 13.5,
+        "check_coherence": 26.0,
+        "verify": 26.0,
+        "promoter_review": 26.0,
+        "generate_review": 31.9
+      },
+      "node_errors": [],
+      "error": null,
+      "finding_count": 15,
+      "matched": [
+        "conclusion-contradicts-results",
+        "small-sample-generalised",
+        "hypotheses-not-verified",
+        "taylor-chapter-off-topic"
+      ],
+      "missed": [],
+      "underrated": [],
+      "duplicates": 5,
+      "false_flags": [],
+      "unmatched": 6,
+      "recommendation": "Zwrócić do poprawy",
+      "recommendation_ok": true,
+      "findings": [
+        {
+          "severity": "critical",
+          "source": "methodology",
+          "section": "Rozdział 3.1 Metodyka badania",
+          "description": "Próba obejmuje 23 osoby z jednego sklepu internetowego w Krakowie, w którym autorka odbywała praktykę. Jest to próba dobrana wygodnie, bardzo mała i niereprezentatywna dla małych przedsiębiorstw w Polsce. Nie opisano doboru respondentów, sposobu dystrybucji ankiety ani jej walidacji, nie ma też analizy statystycznej, więc wyniki nie pozwalają na testowanie hipotez w zadeklarowanym zakresie przestrzennym."
+        },
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "Wstęp – zakres badania",
+          "description": "Deklarowany zakres przestrzenny (małe przedsiębiorstwa w Polsce) jest niezgodny z faktycznie zrealizowanym badaniem w jednej firmie. Brakuje też operacjonalizacji pojęć (pokolenie Z, małe przedsiębiorstwo, czynniki finansowe i pozafinansowe). Granica urodzeń po 1995 r. jest niedookreślona, a w ankiecie mogą być respondenci spoza tej grupy."
+        },
+        {
+          "severity": "critical",
+          "source": "structure",
+          "section": "Rozdział 2. Naukowa organizacja pracy F. W. Taylora",
+          "description": "Cały rozdział o Taylorze (życiorys, zasady, akord) nie służy celowi pracy, którym jest motywowanie pokolenia Z w małych firmach. Jest to dygresja historyczna. Rozdział nie jest powiązany z rozdziałem 1 ani z badaniem. Nigdy nie wraca w analizie wyników ani w zakończeniu. Zajmuje przy tym znaczną część i tak krótkiej pracy."
+        },
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "Bibliografia i wykorzystanie źródeł",
+          "description": "Literatura o pokoleniu Z jest szczątkowa (Schroth, Twenge, w tekście tylko dwa źródła na ten temat). Wiele pozycji z bibliografii (np. Dolot, Żukowska, Wiktorowicz i Warwas, Juchnowicz, Pocztowski) nie jest w ogóle cytowanych w tekście. Źródła teoretyczne to głównie klasyka sprzed kilkudziesięciu lat, brakuje nowszych badań empirycznych o motywacji młodych pracowników w Polsce. Wyniki nie są porównane z literaturą."
+        },
+        {
+          "severity": "critical",
+          "source": "coherence",
+          "section": "Zakończenie / hipoteza H2",
+          "description": "Hipoteza H2 (praca zdalna w trójce najważniejszych czynników) nie jest w ogóle omówiona w zakończeniu. Wyniki ją przeczą: praca zdalna zajęła 8. miejsce z 12 (4 wskazania w top 3). Zakończenie nie stwierdza jej odrzucenia."
+        },
+        {
+          "severity": "major",
+          "source": "structure",
+          "section": "Rozdział 3. Motywowanie pokolenia Z — badanie własne",
+          "description": "Rozdział empiryczny jest krótki i nie zawiera dyskusji wyników. Nie odnosi ich do hipotez ani do teorii z rozdziału 1. Wykres 1 jest wspomniany, ale nie jest omówiony. Brak podrozdziału podsumowującego lub weryfikującego H1 i H2. Wyniki przechodzą wprost do zakończenia bez pomostu argumentacyjnego."
+        },
+        {
+          "severity": "major",
+          "source": "structure",
+          "section": "Zakończenie",
+          "description": "Zakończenie nie wynika z linii argumentacji pracy. Wnioski są sprzeczne z wynikami rozdziału 3, gdzie wynagrodzenie było najważniejsze. Zakończenie nie wraca do rozdziału 2 i nie podsumowuje całości. Dodaje też rekomendacje (nie podnosić wynagrodzeń), które nie mają oparcia w analizie."
+        },
+        {
+          "severity": "minor",
+          "source": "structure",
+          "section": "Wstęp",
+          "description": "Wstęp opisuje strukturę pracy jako teoretyczną, historyczną i empiryczną. Rozdział „historyczny” nie ma uzasadnienia w celu pracy, co ujawnia brak spójności układu rozdziałów z celem. Proporcje są też zaburzone: dwa rozdziały nieempiryczne są równie krótkie jak rozdział badawczy."
+        },
+        {
+          "severity": "critical",
+          "source": "requirements",
+          "section": "1.6 Zakończenie",
+          "description": "Zakończenie nie odnosi się do hipotez H1 i H2 (brak potwierdzenia lub odrzucenia) ani wprost do pytania badawczego. Brakuje wymaganego elementu: odniesienia do hipotez."
+        },
+        {
+          "severity": "major",
+          "source": "requirements",
+          "section": "1.4 Wstęp",
+          "description": "We wstępie brak ogólnej charakterystyki wykorzystanej literatury (podano tylko, że jest polska i zagraniczna). Opis struktury pracy jest zdawkowy i nieprecyzyjny (nie wymienia treści rozdziałów)."
+        },
+        {
+          "severity": "minor",
+          "source": "requirements",
+          "section": "1.4 Wstęp / 1.6 Zakończenie",
+          "description": "We wstępie nie opisano narzędzia badawczego i próby (tylko ogólnie 'badanie ankietowe'), a zakończenie nie zawiera podsumowania wyników badania w postaci uwag końcowych ani ograniczeń; sformułowano wnioski ogólne."
+        },
+        {
+          "severity": "minor",
+          "source": "requirements",
+          "section": "2.1 Długość pracy",
+          "description": "Długość treści (5 530 znaków) jest na samej dolnej granicy wymaganego minimum 5 000 znaków; praca jest bardzo krótka, rozdziały są szczątkowe."
+        },
+        {
+          "severity": "minor",
+          "source": "requirements",
+          "section": "2.3 Styl cytowania APA / 1.7 Bibliografia",
+          "description": "Bibliografia zawiera pozycje niecytowane w tekście (np. Dolot, Gick, Griffin, Juchnowicz), a zapisy nie w pełni zgodne z APA (np. brak 'i'/'&' przy autorach, przy czym w tekście cytowano 'Deci i Ryan'); lista jest ponumerowana, ale bez DOI/formatowania APA. Rozdział 3 nie ma cytowań."
+        },
+        {
+          "severity": "major",
+          "source": "coherence",
+          "section": "Zakończenie",
+          "description": "Wniosek, że dla ok. 70% badanych najważniejsze są czynniki pozafinansowe, nie wynika z danych. Wynagrodzenie jest czynnikiem numer jeden (39% jako najważniejsze; 19 wskazań w zestawieniu top 3, przed atmosferą 15 i elastycznością 11). Suma czynników pozafinansowych (61%) to kategoria zbiorcza, a nie pojedyncza preferencja. 70% nie pojawia się w wynikach."
+        },
+        {
+          "severity": "major",
+          "source": "coherence",
+          "section": "Zakończenie",
+          "description": "Wniosek ogólny o wszystkich małych firmach jest nieuprawnionym uogólnieniem z 23 respondentów z jednej firmy."
+        }
+      ],
+      "recall": 1.0
+    }
+  ]
+}

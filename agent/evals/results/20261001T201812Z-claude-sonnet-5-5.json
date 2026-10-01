@@ -1,0 +1,365 @@
+{
+  "model": "claude-sonnet-5-5",
+  "judge": "claude-sonnet-5-5",
+  "action": "generate_review",
+  "summary": {
+    "model": "claude-sonnet-5-5",
+    "cases": 3,
+    "recall": 1.0,
+    "underrated": 1,
+    "duplicates": 8,
+    "false_flags": 1,
+    "unmatched": 23,
+    "failed_nodes": 0,
+    "recommendations_ok": "2/3",
+    "seconds": 65.8
+  },
+  "cases": [
+    {
+      "case_id": "kryptowaluty",
+      "model": "claude-sonnet-5-5",
+      "seconds": 22.1,
+      "node_seconds": {
+        "check_requirements": 11.0,
+        "analyze_structure": 11.3,
+        "analyze_methodology": 15.7,
+        "verify": 15.7,
+        "promoter_review": 15.7,
+        "generate_review": 22.1
+      },
+      "node_errors": [],
+      "error": null,
+      "finding_count": 15,
+      "matched": [
+        "no-hypotheses",
+        "too-few-sources",
+        "no-foreign-sources",
+        "undescribed-survey",
+        "overgeneralised-conclusion",
+        "intro-incomplete"
+      ],
+      "missed": [],
+      "underrated": [],
+      "duplicates": 4,
+      "false_flags": [],
+      "unmatched": 7,
+      "recommendation": "Zwrócić do poprawy",
+      "recommendation_ok": true,
+      "findings": [
+        {
+          "severity": "critical",
+          "source": "methodology",
+          "section": "Wstęp – problem i cel badawczy",
+          "description": "Praca nie formułuje problemu badawczego, pytań ani hipotez. Cel („przedstawienie wpływu”) jest opisowy i nieoperacjonalizowany: nie wskazano, co jest wpływem, jak go mierzyć ani w jakim okresie. Brakuje zakresu przedmiotowego, czasowego i terytorialnego."
+        },
+        {
+          "severity": "critical",
+          "source": "methodology",
+          "section": "Rozdział 3.1 – dobór próby",
+          "description": "Ankieta przeprowadzona wśród znajomych autora i udostępniona w mediach społecznościowych to próba wygodna, nieprobabilistyczna i nie reprezentatywna. Nie podano liczebności próby, struktury respondentów, czasu badania ani narzędzia. Wyniki nie pozwalają wnioskować o Polakach ani o systemie finansowym."
+        },
+        {
+          "severity": "critical",
+          "source": "methodology",
+          "section": "Rozdział 3 – dopasowanie metody do celu",
+          "description": "Ankieta o opiniach nie bada wpływu kryptowalut na system finansowy (banki, rynek płatniczy, stabilność, regulacje). Metoda nie odpowiada celowi. Brak danych ilościowych (wolumeny obrotu, liczba podmiotów w rejestrze, dane NBP/KNF) i jakiejkolwiek analizy."
+        },
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "Rozdział 3.2 – prezentacja wyników",
+          "description": "Wyniki opisano ogólnikowo („większość”, „spora część”, „niewielu”) bez liczb, odsetków, tabel, wykresów i analizy statystycznej. Nie można ich zweryfikować."
+        },
+        {
+          "severity": "critical",
+          "source": "methodology",
+          "section": "Bibliografia – liczba i jakość źródeł",
+          "description": "Jest tylko 9 pozycji, z czego 7 to serwisy internetowe i komunikaty prasowe, a tylko 2 to publikacje książkowe (poradnikowa i jedna naukowa). Brak artykułów naukowych, raportów ESMA/EBC/KNF i źródeł obcojęzycznych, w tym pierwotnego dokumentu Nakamoto. Źródła są mało wiarygodne dla pracy naukowej."
+        },
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "Rozdział 2 – wykorzystanie źródeł",
+          "description": "Kluczowe tezy o bankach i regulacjach opierają się na serwisach popularnych (Bankier.pl, Prawo.pl) i nie mają oparcia w danych; twierdzenia o blokowaniu przelewów przez banki, ostrożności banków i KNF nie są poparte źródłem. Wiśniewski (2020) nie jest nigdzie cytowany. Źródła datowane na 2022–2023 nie uwzględniają aktualnego stanu MiCA."
+        },
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "Zakończenie – wnioskowanie",
+          "description": "Wnioski wykraczają poza dane: z ankiety wśród znajomych wyciągnięto tezę o dobrej orientacji Polaków i o rosnącym wpływie kryptowalut na system finansowy; prognozy dotyczące banków i MiCA nie mają oparcia w badaniu."
+        },
+        {
+          "severity": "minor",
+          "source": "methodology",
+          "section": "Wstęp – metody i literatura",
+          "description": "Wstęp nie opisuje metod, technik ani narzędzi badawczych, ani charakterystyki wykorzystanej literatury. Uzasadnienie aktualności opiera się na nieprecyzyjnym stwierdzeniu o wartości bitcoina."
+        },
+        {
+          "severity": "major",
+          "source": "structure",
+          "section": "Zakończenie",
+          "description": "Zakończenie wprowadza tezy o wpływie kryptowalut na system finansowy, o dostosowaniu się banków i bezpieczeństwie rynku dzięki MiCA, które nie wynikają z badania ani nie są rozwinięte w pracy. Linia argumentacji urywa się: wnioski opierają się na ankiecie, która tego nie bada."
+        },
+        {
+          "severity": "major",
+          "source": "structure",
+          "section": "Proporcje rozdziałów",
+          "description": "Praca jest bardzo krótka, a rozdziały są powierzchowne i nieproporcjonalne. Rozdział 2, kluczowy dla celu, jest zbliżony objętościowo do opisowego rozdziału 1, a rozdział 3 ma dwa krótkie podrozdziały bez danych liczbowych. Brakuje analizy wpływu na sektor bankowy, płatności, stabilność finansową czy rynek polski."
+        },
+        {
+          "severity": "minor",
+          "source": "structure",
+          "section": "Rozdział 1. Istota i rodzaje kryptowalut",
+          "description": "Rozdział 1 zawiera dygresje niezwiązane z celem, np. opis blockchaina i stablecoinów, a brakuje przejścia do rozdziału 2. Podrozdział o zmienności i upadku FTX należałoby przenieść do części o ryzyku systemowym, bo tutaj pozostaje bez wpływu na argument. Wstęp nie zapowiada tych treści."
+        },
+        {
+          "severity": "critical",
+          "source": "requirements",
+          "section": "2.2 Wymogi dotyczące bibliografii",
+          "description": "Bibliografia zawiera tylko 9 pozycji, przy wymaganym minimum 25. Większość to netografia (strony internetowe), która nie wlicza się do limitu."
+        },
+        {
+          "severity": "major",
+          "source": "requirements",
+          "section": "1.6 Zakończenie",
+          "description": "Zakończenie nie odnosi się do problemu badawczego, hipotez ani nie podsumowuje wyników w sposób kompletny. Jest bardzo krótkie, a jego tezy wykraczają poza wyniki badania."
+        },
+        {
+          "severity": "minor",
+          "source": "requirements",
+          "section": "2.1 Długość pracy",
+          "description": "Treść pracy liczy 5756 znaków, czyli tuż powyżej dolnego limitu 5000. Praca jest bardzo powierzchowna, a rozdziały są skrajnie krótkie."
+        },
+        {
+          "severity": "minor",
+          "source": "requirements",
+          "section": "2.3 Styl cytowania",
+          "description": "Cytowania w tekście nie są zgodne ze stylem APA: powołania na strony internetowe bez autora oraz brak stron/DOI. Wpisy w bibliografii mają niepełne dane (brak dat dostępu, tytuły bez rozróżnienia). Bibliografia nie jest ułożona alfabetycznie w sposób zgodny z APA (Bankier, Bitcoin, Comparic, Kowalczyk, Kryptowaluty, Money, NBP, Prawo, Wiśniewski – pozycje 1-3, 5-8 to serwisy)."
+        }
+      ],
+      "recall": 1.0
+    },
+    {
+      "case_id": "oszczednosci",
+      "model": "claude-sonnet-5-5",
+      "seconds": 24.0,
+      "node_seconds": {
+        "check_requirements": 7.2,
+        "analyze_structure": 11.1,
+        "analyze_methodology": 17.6,
+        "verify": 17.6,
+        "promoter_review": 17.6,
+        "generate_review": 24.0
+      },
+      "node_errors": [],
+      "error": null,
+      "finding_count": 13,
+      "matched": [
+        "bibliography-not-alphabetical",
+        "no-list-of-tables"
+      ],
+      "missed": [],
+      "underrated": [],
+      "duplicates": 0,
+      "false_flags": [
+        "The bibliography has fewer than 25 sources."
+      ],
+      "unmatched": 10,
+      "recommendation": "Zwrócić do poprawy",
+      "recommendation_ok": false,
+      "findings": [
+        {
+          "severity": "critical",
+          "source": "methodology",
+          "section": "3.1. Dane i metoda badania",
+          "description": "Zmienną objaśnianą (stopa oszczędności) i regresory konstruuje się z tych samych danych budżetowych. Realna stopa procentowa jest zmienną o wartości jednakowej dla wszystkich gospodarstw w danym roku, a w modelu są jednocześnie efekty stałe lat. Efekty te pochłaniają całą zmienność stopy procentowej, więc jej oszacowanie jest niezidentyfikowane lub artefaktem. Test H2 jest przez to metodologicznie wadliwy."
+        },
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "3.1–3.2. Dane i wyniki estymacji",
+          "description": "Stopa oszczędności jest liczona jako różnica dochodu i wydatków, dochód występuje po obu stronach równania (log dochodu jako regresor), co grozi błędem pomiaru i mechanicznym związkiem. Nie omówiono endogeniczności, wartości odstających (ujemne oszczędności), wag próby ani diagnostyki modelu. Dane BBGD to powtarzane przekroje, nie panel, a błędy nie są klastrowane. Interpretacja przyczynowa jest nieuzasadniona."
+        },
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "3.1. Dane i metoda badania",
+          "description": "Opis danych jest niespójny z deklaracjami. Cel obejmuje wpływ wieku i wykształcenia, ale wiek wchodzi liniowo, mimo że teoria cyklu życia przewiduje zależność nieliniową (kwadrat wieku). Wykształcenie ujęto tylko jako zmienną wyższe, bez grupy referencyjnej. Brak statystyk opisowych i definicji zmiennych. Ocena „największego wpływu” porównuje współczynniki o różnych skalach."
+        },
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "3.2–3.3. Wyniki i dyskusja",
+          "description": "Hipotezę H1 (stopa oszczędności rośnie z dochodem) testuje się dodatnim współczynnikiem, a wynik uznaje za zgodny z Keynesem i teorią cyklu życia, bez rozważenia alternatyw (np. dochód permanentny Friedmana, który przewiduje podobny wzorzec przy dochodzie przejściowym). Dyskusja jest powierzchowna, a R²=0,21 nie jest komentowane. Hipoteza H2 nie ma określonego progu „słabości” efektu."
+        },
+        {
+          "severity": "minor",
+          "source": "methodology",
+          "section": "Wstęp / Rozdział 2",
+          "description": "Zakres 2010–2022 obejmuje pandemię i szok inflacyjny, ale model nie uwzględnia ich osobno (tylko efekty lat), choć praca uzasadnia aktualność właśnie nimi. Dane o stopie oszczędności z Eurostatu są makro, brutto, a model mikro używa stopy netto z BBGD, bez omówienia porównywalności."
+        },
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "Bibliografia",
+          "description": "Kilkanaście pozycji z bibliografii (m.in. Deaton, Carroll, Attanasio i Weber, Bańbuła, Grabowski i Welfe, Kotowska, Wójcik, Szczepańska) nie jest cytowanych w tekście, co sugeruje dobór listy dla liczby. Literatura o oszczędzaniu w pandemii i inflacji, istotna dla okresu badania, nie została wykorzystana. Przegląd badań dla Polski opiera się na kilku pozycjach, w tym starszych (2011–2014)."
+        },
+        {
+          "severity": "minor",
+          "source": "methodology",
+          "section": "2.2. Wyniki wcześniejszych badań empirycznych",
+          "description": "Przegląd badań jest skrótowy i bez krytycznej oceny: wymienia ustalenia pojedynczych autorów, nie porównuje metod, danych ani rozbieżności wyników. Deklarowana „krytyczna analiza literatury” nie jest realizowana, a odwołanie do wyniku Browninga i Lusardi (1996) sprzed ćwierćwiecza służy potwierdzeniu własnego wyniku."
+        },
+        {
+          "severity": "major",
+          "source": "structure",
+          "section": "Rozdział 3 / Zakończenie – hipoteza H2 i wnioski",
+          "description": "Zakończenie formułuje rekomendacje polityki (wsparcie niższych dochodów, edukacja finansowa) oraz ranking wpływu zmiennych, których rozdział 3 nie uzasadnia: brak porównania siły efektów, brak analizy edukacji finansowej czy grup dochodowych. Wnioski wykraczają poza przeprowadzoną analizę."
+        },
+        {
+          "severity": "major",
+          "source": "structure",
+          "section": "Rozdział 1 – część teoretyczna",
+          "description": "Rozdział teoretyczny jest bardzo krótki (dwa podrozdziały po kilka zdań) i nie rozwija teorii istotnych dla dalszej analizy: brak teorii bufora oszczędności i roli stopy procentowej (efekt dochodowy/substytucyjny), choć H2 i zmienne modelu tego wymagają. Dysproporcja wobec spisu treści zapowiadającego rozdziały po ok. 6 stron."
+        },
+        {
+          "severity": "minor",
+          "source": "requirements",
+          "section": "2.3 Bibliography / 1.7 Bibliografia",
+          "description": "Bibliografia nie jest w całości ułożona alfabetycznie. Pozycje 1–13 są alfabetyczne, a pozycje 14–27 (Attanasio, Bańbuła, Carroll itd.) tworzą osobny ciąg alfabetyczny dołączony na końcu. Wymóg porządku alfabetycznego nie jest spełniony."
+        },
+        {
+          "severity": "minor",
+          "source": "requirements",
+          "section": "2.3 Citation Style",
+          "description": "Odwołania w tekście są podane w stylu APA, ale część pozycji z bibliografii (m.in. Attanasio i Weber, Carroll, Mankiw i Taylor, Bańbuła, Jappelli i Pistaferri) nie jest cytowana w tekście. Zestaw źródeł jest więc niespójny z cytowaniami. Praca ma też mało odwołań w części teoretycznej."
+        },
+        {
+          "severity": "major",
+          "source": "requirements",
+          "section": "1.8 Lists",
+          "description": "W pracy są dwie tabele (Tabela 1 i Tabela 2), ale nie ma spisu tabel. Spis treści nie zawiera takiej listy."
+        },
+        {
+          "severity": "minor",
+          "source": "requirements",
+          "section": "2.2 Bibliography Requirements",
+          "description": "Źródeł jest 27, czyli mniej niż 30, a wiele z nich to książki i raporty. Pozycje zagraniczne (Browning i Lusardi, Keynes, Laibson, Carroll i inne) spełniają minimum 4 źródeł obcojęzycznych. Wymóg minimum 25 jest spełniony tylko na granicy."
+        }
+      ],
+      "recall": 1.0
+    },
+    {
+      "case_id": "pokolenie-z",
+      "model": "claude-sonnet-5-5",
+      "seconds": 19.7,
+      "node_seconds": {
+        "check_requirements": 9.9,
+        "analyze_structure": 11.6,
+        "analyze_methodology": 13.6,
+        "verify": 13.6,
+        "promoter_review": 13.6,
+        "generate_review": 19.7
+      },
+      "node_errors": [],
+      "error": null,
+      "finding_count": 13,
+      "matched": [
+        "conclusion-contradicts-results",
+        "small-sample-generalised",
+        "hypotheses-not-verified",
+        "taylor-chapter-off-topic"
+      ],
+      "missed": [],
+      "underrated": [
+        "hypotheses-not-verified"
+      ],
+      "duplicates": 4,
+      "false_flags": [],
+      "unmatched": 6,
+      "recommendation": "Zwrócić do poprawy",
+      "recommendation_ok": true,
+      "findings": [
+        {
+          "severity": "critical",
+          "source": "methodology",
+          "section": "Rozdział 3.1 Metodyka badania",
+          "description": "Próba to 23 osoby z jednego sklepu internetowego w Krakowie, w którym autorka odbywała praktykę. Jest to próba dobrana wygodnie, bardzo mała i nielosowa, a zarazem w jednej firmie. Nie odpowiada zadeklarowanemu zakresowi badania („małe przedsiębiorstwa w Polsce”) i nie pozwala na wnioskowanie ani testowanie hipotez. Brakuje opisu doboru respondentów, operacjonalizacji pojęć i narzędzia. Nie ma też informacji o pilotażu, anonimowości ani o ewentualnym wpływie praktykantki na odpowiedzi."
+        },
+        {
+          "severity": "critical",
+          "source": "methodology",
+          "section": "Rozdział 3.2 Wyniki badania / Zakończenie",
+          "description": "Uogólnienia na pokolenie Z w Polsce i na wszystkie małe firmy są nieuprawnione przy próbie 23 osób z jednej firmy. Wnioski są też niespójne z danymi: wynagrodzenie było najczęściej wskazywanym czynnikiem. Rekomendacja, by nie podnosić wynagrodzeń, jest nieuzasadniona. Wartość „ok. 70%” nie wynika jednoznacznie z podanych wyników. Hipotezy nie zostały poddane żadnej analizie, a wyniki ograniczają się do prostych odsetków, bez analizy statystycznej."
+        },
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "Rozdział 2 Naukowa organizacja pracy Taylora",
+          "description": "Cały rozdział o Taylorze (życiorys, zasady, akord) nie jest związany z problemem badawczym (motywowanie pokolenia Z w małych firmach). Rozdział ten nie jest wykorzystany w analizie ani w interpretacji wyników. Zastępuje on przegląd literatury o pokoleniu Z i motywowaniu w MŚP, który jest bardzo skromny. Brakuje przeglądu dotychczasowych badań empirycznych."
+        },
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "Bibliografia i wykorzystanie źródeł",
+          "description": "Bibliografia liczy 25 pozycji, ale w tekście cytowano tylko ok. 11 z nich. Większość pozycji (m.in. Dolot, Juchnowicz, Pocztowski, Żukowska, Wiktorowicz i Warwas) nie pojawia się w tekście, a literatura o pokoleniu Z występuje jedynie w jednym zdaniu. Dominują klasyczne i podręcznikowe źródła sprzed kilkudziesięciu lat (Maslow, Herzberg, Vroom, Taylor 1911). Brakuje aktualnych badań empirycznych o motywacji pokolenia Z i o małych firmach."
+        },
+        {
+          "severity": "major",
+          "source": "methodology",
+          "section": "Wstęp – założenia badawcze",
+          "description": "Problem badawczy mówi o „niedopasowaniu narzędzi motywacyjnych” w małych firmach, ale badanie nie analizuje stosowanych narzędzi, tylko preferencje pracowników. Hipotezy nie są wyprowadzone z literatury. Rozróżnienie „finansowe–pozafinansowe” nie jest zdefiniowane, a w H1 grupa czynników pozafinansowych jest porównywana z jednym czynnikiem (płacą). Przyjęta definicja pokolenia Z (po 1995) nie jest uzasadniona źródłem."
+        },
+        {
+          "severity": "critical",
+          "source": "structure",
+          "section": "Rozdział 2. Naukowa organizacja pracy F. W. Taylora",
+          "description": "Cały rozdział o Taylorze (biografia, zasady, akordowe systemy płac) jest dygresją niezwiązaną z celem pracy, czyli motywowaniem pokolenia Z w małych firmach. Rozdział nie jest powiązany z pokoleniem Z ani z rozdziałem 1 i 3, nie ma też żadnego wniosku łączącego go z badaniem. Rozdział 2. jest przy tym proporcjonalnie większy niż merytoryczna część teoretyczna."
+        },
+        {
+          "severity": "major",
+          "source": "structure",
+          "section": "Rozdział 3. Motywowanie pokolenia Z — badanie własne",
+          "description": "Rozdział empiryczny jest bardzo krótki i kończy się na prezentacji wyników. Brakuje w nim omówienia wyników, odniesienia do hipotez H1 i H2 oraz porównania z literaturą z rozdziału 1. Wyniki nie są też zinterpretowane w świetle teorii. Dyskusja i weryfikacja hipotez nie pojawiają się nigdzie w pracy przed zakończeniem."
+        },
+        {
+          "severity": "major",
+          "source": "structure",
+          "section": "Zakończenie",
+          "description": "Wnioski nie wynikają z logiki rozdziału 3. i wprowadzają nowe, niepodparte tezy. Zakończenie nie odwołuje się do rozdziału 2. i nie podsumowuje poszczególnych rozdziałów. Rozbudowane rekomendacje dla małych firm nie mają oparcia w analizie."
+        },
+        {
+          "severity": "minor",
+          "source": "structure",
+          "section": "Wstęp",
+          "description": "Opis struktury pracy jako „teoretycznego, historycznego i empirycznego” rozdziału ujawnia brak spójności układu z celem. Rozdział historyczny nie służy realizacji celu, a wstęp nie uzasadnia jego obecności."
+        },
+        {
+          "severity": "major",
+          "source": "requirements",
+          "section": "1.6 Zakończenie",
+          "description": "Zakończenie nie odnosi się do hipotez H1 i H2 (brak potwierdzenia lub odrzucenia), choć wymóg 1.6 tego wprost wymaga. Nie odpowiada też wprost na pytanie badawcze o czynniki finansowe vs pozafinansowe."
+        },
+        {
+          "severity": "minor",
+          "source": "requirements",
+          "section": "1.4 Wstęp",
+          "description": "We wstępie brakuje ogólnej charakterystyki wykorzystanej literatury (jest tylko ogólne zdanie bez omówienia głównych nurtów i autorów). Opis struktury pracy jest błędny/niepełny: rozdział 2 określono jako „historyczny”, mimo że nie służy celowi pracy, a metody i narzędzia opisano bardzo ogólnie."
+        },
+        {
+          "severity": "minor",
+          "source": "requirements",
+          "section": "2.1 Długość",
+          "description": "Treść główna ma 5 530 znaków, co mieści się w limicie, lecz jest tuż nad dolną granicą (5 000); praca jest bardzo krótka, a rozdziały teoretyczne szczątkowe."
+        },
+        {
+          "severity": "minor",
+          "source": "requirements",
+          "section": "1.7 / 2.3 Bibliografia i cytowanie (APA)",
+          "description": "Bibliografia ma dokładnie 25 pozycji, więc minimum jest ledwo spełnione; liczba źródeł obcojęzycznych (ok. 8) jest wystarczająca. Wiele pozycji z bibliografii (m.in. Gick, Juchnowicz, Kopertyńska, Oleksyn, Pocztowski, Zając, Dolot) nie jest cytowanych w tekście. Format APA niekonsekwentny (brak „&”, brak DOI, brak zapisu „i” vs „&”, przy zapisie Deci i Ryan bez przecinka przed nazwiskiem drugiego autora)."
+        }
+      ],
+      "recall": 1.0
+    }
+  ]
+}

@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     crossref_mailto: str = ""
     crossref_timeout: float = 10.0
 
+    # The review's map-reduce over the chapters (digest each, then check that
+    # the conclusions follow). Built for a model that reads a prefix of the
+    # thesis; whether it still earns its ten seconds when every analysis reads
+    # the whole work is a question for the evals — hence a switch.
+    review_chapter_digests: bool = True
+
     # Graph checkpoints in Postgres, so a run that dies can resume. Off in
     # tests and evals, which have no database.
     checkpoints_enabled: bool = True
