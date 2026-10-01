@@ -28,7 +28,9 @@ from src.infrastructure.settings import settings
 # to Anthropic would just fail.
 _BYOK_MODELS: dict[str, str] = {
     "claude": "claude-sonnet-5-5",
-    "openai": "gpt-5",
+    # OpenAI's counterpart of Sonnet: "near-flagship at a lower cost", and the
+    # same price per token. Checked against the key's model list 2026-10-01.
+    "openai": "gpt-6.1-sol",
 }
 
 # Thinking counts toward the limit even though its text is not returned, and

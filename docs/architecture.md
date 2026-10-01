@@ -478,7 +478,7 @@ def get_llm(model: str) -> BaseChatModel:
         case "ollama":
             return ChatOllama(model=model, base_url=settings.ollama_base_url)
         case "openai":
-            return ChatOpenAI(model="gpt-5")
+            return ChatOpenAI(model="gpt-6.1-sol")
         case _:
             raise ValueError(f"Nieznany MODEL_BACKEND: {settings.model_backend}")
 ```

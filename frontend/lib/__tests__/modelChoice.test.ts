@@ -9,7 +9,7 @@ const CATALOG: ModelCatalog = {
     { name: "qwen3:30b-a3b", parameter_size: "30.5B" },
   ],
   local_available: true,
-  byok: { claude: "claude-sonnet-5-5", openai: "gpt-5" },
+  byok: { claude: "claude-sonnet-5-5", openai: "gpt-6.1-sol" },
 }
 
 describe("resolveModel", () => {

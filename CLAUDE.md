@@ -127,7 +127,7 @@ Przełączanie modelu przez zmienną środowiskową lub klucz API w UI:
 match settings.model_backend:
     case "ollama":   return ChatOllama(model=settings.ollama_model)
     case "claude":   return ChatAnthropic(model="claude-sonnet-5-5")
-    case "openai":   return ChatOpenAI(model="gpt-5")
+    case "openai":   return ChatOpenAI(model="gpt-6.1-sol")
 ```
 
 ---

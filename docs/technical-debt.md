@@ -125,7 +125,7 @@
   i pozwolić workerowi odszyfrować go samodzielnie.
 
 - [ ] **Nie można wybrać modelu u dostawcy** — BYOK używa stałych domyślnych
-  (`claude-sonnet-5-5`, `gpt-5`); parametr `model` dotyczy tylko Ollamy, bo to
+  (`claude-sonnet-5-5`, `gpt-6.1-sol`); parametr `model` dotyczy tylko Ollamy, bo to
   tag lokalnego modelu. Do wystawienia razem z listą modeli per dostawca.
 
 - [x] ~~**Brak walidacji klucza przy zapisie**~~ — `PATCH /settings/api-key` pyta
@@ -221,7 +221,9 @@ Pierwszy dzień akcji na żywo na Claude (`claude-sonnet-5-5`). Co zostało świ
 odłożone:
 
 - [ ] **OpenAI niesprawdzone** — ścieżka istnieje i ma testy, ale żadna akcja nie
-  poszła na kluczu OpenAI; `gpt-5` w `llm_factory` nie był zweryfikowany u dostawcy.
+  poszła na kluczu OpenAI. Model to `gpt-6.1-sol` (jest na liście modeli klucza);
+  dokumentacja OpenAI mówi o Responses API, a `ChatOpenAI` domyślnie woła Chat
+  Completions — do sprawdzenia pierwszą akcją.
 
 - [ ] **Evals nie mają przebiegu na dostawcy** — `make eval MODEL=claude` działa od
   2026-10-01, liczb jeszcze nie ma. Poziom `ANTHROPIC_EFFORT=medium` i ewentualny

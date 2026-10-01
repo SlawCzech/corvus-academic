@@ -25,7 +25,7 @@ START ─┬─ analyze_structure ────┐
 
 | # | Co | Gdzie | Mechanizm do zrozumienia |
 |---|---|---|---|
-| 0 | BYOK na aktualnych modelach (`claude-sonnet-5-5`, `gpt-5`) | `infrastructure/llm_factory.py` | — |
+| 0 | BYOK na aktualnych modelach (`claude-sonnet-5-5`, `gpt-6.1-sol`) | `infrastructure/llm_factory.py` | — |
 | 1 | Tracing każdego przebiegu w self-hosted Langfuse | `infrastructure/tracing.py`, `infra/langfuse/` | callbacki LangChain; `config` przekazywany przez graf do każdego `llm.invoke` przez contextvar |
 | 2 | Evals: syntetyczne prace z wpisanymi wadami + sędzia | `agent/evals/` | LLM-as-judge tylko do dopasowania; metryki w czystym Pythonie |
 | 3 | Structured output: schema → Ollama `format`, walidacja, tura naprawcza | `application/structured.py`, `replies.py` | constrained decoding vs walidacja vs repair |
