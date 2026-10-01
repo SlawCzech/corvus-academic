@@ -93,22 +93,44 @@ def _author_matches(work: Work, entry: str) -> bool:
     return normalize(work.authors[0]) in normalize(entry)
 
 
+def _same_year(work: Work, year: int | None) -> bool:
+    return year is None or work.year is None or abs(work.year - year) <= 1
+
+
 def match(entry: str, year: int | None, works: Sequence[Work]) -> Check:
-    """Settle a reference from Crossref's candidates, or leave it unresolved."""
-    for work in works:
-        if not _title_matches(work, entry):
-            continue
-        same_year = year is None or work.year is None or abs(work.year - year) <= 1
-        if same_year and _author_matches(work, entry):
+    """Settle a reference from Crossref's candidates, or leave it unresolved.
+
+    Every candidate is looked at, not the first whose title fits: for a
+    well-known book the best-scoring records are its reviews — same title,
+    the reviewer as author — and the book itself comes fourth.
+
+    A record with the title under another author is therefore not this work
+    with a wrong author; it says nothing, and is passed over. A record with
+    the title and the author under another year is this work in another
+    edition or a reprint (Wallerstein 1974, in Crossref as the 2011 edition) —
+    unless all there is is a journal article: an article has one year, and a
+    reference that gives another has it wrong.
+    """
+    same_work = [
+        w for w in works if _title_matches(w, entry) and _author_matches(w, entry)
+    ]
+    for work in same_work:
+        if _same_year(work, year):
             return Check(VERIFIED, doi=work.doi)
-        differences: list[str] = []
-        if not same_year:
-            differences.append(f"rok {work.year} zamiast {year}")
-        if not _author_matches(work, entry):
-            differences.append(f"pierwszy autor: {work.authors[0]}")
+    if not same_work:
+        return Check(UNRESOLVED)
+    work = same_work[0]
+    one_article = all(w.kind == "journal-article" for w in same_work) and (
+        len({w.year for w in same_work}) == 1
+    )
+    if one_article:
         return Check(
             MISMATCH,
-            note="Crossref zna tę pracę, ale: " + ", ".join(differences),
+            note=f"Crossref zna tę pracę, ale: rok {work.year} zamiast {year}",
             doi=work.doi,
         )
-    return Check(UNRESOLVED)
+    return Check(
+        VERIFIED,
+        note=f"W Crossref jako wydanie lub przedruk z {work.year} r.",
+        doi=work.doi,
+    )

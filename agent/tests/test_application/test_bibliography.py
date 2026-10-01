@@ -23,7 +23,12 @@ from src.application.graph import build_action_graph
 from src.application.nodes import bibliography as nodes
 from src.domain.action import ActionType
 from src.infrastructure.checkpoints import serializer
-from src.infrastructure.crossref import CrossrefClient, CrossrefUnavailableError, Work
+from src.infrastructure.crossref import (
+    CrossrefClient,
+    CrossrefUnavailableError,
+    Pace,
+    Work,
+)
 from tests.factories import make_state
 
 _LAIBSON = Work(
@@ -63,6 +68,72 @@ def test_the_right_work_with_the_wrong_year_is_a_mismatch() -> None:
     assert check.doi == _LAIBSON.doi
 
 
+def _record(title: str, author: str, year: int | None, kind: str) -> Work:
+    return Work(
+        doi=f"10.1/{author.lower()}{year}",
+        title=title,
+        year=year,
+        authors=(author,),
+        venue="",
+        kind=kind,
+        score=50.0,
+    )
+
+
+_NORTH_ENTRY = (
+    "North, D. C., i Thomas, R. P. (1973). The rise of the Western world: "
+    "A new economic history. Cambridge University Press."
+)
+_RISE = "The Rise of the Western World"
+
+
+def test_a_books_reviews_do_not_make_it_a_mismatch() -> None:
+    """What Crossref returns for a classic: its reviews first, the book fourth."""
+    works = [
+        _record(
+            f"{_RISE}: A New Economic History", "Shneidman", 1973, "journal-article"
+        ),
+        _record(
+            f"{_RISE}: A New Economic History", "Knauerhase", 1974, "journal-article"
+        ),
+        _record(_RISE, "North", 1973, "monograph"),
+    ]
+
+    check = match(_NORTH_ENTRY, 1973, works)
+
+    assert (check.status, check.doi) == (VERIFIED, "10.1/north1973")
+
+
+def test_only_reviews_leave_the_book_to_the_agent() -> None:
+    reviews = [_record(_RISE, "Shneidman", 1973, "journal-article")]
+
+    assert match(_NORTH_ENTRY, 1973, reviews).status == UNRESOLVED
+
+
+def test_a_later_edition_of_a_book_is_the_book() -> None:
+    entry = "Wallerstein, I. (1974). The modern world-system I. Academic Press."
+    edition = _record("The Modern World-System I", "Wallerstein", 2011, "monograph")
+
+    check = match(entry, 1974, [edition])
+
+    assert check.status == VERIFIED
+    assert "2011" in check.note
+
+
+def test_an_article_known_only_from_reprints_is_not_a_wrong_year() -> None:
+    entry = (
+        "Alchian, A. A., i Demsetz, H. (1972). Production, information costs, "
+        "and economic organization. American Economic Review, 62(5), 777–795."
+    )
+    title = "Production, Information Costs, and Economic Organization"
+    reprints = [
+        _record(title, "Alchian", 2009, "book-chapter"),
+        _record(title, "Alchian", 1975, "journal-article"),
+    ]
+
+    assert match(entry, 1972, reprints).status == VERIFIED
+
+
 def test_an_unrelated_record_leaves_the_entry_open() -> None:
     assert match(_FAKE_ENTRY, 2019, [_LAIBSON]).status == UNRESOLVED
     assert match(_FAKE_ENTRY, 2019, []).status == UNRESOLVED
@@ -98,7 +169,9 @@ def _client(handler: Any) -> CrossrefClient:  # noqa: ANN401
         httpx.Client(
             transport=httpx.MockTransport(handler),
             base_url="https://api.crossref.org",
-        )
+        ),
+        # Retries are waited out for real otherwise; nothing here needs the wait.
+        Pace(sleep=lambda _: None),
     )
 
 
@@ -284,7 +357,9 @@ def test_the_loop_ends_when_the_budget_is_spent_whatever_the_agent_asks() -> Non
     last_turn = seen[-2]
     assert "used up" in str(last_turn[-1].content)
     # One search to match the entries, then the budget — and not one more.
-    agent_searches = [c for c in crossref.search.call_args_list if c.kwargs]
+    agent_searches = [
+        c for c in crossref.search.call_args_list if str(c.args[0]).startswith("q")
+    ]
     assert len(agent_searches) == nodes.TOOL_BUDGET
     assert final["status"] == "bibliography_checked"
 

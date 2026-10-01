@@ -66,6 +66,9 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 # Past this, the rest of the list is not checked (and says so).
 _MAX_REFERENCES = 80
+# Crossref records looked at per entry. Three was too few: a classic's reviews
+# outrank the book itself.
+_CANDIDATES = 5
 # Tool calls the agent may make across all the references it investigates.
 TOOL_BUDGET = 12
 
@@ -154,7 +157,9 @@ def match_references(state: BibliographyState) -> dict[str, Any]:
         else:
             try:
                 check = match(
-                    entry, cast(int | None, ref.get("year")), client.search(entry)
+                    entry,
+                    cast(int | None, ref.get("year")),
+                    client.search(entry, rows=_CANDIDATES),
                 )
             except CrossrefUnavailableError as exc:
                 check = Check(UNCHECKED, note=f"Crossref niedostępny: {exc}")
