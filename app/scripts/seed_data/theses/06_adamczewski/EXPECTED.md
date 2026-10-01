@@ -18,7 +18,7 @@ literature — a model that mistakes confidence for quality will rate it highly.
 
 ## MAJOR / MINOR
 
-4. Literature at the edge of the minimum: 41 items, one of them the author's own
+4. Literature at the edge of the minimum: 43 items, one of them the author's own
    unpublished typescript, two of them 16th–17th-century treatises.
 5. Discussion "argues" with earlier work by dismissal rather than argument.
 6. Body slightly under the suggested 55 000 chars.
@@ -85,6 +85,34 @@ literature — a model that mistakes confidence for quality will rate it highly.
     around "control over labour"; extension to construction and catering.
     A review should say plainly that these do not follow from the study and
     describe unfree labour.
+
+## Bibliography — planted for `verify_bibliography`
+
+The one place in the fixtures where sources are **invented on purpose**
+(decided 2026-10-01: a demo of a reference check needs something to catch).
+The authors are characters from Sienkiewicz's Trilogy, so no real scholar is
+credited with a work they did not write; the journal and the publisher are
+real, which is what makes the entries look checkable.
+
+20. **A book no catalogue knows** — Zagłoba, J. O. (2011). *Rachunek
+    ekonomiczny folwarku szlacheckiego w XVII wieku*. Wydawnictwo Naukowe PWN.
+    Not in Crossref, the National Library or Open Library, though a PWN
+    monograph from 2011 would be in the legal-deposit catalogue. Expected:
+    **suspicious**. Cited in 1.3 as agreeing "w pełni" with the thesis.
+21. **An article that does not exist** — Kmicic, A., i Wołodyjowski, J. M.
+    (2019). Coerced labour and estate productivity in the Polish–Lithuanian
+    Commonwealth, 1650–1700. *Journal of Economic History, 79*(3), 812–847.
+    A 2019 article in a Cambridge journal would have a DOI. Expected:
+    **suspicious**. Cited in 1.2 as the "newest quantitative research".
+22. **A real article under the wrong year** — Malinowski, M. (2013), *Serfs and
+    the city…*, European Review of Economic History 20(2). Published in 2016.
+    Expected: **mismatch** ("rok 2016 zamiast 2013").
+
+Everything else in the list is real and should come back verified — the
+articles from Crossref, the books from a library catalogue — except what no
+catalogue holds and nobody should hold against him: his own typescript (3),
+the manuscript ledger (44), and a journal article from before DOIs (Eswaran &
+Kotwal, 1985).
 
 ## Numbers for checking
 

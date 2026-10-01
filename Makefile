@@ -47,10 +47,10 @@ seed-guidelines:  ## Fill the guideline catalog (UPDATE=1 publishes changed seed
 	$(COMPOSE) run --rm app python scripts/seed_guidelines.py $(if $(UPDATE),--update)
 
 seed-demo:  ## Give a promoter the demo students, notes and theses (PROMOTOR=<e-mail>, required; AS_OF=today moves the dates)
-	$(COMPOSE) run --rm app python scripts/seed_demo.py --promotor $(PROMOTOR) $(if $(AS_OF),--as-of $(AS_OF))
+	$(COMPOSE) run --rm app python scripts/seed_demo.py --promotor $(PROMOTOR) $(if $(AS_OF),--as-of $(AS_OF)) $(if $(ONLY),--only $(ONLY))
 
 demo-reset:  ## Delete the demo students from a promoter's roster and seed them again (PROMOTOR=<e-mail>, required)
-	$(COMPOSE) run --rm app python scripts/seed_demo.py --promotor $(PROMOTOR) --reset $(if $(AS_OF),--as-of $(AS_OF))
+	$(COMPOSE) run --rm app python scripts/seed_demo.py --promotor $(PROMOTOR) --reset $(if $(AS_OF),--as-of $(AS_OF)) $(if $(ONLY),--only $(ONLY))
 
 purge-drafts:  ## Run the thesis-version retention sweep once (NOW=<iso> to shift the clock)
 	$(COMPOSE) run --rm app python scripts/purge_drafts.py $(if $(NOW),--now $(NOW))

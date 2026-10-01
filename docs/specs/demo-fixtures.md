@@ -54,7 +54,11 @@ Adamczewski has the thesis decided before the research.
 - **Bibliography.** Real, well-known works (Williamson, North, Acemoglu & Robinson,
   Kula…) mixed with openly fictional empirical data. Never invented references that
   look real. A "bad bibliography" is bad in quality (blogs only, nothing recent),
-  not fabricated.
+  not fabricated. **One exception, since 2026-10-01:** Adamczewski's list holds
+  two invented works and one real article under a wrong year, so that
+  `verify_bibliography` has something to catch. Their authors are characters
+  from Sienkiewicz's Trilogy — no real scholar is credited with a work they did
+  not write — and each is listed in his `EXPECTED.md`.
 - **Expected findings.** Each thesis gets an `EXPECTED.md` listing its planted
   defects — a demo checklist now, a simple eval later.
 - **Guidelines.** Theses align with what `seed_guidelines` seeds, and at least one
@@ -70,7 +74,9 @@ promoter account all seven students. Each fixture directory has a `student.toml`
 the student's details, topic, and a dated timeline of meeting notes and uploaded
 versions. The script goes through `StudentService` and `DraftService`, so uploads
 are extracted and versioned exactly as in the UI. Students already on the roster
-(by name) are skipped. `--dry-run` only reads the data and extracts the files,
+(by name) are skipped. `ONLY=<fixture directory>` (`--only`, repeatable) limits a
+seed or a reset to those students — to reload one changed thesis without
+wiping what was run for the others. `--dry-run` only reads the data and extracts the files,
 and prints each student's timeline with its dates.
 
 Everything is dated from the timeline: the student and the topic from its

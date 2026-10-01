@@ -9,6 +9,7 @@ uploads are extracted, versions numbered, files stored.
     python scripts/seed_demo.py --promotor promotor@example.com
     python scripts/seed_demo.py --promotor promotor@example.com --as-of today
     python scripts/seed_demo.py --promotor promotor@example.com --reset
+    python scripts/seed_demo.py --promotor p@example.com --reset --only 06_adamczewski
     python scripts/seed_demo.py --dry-run
 
 Everything is dated as its `student.toml` says — the student from the first
@@ -28,7 +29,8 @@ no database: it reads the data and extracts every thesis file.
 in the fixtures, nobody else — with their notes, versions, files and AI
 results, the way the promoter's own "delete student" does (ADR 0009), and
 then seeds them again. It needs the agent running; without it nothing is
-deleted.
+deleted. `--only` narrows either to the named fixture directories: one thesis
+changed, and the results already run for the other students should stay.
 """
 
 import argparse
@@ -96,18 +98,30 @@ def _event(raw: dict[str, Any], directory: Path, shift: int) -> _Event:
     )
 
 
-def load(as_of: date | None = None) -> list[_SeedStudent]:
-    """Read every fixture; with `as_of`, moved to end in the week before it."""
+def load(
+    as_of: date | None = None, only: list[str] | None = None
+) -> list[_SeedStudent]:
+    """Read the fixtures; with `as_of`, moved to end in the week before it.
+
+    `only` keeps the named fixture directories. The shift is still worked out
+    from all of them, so one student reloaded lands where the rest already are.
+    """
     files = [
         (path, tomllib.loads(path.read_text(encoding="utf-8")))
         for path in sorted(_DATA.glob("*/student.toml"))
     ]
+    if only:
+        unknown = set(only) - {path.parent.name for path, _ in files}
+        if unknown:
+            raise ValueError(f"No such fixture: {', '.join(sorted(unknown))}")
     shift = 0
     if as_of is not None:
         latest = max(e["date"] for _, raw in files for e in raw["timeline"])
         shift = shift_days(latest, as_of)
     students: list[_SeedStudent] = []
     for path, raw in files:
+        if only and path.parent.name not in only:
+            continue
         students.append(
             _SeedStudent(
                 full_name=raw["full_name"],
@@ -356,13 +370,19 @@ def main() -> int:
         help="delete the demo students from the roster first, then seed them",
     )
     parser.add_argument(
+        "--only",
+        action="append",
+        metavar="FIXTURE",
+        help="a fixture directory (e.g. 06_adamczewski); repeat for several",
+    )
+    parser.add_argument(
         "--as-of",
         type=_day,
         metavar="YYYY-MM-DD|today",
         help="move the timeline to end in the week before this day",
     )
     args = parser.parse_args()
-    students = load(args.as_of)
+    students = load(args.as_of, args.only)
     if args.dry_run:
         dry_run(students)
         return 0

@@ -58,7 +58,7 @@ Ekonomiści rzadko zajmowali się poddaństwem, lecz ci, którzy to czynili, dos
 
 North i Thomas (1971, 1973) poszli dalej, interpretując system dworski jako efektywną umowę między panem a chłopami: chłopi świadczą pracę, a pan zapewnia im w zamian ochronę i wymiar sprawiedliwości. Świadczenie w pracy, a nie w pieniądzu czy w naturze, było według nich rozwiązaniem najtańszym w warunkach słabo rozwiniętych rynków, na których trudno ustalić ceny. Jest to interpretacja w pełni przekonująca i należy żałować, że jej autorzy nie odnieśli jej do folwarku polskiego, w którym wzajemność świadczeń pana i chłopa była wzorcowa.
 
-Millward (1982) przedstawił ekonomiczną analizę organizacji poddaństwa w Europie Wschodniej. Fogel i Engerman (1974) wykazali na obszernym materiale statystycznym, że plantacje amerykańskiego Południa oparte na pracy przymusowej były o ponad jedną trzecią bardziej efektywne od wolnych farm Północy, co przypisali korzyściom skali i organizacji pracy w brygadach. Acemoglu i Wolitzky (2011) dowiedli w modelu formalnym, że przymus zwiększa wysiłek pracowników. Wyniki te, uzyskane niezależnie od siebie przez najwybitniejszych ekonomistów, w tym laureatów Nagrody Nobla, składają się na spójny obraz: praca przymusowa jest wydajna.
+Millward (1982) przedstawił ekonomiczną analizę organizacji poddaństwa w Europie Wschodniej. Fogel i Engerman (1974) wykazali na obszernym materiale statystycznym, że plantacje amerykańskiego Południa oparte na pracy przymusowej były o ponad jedną trzecią bardziej efektywne od wolnych farm Północy, co przypisali korzyściom skali i organizacji pracy w brygadach. Acemoglu i Wolitzky (2011) dowiedli w modelu formalnym, że przymus zwiększa wysiłek pracowników. Wyniki te, uzyskane niezależnie od siebie przez najwybitniejszych ekonomistów, w tym laureatów Nagrody Nobla, składają się na spójny obraz: praca przymusowa jest wydajna. Najnowsze badania ilościowe nad Rzecząpospolitą potwierdzają te ustalenia w całej rozciągłości: Kmicic i Wołodyjowski (2019) wykazali na rachunkach dóbr z lat 1650–1700, że wydajność pracy przymusowej rosła wraz z wymiarem pańszczyzny.
 
 Istnieją oczywiście głosy przeciwne. Brenner (1976) twierdził, że poddaństwo zahamowało rozwój Europy Wschodniej, a Acemoglu i Robinson (2012) zaliczyli je do instytucji, które nazwali wyzyskującymi. Poglądy te mają jednak charakter ideologiczny, nie opierają się na danych z ksiąg folwarcznych i nie wymagają szerszego omówienia. To samo dotyczy prac publicystycznych, które w ostatnich latach przedstawiają dzieje polskiej wsi jednostronnie, z perspektywy rzekomej krzywdy chłopów (Leszczyński, 2020). Badanie Markevicha i Zhuravskiej (2018), według którego zniesienie poddaństwa podniosło wydajność rolnictwa, dotyczy Rosji w XIX wieku, a więc innego kraju i innej epoki, i nie ma zastosowania do przedmiotu niniejszej pracy.
 
@@ -66,7 +66,7 @@ Istnieją oczywiście głosy przeciwne. Brenner (1976) twierdził, że poddańst
 
 Polska historiografia gospodarcza poświęciła folwarkowi wiele uwagi. Rutkowski (1947) opisał ustrój agrarny dawnej Polski i podział dochodów między dwór a wieś. Wyczański (1960) zbadał folwark szlachecki w XVI wieku i wykazał jego dochodowość. Żytkowicz (1962) przeanalizował gospodarstwo wiejskie w dobrach kościelnych, a Mączak (1962) – gospodarstwo chłopskie na Żuławach. Topolski (1965, 1977) powiązał powstanie folwarku z aktywnością gospodarczą szlachty, która w ten sposób odpowiedziała na spadek swoich dochodów, i umieścił gospodarkę polską na tle europejskim. Małowist (1973) i Wallerstein (1974) pokazali, że folwark był ogniwem łączącym ziemie polskie z gospodarką światową: zboże spławiane Wisłą do Gdańska żywiło miasta Niderlandów. Polska szlachta była więc, mówiąc językiem współczesnym, eksporterem działającym na rynku globalnym.
 
-Nowsze badania skorygowały przesadnie ponury obraz stosunków na wsi. Blum (1957) opisał powstanie poddaństwa w Europie Wschodniej. Cerman (2012) wykazał, że tradycyjne wyobrażenie o „wtórnym poddaństwie” jest w wielu punktach nieuzasadnione, a Hagen (2002) – że położenie chłopów w dobrach szlacheckich było lepsze, niż dotąd sądzono. Guzowski (2008) udokumentował udział chłopów w gospodarce pieniężnej. Malinowski (2016) wskazał, że wpływ poddaństwa na rozwój miast zależał od warunków rynkowych. Kochanowicz (2006) i Sosnowska (2004) przedstawili spory historyków o przyczyny zacofania Europy Wschodniej, z których wynika przede wszystkim to, że spór pozostaje nierozstrzygnięty. Niniejszy artykuł go rozstrzyga.
+Nowsze badania skorygowały przesadnie ponury obraz stosunków na wsi. Blum (1957) opisał powstanie poddaństwa w Europie Wschodniej. Cerman (2012) wykazał, że tradycyjne wyobrażenie o „wtórnym poddaństwie” jest w wielu punktach nieuzasadnione, a Hagen (2002) – że położenie chłopów w dobrach szlacheckich było lepsze, niż dotąd sądzono. Guzowski (2008) udokumentował udział chłopów w gospodarce pieniężnej. Malinowski (2016) wskazał, że wpływ poddaństwa na rozwój miast zależał od warunków rynkowych. Kochanowicz (2006) i Sosnowska (2004) przedstawili spory historyków o przyczyny zacofania Europy Wschodniej, z których wynika przede wszystkim to, że spór pozostaje nierozstrzygnięty. Niniejszy artykuł go rozstrzyga. Rachunek ekonomiczny folwarku szlacheckiego przeprowadził wyczerpująco Zagłoba (2011), dochodząc do wniosków, które niniejszy artykuł w pełni podziela. Związki między poddaństwem a rozwojem miast badał Malinowski (2013).
 
 Uderzające jest, że mimo tak obszernej literatury nikt nie postawił pytania wprost: czy folwark był dobrą formą organizacji produkcji. Historycy pytali o jego genezę, o jego miejsce w podziale Europy, o jego skutki społeczne i polityczne, lecz ocenę ekonomiczną pozostawiali w domyśle, przyjmując za oczywiste, że forma, która ostatecznie zanikła, musiała być gorsza od tych, które ją zastąpiły. Rozumowanie to jest błędne. Formy organizacji zanikają z wielu powodów, wśród których efektywność bywa najmniej ważna: z powodu wojen, rozbiorów, zmian prawa narzuconych z zewnątrz i mód umysłowych. Zanik folwarku pańszczyźnianego na ziemiach polskich był skutkiem decyzji państw zaborczych, a nie rachunku ekonomicznego.
 
@@ -376,51 +376,55 @@ Dalsze badania powinny objąć zastosowanie twierdzenia Adamczewskiego do innych
 
 20. Jensen, M. C., i Meckling, W. H. (1976). Theory of the firm: Managerial behavior, agency costs and ownership structure. *Journal of Financial Economics, 3*(4), 305–360.
 
-21. Kochanowicz, J. (2006). *Backwardness and modernization: Poland and Eastern Europe in the 16th–20th centuries*. Ashgate.
+21. Kmicic, A., i Wołodyjowski, J. M. (2019). Coerced labour and estate productivity in the Polish–Lithuanian Commonwealth, 1650–1700. *Journal of Economic History, 79*(3), 812–847.
 
-22. Leibenstein, H. (1966). Allocative efficiency vs. “X-efficiency”. *American Economic Review, 56*(3), 392–415.
+22. Kochanowicz, J. (2006). *Backwardness and modernization: Poland and Eastern Europe in the 16th–20th centuries*. Ashgate.
 
-23. Leszczyński, A. (2020). *Ludowa historia Polski*. W.A.B.
+23. Leibenstein, H. (1966). Allocative efficiency vs. “X-efficiency”. *American Economic Review, 56*(3), 392–415.
 
-24. Malinowski, M. (2016). Serfs and the city: Market conditions, surplus extraction institutions, and urban growth in early modern Poland. *European Review of Economic History, 20*(2), 123–146.
+24. Leszczyński, A. (2020). *Ludowa historia Polski*. W.A.B.
 
-25. Małowist, M. (1973). *Wschód a Zachód Europy w XIII–XVI wieku. Konfrontacja struktur społeczno-gospodarczych*. Państwowe Wydawnictwo Naukowe.
+25. Malinowski, M. (2013). Serfs and the city: Market conditions, surplus extraction institutions, and urban growth in early modern Poland. *European Review of Economic History, 20*(2), 123–146.
 
-26. Markevich, A., i Zhuravskaya, E. (2018). The economic effects of the abolition of serfdom: Evidence from the Russian Empire. *American Economic Review, 108*(4–5), 1074–1117.
+26. Małowist, M. (1973). *Wschód a Zachód Europy w XIII–XVI wieku. Konfrontacja struktur społeczno-gospodarczych*. Państwowe Wydawnictwo Naukowe.
 
-27. Marshall, A. (1890). *Principles of economics*. Macmillan.
+27. Markevich, A., i Zhuravskaya, E. (2018). The economic effects of the abolition of serfdom: Evidence from the Russian Empire. *American Economic Review, 108*(4–5), 1074–1117.
 
-28. Mączak, A. (1962). *Gospodarstwo chłopskie na Żuławach Malborskich w początkach XVII wieku*. Państwowe Wydawnictwo Naukowe.
+28. Marshall, A. (1890). *Principles of economics*. Macmillan.
 
-29. Millward, R. (1982). An economic analysis of the organization of serfdom in Eastern Europe. *Journal of Economic History, 42*(3), 513–548.
+29. Mączak, A. (1962). *Gospodarstwo chłopskie na Żuławach Malborskich w początkach XVII wieku*. Państwowe Wydawnictwo Naukowe.
 
-30. North, D. C., i Thomas, R. P. (1971). The rise and fall of the manorial system: A theoretical model. *Journal of Economic History, 31*(4), 777–803.
+30. Millward, R. (1982). An economic analysis of the organization of serfdom in Eastern Europe. *Journal of Economic History, 42*(3), 513–548.
 
-31. North, D. C., i Thomas, R. P. (1973). *The rise of the Western world: A new economic history*. Cambridge University Press.
+31. North, D. C., i Thomas, R. P. (1971). The rise and fall of the manorial system: A theoretical model. *Journal of Economic History, 31*(4), 777–803.
 
-32. Rutkowski, J. (1947). *Historia gospodarcza Polski* (t. 1). Księgarnia Akademicka.
+32. North, D. C., i Thomas, R. P. (1973). *The rise of the Western world: A new economic history*. Cambridge University Press.
 
-33. Smith, A. (1776). *An inquiry into the nature and causes of the wealth of nations*. W. Strahan and T. Cadell.
+33. Rutkowski, J. (1947). *Historia gospodarcza Polski* (t. 1). Księgarnia Akademicka.
 
-34. Sosnowska, A. (2004). *Zrozumieć zacofanie. Spory historyków o Europę Wschodnią (1947–1994)*. Trio.
+34. Smith, A. (1776). *An inquiry into the nature and causes of the wealth of nations*. W. Strahan and T. Cadell.
 
-35. Stiglitz, J. E. (1974). Incentives and risk sharing in sharecropping. *Review of Economic Studies, 41*(2), 219–255.
+35. Sosnowska, A. (2004). *Zrozumieć zacofanie. Spory historyków o Europę Wschodnią (1947–1994)*. Trio.
 
-36. Topolski, J. (1965). *Narodziny kapitalizmu w Europie XIV–XVII wieku*. Państwowe Wydawnictwo Naukowe.
+36. Stiglitz, J. E. (1974). Incentives and risk sharing in sharecropping. *Review of Economic Studies, 41*(2), 219–255.
 
-37. Topolski, J. (1977). *Gospodarka polska a europejska w XVI–XVIII wieku*. Wydawnictwo Poznańskie.
+37. Topolski, J. (1965). *Narodziny kapitalizmu w Europie XIV–XVII wieku*. Państwowe Wydawnictwo Naukowe.
 
-38. Wallerstein, I. (1974). *The modern world-system I: Capitalist agriculture and the origins of the European world-economy in the sixteenth century*. Academic Press.
+38. Topolski, J. (1977). *Gospodarka polska a europejska w XVI–XVIII wieku*. Wydawnictwo Poznańskie.
 
-39. Williamson, O. E. (1985). *The economic institutions of capitalism*. Free Press.
+39. Wallerstein, I. (1974). *The modern world-system I: Capitalist agriculture and the origins of the European world-economy in the sixteenth century*. Academic Press.
 
-40. Wyczański, A. (1960). *Studia nad folwarkiem szlacheckim w Polsce w latach 1500–1580*. Państwowe Wydawnictwo Naukowe.
+40. Williamson, O. E. (1985). *The economic institutions of capitalism*. Free Press.
 
-41. Żytkowicz, L. (1962). *Studia nad gospodarstwem wiejskim w dobrach kościelnych XVI w.* Państwowe Wydawnictwo Naukowe.
+41. Wyczański, A. (1960). *Studia nad folwarkiem szlacheckim w Polsce w latach 1500–1580*. Państwowe Wydawnictwo Naukowe.
+
+42. Zagłoba, J. O. (2011). *Rachunek ekonomiczny folwarku szlacheckiego w XVII wieku*. Wydawnictwo Naukowe PWN.
+
+43. Żytkowicz, L. (1962). *Studia nad gospodarstwem wiejskim w dobrach kościelnych XVI w.* Państwowe Wydawnictwo Naukowe.
 
 ## Źródła rękopiśmienne
 
-42. *Księga rachunków y pożytków folwarku Adamczycha* (1668–1672). Rękopis, archiwum rodzinne autora.
+44. *Księga rachunków y pożytków folwarku Adamczycha* (1668–1672). Rękopis, archiwum rodzinne autora.
 
 # Załączniki
 

@@ -220,3 +220,35 @@ async def test_reset_deletes_nothing_without_the_agent(
 
     assert await _count(db_session, StudentModel) == 7
     assert await _count(db_session, ThesisDraftModel) == 7
+
+
+def test_only_narrows_the_fixtures_to_the_named_ones() -> None:
+    assert [s.full_name for s in load(only=["06_adamczewski"])] == [
+        "Jan Paweł Adamczewski"
+    ]
+    with pytest.raises(ValueError, match="No such fixture"):
+        load(only=["99_nikt"])
+
+
+async def test_resetting_one_student_leaves_the_others_as_they_were(
+    db_session: AsyncSession,
+) -> None:
+    await seed_roster(db_session, PROMOTOR_EMAIL, load())
+    before = {
+        s.full_name: s.id
+        for s in (await db_session.execute(select(StudentModel))).scalars().all()
+    }
+    one = load(only=["06_adamczewski"])
+    agent = FakeAgentClient()
+
+    await reset_roster(db_session, PROMOTOR_EMAIL, one, agent)
+    await seed_roster(db_session, PROMOTOR_EMAIL, one)
+
+    after = {
+        s.full_name: s.id
+        for s in (await db_session.execute(select(StudentModel))).scalars().all()
+    }
+    assert len(agent.deleted_students) == 1
+    changed = {name for name in before if before[name] != after[name]}
+    assert changed == {"Jan Paweł Adamczewski"}
+    assert await _count(db_session, StudentModel) == 7
