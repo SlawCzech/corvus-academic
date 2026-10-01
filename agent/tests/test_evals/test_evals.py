@@ -210,3 +210,40 @@ def test_summary_and_report_aggregate_across_cases() -> None:
     assert summary.seconds == 15.0
     assert summary.recommendations_ok == "2/2"
     assert "| case | 0.33 |" in report
+
+
+# ---------- run: which model is under test ----------
+
+
+def test_an_ollama_tag_needs_no_key_and_is_its_own_label() -> None:
+    from evals.run import credentials_for, model_label
+
+    assert credentials_for("qwen3:30b-a3b", "--model") is None
+    assert model_label("qwen3:30b-a3b") == "qwen3:30b-a3b"
+
+
+def test_a_provider_takes_its_key_from_the_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from evals.run import credentials_for, model_label
+    from src.infrastructure.llm_factory import byok_models
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+
+    credentials = credentials_for("claude", "--model")
+
+    assert credentials is not None
+    assert (credentials.provider, credentials.api_key) == ("claude", "sk-test")
+    # Results are filed under the model that answered, not under "claude".
+    assert model_label("claude") == byok_models()["claude"]
+
+
+def test_a_provider_without_its_key_stops_the_run(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from evals.run import credentials_for
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    with pytest.raises(SystemExit, match="OPENAI_API_KEY"):
+        credentials_for("openai", "--model")

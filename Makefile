@@ -89,7 +89,7 @@ front-dev:  ## Run the Next.js dev server locally with hot reload (Ctrl+C to sto
 # Runs on the host against the host's Ollama, not in a container: an eval is a
 # tool for whoever changes a prompt or a model, and it needs no stack.
 
-eval:  ## Score a model on the eval cases (MODEL=qwen3:30b-a3b JUDGE=… CASES="a b")
+eval:  ## Score a model on the eval cases (MODEL=qwen3:30b-a3b|claude|openai JUDGE=… CASES="a b")
 	cd agent && uv run python -m evals.run --model $(or $(MODEL),qwen3:30b-a3b) \
 		$(if $(JUDGE),--judge $(JUDGE)) $(if $(CASES),--cases $(CASES))
 

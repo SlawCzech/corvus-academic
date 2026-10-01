@@ -9,6 +9,7 @@ make eval                                   # qwen3:30b-a3b, wszystkie przypadki
 make eval MODEL=gemma4:26b                  # inny model, ten sam klucz
 make eval MODEL=qwen3:30b-a3b CASES="pokolenie-z"
 cd agent && uv run python -m evals.run --model qwen3:30b-a3b --judge claude  # ANTHROPIC_API_KEY
+cd agent && uv run python -m evals.run --model claude                        # graf i sędzia na Claude
 ```
 
 Chodzi na hoście, przeciw Ollamie z hosta (`127.0.0.1:11434` — nie `localhost`,

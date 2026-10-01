@@ -3,6 +3,12 @@
     uv run python -m evals.run --model qwen3:30b-a3b
     uv run python -m evals.run --model gemma4:26b --cases pokolenie-z
     uv run python -m evals.run --model qwen3:30b-a3b --judge claude  # needs a key
+    uv run python -m evals.run --model claude  # ANTHROPIC_API_KEY; judged there too
+
+`--model` is an Ollama tag, or `claude` / `openai` to run the graph on that
+provider with the key from the environment — the same path a promoter's own
+key takes in the worker. A provider under test is also the default judge;
+an Ollama tag is judged by qwen3 unless `--judge` says otherwise.
 
 The graph runs in-process — no Celery, no Postgres, no `app` — exactly as the
 worker would build it for this action type. The Ollama it talks to is
@@ -43,7 +49,9 @@ from src.domain.action import ActionType
 from src.domain.analysis import Finding
 from src.infrastructure.llm_factory import (
     ModelCredentials,
+    byok_models,
     get_llm,
+    use_credentials,
 )
 from src.infrastructure.tracing import flush, run_config
 
@@ -56,21 +64,45 @@ RESULTS_DIR = Path(__file__).parent / "results"
 _PROVIDER_KEYS = {"claude": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY"}
 
 
-def _judge_for(name: str) -> Judge:
-    """A provider name judges on that provider; anything else is an Ollama tag."""
+_LOCAL_JUDGE = "qwen3:30b-a3b"
+
+
+def credentials_for(name: str, flag: str) -> ModelCredentials | None:
+    """The key for a provider name, from the environment; None for an Ollama tag."""
     env = _PROVIDER_KEYS.get(name)
     if env is None:
-        return llm_judge(get_llm(name))
+        return None
     key = os.environ.get(env, "")
     if not key:
-        raise SystemExit(f"--judge {name} needs {env} in the environment")
-    return llm_judge(get_llm(credentials=ModelCredentials(provider=name, api_key=key)))
+        raise SystemExit(f"{flag} {name} needs {env} in the environment")
+    return ModelCredentials(provider=name, api_key=key)
+
+
+def model_label(name: str) -> str:
+    """What actually answers: the provider's model id, or the Ollama tag."""
+    return byok_models().get(name, name)
+
+
+def _judge_for(name: str) -> Judge:
+    """A provider name judges on that provider; anything else is an Ollama tag."""
+    credentials = credentials_for(name, "--judge")
+    if credentials is None:
+        return llm_judge(get_llm(name))
+    return llm_judge(get_llm(credentials=credentials))
 
 
 def run_case(
-    case: EvalCase, action_type: str, model: str, judge: Judge
+    case: EvalCase,
+    action_type: str,
+    model: str,
+    judge: Judge,
+    credentials: ModelCredentials | None = None,
 ) -> CaseResult:
-    """Run one case through the graph and score it."""
+    """Run one case through the graph and score it.
+
+    With `credentials` every node's model is that provider's, as it is in the
+    worker when a promoter runs an action on their own key.
+    """
     action_id, student_id = str(uuid.uuid4()), f"eval-{case.id}"
     state = _initial_state(
         action_id, action_type, student_id, case.context(), model, "pl"
@@ -88,16 +120,17 @@ def run_case(
     started = time.monotonic()
     done_at: dict[str, float] = {}
     final: dict[str, Any] = {}
-    # "updates" says when each node finished — the parallel branches of a
-    # review finish at different times, and the slowest is the one to fix.
-    for mode, chunk in graph.stream(  # pyright: ignore[reportUnknownMemberType]
-        state, config=config, stream_mode=["updates", "values"]
-    ):
-        if mode == "updates":
-            for node in cast(dict[str, Any], chunk):
-                done_at[node] = time.monotonic() - started
-        else:
-            final = cast(dict[str, Any], chunk)
+    with use_credentials(credentials):
+        # "updates" says when each node finished — the parallel branches of a
+        # review finish at different times, and the slowest is the one to fix.
+        for mode, chunk in graph.stream(  # pyright: ignore[reportUnknownMemberType]
+            state, config=config, stream_mode=["updates", "values"]
+        ):
+            if mode == "updates":
+                for node in cast(dict[str, Any], chunk):
+                    done_at[node] = time.monotonic() - started
+            else:
+                final = cast(dict[str, Any], chunk)
     seconds = time.monotonic() - started
     flush()
 
@@ -123,11 +156,15 @@ def run_case(
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Run and score the eval cases.")
-    parser.add_argument("--model", required=True, help="Ollama tag under test")
+    parser.add_argument(
+        "--model",
+        required=True,
+        help="Ollama tag under test, or 'claude' / 'openai' for that provider",
+    )
     parser.add_argument(
         "--judge",
-        default="qwen3:30b-a3b",
-        help="Ollama tag, or 'claude' / 'openai' to judge on that provider",
+        help="Ollama tag, or 'claude' / 'openai' to judge on that provider "
+        f"(default: the provider under test, else {_LOCAL_JUDGE})",
     )
     parser.add_argument(
         "--action",
@@ -137,11 +174,14 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--cases", nargs="*", help="case ids (default: all)")
     args = parser.parse_args(argv)
 
-    judge = _judge_for(args.judge)
+    credentials = credentials_for(args.model, "--model")
+    model = model_label(args.model)
+    judge_name = args.judge or (args.model if credentials else _LOCAL_JUDGE)
+    judge = _judge_for(judge_name)
     results: list[CaseResult] = []
     for case in load_cases(args.cases):
-        print(f"… {case.id} on {args.model}", flush=True)
-        result = run_case(case, args.action, args.model, judge)
+        print(f"… {case.id} on {model}", flush=True)
+        result = run_case(case, args.action, model, judge, credentials)
         print(
             f"  recall {result.recall:.2f}, {result.finding_count} findings, "
             f"{result.seconds} s",
@@ -151,12 +191,12 @@ def main(argv: list[str] | None = None) -> None:
 
     RESULTS_DIR.mkdir(exist_ok=True)
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    out = RESULTS_DIR / f"{stamp}-{args.model.replace(':', '_').replace('/', '_')}.json"
+    out = RESULTS_DIR / f"{stamp}-{model.replace(':', '_').replace('/', '_')}.json"
     out.write_text(
         json.dumps(
             {
-                "model": args.model,
-                "judge": args.judge,
+                "model": model,
+                "judge": model_label(judge_name),
                 "action": args.action,
                 "summary": asdict(summarise(results)),
                 "cases": [asdict(r) | {"recall": r.recall} for r in results],
