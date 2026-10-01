@@ -48,6 +48,23 @@ Krótkie akcje na żywo: `propose_topic` (Pawlak), `check_progress` (Miauczyńsk
 - **Jak to powstało:** ADR-y, plan faz, `CLAUDE.md`, ok. 870 testów — budowane z
   Claude Code; to część odpowiedzi na temat showcase'u.
 
+## Ustalenia z 2026-10-01 warte pokazania
+
+- **Model u dostawcy czyta całą pracę, lokalny wycinek** — jedna decyzja w jednym
+  miejscu (`excerpt.reading_budget`). „Sprawdź postęp” przy limicie 7000 znaków
+  porównywało dwie strony tytułowe; na pełnym tekście znalazło 5 z 6 wad wpisanych
+  w wersję drugą Miauczyńskiego (szacunek 3,7 mld zł, autor wśród respondentów,
+  tabela 7 zapowiedziana jako 8).
+- **Bibliografia: trzy źródła, agent tylko dla ogona.** Crossref dla artykułów,
+  potem Biblioteka Narodowa i Open Library dla książek — bez modelu rozstrzyga się
+  37 z 42 pozycji. Pierwsza wersja zgłosiła 11 fałszywych alarmów (recenzje książek
+  zamiast książek, późniejsze wydania); dobry przykład, że reguła też halucynuje.
+- **Mapa dokumentu bez modelu** miała dwa błędy znalezione dopiero na prawdziwych
+  pracach: podsumowanie rozdziału brane za zakończenie pracy i spis treści z
+  kropkami połykający wstęp. Liczby w mapie są policzone, nie odczytane przez model.
+- **Human in the loop na żywo:** pauza po 38 s, stan w checkpoincie 13 minut,
+  wznowienie z wyborem promotora (24 z 25 uwag), recenzja w 7 s.
+
 ## Ryzyka na żywo
 
 - Recenzja trwa minuty nawet na chmurze → odpalić przed wejściem, pokazać wynik.
@@ -66,8 +83,16 @@ Krótkie akcje na żywo: `propose_topic` (Pawlak), `check_progress` (Miauczyńsk
 ## Otwarte
 
 - [x] Chmura rusza (2026-10-01): `propose_topic` na `claude-sonnet-5-5`, effort `medium`, 19 s (na Sonnet 5 przy domyślnym effort: 37 s). OpenAI nadal niesprawdzone — brak klucza.
-- [ ] Każda z 7 akcji raz na żywo na studentach demo; wynik wobec `EXPECTED.md`.
-- [ ] Podejrzana pozycja w bibliografii Adamczewskiego (wyjątek od „nie zmyślamy źródeł”) — decyzja.
+- [~] Każda z 7 akcji raz na żywo na studentach demo; wynik wobec `EXPECTED.md`.
+  Przeszły 2026-10-01 na Claude: `propose_topic` (Pawlak, 19 s), `generate_review` z
+  pauzą i wznowieniem (Kiepski, 38 s do pauzy, 7 s po wznowieniu), pełna recenzja
+  (Ochódzki, 70 s), `verify_bibliography` (Adamczewski, 91 s), `check_progress`
+  (Miauczyński, 25 s). Zostają: `evaluate_methodology`, `defence_questions`,
+  `draft_meeting_note`.
+- [x] Planowane wady w bibliografii Adamczewskiego (2026-10-01): książka i artykuł,
+  których nie ma (autorzy z Trylogii), oraz prawdziwy artykuł ze złym rokiem. Wynik
+  przebiegu: 38 potwierdzonych, 1 niezgodna, 2 podejrzane, 3 spoza indeksu — dokładnie
+  według `EXPECTED.md`. Agent sam zauważył, że autorzy to postaci z Sienkiewicza.
 - [ ] Claude jako główny dostawca, OpenAI tylko jako pokaz przełączenia — decyzja.
 - [ ] Domyślny dostawca dla akcji, gdy promotor ma klucz.
 - [ ] Evals z opcją dostawcy + przebieg bazowy na jednym modelu (Sonnet).

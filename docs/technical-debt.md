@@ -55,7 +55,10 @@
   jedynym śladem jest log `task_status_write_failed`. Wymaga alertu na ten event, tak samo
   jak `token_store_check_failed_fail_open`.
 
-- [ ] **Zawieszony worker zostawia akcję w `running` na zawsze** — status jest zapisywany
+- [x] ~~**Zawieszony worker zostawia akcję w `running` na zawsze**~~ — od 2026-09-30
+  (ADR 0010) taski są potwierdzane po zakończeniu, a padnięty worker wznawia
+  przebieg z checkpointu. Zostaje brak limitu ponownych dostarczeń dla taska,
+  który za każdym razem zabija workera. Pierwotny opis: status jest zapisywany
   przed i po wywołaniu grafu; jeśli proces zginie w środku (OOM, kill), nic tego nie
   posprząta. Naprawka: timeout na akcję (`updated_at` starsze niż N minut → `failed`)
   albo Celery `task_reject_on_worker_lost` + sprzątanie przy starcie.
@@ -162,7 +165,8 @@
 
 ## Agent / Frontend
 
-- [ ] **`agent-worker` zawsze raportuje `unhealthy`** — dziedziczy HEALTHCHECK z obrazu
+- [x] ~~**`agent-worker` zawsze raportuje `unhealthy`**~~ — naprawione 2026-09-12
+  (`celery inspect ping` jako healthcheck). Pierwotny opis: dziedziczy HEALTHCHECK z obrazu
   agenta, który sprawdza HTTP na :8002, a worker nie wystawia HTTP. Kosmetyka, ale myli
   przy `docker compose ps`. Naprawka: własny healthcheck (`celery inspect ping`) albo
   `healthcheck: disable: true` w compose.
@@ -171,11 +175,14 @@
   nie klika przez ścieżkę „dodaj studenta → wgraj pracę → uruchom akcję → zaakceptuj".
   Do rozważenia Playwright przy Fazie 6.
 
-- [ ] **Frontend nie pokazuje historii wyników akcji** — lista akcji na stronie studenta
+- [x] ~~**Frontend nie pokazuje historii wyników akcji**~~ — naprawione 2026-09-12;
+  od 2026-10-01 niedokończona akcja w historii prowadzi do widoku postępu.
+  Pierwotny opis: lista akcji na stronie studenta
   pokazuje typ i status, ale kliknięcie w zakończoną akcję nie otwiera jej wyniku;
   wynik widać tylko dla akcji uruchomionej w bieżącej sesji.
 
-- [ ] **`review_tone` niedostępny w akcjach mentoringowych** — `generate_review` jest
+- [x] ~~**`review_tone` niedostępny w akcjach mentoringowych**~~ — wystawiony w UI
+  2026-09-13/23. Pierwotny opis: `generate_review` jest
   zawsze uruchamiany z tonem `auto`, mimo że graf i prompty obsługują siedem tonów
   (spec: `docs/specs/review-tone-spec.md`). Do wystawienia w UI.
 
@@ -191,8 +198,8 @@
   nie ma HTTPS/reverse proxy, `ENVIRONMENT=production` wpływa tylko na flagę
   `Secure` w ciasteczkach.
 
-- [ ] **SonarQube nieskonfigurowany** — `sonar-project.properties` istnieje, ale nikt
-  nie postawił serwera ani nie ustawił `SONAR_TOKEN`; job w CI się pomija.
+- [ ] **SonarQube nieskonfigurowany w CI** — kontener `sonarqube` chodzi lokalnie, ale
+  nikt nie ustawił `SONAR_TOKEN`; job w CI się pomija.
 
 - [ ] **Brak testów E2E w CI** — pipeline sprawdza jednostki i migracje, nikt nie
   uruchamia prawdziwej akcji przez `docker compose` (wymagałoby modelu w runnerze).
@@ -201,10 +208,52 @@
 
 ## Infrastruktura
 
-- [ ] **Brak healthchecku Celery workera w `docker-compose`** — kontener `agent` startuje, ale `docker-compose` nie wie czy worker faktycznie obsługuje zadania.
+- [x] ~~**Brak healthchecku Celery workera w `docker-compose`**~~ — jest od 2026-09-12.
+  Pierwotny opis: kontener `agent` startuje, ale `docker-compose` nie wie czy worker faktycznie obsługuje zadania.
 
 - [ ] **Dependabot / Renovate Bot nie skonfigurowany** — zależności nie są automatycznie aktualizowane (faza 5 z CLAUDE.md).
 
 ---
 
-*Ostatnia aktualizacja: 2026-09-05 (po Fazie 0 — konsolidacja serwisów)*
+## Moduł AI na dostawcy (2026-10-01)
+
+Pierwszy dzień akcji na żywo na Claude (`claude-sonnet-5-5`). Co zostało świadomie
+odłożone:
+
+- [ ] **OpenAI niesprawdzone** — ścieżka istnieje i ma testy, ale żadna akcja nie
+  poszła na kluczu OpenAI; `gpt-5` w `llm_factory` nie był zweryfikowany u dostawcy.
+
+- [ ] **Evals nie mają przebiegu na dostawcy** — `make eval MODEL=claude` działa od
+  2026-10-01, liczb jeszcze nie ma. Poziom `ANTHROPIC_EFFORT=medium` i ewentualny
+  podział modeli per węzeł (mały model na streszczenia rozdziałów) czekają na ten
+  pomiar. Dotychczasowe 0,61 / 0,67 sędziował qwen3, więc nie są wprost porównywalne.
+
+- [ ] **Brak przełączenia po odmowie klasyfikatora** — Sonnet 5.5 może odmówić
+  (`stop_reason: refusal`); zgłaszamy to wprost, ale nie ponawiamy na innym modelu.
+  Wymaga parametru beta, którego przez LangChain nie przetestowano.
+
+- [ ] **Wymuszanie schematu tylko na Ollamie** — na dostawcy zostaje prompt, walidacja
+  i jedna tura naprawcza. W recenzjach z 2026-10-01 dwie z trzech analiz potrzebowały
+  tury naprawczej (brak `severity`); prompty podają teraz kształt JSON-a dosłownie,
+  skutek niezmierzony. Docelowo: structured outputs dostawcy.
+
+- [ ] **Uwagi w recenzji nie mają pozycji w dokumencie** — `section` to wolny tekst
+  modelu, więc listy uwag nie da się posortować kolejnością rozdziałów (jest po wadze).
+
+- [ ] **`check_progress` nie zna notatek ze spotkań** — porównuje dwie wersje, ale nie
+  wie, o co promotor prosił między nimi.
+
+- [ ] **Trzy ostatnie notatki, niezależnie od modelu** — `propose_topic` i
+  `draft_meeting_note` dostają `_MAX_NOTES = 3`; na dostawcy mogłyby dostać wszystkie.
+
+- [ ] **Katalogi biblioteczne: limity przyjęte, nie zmierzone** — Biblioteka Narodowa
+  i Open Library nie podają limitów w nagłówkach; odstępy (0,2 s i 1 s) są ostrożnym
+  założeniem. Crossref bez `CROSSREF_MAILTO` to 1 zapytanie/s — 45 s na 42 pozycje.
+
+- [ ] **Lista „w toku” na dashboardzie odpytuje agenta przy każdym wejściu** — każda
+  niedokończona akcja to jedno żądanie do agenta, sekwencyjnie.
+
+---
+
+*Ostatnia aktualizacja: 2026-10-01 (pierwsze akcje na dostawcy; katalogi biblioteczne;
+pełny tekst dla modeli hostowanych)*
