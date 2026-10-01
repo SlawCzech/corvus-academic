@@ -252,3 +252,69 @@ def test_table_rows_are_not_headings() -> None:
     titles = [s.title for s in extract_outline(text)]
     assert "12. Ankieta | 30" not in titles
     assert "3.1. Wyniki szczegółowe" in titles
+
+
+# ---------- a bachelor's thesis: "Rozdział N" and chapter summaries ----------
+
+_CHAPTERED = """Spis treści
+Wstęp
+Rozdział 1. Teoretyczne podstawy zarządzania
+1.1. Pojęcie zarządzania
+1.2. Podsumowanie
+Rozdział 2. Badania własne
+2.1. Metodyka badań
+Zakończenie
+Literatura
+Wstęp
+Celem pracy jest ocena modelu zarządzania klubem sportowym w małym mieście.
+Rozdział 1. Teoretyczne podstawy zarządzania
+1.1. Pojęcie zarządzania
+Zarządzanie to proces planowania, organizowania, motywowania i kontroli.
+1.2. Podsumowanie
+W rozdziale przedstawiono podstawowe pojęcia, na których opiera się praca.
+Rozdział 2. Badania własne
+2.1. Metodyka badań
+Badanie przeprowadzono metodą wywiadu z członkami zarządu klubu.
+Zakończenie
+Postawiony cel został zrealizowany.
+Literatura
+1. Griffin, R. W. (2017). Podstawy zarządzania organizacjami. PWN.
+"""
+
+
+def test_a_chapters_own_summary_is_not_the_thesis_conclusions() -> None:
+    """Read as the conclusions, "1.2. Podsumowanie" ended the table of contents
+    at its "Zakończenie" line and took every numbered heading with it."""
+    outline = extract_outline(_CHAPTERED)
+
+    titles = [s.title for s in outline]
+    assert "1.1. Pojęcie zarządzania" in titles
+    summary = next(s for s in outline if s.title == "1.2. Podsumowanie")
+    assert summary.canonical is None
+    conclusions = [s for s in outline if s.canonical == "conclusions"]
+    assert [s.title for s in conclusions] == ["Zakończenie"]
+
+
+def test_a_subsection_can_still_be_the_methodology() -> None:
+    outline = extract_outline(_CHAPTERED)
+
+    method = next(s for s in outline if s.title == "2.1. Metodyka badań")
+    assert method.canonical == "methodology"
+
+
+def test_chapter_lines_are_headings_and_end_the_introduction() -> None:
+    outline = extract_outline(_CHAPTERED)
+
+    assert [s.title for s in outline if s.title.startswith("Rozdział")] == [
+        "Rozdział 1. Teoretyczne podstawy zarządzania",
+        "Rozdział 2. Badania własne",
+    ]
+    introduction = next(s for s in outline if s.canonical == "introduction")
+    # The introduction is the introduction, not it and the chapters after it.
+    assert _CHAPTERED[introduction.start :][: introduction.char_count].count("\n") == 2
+
+
+def test_a_sentence_about_a_chapter_is_not_a_heading() -> None:
+    text = "Wstęp\nRozdział 3 zawiera opis badań własnych.\nZakończenie\nKoniec.\n"
+
+    assert [s.title for s in extract_outline(text)] == ["Wstęp", "Zakończenie"]

@@ -80,6 +80,19 @@ _DOT_LEADER = re.compile(r"\.{4,}")
 # entries, not chapters.
 _NUMBERED = re.compile(r"^(\d{1,2}(?:\.\d{1,2})*)\.?\s+(\S.*)$")
 
+# "Rozdział 2. Klub sportowy jako organizacja" — how a bachelor's thesis names
+# its chapters. A title, or nothing, after the number: "Rozdział 3 zawiera
+# opis…" is a sentence.
+_CHAPTER = re.compile(
+    r"^(?:rozdział|chapter)\s+\d{1,2}\s*[.:–-]?\s*(.*)$", re.IGNORECASE
+)
+
+# What a numbered SUBSECTION may be taken for. "4.1. Metodyka badań" is the
+# methodology; "1.9. Podsumowanie" is a chapter's own summary, not the
+# thesis's conclusions — and read as those, it ended the table of contents
+# early and took every numbered heading of the body with it.
+_SUBSECTION_KINDS = frozenset({"literature", "methodology", "results", "discussion"})
+
 # A bibliography entry carries a year in brackets; a heading does not.
 _YEAR = re.compile(r"\(\s*\d{4}[a-z]?\s*[,)]")
 
@@ -132,12 +145,19 @@ def _heading_at(line: str) -> tuple[str, str | None] | None:
     if canonical is not None:
         return stripped, canonical
 
+    chapter = _CHAPTER.match(stripped)
+    if chapter is not None:
+        title = chapter.group(1)
+        return (stripped, None) if not title or title[:1].isupper() else None
+
     numbered = _NUMBERED.match(stripped)
     if numbered is None or not numbered.group(2)[:1].isupper():
         return None
     # "1. Wstęp" is the introduction; "3.1. Aktywność cyfrowa" is a heading
     # under its own name.
     inner = _BY_ALIAS.get(_normalise(numbered.group(2)))
+    if "." in numbered.group(1) and inner not in _SUBSECTION_KINDS:
+        inner = None
     return stripped, inner
 
 
@@ -183,6 +203,14 @@ def _ends_toc(
     return len(stripped) > _MAX_HEADING_CHARS and not _DOT_LEADER.search(stripped)
 
 
+def _opens_a_chapter(title: str) -> bool:
+    """A "Rozdział 2…" line, or a heading numbered at the top level ("2. …")."""
+    if _CHAPTER.match(title):
+        return True
+    numbered = _NUMBERED.match(title)
+    return numbered is not None and "." not in numbered.group(1)
+
+
 def extract_outline(text: str) -> list[Section]:
     """Return the headings of a thesis, in the order they appear.
 
@@ -210,13 +238,19 @@ def extract_outline(text: str) -> list[Section]:
 
     # A named section runs until the next named section, not until its own
     # first subsection: "Wyniki badań" followed immediately by "3.1." is
-    # twenty thousand characters of results, not fourteen.
-    starts_of_named = [start for _, canonical, start in found if canonical]
+    # twenty thousand characters of results, not fourteen. A new chapter ends
+    # it too — "Wstęp" followed by "Rozdział 1" is the introduction, not the
+    # introduction and the three chapters after it.
+    section_ends = [
+        start
+        for title, canonical, start in found
+        if canonical or _opens_a_chapter(title)
+    ]
 
     sections: list[Section] = []
     for index, (title, canonical, start) in enumerate(found):
         if canonical is not None:
-            end = next((s for s in starts_of_named if s > start), len(text))
+            end = next((s for s in section_ends if s > start), len(text))
         else:
             end = found[index + 1][2] if index + 1 < len(found) else len(text)
         sections.append(

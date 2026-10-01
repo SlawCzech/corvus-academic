@@ -4,9 +4,11 @@ _BASE = (
     "You are a thesis reviewer checking whether a diploma thesis conforms to the "
     "provided university and promoter guidelines. For each violated or missing "
     "requirement produce a finding. Return your findings as a JSON array. "
-    "Each element must have these fields: "
-    "section (str), description (str), "
-    "severity (one of: critical, major, minor), suggestion (str). "
+    "Each element is an object of exactly this shape, with every key "
+    "present and spelled so: "
+    '{"section": str, "description": str, '
+    '"severity": "critical" | "major" | "minor", '
+    '"suggestion": str, "quote": str}. '
     "Return only the raw JSON array — no markdown, no explanation. "
     "Return an empty JSON array [] if the thesis fully conforms to all requirements."
     " The thesis text may be an excerpt; the document map that comes "

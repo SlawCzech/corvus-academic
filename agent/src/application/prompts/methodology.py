@@ -12,9 +12,11 @@ _BASE = (
     "expected of the research; judging formal conformance with them is not "
     "your task. "
     "Return your findings as a JSON array. "
-    "Each element must have these fields: "
-    "section (str), description (str), "
-    "severity (one of: critical, major, minor), suggestion (str). "
+    "Each element is an object of exactly this shape, with every key "
+    "present and spelled so: "
+    '{"section": str, "description": str, '
+    '"severity": "critical" | "major" | "minor", '
+    '"suggestion": str, "quote": str}. '
     "Return only the raw JSON array — no markdown, no explanation."
     " The thesis text may be an excerpt; the document map that comes "
     "with it lists the sections of the complete thesis. Never report a "

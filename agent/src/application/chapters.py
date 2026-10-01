@@ -8,11 +8,9 @@ time: each chapter is digested on its own (the map step, in parallel), and one
 node reads the digests side by side (the reduce step).
 
 Chapters come from the document map's headings. Numbered headings are grouped
-by their first number — "2.1", "2.2" and "2.3" are chapter 2 — because that is
-the part of a Polish thesis's numbering the outline reliably sees ("Rozdział 2"
-lines are not headings to it). The introduction and the conclusions are left
-out: the coherence node reads those two whole, since they are what the
-chapters are checked against.
+by their first number — "Rozdział 2", "2.1", "2.2" and "2.3" are chapter 2.
+The introduction and the conclusions are left out: the coherence node reads
+those two whole, since they are what the chapters are checked against.
 """
 
 from __future__ import annotations
@@ -22,17 +20,23 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, cast
 
-# Big enough for a chapter of a bachelor's thesis in one call; a longer one is
-# cut into parts rather than truncated — a digest of half a chapter reads as a
-# digest of the chapter.
+from src.application.excerpt import reading_budget, within_budget
+
+# On the local model: big enough for a chapter of a bachelor's thesis in one
+# call; a longer one is cut into parts rather than truncated — a digest of
+# half a chapter reads as a digest of the chapter. A hosted model reads every
+# chapter in one piece.
 _CHUNK_CHARS = 14000
 # More parts than this and the fan-out costs more than it reveals: adjacent
 # parts are merged until the count fits.
 _MAX_CHUNKS = 10
-# How much of the introduction and the conclusions the coherence node reads.
+# How much of the introduction and the conclusions the coherence node reads
+# on the local model; all of both on a hosted one.
 _FRAME_CHARS = 9000
 
-_NUMBER = re.compile(r"^\s*(\d{1,2})[.\s]")
+# "2.3. Formy prawne" — numbered below the chapter level.
+_SUBSECTION = re.compile(r"^\s*\d{1,2}\.\d")
+_NUMBER = re.compile(r"^\s*(?:(?:rozdział|chapter)\s+)?(\d{1,2})[.:\s]", re.IGNORECASE)
 # Headings that are not body chapters: front matter, the frame the chapters
 # are checked against, and back matter.
 _NOT_BODY = {
@@ -89,12 +93,10 @@ def _body_bounds(
     return start, end
 
 
-def _group_key(section: Mapping[str, Any]) -> str:
-    canonical = section.get("canonical")
-    if canonical:
-        return str(canonical)
-    number = _NUMBER.match(str(section.get("title") or ""))
-    return f"chapter-{number.group(1)}" if number else str(section.get("title"))
+def _chapter_number(title: str) -> str | None:
+    """The chapter a heading belongs to: "Rozdział 2", "2. …" and "2.3. …" → 2."""
+    number = _NUMBER.match(title)
+    return number.group(1) if number else None
 
 
 def split_chapters(text: str, document_map: Mapping[str, Any]) -> list[Chapter]:
@@ -117,23 +119,34 @@ def split_chapters(text: str, document_map: Mapping[str, Any]) -> list[Chapter]:
         )
         spans.append((section, start, end))
 
-    groups: list[tuple[str, str, int, int]] = []  # key, title, start, end
+    # A chapter opens at a heading that is not a subsection — "Rozdział 2…",
+    # "2. …", or a named section such as "Wyniki badań" — and takes the
+    # numbered subsections under it, whatever they are called: "4.1. Metodyka
+    # badań" is part of chapter 4, and "Wyniki badań" followed by "3.1." is
+    # one chapter, not a twelve-character one and another.
+    groups: list[tuple[str, str | None, int, int]] = []  # title, number, start, end
+    open_chapter = False
     for section, start, end in spans:
         if section.get("canonical") in _NOT_BODY:
+            open_chapter = False
             continue
-        key = _group_key(section)
-        if groups and groups[-1][0] == key and groups[-1][3] == start:
-            last = groups[-1]
-            groups[-1] = (key, last[1], last[2], end)
-        else:
-            groups.append((key, str(section.get("title") or "").strip(), start, end))
+        title = str(section.get("title") or "").strip()
+        number = _chapter_number(title)
+        if open_chapter and _SUBSECTION.match(title) and groups[-1][3] == start:
+            head, opened_as, opened_at, _ = groups[-1]
+            if opened_as in (None, number):
+                groups[-1] = (head, number, opened_at, end)
+                continue
+        groups.append((title, number, start, end))
+        open_chapter = True
 
     chapters: list[Chapter] = []
-    for _, title, start, end in groups:
+    for title, _, start, end in groups:
         body = text[start:end].strip()
         if not body:
             continue
-        parts = [body[i : i + _CHUNK_CHARS] for i in range(0, len(body), _CHUNK_CHARS)]
+        chunk = reading_budget(_CHUNK_CHARS) or len(body)
+        parts = [body[i : i + chunk] for i in range(0, len(body), chunk)]
         for n, part in enumerate(parts, start=1):
             label = title if len(parts) == 1 else f"{title} (część {n}/{len(parts)})"
             chapters.append(Chapter(title=label, text=part))
@@ -170,4 +183,4 @@ def frame(text: str, document_map: Mapping[str, Any], canonical: str) -> str:
         int(s.get("start") or 0) for s in sections if int(s.get("start") or 0) > start
     ]
     end = min(following) if following else len(text)
-    return text[start:end].strip()[:_FRAME_CHARS]
+    return within_budget(text[start:end].strip(), _FRAME_CHARS)

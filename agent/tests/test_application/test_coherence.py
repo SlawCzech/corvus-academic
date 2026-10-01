@@ -16,6 +16,7 @@ from src.application.nodes.coherence import (
 )
 from src.domain.action import ActionType
 from src.domain.analysis import FindingSource
+from src.infrastructure.llm_factory import ModelCredentials, use_credentials
 from tests.factories import make_state
 
 
@@ -74,6 +75,70 @@ def test_no_introduction_in_the_map_means_no_chapters() -> None:
     assert split_chapters(text, {}) == []
 
 
+def _mapped(*headings: tuple[str, str | None]) -> tuple[str, dict[str, Any]]:
+    """A thesis of headings, each followed by a line of text, and its map."""
+    text, sections = "", []
+    for title, canonical in headings:
+        sections.append({"title": title, "canonical": canonical, "start": len(text)})
+        text += f"{title}\nTreść pod nagłówkiem {title}, kilka zdań.\n"
+    return text, {"sections": sections}
+
+
+def test_a_chapter_takes_its_subsections_whatever_they_are_called() -> None:
+    """ "4.1. Metodyka badań" is part of chapter 4, not a chapter of its own."""
+    text, document_map = _mapped(
+        ("Wstęp", "introduction"),
+        ("Rozdział 1. Teoria", None),
+        ("1.1. Pojęcia", None),
+        ("1.2. Podsumowanie", None),
+        ("Rozdział 4. Badania własne", None),
+        ("4.1. Metodyka badań", "methodology"),
+        ("4.2. Wyniki", None),
+        ("Zakończenie", "conclusions"),
+        ("Literatura", "bibliography"),
+    )
+
+    found = split_chapters(text, document_map)
+
+    assert [c.title for c in found] == [
+        "Rozdział 1. Teoria",
+        "Rozdział 4. Badania własne",
+    ]
+    assert "4.1. Metodyka badań" in found[1].text and "4.2. Wyniki" in found[1].text
+
+
+def test_a_named_section_is_one_chapter_with_what_is_under_it() -> None:
+    """ "Wyniki badań" then "3.1." used to be a twelve-character chapter and another."""
+    text, document_map = _mapped(
+        ("Wstęp", "introduction"),
+        ("Metodyka badań", "methodology"),
+        ("2.1. Dobór próby", None),
+        ("Wyniki badań", "results"),
+        ("3.1. Poziom wypalenia", None),
+        ("3.2. Zamiar odejścia", None),
+        ("Zakończenie", "conclusions"),
+    )
+
+    found = split_chapters(text, document_map)
+
+    assert [c.title for c in found] == ["Metodyka badań", "Wyniki badań"]
+    assert "3.2. Zamiar odejścia" in found[1].text
+
+
+def test_subsections_without_chapter_lines_still_split_by_their_number() -> None:
+    text, document_map = _mapped(
+        ("Wstęp", "introduction"),
+        ("1.1. Pojęcia", None),
+        ("1.2. Teorie", None),
+        ("2.1. Metoda", None),
+        ("Zakończenie", "conclusions"),
+    )
+
+    found = split_chapters(text, document_map)
+
+    assert [c.title for c in found] == ["1.1. Pojęcia", "2.1. Metoda"]
+
+
 def test_a_long_chapter_is_cut_into_parts_not_truncated() -> None:
     text, document_map = _thesis()
     with patch.object(chapters_module, "_CHUNK_CHARS", 20):
@@ -82,6 +147,29 @@ def test_a_long_chapter_is_cut_into_parts_not_truncated() -> None:
     assert any("(część 1/" in c.title for c in found)
     joined = "".join(c.text for c in found if c.title.startswith("2.1"))
     assert "39% wskazało płacę" in joined.replace("\n", "")
+
+
+def test_a_hosted_model_reads_every_chapter_in_one_piece() -> None:
+    text, document_map = _thesis()
+    with (
+        patch.object(chapters_module, "_CHUNK_CHARS", 20),
+        use_credentials(ModelCredentials(provider="claude", api_key="k")),
+    ):
+        found = split_chapters(text, document_map)
+
+    assert not any("(część" in c.title for c in found)
+    assert any("39% wskazało płacę" in c.text.replace("\n", "") for c in found)
+
+
+def test_a_hosted_model_reads_the_whole_introduction() -> None:
+    text, document_map = _thesis()
+    with patch.object(chapters_module, "_FRAME_CHARS", 5):
+        rationed = frame(text, document_map, "introduction")
+        with use_credentials(ModelCredentials(provider="claude", api_key="k")):
+            whole = frame(text, document_map, "introduction")
+
+    assert len(rationed) == 5
+    assert len(whole) > 5 and whole.startswith(rationed)
 
 
 def test_too_many_parts_are_merged_down_to_the_cap() -> None:
