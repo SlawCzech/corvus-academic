@@ -20,8 +20,9 @@ from ..state import ActionState
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
-# The committee reads the whole work, but the model gets a slice — enough for
-# it to ask about the argument rather than about the appendices. The map that
+# The committee reads the whole work, and so does a hosted model. The local
+# one gets a slice (see `excerpt.reading_budget`) — enough for it to ask
+# about the argument rather than about the appendices. The map that
 # travels with the slice names the chapters it does not reach, so a question
 # can still be aimed at the results or the conclusions.
 _MAX_TEXT_CHARS = 14000

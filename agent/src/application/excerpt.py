@@ -1,20 +1,44 @@
 """What a node is shown of a thesis, and what it is told about the rest.
 
-A thesis is tens of thousands of characters and every node gets a prefix of
-it. That is survivable; what is not survivable is a node treating the end of
-its excerpt as the end of the work, which is how a chapter sitting on page 18
-becomes a CRITICAL finding that it was never written.
+Two paths, decided here and nowhere else (`reading_budget`):
 
-So every node that reads thesis text goes through here, and gets three things
-in one block: a map of the whole document computed in `app` without a model,
-the excerpt it is actually allowed to read, and the rule that separates the
-two. One place to change when the budgets or the wording change.
+- **A hosted model reads the whole thesis.** Its context holds a work many
+  times over, and every cut is a place where the model judges a thesis it
+  has not read: a progress check that saw the first seven thousand
+  characters of each version compared two title pages.
+- **The local model reads an excerpt.** A thesis is tens of thousands of
+  characters and its context is not. That is survivable; what is not is a
+  node treating the end of its excerpt as the end of the work, which is how
+  a chapter sitting on page 18 becomes a CRITICAL finding that it was never
+  written. So the excerpt travels with a map of the whole document computed
+  in `app` without a model, and the rule that separates the two.
+
+Every node that reads thesis text goes through here. One place to change
+when the budgets or the wording change.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from typing import Any, cast
+
+from src.infrastructure.llm_factory import hosted_model_in_effect
+
+
+def reading_budget(local_chars: int) -> int | None:
+    """How many characters of a text a node may be shown; None for all of it.
+
+    `local_chars` is the node's ration on the local model. On a hosted model
+    there is no ration.
+    """
+    return None if hosted_model_in_effect() else local_chars
+
+
+def within_budget(text: str, local_chars: int) -> str:
+    """The text as far as the budget goes — all of it on a hosted model."""
+    budget = reading_budget(local_chars)
+    return text if budget is None else text[:budget]
+
 
 # The bibliography goes in whole when it falls outside the excerpt. Half of it
 # is worse than none: a model asked for the number of foreign-language sources
@@ -97,14 +121,20 @@ def render_document_block(
     head_chars: int,
     include_bibliography: bool = True,
 ) -> str:
-    """Return the thesis block for a node's prompt: map, excerpt, and rules."""
+    """Return the thesis block for a node's prompt: map, text, and rules.
+
+    `head_chars` is how much the node reads on the local model. A hosted
+    model gets the thesis complete, with the map and without the rules about
+    what an excerpt does not prove — there is no excerpt.
+    """
     text = str(ctx.get("text", ""))
     raw_map = ctx.get("document_map")
     document_map: Mapping[str, Any] = (
         cast(Mapping[str, Any], raw_map) if isinstance(raw_map, dict) else {}
     )
 
-    shown = min(head_chars, len(text))
+    budget = reading_budget(head_chars)
+    shown = len(text) if budget is None else min(budget, len(text))
     truncated = shown < len(text)
     header = (
         f"## Thesis excerpt (characters 0–{shown:,} of {len(text):,}; "

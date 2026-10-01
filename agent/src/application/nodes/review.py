@@ -20,7 +20,8 @@ from ..state import ActionState, ReviewUpdate
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
-# The review node reads least of the four — it writes from findings.
+# On the local model the review node reads least of the four — it writes from
+# findings. A hosted model has the whole thesis in front of it here too.
 _HEAD_CHARS = 8000
 
 # ---------------------------------------------------------------------------

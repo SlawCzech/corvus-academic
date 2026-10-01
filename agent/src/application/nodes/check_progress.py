@@ -5,6 +5,7 @@ from typing import Any
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from src.application.excerpt import reading_budget
 from src.application.prompts import check_progress as prompts
 from src.application.replies import PROGRESS
 from src.application.structured import invoke_structured
@@ -15,16 +16,17 @@ from ..state import ActionState
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
-# Half the budget per version, so both fit next to each other.
+# On the local model: half the budget per version, so both fit next to each
+# other. A hosted model compares the two versions whole — what a student adds
+# between versions is rarely on the first pages.
 _MAX_TEXT_CHARS = 7000
 
 
 def _slice(text: str) -> str:
-    return (
-        text[:_MAX_TEXT_CHARS] + "\n\n[...text truncated...]"
-        if len(text) > _MAX_TEXT_CHARS
-        else text
-    )
+    budget = reading_budget(_MAX_TEXT_CHARS)
+    if budget is None or len(text) <= budget:
+        return text
+    return text[:budget] + "\n\n[...text truncated...]"
 
 
 def _user_message(ctx: dict[str, Any]) -> str:

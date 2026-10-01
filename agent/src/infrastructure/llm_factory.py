@@ -80,6 +80,16 @@ def current_credentials() -> ModelCredentials | None:
     return _credentials.get()
 
 
+def hosted_model_in_effect() -> bool:
+    """Whether the next `get_llm()` is a provider's model, not the local one.
+
+    The two read a thesis differently. A hosted model takes the whole work in
+    one prompt; the local one has a context of a few thousand tokens to spend,
+    and what it is shown is rationed (see `application.excerpt`).
+    """
+    return current_credentials() is not None or settings.model_backend != "ollama"
+
+
 def get_llm(
     model_override: str | None = None,
     credentials: ModelCredentials | None = None,

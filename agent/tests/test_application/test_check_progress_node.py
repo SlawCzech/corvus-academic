@@ -9,6 +9,7 @@ from langchain_core.messages import AIMessage
 from src.application.nodes.check_progress import check_progress
 from src.application.state import ActionState
 from src.domain.action import ActionType
+from src.infrastructure.llm_factory import ModelCredentials, use_credentials
 from tests.factories import make_state
 
 _VALID_RESPONSE = json.dumps(
@@ -109,3 +110,35 @@ def test_both_versions_reach_the_prompt() -> None:
     assert "STARA WERSJA" in user_content
     assert "NOWA WERSJA" in user_content
     assert "v1" in user_content and "v2" in user_content
+
+
+def _sent_to(mock_llm: MagicMock) -> str:
+    return str(mock_llm.invoke.call_args.args[0][1].content)
+
+
+def test_the_local_model_compares_the_beginning_of_each_version() -> None:
+    mock_llm = MagicMock()
+    mock_llm.invoke.return_value = AIMessage(content=_VALID_RESPONSE)
+    long_version = "a" * 20000 + " ANKIETA WŚRÓD NAUCZYCIELI"
+
+    with patch("src.application.nodes.check_progress.get_llm", return_value=mock_llm):
+        check_progress(_make_state(current=long_version))
+
+    assert "ANKIETA" not in _sent_to(mock_llm)
+    assert "[...text truncated...]" in _sent_to(mock_llm)
+
+
+def test_a_hosted_model_compares_the_two_versions_whole() -> None:
+    """What a student adds between versions is rarely on the first pages."""
+    mock_llm = MagicMock()
+    mock_llm.invoke.return_value = AIMessage(content=_VALID_RESPONSE)
+    long_version = "a" * 20000 + " ANKIETA WŚRÓD NAUCZYCIELI"
+
+    with (
+        patch("src.application.nodes.check_progress.get_llm", return_value=mock_llm),
+        use_credentials(ModelCredentials(provider="claude", api_key="k")),
+    ):
+        check_progress(_make_state(current=long_version))
+
+    assert "ANKIETA WŚRÓD NAUCZYCIELI" in _sent_to(mock_llm)
+    assert "truncated" not in _sent_to(mock_llm)

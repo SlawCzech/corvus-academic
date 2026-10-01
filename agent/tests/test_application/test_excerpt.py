@@ -9,7 +9,8 @@ that the rules travel with it.
 
 from typing import Any
 
-from src.application.excerpt import render_document_block
+from src.application.excerpt import reading_budget, render_document_block
+from src.infrastructure.llm_factory import ModelCredentials, use_credentials
 
 _THESIS = "Wstęp. " * 5000  # 35 000 characters
 
@@ -109,3 +110,30 @@ def test_a_context_without_a_map_still_gets_the_text_and_a_warning() -> None:
 
 def test_an_empty_context_does_not_raise() -> None:
     assert render_document_block({}, head_chars=1000) is not None
+
+
+# ---------- a hosted model reads the whole thesis ----------
+
+_HOSTED = ModelCredentials(provider="claude", api_key="k")
+
+
+def test_the_local_model_is_rationed_and_a_hosted_one_is_not() -> None:
+    assert reading_budget(7000) == 7000
+    with use_credentials(_HOSTED):
+        assert reading_budget(7000) is None
+    # Back on the service's own model once the promoter's key is out of scope.
+    assert reading_budget(7000) == 7000
+
+
+def test_a_hosted_model_is_shown_the_thesis_complete() -> None:
+    with use_credentials(_HOSTED):
+        block = render_document_block(_ctx(), head_chars=1000)
+
+    assert f"## Thesis, complete ({len(_THESIS):,} characters)" in block
+    assert _THESIS in block
+    # The map still travels with it: the counts in it are computed, not read.
+    assert "Bibliography entries counted: 41." in block
+    # No excerpt, so nothing to warn about — and no second copy of the list.
+    assert "What this excerpt does and does not prove" not in block
+    assert "NOT shown" not in block
+    assert block.count("## Bibliography (characters") == 0
