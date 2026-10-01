@@ -14,6 +14,10 @@ import type { Student } from "@/lib/api.types"
 
 export type Section = "overview" | "actions" | "drafts" | "notes" | "history"
 
+export function isSection(value: string): value is Section {
+  return SECTIONS.some((s) => s.key === value)
+}
+
 const SECTIONS: { key: Section; label: string; icon: typeof IconEye }[] = [
   { key: "overview", label: "Przegląd", icon: IconEye },
   { key: "actions", label: "Akcje AI", icon: IconSparkles },

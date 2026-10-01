@@ -13,6 +13,7 @@ import StudentDetailsCard from "@/components/students/StudentDetailsCard"
 import StudentSubNav, { type Section } from "@/components/students/StudentSubNav"
 import TopicCard from "@/components/students/TopicCard"
 import { ACTION_LABELS } from "@/components/students/format"
+import { isUnfinished } from "@/hooks/useAction"
 import { IconTrash } from "@tabler/icons-react"
 import { createMeetingNote, deleteAction, fetcher, uploadDraft } from "@/lib/api.client"
 import type { AgentAction, MeetingNote, Student, ThesisDraft } from "@/lib/api.types"
@@ -20,6 +21,7 @@ import type { AgentAction, MeetingNote, Student, ThesisDraft } from "@/lib/api.t
 const STATUS_LABELS: Record<string, string> = {
   pending: "w kolejce",
   running: "w toku",
+  awaiting_input: "czeka na wybór uwag",
   completed: "gotowe",
   failed: "błąd",
   cancelled: "przerwana",
@@ -33,7 +35,14 @@ function formatDate(iso: string): string {
   })
 }
 
-export default function StudentDetail({ studentId }: { studentId: string }) {
+export default function StudentDetail({
+  studentId,
+  initialSection = "overview",
+}: {
+  studentId: string
+  /** Where to open — the dashboard links straight to a waiting action. */
+  initialSection?: Section
+}) {
   const studentKey = `/api/students/${studentId}`
   const notesKey = `${studentKey}/meeting-notes`
   const draftsKey = `${studentKey}/drafts`
@@ -53,7 +62,7 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
   )
   const { data: actions, mutate: mutateActions } = useSWR<AgentAction[]>(actionsKey, fetcher)
 
-  const [section, setSection] = useState<Section>("overview")
+  const [section, setSection] = useState<Section>(initialSection)
   const [openActionId, setOpenActionId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -116,6 +125,9 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
     (a) => a.action_type === "generate_review" && a.status === "completed",
   )
   const latestDraft = drafts?.[0]
+  // Newest first. The way back to an action started before leaving the page.
+  const unfinished = (actions ?? []).filter(isUnfinished)
+  const reviewGoing = unfinished.some((a) => a.action_type === "generate_review")
 
   return (
     <div className="flex min-h-screen">
@@ -131,7 +143,33 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
           <div>
             <h1 className="mb-6 text-[24px] font-semibold text-foreground">Przegląd</h1>
 
-            {latestDraft && !hasReview && (
+            {unfinished[0] && (
+              <div
+                data-testid="unfinished-banner"
+                className="mb-5 flex items-center justify-between rounded-xl border border-accent bg-accent-soft p-5"
+              >
+                <div>
+                  <span className="mb-0.5 block text-[13px] font-semibold text-accent-hover">
+                    {unfinished[0].status === "awaiting_input"
+                      ? "Recenzja czeka na Twój wybór uwag"
+                      : "Akcja w toku"}
+                  </span>
+                  <span className="text-[13px] text-muted-strong">
+                    {ACTION_LABELS[unfinished[0].action_type] ?? unfinished[0].action_type}
+                    {unfinished.length > 1 ? ` i jeszcze ${unfinished.length - 1}` : ""}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setSection("actions")}
+                  className="h-9 shrink-0 rounded-lg bg-accent px-4 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"
+                >
+                  {unfinished[0].status === "awaiting_input" ? "Wybierz uwagi" : "Pokaż postęp"}
+                </button>
+              </div>
+            )}
+
+            {/* Not while one is being written: the banner above leads to it. */}
+            {latestDraft && !hasReview && !reviewGoing && (
               <div className="mb-5 flex items-center justify-between rounded-xl border border-major-border bg-major-bg p-5">
                 <div>
                   <span className="mb-0.5 block text-[13px] font-semibold text-major-text">
@@ -280,7 +318,8 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
             ) : (
               <div className="rounded-xl border border-line bg-surface">
                 {(actions ?? []).map((action, i) => {
-                  const readable = action.output !== null || action.error !== null
+                  const going = isUnfinished(action)
+                  const readable = !going && (action.output !== null || action.error !== null)
                   const open = openActionId === action.id
                   return (
                     <div
@@ -291,11 +330,16 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
                       <div className="flex items-center">
                         <button
                           type="button"
-                          disabled={!readable}
-                          aria-expanded={open}
-                          onClick={() => setOpenActionId(open ? null : action.id)}
+                          disabled={!readable && !going}
+                          aria-expanded={going ? undefined : open}
+                          title={going ? "Pokaż postęp" : undefined}
+                          // An unfinished one has no result to unfold — it
+                          // leads to where its progress is shown.
+                          onClick={() =>
+                            going ? setSection("actions") : setOpenActionId(open ? null : action.id)
+                          }
                           className={`flex min-w-0 flex-1 items-center justify-between px-4 py-3 text-left text-[13.5px] ${
-                            readable
+                            readable || going
                               ? "text-foreground hover:bg-surface-alt"
                               : "cursor-default text-muted"
                           }`}
@@ -306,6 +350,7 @@ export default function StudentDetail({ studentId }: { studentId: string }) {
                                 {open ? "−" : "+"}
                               </span>
                             )}
+                            {going && <span className="mr-1.5 inline-block w-3 text-accent">→</span>}
                             {ACTION_LABELS[action.action_type] ?? action.action_type}
                             {action.accepted ? " · zaakceptowana" : ""}
                           </span>

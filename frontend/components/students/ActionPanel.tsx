@@ -1,18 +1,17 @@
 "use client"
 
 import { useState } from "react"
-import { useSWRConfig } from "swr"
-import { IconChevronDown } from "@tabler/icons-react"
+import useSWR, { useSWRConfig } from "swr"
 import ActionProgress from "./ActionProgress"
 import FindingPicker from "./FindingPicker"
 import ModelSelect, { useModelChoice } from "@/components/ai/ModelSelect"
 import ReviewToneChoice from "@/components/ai/ReviewToneChoice"
 import ActionResultView from "@/components/students/ActionResultView"
 import GuidelinePicker from "@/components/students/GuidelinePicker"
-import { useAction } from "@/hooks/useAction"
+import { isUnfinished, useAction } from "@/hooks/useAction"
 import { useAiDefaults, type AiDefaults } from "@/lib/aiDefaults"
-import type { ActionType, Student } from "@/lib/api.types"
-import { PROVIDER_LABELS } from "@/lib/modelChoice"
+import { fetcher } from "@/lib/api.client"
+import type { ActionType, AgentAction, Student } from "@/lib/api.types"
 
 interface ActionSpec {
   type: ActionType
@@ -88,6 +87,12 @@ const optionInputClass =
 
 export default function ActionPanel({ student }: { student: Student }) {
   const defaults = useAiDefaults()
+  const { data: actions } = useSWR<AgentAction[]>(
+    `/api/students/${student.id}/actions`,
+    fetcher,
+  )
+  // Newest first, as the server lists them.
+  const unfinished = Array.isArray(actions) ? actions.filter(isUnfinished) : []
   // Remounts once the real (possibly non-fallback) defaults are known, so the
   // panel's local option state starts from them without an effect.
   return (
@@ -95,6 +100,7 @@ export default function ActionPanel({ student }: { student: Student }) {
       key={`${defaults.model}:${defaults.language}:${defaults.reviewTone}`}
       student={student}
       defaults={defaults}
+      unfinished={unfinished}
     />
   )
 }
@@ -102,17 +108,32 @@ export default function ActionPanel({ student }: { student: Student }) {
 function ActionPanelInner({
   student,
   defaults,
+  unfinished,
 }: {
   student: Student
   defaults: AiDefaults
+  /** Actions still queued, running or waiting for the promoter, newest first. */
+  unfinished: AgentAction[]
 }) {
-  const { action, running, error, run, accept, cancel, resume, dismiss } = useAction(student.id)
+  const { action, running, error, run, accept, cancel, resume, watch, dismiss } = useAction(
+    student.id,
+  )
   const { mutate } = useSWRConfig()
   const [selectedType, setSelectedType] = useState<ActionType | null>(null)
+  // Coming back to the page while something runs: open on it, not on nothing.
+  // Only while nothing is chosen — the list of actions may arrive after the
+  // promoter's first click, and that click wins. Set during render, the way
+  // React asks for state derived from a prop that changed.
+  const resumable = unfinished[0]
+  const [adoptedId, setAdoptedId] = useState<string | null>(null)
+  if (resumable && selectedType === null && adoptedId !== resumable.id) {
+    setAdoptedId(resumable.id)
+    setSelectedType(resumable.action_type)
+    watch(resumable.id)
+  }
   const [detail, setDetail] = useState("")
   const [topicIndex, setTopicIndex] = useState(0)
 
-  const [optionsOpen, setOptionsOpen] = useState(false)
   const [model, setModel] = useState(defaults.model)
   const [language, setLanguage] = useState(defaults.language)
   const [reviewTone, setReviewTone] = useState(defaults.reviewTone)
@@ -120,7 +141,7 @@ function ActionPanelInner({
   // What actually gets sent: a saved model the admin has since withdrawn, or
   // a provider whose key was removed, falls back to the default local model
   // rather than getting the action refused.
-  const { provider, model: effectiveModel, withdrawn, missingKey } = useModelChoice(model)
+  const { provider, model: effectiveModel } = useModelChoice(model)
 
   const spec = ACTIONS.find((a) => a.type === selectedType) ?? null
   const shown = action && action.action_type === selectedType ? action : null
@@ -152,15 +173,25 @@ function ActionPanelInner({
             onClick={() => {
               setSelectedType(a.type)
               setDetail("")
-              dismiss()
+              // One of this kind still going: show it, rather than a blank form.
+              const going = unfinished.find((u) => u.action_type === a.type)
+              if (going) watch(going.id)
+              else dismiss()
             }}
-            className={`h-9 rounded-lg border px-3.5 text-[13px] font-medium transition-colors ${
+            className={`flex h-9 items-center gap-2 rounded-lg border px-3.5 text-[13px] font-medium transition-colors ${
               selectedType === a.type
                 ? "border-accent bg-accent-soft text-accent-hover"
                 : "border-line text-muted-strong hover:text-foreground"
             }`}
           >
             {a.label}
+            {unfinished.some((u) => u.action_type === a.type) && (
+              <span
+                data-testid={`unfinished-${a.type}`}
+                title="W toku"
+                className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent"
+              />
+            )}
           </button>
         ))}
       </div>
@@ -214,60 +245,28 @@ function ActionPanelInner({
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={() => setOptionsOpen((v) => !v)}
-            className="mt-3.5 flex items-center gap-1 text-[12.5px] text-muted hover:text-foreground"
-          >
-            Opcje: model, język
-            <IconChevronDown
-              size={13}
-              stroke={2.25}
-              className={`transition-transform ${optionsOpen ? "rotate-180" : ""}`}
-            />
-          </button>
-
-          {withdrawn && !optionsOpen && (
-            <p className="mt-1.5 text-[12px] text-major-text">
-              Model {withdrawn} z Twoich ustawień nie jest już dostępny — użyję
-              domyślnego.
-            </p>
-          )}
-          {missingKey && !optionsOpen && (
-            <p className="mt-1.5 text-[12px] text-major-text">
-              Klucz {PROVIDER_LABELS[missingKey]} z Twoich ustawień został usunięty —
-              użyję domyślnego modelu lokalnego.
-            </p>
-          )}
-          {provider && !optionsOpen && (
-            <p data-testid="runs-on-key" className="mt-1.5 text-[12px] text-muted">
-              Akcja pójdzie na Twój klucz {PROVIDER_LABELS[provider]}.
-            </p>
-          )}
-
-          {optionsOpen && (
-            <div className="mt-3 flex gap-3 rounded-lg bg-surface-alt p-3.5">
-              <div className="flex-1">
-                <ModelSelect
-                  value={model}
-                  onChange={setModel}
-                  className={optionInputClass}
-                  labelClassName="mb-1 block text-[11.5px] text-muted"
-                />
-              </div>
-              <label className="block flex-1">
-                <span className="mb-1 block text-[11.5px] text-muted">Język</span>
-                <select
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  className={optionInputClass}
-                >
-                  <option value="pl">Polski</option>
-                  <option value="en">English</option>
-                </select>
-              </label>
+          {/* Always in view: which model an action runs on is not a detail. */}
+          <div className="mt-3.5 flex gap-3 rounded-lg bg-surface-alt p-3.5">
+            <div className="flex-1">
+              <ModelSelect
+                value={model}
+                onChange={setModel}
+                className={optionInputClass}
+                labelClassName="mb-1 block text-[11.5px] text-muted"
+              />
             </div>
-          )}
+            <label className="block flex-1">
+              <span className="mb-1 block text-[11.5px] text-muted">Język</span>
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className={optionInputClass}
+              >
+                <option value="pl">Polski</option>
+                <option value="en">English</option>
+              </select>
+            </label>
+          </div>
 
           <div className="mt-4 flex gap-2">
             <button

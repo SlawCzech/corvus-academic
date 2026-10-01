@@ -18,6 +18,15 @@ function isFinished(action: AgentAction): boolean {
   return action.status === "completed" || action.status === "failed" || action.status === "cancelled"
 }
 
+/** Still the promoter's business: queued, running, or waiting for their answer. */
+export function isUnfinished(action: AgentAction): boolean {
+  return (
+    action.status === "pending" ||
+    action.status === "running" ||
+    action.status === "awaiting_input"
+  )
+}
+
 /**
  * Stop polling once the agent has finished with the action — or was stopped,
  * or is waiting for the promoter: nothing changes until they answer.
@@ -49,6 +58,9 @@ export interface UseActionReturn {
  * The same 202-then-poll shape the thesis analysis used, generalised: the
  * server refreshes the action from the agent whenever this hook asks for it,
  * so the polling stays a plain GET.
+ *
+ * `watch` picks up an action started earlier — the promoter left the page
+ * while a review was running and came back to it.
  */
 export function useAction(studentId: string): UseActionReturn {
   const [actionId, setActionId] = useState<string | null>(null)

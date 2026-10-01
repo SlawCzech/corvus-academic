@@ -42,6 +42,8 @@ describe("ActionPanel", () => {
   let paused = false
   let resumed = false
   let keys: string[] = []
+  // What the student's action list holds when the panel opens.
+  let listed: unknown[] = []
 
   const PAUSED = {
     ...RUNNING,
@@ -64,6 +66,7 @@ describe("ActionPanel", () => {
     paused = false
     resumed = false
     keys = []
+    listed = []
     fetchMock.mockImplementation((url: string, init?: RequestInit) => {
       if (url.endsWith("/resume")) {
         resumed = true
@@ -79,6 +82,7 @@ describe("ActionPanel", () => {
         if (paused && !resumed) return json(PAUSED)
         return json(RUNNING)
       }
+      if (url === "/api/students/s1/actions") return json(listed)
       if (url.startsWith("/api/guidelines/")) return json([])
       if (url === "/api/settings/api-key/status")
         return json({ configured: keys.length > 0, providers: keys })
@@ -132,7 +136,7 @@ describe("ActionPanel", () => {
     await userEvent.click(screen.getByTestId("run-action"))
 
     await waitFor(() => expect(triggerBody().provider).toBeNull())
-    expect(screen.queryByTestId("runs-on-key")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("model-byok")).not.toBeInTheDocument()
   })
 
   it("says the run goes on the promoter's key, and sends that provider", async () => {
@@ -140,7 +144,9 @@ describe("ActionPanel", () => {
     renderPanel()
     await userEvent.click(screen.getByRole("button", { name: "Zaproponuj temat" }))
 
-    expect(await screen.findByTestId("runs-on-key")).toHaveTextContent("OpenAI")
+    // The model choice is in view without opening anything.
+    expect(await screen.findByTestId("model-byok")).toBeInTheDocument()
+    expect(screen.getByTestId("model-select")).toHaveDisplayValue(/OpenAI/)
     await userEvent.click(screen.getByTestId("run-action"))
 
     await waitFor(() => expect(triggerBody().provider).toBe("openai"))
@@ -180,5 +186,44 @@ describe("ActionPanel", () => {
 
     const resume = fetchMock.mock.calls.find(([url]) => String(url).endsWith("/resume"))
     expect(JSON.parse(String(resume?.[1]?.body))).toEqual({ accepted_findings: [1] })
+  })
+
+  it("keeps the model choice in view without opening anything", async () => {
+    renderPanel()
+
+    await userEvent.click(screen.getByRole("button", { name: "Zaproponuj temat" }))
+
+    expect(screen.getByTestId("model-select")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /Opcje/ })).not.toBeInTheDocument()
+  })
+
+  it("opens on the action that was running when the promoter left", async () => {
+    listed = [RUNNING]
+    renderPanel()
+
+    // Nobody clicked anything: the review started earlier is back in view,
+    // followed again, and can be stopped from here.
+    expect(await screen.findByTestId("action-status")).toHaveTextContent("Liczy się")
+    expect(screen.getByTestId("cancel-action")).toBeInTheDocument()
+    expect(screen.getByTestId("unfinished-generate_review")).toBeInTheDocument()
+  })
+
+  it("comes back to a review waiting for the promoter's findings", async () => {
+    paused = true
+    listed = [PAUSED]
+    renderPanel()
+
+    expect(await screen.findAllByTestId("finding-toggle")).toHaveLength(2)
+  })
+
+  it("leaves the promoter's own choice alone when the list arrives late", async () => {
+    listed = [RUNNING]
+    renderPanel()
+    await userEvent.click(screen.getByRole("button", { name: "Zaproponuj temat" }))
+
+    await screen.findByTestId("unfinished-generate_review")
+    // Still on what they picked, not pulled over to the running review.
+    expect(screen.getByTestId("run-action")).toBeEnabled()
+    expect(screen.queryByTestId("action-status")).not.toBeInTheDocument()
   })
 })

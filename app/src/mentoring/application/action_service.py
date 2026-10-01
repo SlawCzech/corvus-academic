@@ -258,7 +258,9 @@ class ActionService:
         return await self._refresh(record, token)
 
     async def in_progress(self, caller: Caller, token: str) -> list[ActionInProgress]:
-        """Every action of the caller's that is still pending or running.
+        """Every action of the caller's that is not over yet.
+
+        Pending, running, or paused until the promoter answers.
 
         Each is checked with the agent first, so one that finished while
         nobody was looking drops off the list instead of padding the count.

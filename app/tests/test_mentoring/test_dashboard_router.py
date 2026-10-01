@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from main import app
+from src.mentoring.application.agent_client import AgentActionStatus
 from src.mentoring.infrastructure.dependencies import get_agent_client
 from tests.test_mentoring.conftest import (
     OTHER_PROMOTOR_EMAIL,
@@ -58,6 +59,30 @@ def test_summary_counts_active_students_and_missing_topics(
     body = resp.json()
     assert body["active_students"] == 2
     assert body["without_topic"] == 1
+
+
+def test_a_review_waiting_for_the_promoter_is_in_progress_and_called_out(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    """Paused is not over: it is the one unfinished action that needs them."""
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers, full_name="Anna Nowak")
+    client.post(
+        f"/students/{student_id}/actions",
+        json={"action_type": "propose_topic"},
+        headers=headers,
+    )
+    agent.next_status = AgentActionStatus("awaiting_input", {"findings": []}, None)
+
+    body = client.get("/dashboard/summary", headers=headers).json()
+
+    assert body["actions_in_progress"] == 1
+    assert [a["student_name"] for a in body["awaiting_input"]] == ["Anna Nowak"]
+    assert body["awaiting_input"][0]["status"] == "awaiting_input"
+    assert body["recent_activity"][0]["status"] == "awaiting_input"
+    # Still there on the next look — the stored row is what is listed now.
+    listed = client.get("/dashboard/actions-in-progress", headers=headers).json()
+    assert [a["status"] for a in listed] == ["awaiting_input"]
 
 
 def test_summary_counts_actions_in_progress_and_lists_recent_activity(

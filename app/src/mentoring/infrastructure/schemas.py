@@ -240,13 +240,6 @@ class RecentActivityResponse(BaseModel):
     updated_at: datetime
 
 
-class DashboardSummaryResponse(BaseModel):
-    active_students: int
-    without_topic: int
-    actions_in_progress: int
-    recent_activity: list[RecentActivityResponse]
-
-
 class ActionInProgressResponse(BaseModel):
     id: uuid.UUID
     student_id: uuid.UUID
@@ -255,6 +248,14 @@ class ActionInProgressResponse(BaseModel):
     status: str
     created_at: datetime
     updated_at: datetime
+
+
+class DashboardSummaryResponse(BaseModel):
+    active_students: int
+    without_topic: int
+    actions_in_progress: int
+    awaiting_input: list[ActionInProgressResponse]
+    recent_activity: list[RecentActivityResponse]
 
 
 def action_in_progress_response(item: ActionInProgress) -> ActionInProgressResponse:
@@ -274,6 +275,7 @@ def dashboard_summary_response(summary: DashboardSummary) -> DashboardSummaryRes
         active_students=summary.active_students,
         without_topic=summary.without_topic,
         actions_in_progress=summary.actions_in_progress,
+        awaiting_input=[action_in_progress_response(a) for a in summary.awaiting_input],
         recent_activity=[
             RecentActivityResponse(
                 student_id=a.student_id,

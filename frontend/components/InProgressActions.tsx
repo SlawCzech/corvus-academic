@@ -98,7 +98,7 @@ export default function InProgressActions({ onChange }: { onChange: () => void }
               >
                 <span className="min-w-0">
                   <Link
-                    href={`/students/${item.student_id}`}
+                    href={`/students/${item.student_id}?section=actions`}
                     className="font-semibold text-foreground hover:text-accent"
                   >
                     {item.student_name}

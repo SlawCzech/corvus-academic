@@ -9,8 +9,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from src.mentoring.application.action_service import ActionService
+from src.mentoring.application.action_service import ActionInProgress, ActionService
 from src.mentoring.application.student_service import Caller, StudentService
+from src.mentoring.domain.action import ActionStatus
 from src.mentoring.domain.student import StudentStatus
 from src.mentoring.infrastructure.repositories import AgentActionRepository
 
@@ -31,6 +32,9 @@ class DashboardSummary:
     active_students: int
     without_topic: int
     actions_in_progress: int
+    # Of those, the ones that will not move until the promoter does — a
+    # review paused for their pick of findings. Counted above as well.
+    awaiting_input: list[ActionInProgress]
     recent_activity: list[RecentActivity]
 
 
@@ -55,7 +59,12 @@ class DashboardService:
         counted as running until someone did. It runs first, so the recent
         activity below reads the statuses it just brought up to date.
         """
-        actions_in_progress = len(await self._action_service.in_progress(caller, token))
+        in_progress = await self._action_service.in_progress(caller, token)
+        awaiting_input = [
+            item
+            for item in in_progress
+            if item.action.status is ActionStatus.AWAITING_INPUT
+        ]
 
         students = await self._students.list_students(caller)
         names = {s.id: s.full_name for s in students}
@@ -85,6 +94,7 @@ class DashboardService:
         return DashboardSummary(
             active_students=active_students,
             without_topic=without_topic,
-            actions_in_progress=actions_in_progress,
+            actions_in_progress=len(in_progress),
+            awaiting_input=awaiting_input,
             recent_activity=recent_activity,
         )

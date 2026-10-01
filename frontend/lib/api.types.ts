@@ -196,6 +196,8 @@ export interface DashboardSummary {
   active_students: number
   without_topic: number
   actions_in_progress: number
+  /** Of those, the ones paused until the promoter answers. */
+  awaiting_input: ActionInProgress[]
   recent_activity: RecentActivity[]
 }
 

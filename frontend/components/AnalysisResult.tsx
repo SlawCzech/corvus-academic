@@ -8,22 +8,22 @@ import type {
   Score,
 } from "@/lib/api.types"
 
-const SEVERITY_ORDER: FindingSeverity[] = ["critical", "major", "minor"]
+export const SEVERITY_ORDER: FindingSeverity[] = ["critical", "major", "minor"]
 
-const SEVERITY_LABELS: Record<FindingSeverity, string> = {
+export const SEVERITY_LABELS: Record<FindingSeverity, string> = {
   critical: "Krytyczne",
   major: "Poważne",
   minor: "Drobne",
 }
 
-const SOURCE_LABELS: Record<FindingSource, string> = {
+export const SOURCE_LABELS: Record<FindingSource, string> = {
   structure: "Struktura",
   methodology: "Metodologia",
   requirements: "Wymogi",
   coherence: "Spójność wniosków",
 }
 
-const SEVERITY_COLORS: Record<FindingSeverity, string> = {
+export const SEVERITY_COLORS: Record<FindingSeverity, string> = {
   critical: "bg-critical-bg border-critical-border text-critical-text",
   major: "bg-major-bg border-major-border text-major-text",
   minor: "bg-minor-bg border-minor-border text-minor-text",

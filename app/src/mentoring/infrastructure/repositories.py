@@ -191,7 +191,10 @@ class AgentActionRepository:
     async def find_unfinished_by_promotor(
         self, promotor_id: uuid.UUID | None
     ) -> list[AgentActionModel]:
-        """Return every pending or running action, oldest first.
+        """Return every action that is not over, oldest first.
+
+        Pending, running — and paused for the promoter: a review waiting for
+        their pick of findings is the one unfinished action that needs them.
 
         No limit: this is the list the promoter clears stale runs from, and
         the oldest are the likeliest to be dead. ``promotor_id=None`` as in
@@ -199,7 +202,9 @@ class AgentActionRepository:
         """
         stmt = (
             select(AgentActionModel)
-            .where(AgentActionModel.status.in_(("pending", "running")))
+            .where(
+                AgentActionModel.status.in_(("pending", "running", "awaiting_input"))
+            )
             .order_by(AgentActionModel.created_at)
         )
         if promotor_id is not None:

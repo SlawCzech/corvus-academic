@@ -9,6 +9,7 @@ import {
   IconBulbOff,
   IconLoader2,
   IconArrowRight,
+  IconHandStop,
 } from "@tabler/icons-react"
 import InProgressActions from "@/components/InProgressActions"
 import StudentForm from "@/components/students/StudentForm"
@@ -29,6 +30,7 @@ const ACTION_LABELS: Record<string, string> = {
 const STATUS_ACTIVITY_LABELS: Record<string, string> = {
   pending: "w kolejce",
   running: "w toku",
+  awaiting_input: "czeka na Twój wybór uwag",
   completed: "gotowe",
   failed: "błąd",
   cancelled: "przerwana",
@@ -70,6 +72,34 @@ export default function DashboardPage() {
         />
       )}
 
+      {(summary?.awaiting_input ?? []).map((item) => (
+        <div
+          key={item.id}
+          data-testid="awaiting-input"
+          className="mb-4 flex items-center justify-between gap-4 rounded-xl border border-accent bg-accent-soft p-5"
+        >
+          <div className="flex items-center gap-3">
+            <IconHandStop size={18} stroke={1.75} className="shrink-0 text-accent-hover" />
+            <div>
+              <span className="block text-[13px] font-semibold text-accent-hover">
+                Czeka na Ciebie
+              </span>
+              <span className="text-[13.5px] text-foreground">
+                <strong className="font-semibold">{item.student_name}</strong> —{" "}
+                {ACTION_LABELS[item.action_type] ?? item.action_type}: uwagi są gotowe,
+                wybierz, z których ma powstać recenzja.
+              </span>
+            </div>
+          </div>
+          <Link
+            href={`/students/${item.student_id}?section=actions`}
+            className="flex h-9 shrink-0 items-center rounded-lg bg-accent px-4 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"
+          >
+            Wybierz uwagi
+          </Link>
+        </div>
+      ))}
+
       <div className="mb-7 grid grid-cols-3 gap-4">
         <Link
           href="/students"
@@ -110,6 +140,11 @@ export default function DashboardPage() {
           <span className="font-serif text-[28px] font-semibold text-foreground">
             {summary?.actions_in_progress ?? "—"}
           </span>
+          {summary && summary.awaiting_input.length > 0 && (
+            <span className="ml-2 text-[12px] text-accent-hover">
+              w tym {summary.awaiting_input.length} czeka na Ciebie
+            </span>
+          )}
         </button>
         <Link
           href="/students?topic=none"
@@ -162,7 +197,11 @@ export default function DashboardPage() {
               {summary.recent_activity.map((a, i) => (
                 <Link
                   key={`${a.student_id}-${a.updated_at}-${i}`}
-                  href={`/students/${a.student_id}`}
+                  href={
+                    a.status === "awaiting_input" || a.status === "running" || a.status === "pending"
+                      ? `/students/${a.student_id}?section=actions`
+                      : `/students/${a.student_id}`
+                  }
                   className="flex items-center justify-between border-b border-line/60 py-2.5 text-[13.5px] last:border-none hover:text-accent"
                 >
                   <span className="text-foreground">

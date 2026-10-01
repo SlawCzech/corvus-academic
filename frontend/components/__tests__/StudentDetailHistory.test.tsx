@@ -123,7 +123,37 @@ describe("StudentDetail — action history", () => {
     })
   })
 
-  it("leaves an action with nothing stored unopenable", async () => {
+  it("offers the way back to a running action on the overview", async () => {
+    const pending = { ...REVIEW, id: "a2", status: "running", output: null }
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify(
+              url.endsWith("/actions")
+                ? [pending]
+                : url.endsWith("/meeting-notes") ||
+                    url.endsWith("/drafts") ||
+                    url.includes("/guidelines/")
+                  ? []
+                  : STUDENT,
+            ),
+            { status: 200 },
+          ),
+        ),
+      ),
+    )
+    renderDetail()
+
+    const banner = await screen.findByTestId("unfinished-banner")
+    expect(banner).toHaveTextContent("Akcja w toku")
+    await userEvent.click(screen.getByRole("button", { name: "Pokaż postęp" }))
+
+    expect(await screen.findByRole("heading", { name: "Akcje AI" })).toBeInTheDocument()
+  })
+
+  it("leads from an action still running to where its progress is shown", async () => {
     const pending = { ...REVIEW, id: "a2", status: "running", output: null }
     vi.stubGlobal(
       "fetch",
@@ -148,7 +178,11 @@ describe("StudentDetail — action history", () => {
     await openHistorySection()
 
     const entry = await screen.findByRole("button", { name: /Recenzja/ })
-    expect(entry).toBeDisabled()
+    // Nothing to unfold yet — it is the way back to the running action.
+    await userEvent.click(entry)
+
+    expect(await screen.findByRole("heading", { name: "Akcje AI" })).toBeInTheDocument()
+    expect(screen.queryByTestId("history-result")).not.toBeInTheDocument()
   })
 
   it("deletes an action from the history after asking", async () => {
