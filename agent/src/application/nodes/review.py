@@ -9,6 +9,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.application.excerpt import render_document_block
 from src.application.replies import RECOMMENDATIONS, review_reply_for
+from src.application.scoring import score_bands, within_band
 from src.application.structured import invoke_structured
 from src.domain.analysis import Finding, FindingSeverity, ReviewTone, ThesisAnalysis
 from src.domain.evaluation import EvaluationStatus
@@ -80,11 +81,16 @@ based on author name in metadata — default to "Autorka" if unclear
 
 ## Scoring guidelines
 
-10:   Exceptional — significantly exceeds requirements
-8–9:  Good — meets all requirements, notable strengths present
-6–7:  Satisfactory — meets basic requirements, minor issues only
-4–5:  Weak — meets minimum, notable deficiencies present
-0–3:  Failing — does not meet requirements (CRITICAL findings required)
+Score against what a diploma thesis at a regional university is expected to
+be, not against a journal article. Weigh the findings, do not count them.
+The findings decide the range each criterion may take; the ranges come with
+the findings, and they override any score range a tone instruction names.
+Choose within the range.
+
+8–10: Good to exceptional — no MAJOR finding in this criterion
+7–8:  Satisfactory — a MAJOR finding in this criterion
+6–7:  Satisfactory with reservations — several MAJOR findings in it
+0–5:  Does not meet requirements — a CRITICAL finding in this criterion
 
 ## Output format
 
@@ -104,11 +110,11 @@ Return ONLY a raw JSON object — no markdown fences, no explanation:
 ## Recommendation rules
 
 "Dopuścić do obrony":
-  No CRITICAL findings. All scores >= 6.
+  No CRITICAL findings. All scores >= 7.
 
 "Dopuścić do obrony z zastrzeżeniami":
-  No CRITICAL findings. At least one score 4–5, or MAJOR findings \
-that do not individually block the defense.
+  No CRITICAL findings. At least one score of 6, or MAJOR findings \
+the author should answer before the defense.
 
 "Zwrócić do poprawy":
   Any CRITICAL finding present. Use regardless of tone selection.
@@ -353,7 +359,8 @@ def generate_review(state: ActionState) -> ReviewUpdate:
             + _LANGUAGE_OVERRIDES.get(language, "")
         )
 
-        allowed = allowed_recommendations(state["findings"], language)
+        findings = state["findings"]
+        allowed = allowed_recommendations(findings, language)
         findings_summary = "\n".join(
             f"- [{f.severity.upper()}] ({f.source or 'unknown'}) "
             f"{f.section}: {f.description}"
@@ -377,7 +384,11 @@ def generate_review(state: ActionState) -> ReviewUpdate:
             f"Guidelines:\n{ctx.get('guidelines', '')}\n\n"
             f"Accumulated findings:\n{findings_summary or 'None'}\n\n"
             f"Allowed recommendation (decided by the findings): "
-            f"{' | '.join(allowed)}\n\n"
+            f"{' | '.join(allowed)}\n"
+            f"Allowed points per criterion, in the order of the output "
+            f"format (decided by the findings): "
+            f"{', '.join(f'{low}–{high}' for low, high in score_bands(findings))}"
+            f"\n\n"
             f"{document}"
         )
 
@@ -391,10 +402,24 @@ def generate_review(state: ActionState) -> ReviewUpdate:
             review_reply_for(allowed),
             node="review",
         )
+        # The prompt gives the model these ranges; this is what holds if it
+        # scores outside them anyway.
+        bands = score_bands(findings, len(reply.scores))
         scores: list[Score] = [
-            Score(criteria=s.criteria, points=s.points, max_points=s.max_points)
-            for s in reply.scores
+            Score(
+                criteria=s.criteria,
+                points=within_band(s.points, s.max_points, band),
+                max_points=s.max_points,
+            )
+            for s, band in zip(reply.scores, bands, strict=True)
         ]
+        proposed = [s.points for s in reply.scores]
+        if proposed != [s.points for s in scores]:
+            logger.info(
+                "review_scores_held_to_findings",
+                proposed=proposed,
+                kept=[s.points for s in scores],
+            )
 
         action_uuid = UUID(state["action_id"])
         review = Review(

@@ -140,8 +140,9 @@ def test_generate_review_score_percentage() -> None:
 
     output = result["output"]
     assert output is not None
-    # 8+7+9+8 = 32 out of 40 max → 80.0%
-    assert output["total_percentage"] == 80.0
+    # No findings, so no criterion goes below 8: the 7 is raised.
+    # 8+8+9+8 = 33 out of 40 max → 82.5%
+    assert output["total_percentage"] == 82.5
 
 
 def test_generate_review_recommendation_stored() -> None:
@@ -472,3 +473,40 @@ def test_a_recommendation_the_findings_rule_out_gets_repaired() -> None:
     assert "recommendation" in repair
     first_prompt = mock_llm.invoke.call_args_list[0].args[0][1].content
     assert "Allowed recommendation (decided by the findings): Dopuścić" in first_prompt
+
+
+def test_scores_outside_what_the_findings_allow_are_moved_into_range() -> None:
+    """One MAJOR finding in methodology: 7–8 there, 8–10 where nothing is major."""
+    low = json.dumps(
+        {
+            "scores": [
+                {"criteria": "Struktura i spójność", "points": 6, "max_points": 10},
+                {"criteria": "Metodologia i bibliografia", "points": 4},
+                {"criteria": "Zgodność z wymogami", "points": 5, "max_points": 10},
+                {"criteria": "Jakość merytoryczna", "points": 10, "max_points": 10},
+            ],
+            "review_text": "Praca spełnia wymagania stawiane pracom dyplomowym.",
+            "recommendation": "Dopuścić do obrony z zastrzeżeniami",
+        }
+    )
+    state = make_state(
+        findings=[
+            Finding(
+                section="Metodologia",
+                description="Dobór próby nieopisany",
+                severity=FindingSeverity.MAJOR,
+                suggestion="Opisz dobór próby.",
+                source=FindingSource.METHODOLOGY,
+            )
+        ],
+        context={"text": "Rozdział 1.", "metadata": _make_metadata()},
+    )
+    mock_llm = MagicMock()
+    mock_llm.invoke.return_value = AIMessage(content=low)
+
+    with patch("src.application.nodes.review.get_llm", return_value=mock_llm):
+        result = generate_review(state)
+
+    assert [s.points for s in result["scores"]] == [8, 7, 8, 8]
+    user_message = mock_llm.invoke.call_args.args[0][1].content
+    assert "8–10, 7–8, 8–10, 7–8" in user_message

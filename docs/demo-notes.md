@@ -70,8 +70,17 @@ wyszło na jaw, co pomogło, czego to uczy. Liczby są z przebiegów 2026-10-01/
      tonu. I druga rzecz, którą trzeba powiedzieć wprost: prompty stroiłem na
      tych samych trzech pracach, na których mierzę — fikstury demo są jedynym
      sprawdzianem spoza zestawu.
-   - Co zostało: punktacja nadal surowa (Anioł 25/40), liczba uwag ogółem
-     prawie nie spadła — spadła ich waga.
+   - Krok 4: punktacja. Skala w prompcie niczego nie zmieniła (Anioł 23–25/40),
+     więc przedział punktów dla każdego kryterium liczy teraz kod z uwag
+     (`application/scoring.py`), tak jak rekomendację; model wybiera w
+     przedziale. Anioł: 28/40, ton „zasługuje na pozytywną ocenę”.
+   - Wpadka po drodze: jedną rundę „strojenia” punktacji zrobiłem w pliku z
+     promptem, którego żaden węzeł nie importował — i z recenzji wywnioskowałem,
+     że „model ignoruje skalę”. Model jej nigdy nie widział. Wniosek o modelu
+     warto poprzedzić sprawdzeniem, co faktycznie do niego poszło (ślad w Langfuse).
+   - Co zostało: liczba uwag ogółem prawie nie spadła — spadła ich waga. Lista
+     uwag poważnych zmienia się między przebiegami, więc punktacja też
+     (Anioł ok. 27–31/40).
 2. **Architektura pod mały kontekst stała się balastem.** Lokalny model dostawał
    wycinek 7000 znaków; „Sprawdź postęp” porównywało przez to dwie strony
    tytułowe. Na pełnym tekście znalazło 5 z 6 wpisanych wad. Odwrotna strona:

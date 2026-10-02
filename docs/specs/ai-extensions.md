@@ -51,7 +51,8 @@ START ─┬─ analyze_structure ────┐
 | bez streszczeń rozdziałów (`REVIEW_CHAPTER_DIGESTS=false`) | 1.00 | 1 | 8 | 1 | 23 | 2/3 | 66 s |
 | kalibracja: poziom pracy dyplomowej, wagi, limit uwag (2026-10-01) | 0.83 | 0 | 8 | 0 | 23 | 2/3 | 89 s |
 | kalibracja z zamkniętą listą uwag krytycznych (2026-10-02) | 1.00 | 1 | 11 | 0 | 19 | 3/3 | 101 s |
-| + co jest uwagą poważną, a co drobną; skala punktacji (2026-10-02) | 1.00 | 1 | 9 | 0 | 20 | 3/3 | 107 s |
+| + co jest uwagą poważną, a co drobną (2026-10-02) | 1.00 | 1 | 9 | 0 | 20 | 3/3 | 107 s |
+| + przedziały punktacji liczone z uwag (2026-10-02) | 0.83 | 1 | 9 | 0 | 18 | 3/3 | 96 s |
 
 Trzy przypadki, po jednym przebiegu — różnica w recall to jedna uwaga, czyli szum.
 Co z tego wynika: streszczenia rozdziałów nie poprawiają wykrywalności, gdy każda
@@ -68,6 +69,11 @@ nadal wracała do poprawy przez jedną „krytyczną” uwagę o specyfikacji mo
 Pomogło dopiero zamknięcie listy tego, co wolno nazwać krytycznym. Prompty są
 strojone na tych samych trzech pracach, na których są mierzone — sprawdzianem
 spoza zestawu są fikstury demo.
+
+Punktacji evals nie mierzą. Jej przedziały wynikają z uwag i liczy je kod
+(`application/scoring.py`): bez uwagi poważnej w kryterium 8–10, z jedną 7–8,
+z kilkoma 6–7, z krytyczną najwyżej 5. Model wybiera w przedziale; wynik spoza
+niego jest przycinany i logowany (`review_scores_held_to_findings`).
 
 Pełne liczby i każda uwaga: `agent/evals/results/`.
 
