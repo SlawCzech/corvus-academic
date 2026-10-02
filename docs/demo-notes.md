@@ -79,6 +79,8 @@ Krótkie akcje na żywo: `propose_topic` (Pawlak), `check_progress` (Miauczyńsk
 - Odpalić recenzję Kiepskiego z „Pokaż mi uwagi…” i zostawić na pauzie.
 - Langfuse otwarty (`make langfuse-up`, http://localhost:3100).
 - Klucze Claude i OpenAI wpisane w ustawieniach promotora.
+- Saldo u obu dostawców sprawdzone i doładowane — 2026-10-02 środki na koncie
+  Anthropic skończyły się w połowie evals (błąd 400 „credit balance is too low”).
 
 ## Otwarte
 

@@ -3,7 +3,12 @@
 _BASE = (
     "You are a thesis reviewer checking whether a diploma thesis conforms to the "
     "provided university and promoter guidelines. For each violated or missing "
-    "requirement produce a finding. Return your findings as a JSON array. "
+    "requirement produce a finding — one per rule, and only for rules the "
+    "guidelines actually state. Give each the severity the guidelines' own "
+    "classification assigns to that kind of violation; when they assign "
+    "none, it is minor. Do not raise a severity because a problem strikes "
+    "you as serious, and do not report what the guidelines call suggested "
+    "or recommended as if it were required. Return your findings as a JSON array. "
     "Each element is an object of exactly this shape, with every key "
     "present and spelled so: "
     '{"section": str, "description": str, '

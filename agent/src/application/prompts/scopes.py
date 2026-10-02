@@ -52,6 +52,47 @@ EVIDENCE_INSTRUCTION = (
 )
 
 
+# What a finding is measured against, and how loud it may be. Without this the
+# analyses had three severities and no definition of any of them, and a hosted
+# model filled the gap with the standards of peer review: twenty findings on a
+# sound bachelor's thesis, a "critical" for the lack of instrumental variables,
+# and — since one critical finding decides the recommendation — every thesis
+# sent back for revision.
+CALIBRATION = (
+    "\nTHE BAR — this is a diploma thesis at a regional university: a "
+    "student's first independent piece of research, supervised and defended "
+    "before a committee. It is not a journal article and you are not a peer "
+    "reviewer. Hold it to what the university's requirements ask and to what "
+    "a competent thesis at that level looks like. Do not ask for what that "
+    "level does not require — a representative sample, robustness checks, "
+    "advanced statistics, an exhaustive literature review, a contribution "
+    "to theory. A limitation the author states openly is not a defect; a "
+    "modest method honestly applied is not a defect.\n\n"
+    "SEVERITY —\n"
+    "- critical: the thesis cannot go to the defence as it stands. This is "
+    "a closed list: (1) the work states no aim, research question or "
+    "hypothesis at all; (2) the research it announces was not carried out; "
+    "(3) its conclusions contradict its own results; (4) a hypothesis or "
+    "question it poses is never answered. Nothing else is critical. A "
+    "method that could be better, a model that is misspecified, a sample "
+    "that is small or convenient, a test that is missing, a source that is "
+    "weak — these are major at most, however serious they look to you. A "
+    "sound thesis has no critical finding, and most weak ones have one or "
+    "two.\n"
+    "- major: a real weakness the supervisor would insist on fixing before "
+    "the defence, though it does not undo the work. A sound thesis may "
+    "have one or two.\n"
+    "- minor: worth a remark; it would not change the grade.\n"
+    "When you hesitate between two levels, choose the lower one.\n\n"
+    "HOW MANY — report what a supervisor would raise in a meeting, not "
+    "everything that could be said. At most five findings, the ones that "
+    "matter most; fewer is better, and an empty array is the right answer "
+    "for a thesis that is sound in your scope. Leave out matters of taste, "
+    "other ways the work could have been done, and remarks that would apply "
+    "to almost any student thesis.\n"
+)
+
+
 def scope_instruction(own: FindingSource) -> str:
     """The scope paragraph for one analysis: what it judges, what it leaves."""
     others = "\n".join(
@@ -67,5 +108,6 @@ def scope_instruction(own: FindingSource) -> str:
         "it will be reported there, and reporting it twice distorts the "
         "review. Report each problem once: one finding per problem, not one "
         "per place where it shows.\n"
+        + CALIBRATION
         + EVIDENCE_INSTRUCTION
     )

@@ -49,6 +49,8 @@ START ─┬─ analyze_structure ────┐
 |---|---|---|---|---|---|---|---|
 | pełna recenzja, ze streszczeniami rozdziałów | 0.83 | 0 | 10 | 1 | 27 | 2/3 | 97 s |
 | bez streszczeń rozdziałów (`REVIEW_CHAPTER_DIGESTS=false`) | 1.00 | 1 | 8 | 1 | 23 | 2/3 | 66 s |
+| kalibracja: poziom pracy dyplomowej, wagi, limit uwag (2026-10-01) | 0.83 | 0 | 8 | 0 | 23 | 2/3 | 89 s |
+| kalibracja z zamkniętą listą uwag krytycznych (2026-10-02) | 1.00 | 1 | 11 | 0 | 19 | 3/3 | 101 s |
 
 Trzy przypadki, po jednym przebiegu — różnica w recall to jedna uwaga, czyli szum.
 Co z tego wynika: streszczenia rozdziałów nie poprawiają wykrywalności, gdy każda
@@ -58,6 +60,13 @@ korzyść: bez nich „hipotezy niezweryfikowane” wyszły z zaniżoną wagą.
 Liczb z qwen3 nie da się z tymi wprost zestawić (inny sędzia). Problemem na
 dostawcy nie jest recall, tylko nadgorliwość: 23–27 uwag spoza klucza na trzech
 krótkich pracach, a dobra praca (`oszczednosci`) dostaje „Zwrócić do poprawy”.
+
+Kalibracja (`prompts/scopes.py`, `CALIBRATION`) mówi analizom, że czytają pracę
+dyplomową, a nie artykuł do recenzji. Sam opis poziomu nie wystarczył: dobra praca
+nadal wracała do poprawy przez jedną „krytyczną” uwagę o specyfikacji modelu.
+Pomogło dopiero zamknięcie listy tego, co wolno nazwać krytycznym. Prompty są
+strojone na tych samych trzech pracach, na których są mierzone — sprawdzianem
+spoza zestawu są fikstury demo.
 
 Pełne liczby i każda uwaga: `agent/evals/results/`.
 
