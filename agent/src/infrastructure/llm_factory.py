@@ -38,6 +38,12 @@ _BYOK_MODELS: dict[str, str] = {
 # falls back to 4096 for a model it has no profile for — a truncated JSON.
 _CLAUDE_MAX_TOKENS = 16000
 
+# One call to a provider, in seconds. The SDKs wait ten minutes by default and
+# then try again twice — half an hour before a connection that went quiet
+# becomes a failed action. The longest call seen on a full thesis took half a
+# minute.
+_REQUEST_TIMEOUT = 180.0
+
 
 def byok_models() -> dict[str, str]:
     """The model each provider runs on when the user brings the key."""
@@ -130,6 +136,8 @@ def _claude(api_key: str) -> BaseChatModel:
         anthropic_api_key=api_key,  # pyright: ignore[reportCallIssue]
         max_tokens=_CLAUDE_MAX_TOKENS,  # pyright: ignore[reportCallIssue]
         effort=settings.anthropic_effort,
+        timeout=_REQUEST_TIMEOUT,  # pyright: ignore[reportCallIssue]
+        max_retries=1,
     )
 
 
@@ -142,4 +150,6 @@ def _byok_model(credentials: ModelCredentials) -> BaseChatModel:
             return ChatOpenAI(  # pyright: ignore[reportCallIssue]
                 model=_BYOK_MODELS["openai"],
                 api_key=SecretStr(credentials.api_key),
+                timeout=_REQUEST_TIMEOUT,
+                max_retries=1,
             )

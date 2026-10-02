@@ -149,6 +149,10 @@ def test_claude_gets_room_to_think_and_an_explicit_effort() -> None:
     kwargs = anthropic.call_args.kwargs
     assert kwargs["max_tokens"] == 16000
     assert kwargs["effort"] == "medium"
+    # A connection that goes quiet must not hold a review for the SDK's ten
+    # minutes, three times over.
+    assert kwargs["timeout"] == 180.0
+    assert kwargs["max_retries"] == 1
 
 
 def test_unsupported_provider_is_rejected() -> None:
