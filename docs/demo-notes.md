@@ -145,7 +145,10 @@ wyszło na jaw, co pomogło, czego to uczy. Liczby są z przebiegów 2026-10-01/
 ## Ryzyka na żywo
 
 - Recenzja trwa minuty nawet na chmurze → odpalić przed wejściem, pokazać wynik.
-- Brak wyboru dostawcy w UI = model lokalny (ok. 10 minut). Do naprawy przed demo.
+- Wybór modelu: bez zapisanej preferencji UI bierze zapisany klucz (Claude przed
+  OpenAI). Preferencja siedzi jednak w `localStorage` przeglądarki — jeśli w
+  przeglądarce na demo zapisano kiedyś model lokalny, akcja pójdzie lokalnie
+  (ok. 10 minut). Przed wejściem spojrzeć, czy w ramce „Model” stoi Claude.
 - Limity zapytań na koncie dostawcy przy równoległych gałęziach recenzji.
 - Plan awaryjny: wyniki z próby zostają w historii studentów — przy padzie sieci
   pokazać zapisane.
@@ -173,7 +176,8 @@ wyszło na jaw, co pomogło, czego to uczy. Liczby są z przebiegów 2026-10-01/
   przebiegu: 38 potwierdzonych, 1 niezgodna, 2 podejrzane, 3 spoza indeksu — dokładnie
   według `EXPECTED.md`. Agent sam zauważył, że autorzy to postaci z Sienkiewicza.
 - [ ] Claude jako główny dostawca, OpenAI tylko jako pokaz przełączenia — decyzja.
-- [ ] Domyślny dostawca dla akcji, gdy promotor ma klucz.
+- [x] Domyślny dostawca dla akcji, gdy promotor ma klucz (sprawdzone 2026-10-02):
+  UI wybiera zapisany klucz, Claude pierwszy; pokryte testem `modelChoice`.
 - [ ] Evals z opcją dostawcy + przebieg bazowy na jednym modelu (Sonnet).
 - [ ] **Sobota, warunkowo po evals — tiering modeli per węzeł.** Mały model na
   `digest_chapter` (krok map), ewentualnie `extract_references` i
