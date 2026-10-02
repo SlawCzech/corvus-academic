@@ -51,6 +51,7 @@ START ─┬─ analyze_structure ────┐
 | bez streszczeń rozdziałów (`REVIEW_CHAPTER_DIGESTS=false`) | 1.00 | 1 | 8 | 1 | 23 | 2/3 | 66 s |
 | kalibracja: poziom pracy dyplomowej, wagi, limit uwag (2026-10-01) | 0.83 | 0 | 8 | 0 | 23 | 2/3 | 89 s |
 | kalibracja z zamkniętą listą uwag krytycznych (2026-10-02) | 1.00 | 1 | 11 | 0 | 19 | 3/3 | 101 s |
+| + co jest uwagą poważną, a co drobną; skala punktacji (2026-10-02) | 1.00 | 1 | 9 | 0 | 20 | 3/3 | 107 s |
 
 Trzy przypadki, po jednym przebiegu — różnica w recall to jedna uwaga, czyli szum.
 Co z tego wynika: streszczenia rozdziałów nie poprawiają wykrywalności, gdy każda

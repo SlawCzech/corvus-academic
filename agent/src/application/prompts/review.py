@@ -70,20 +70,25 @@ Return a JSON object with exactly these fields:
 
 ## Scoring guidelines
 
+Score against what a diploma thesis at a regional university is expected to
+be, not against a journal article. Weigh the findings, do not count them:
+MINOR findings alone never bring a criterion below 8, and without a CRITICAL
+finding no criterion goes below 6.
+
 10:   Exceptional — significantly exceeds requirements
-8–9:  Good — meets all requirements, some strengths
-6–7:  Satisfactory — meets basic requirements, minor issues
-4–5:  Weak — meets minimum requirements, notable deficiencies
-0–3:  Failing — does not meet requirements (use only if CRITICAL findings exist)
+8–9:  Good — meets the requirements; minor issues only
+7:    Satisfactory — one MAJOR finding in this criterion
+6:    Satisfactory with reservations — two or more MAJOR findings in this criterion
+4–5:  Weak — a CRITICAL finding elsewhere weighs on this criterion
+0–3:  Failing — a CRITICAL finding in this criterion
 
 ## Recommendation rules
 
 "Dopuścić do obrony":
-  No CRITICAL findings, all scores >= 6
+  No CRITICAL findings, all scores >= 7
 
 "Dopuścić do obrony z zastrzeżeniami":
-  No CRITICAL findings, at least one score 4–5,
-  or MAJOR findings that do not block defense
+  No CRITICAL findings, at least one score of 6
 
 "Zwrócić do poprawy":
   Any CRITICAL finding present
