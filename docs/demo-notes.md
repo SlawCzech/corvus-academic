@@ -2,6 +2,7 @@
 
 > Robocze. Scenariusz dogrywamy w niedzielę 2026-10-04.
 > Publiczność: mała grupa programistów. Temat: jak używamy AI w prywatnych projektach.
+> Format: **30 minut — prezentacja z demo w środku**, nie samo klikanie po aplikacji.
 > Fikstury: [specs/demo-fixtures.md](specs/demo-fixtures.md) · mechanizmy: [specs/ai-extensions.md](specs/ai-extensions.md)
 
 ## Teza pokazu
@@ -10,6 +11,16 @@ Nie „aplikacja do recenzji prac”, tylko **„jak zbudować coś wokół LLM-
 się temu ufać”**. Na ekranie to formularze i przyciski — wszystko, co ciekawe,
 jest pod spodem, więc trzeba to pokazać wprost. Samo klikanie po UI wygląda jak
 kolejna nakładka na model.
+
+## Układ 30 minut (szkic do niedzieli)
+
+| Czas | Część | Co |
+|---|---|---|
+| 3 min | Po co to jest | promotor, prace dyplomowe, siedem predefiniowanych akcji zamiast czatu |
+| 5 min | Co jest pod spodem | dwa serwisy, graf per akcja, klucz użytkownika, gdzie jest model, a gdzie go celowo nie ma |
+| 10 min | Demo | trzy sceny niżej |
+| 8 min | Problemy, z którymi trzeba było sobie poradzić | sekcja niżej — wybrać 3–4, resztę mieć na pytania |
+| 4 min | Jak to powstało + pytania | Claude Code, ADR-y, evals jako pętla zwrotna |
 
 ## Mechanika AI do uwypuklenia
 
@@ -38,13 +49,70 @@ kolejna nakładka na model.
 Reszta akcji działa i jest „jest też to”, nie punkt programu.
 Krótkie akcje na żywo: `propose_topic` (Pawlak), `check_progress` (Miauczyński v1 → v2).
 
+## Problemy, z którymi trzeba było sobie poradzić
+
+Materiał na część „nie wszystko poszło gładko”. Każdy punkt: co się stało, jak
+wyszło na jaw, co pomogło, czego to uczy. Liczby są z przebiegów 2026-10-01/02.
+
+1. **Model u dostawcy był nadgorliwy — recenzował licencjat jak artykuł do
+   czasopisma.** Po przejściu na Claude recall nie był problemem (0,83–1,00);
+   problemem było 27 uwag spoza klucza na trzech krótkich pracach i dobra praca
+   odesłana do poprawy za identyfikację jednego współczynnika w modelu.
+   - Krok 1: opis poziomu („praca dyplomowa na uczelni regionalnej, nie
+     recenzja naukowa”), definicje wag, limit pięciu uwag. Fałszywe zarzuty
+     1 → 0, ale dobra praca nadal odrzucona — wystarczyła jedna uwaga „krytyczna”.
+   - Krok 2: **zamknięta lista** tego, co wolno nazwać krytycznym (brak celu,
+     badanie niewykonane, wnioski sprzeczne z wynikami, hipoteza bez
+     odpowiedzi). Rekomendacje 2/3 → 3/3.
+   - Krok 3: to samo dla uwag poważnych i dla punktacji. Anioł (dobra praca):
+     9 poważnych uwag → 3, wszystkie trzy merytorycznie zasadne.
+   - Czego to uczy: model lepiej trzyma się reguły kategorycznej niż opisu
+     tonu. I druga rzecz, którą trzeba powiedzieć wprost: prompty stroiłem na
+     tych samych trzech pracach, na których mierzę — fikstury demo są jedynym
+     sprawdzianem spoza zestawu.
+   - Co zostało: punktacja nadal surowa (Anioł 25/40), liczba uwag ogółem
+     prawie nie spadła — spadła ich waga.
+2. **Architektura pod mały kontekst stała się balastem.** Lokalny model dostawał
+   wycinek 7000 znaków; „Sprawdź postęp” porównywało przez to dwie strony
+   tytułowe. Na pełnym tekście znalazło 5 z 6 wpisanych wad. Odwrotna strona:
+   streszczenia rozdziałów (`Send` × N), zbudowane dla małego kontekstu, u
+   dostawcy nie poprawiają wykrywalności i kosztują ok. 10 s — zmierzone, nie
+   założone.
+3. **Reguła też „halucynuje”.** Pierwsza wersja dopasowania bibliografii zgłosiła
+   11 fałszywych alarmów: recenzja książki w Crossref brana za książkę,
+   późniejsze wydanie brane za zły rok. Do tego Crossref odpowiedział 429 i 23
+   z 42 pozycji zostały niesprawdzone. Pomogło: tempo według nagłówków limitu,
+   katalogi bibliotek dla książek, agent dopiero dla ogona.
+4. **Mapa dokumentu bez modelu miała błędy widoczne dopiero na prawdziwych
+   pracach.** „1.9. Podsumowanie” brane za zakończenie całej pracy; spis treści
+   z kropkami połykający wstęp. Drugi błąd siedział w kodzie od dawna, a mapy
+   przypadków w evals były nieaktualne — evals mierzyły na złych danych.
+5. **Zmiana modelu to nie zmiana jednej linijki.** Sonnet 5.5 zwraca treść w
+   częściach (myślenie + tekst) — pierwsza akcja padła na parsowaniu. Wymuszony
+   wybór narzędzia jest odrzucany, `max_tokens` trzeba podać jawnie (domyślne
+   4096 obcinało recenzję), poziom `effort` zmienia czas z 37 s na 19 s.
+   Structured output u dostawcy to prompt + walidacja + tura naprawcza; dwie
+   analizy gubiły pole `severity`, dopóki prompt nie pokazał dosłownego kształtu JSON.
+6. **Mechanizm działa, a funkcji nie ma.** Pauza grafu (`interrupt`) działała od
+   pierwszego dnia, ale w UI nie było jak do niej wrócić: dashboard pokazywał
+   „0 akcji w toku”, status wyświetlał się jako `awaiting_input`. Human in the
+   loop to w połowie problem interfejsu.
+7. **Operacyjne, czyli to, co zabiera najwięcej czasu.** Klucz bez przypisania
+   do workspace'u pokazany jako „nie udało się połączyć”; środki na koncie
+   skończone w połowie evals; „zawieszony” dostawca, który okazał się uśpionym
+   laptopem. Stąd: komunikat dostawcy pokazywany wprost, limit 180 s na
+   wywołanie, saldo na liście kontrolnej.
+8. **Evals mają swoje granice.** Trzy przypadki, jeden przebieg, sędzia tym samym
+   modelem — różnica jednej uwagi to 0,17 recall. Wystarcza, żeby zobaczyć
+   kierunek (nadgorliwość, rekomendacje), nie wystarcza do porównywania wariantów.
+
 ## Co powiedzieć samemu, zanim ktoś zapyta
 
 - **Infrastruktura jest przerośnięta względem skali** (Jenkins, SonarQube, Celery,
   Flower dla jednego użytkownika) — to projekt do nauki stacku, celowo.
-- **Jakość:** recall 0,61–0,67 na trzech syntetycznych pracach, lokalny model,
-  ten sam model jako sędzia. Model gubi mniej więcej co trzecią wpisaną wadę.
-  Liczba na Claude — do uzupełnienia po przebiegu evals.
+- **Jakość:** na lokalnym modelu recall 0,61–0,67 (gubi co trzecią wpisaną wadę);
+  na Claude Sonnet 5.5 recall 1,00, zero fałszywych zarzutów, rekomendacje 3/3 —
+  ale to trzy syntetyczne prace, jeden przebieg i ten sam model jako sędzia.
 - **Jak to powstało:** ADR-y, plan faz, `CLAUDE.md`, ok. 870 testów — budowane z
   Claude Code; to część odpowiedzi na temat showcase'u.
 
