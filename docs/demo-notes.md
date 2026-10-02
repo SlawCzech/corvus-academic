@@ -164,27 +164,28 @@ wyszło na jaw, co pomogło, czego to uczy. Liczby są z przebiegów 2026-10-01/
 
 ## Otwarte
 
-- [x] Chmura rusza (2026-10-01): `propose_topic` na `claude-sonnet-5-5`, effort `medium`, 19 s (na Sonnet 5 przy domyślnym effort: 37 s). OpenAI nadal niesprawdzone — brak klucza.
-- [~] Każda z 7 akcji raz na żywo na studentach demo; wynik wobec `EXPECTED.md`.
+- [x] Chmura rusza (2026-10-01): `propose_topic` na `claude-sonnet-5-5`, effort `medium`, 19 s (na Sonnet 5 przy domyślnym effort: 37 s). OpenAI: `propose_topic` na `gpt-6.1-sol`, 34 s.
+- [x] Każda z 7 akcji raz na żywo na studentach demo; wynik wobec `EXPECTED.md`.
   Przeszły 2026-10-01 na Claude: `propose_topic` (Pawlak, 19 s), `generate_review` z
   pauzą i wznowieniem (Kiepski, 38 s do pauzy, 7 s po wznowieniu), pełna recenzja
   (Ochódzki, 70 s), `verify_bibliography` (Adamczewski, 91 s), `check_progress`
-  (Miauczyński, 25 s). Zostają: `evaluate_methodology`, `defence_questions`,
-  `draft_meeting_note`.
+  (Miauczyński, 25 s), `evaluate_methodology` (Kargul, 25 s), `defence_questions`
+  (Anioł, 14 s). 2026-10-02: `draft_meeting_note` z zapisem notatki (Pawlak, 4 s).
 - [x] Planowane wady w bibliografii Adamczewskiego (2026-10-01): książka i artykuł,
   których nie ma (autorzy z Trylogii), oraz prawdziwy artykuł ze złym rokiem. Wynik
   przebiegu: 38 potwierdzonych, 1 niezgodna, 2 podejrzane, 3 spoza indeksu — dokładnie
   według `EXPECTED.md`. Agent sam zauważył, że autorzy to postaci z Sienkiewicza.
-- [ ] Claude jako główny dostawca, OpenAI tylko jako pokaz przełączenia — decyzja.
+- [x] Claude jest głównym dostawcą, OpenAI tylko jako pokaz przełączenia (decyzja
+  2026-10-02). Kalibracja i evals były robione na Claude — na OpenAI nie są zmierzone.
 - [x] Domyślny dostawca dla akcji, gdy promotor ma klucz (sprawdzone 2026-10-02):
   UI wybiera zapisany klucz, Claude pierwszy; pokryte testem `modelChoice`.
-- [ ] Evals z opcją dostawcy + przebieg bazowy na jednym modelu (Sonnet).
-- [ ] **Sobota, warunkowo po evals — tiering modeli per węzeł.** Mały model na
-  `digest_chapter` (krok map), ewentualnie `extract_references` i
-  `draft_meeting_note`; średni na analizy i agenta bibliografii; duży na
-  `generate_review` tylko jeśli evals pokażą zysk wart wolniejszej odpowiedzi.
-  Zostaje wyłącznie z liczbami: recall nie spada, czas spada. `get_llm` dostaje
-  parametr poziomu. To *model routing*, nie orkiestracja — trudność kroku jest
-  znana z góry (ADR 0005). Jeśli wejdzie: ADR 0012 (promotor wybiera dostawcę,
-  nie model — zmiana względem ADR 0011).
+- [x] Evals z opcją dostawcy (`make eval MODEL=claude`) i przebiegi na Sonnet 5.5 —
+  liczby w [specs/ai-extensions.md](specs/ai-extensions.md).
+- [x] **Tiering modeli per węzeł — odpuszczony (decyzja 2026-10-02).** Recenzja
+  trwa 30–50 s na jednym modelu; mniejszy model na kroku map dałby kilka sekund,
+  a dołożyłby drugą zmienną do evals. Jeśli ktoś zapyta: to byłby *model
+  routing*, nie orkiestracja — trudność kroku jest znana z góry (ADR 0005).
+- [x] **Streszczenia rozdziałów zostają włączone (decyzja 2026-10-02).** Pomiar nie
+  pokazał zysku w wykrywalności, kosztują ok. 10 s — zostają, bo pokazują
+  fan-out (`Send`) w śladzie. Powiedzieć to wprost, z liczbą.
 - [ ] Próba generalna dwa razy od `demo-reset`, ze stoperem.
