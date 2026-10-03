@@ -619,7 +619,9 @@ który ludzie wyłączają przez `--no-verify`. Od tego jest CI.
   blacklist): `/auth/logout` odwołuje oba, każdy na tyle, ile jeszcze byłby
   ważny, a `get_current_user` sprawdza listę przy każdym żądaniu (fail-open,
   gdy Redis leży — patrz `technical-debt.md`)
-- klucze API użytkowników szyfrowane Fernetem w Postgres
+- klucze API użytkowników szyfrowane Fernetem w Postgres; w kolejce Celery klucz
+  jedzie zaszyfrowany kluczem wyprowadzonym z `JWT_SECRET` i otwiera go dopiero
+  worker ([ADR 0012](adr/0012-seal-the-provider-key-for-the-task-queue.md))
 - każdy serwis ma non-root user w Dockerze
 - audyt logowań (`LoginEventModel`) — IP, user-agent, sukces/porażka
 - rate limiting na `/auth/login` (fastapi-limiter)

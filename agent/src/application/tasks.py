@@ -18,6 +18,7 @@ from src.domain.action import ActionType, TaskStatus
 from src.domain.analysis import ThesisType
 from src.infrastructure.checkpoints import delete as delete_checkpoints
 from src.infrastructure.checkpoints import open_checkpointer
+from src.infrastructure.key_transit import KeyUnsealError, unseal
 from src.infrastructure.llm_factory import ModelCredentials, use_credentials
 from src.infrastructure.provider_errors import classify as classify_provider_error
 from src.infrastructure.task_status import (
@@ -333,6 +334,24 @@ def _fail_or_retry(task: Task, task_id: str | None, exc: Exception) -> NoReturn:
     raise task.retry(exc=exc, countdown=countdown)
 
 
+def _credentials(
+    task_id: str | None, provider: str | None, sealed_api_key: str | None
+) -> ModelCredentials | None:
+    """Open the promoter's key, here in the worker that is about to use it.
+
+    A key that will not open fails the task at once: retrying cannot fix it,
+    and running on the local model instead would be a silent fallback the
+    promoter did not choose (ADR 0011).
+    """
+    if not (provider and sealed_api_key):
+        return None
+    try:
+        return ModelCredentials(provider=provider, api_key=unseal(sealed_api_key))
+    except KeyUnsealError as exc:
+        record_task_status(task_id, TaskStatus.FAILED, error=str(exc))
+        raise
+
+
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def run_action(
     self: Task,  # type: ignore[type-arg]
@@ -343,7 +362,7 @@ def run_action(
     model: str = "qwen3:30b-a3b",
     language: str = "pl",
     provider: str | None = None,
-    api_key: str | None = None,
+    sealed_api_key: str | None = None,
 ) -> dict[str, Any]:
     """Run one AI action for one student.
 
@@ -351,15 +370,12 @@ def run_action(
     for data mid-task, so a worker's job never depends on `app` being up.
 
     The user's own provider key, when they brought one, arrives as its own
-    argument and is held only for the duration of the graph run. It is never
-    put into the state, which is what gets serialised into the stored result.
+    argument, sealed for the broker (`key_transit`), and is opened and held
+    only for the duration of the graph run. It is never put into the state,
+    which is what gets serialised into the stored result.
     """
     task_id: str | None = self.request.id
-    credentials = (
-        ModelCredentials(provider=provider, api_key=api_key)
-        if provider and api_key
-        else None
-    )
+    credentials = _credentials(task_id, provider, sealed_api_key)
     logger.info(
         "run_action.started",
         action_id=action_id,
@@ -396,7 +412,7 @@ def resume_action(
     action_type: str,
     decision: dict[str, Any],
     provider: str | None = None,
-    api_key: str | None = None,
+    sealed_api_key: str | None = None,
 ) -> dict[str, Any]:
     """Continue a run paused for the promoter, with their decision.
 
@@ -405,11 +421,7 @@ def resume_action(
     promoter brought one, comes again: it was never stored.
     """
     task_id: str | None = self.request.id
-    credentials = (
-        ModelCredentials(provider=provider, api_key=api_key)
-        if provider and api_key
-        else None
-    )
+    credentials = _credentials(task_id, provider, sealed_api_key)
     logger.info("resume_action.started", task_id=task_id, action_type=action_type)
     try:
         with use_credentials(credentials):

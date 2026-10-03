@@ -23,6 +23,7 @@ from main import app  # noqa: E402
 from src.domain.action import ActionType, TaskStatus  # noqa: E402
 from src.infrastructure.api.router import get_http_client  # noqa: E402
 from src.infrastructure.database import get_db_session  # noqa: E402
+from src.infrastructure.key_transit import unseal  # noqa: E402
 from src.infrastructure.models import AgentTaskModel, Base  # noqa: E402
 from src.infrastructure.repositories import AgentTaskRepository  # noqa: E402
 from src.infrastructure.settings import settings  # noqa: E402
@@ -505,8 +506,23 @@ def test_byok_travels_as_task_arguments_not_context(
 
     call = dispatch.call_args.kwargs
     assert call["kwargs"]["provider"] == "claude"
-    assert call["kwargs"]["api_key"] == "sk-user-key"
+    assert unseal(call["kwargs"]["sealed_api_key"]) == "sk-user-key"
     assert "sk-user-key" not in json.dumps(call["args"])
+
+
+def test_the_key_is_sealed_before_it_reaches_the_broker(
+    client: TestClient, dispatch: MagicMock
+) -> None:
+    """The message sits in Redis for the whole run; the key must not be legible."""
+    body = {
+        **_ACTION_BODY,
+        "byok": {"provider": "claude", "api_key": "sk-user-key"},
+    }
+    client.post("/actions", json=body, headers=_auth(PROMOTOR_ID, "promotor"))
+
+    message = json.dumps(dispatch.call_args.kwargs)
+    assert "sk-user-key" not in message
+    assert "api_key" not in dispatch.call_args.kwargs["kwargs"]
 
 
 def test_action_without_byok_sends_no_credentials(
@@ -514,7 +530,7 @@ def test_action_without_byok_sends_no_credentials(
 ) -> None:
     _submit(client, _auth(PROMOTOR_ID, "promotor"))
 
-    assert "api_key" not in dispatch.call_args.kwargs["kwargs"]
+    assert "sealed_api_key" not in dispatch.call_args.kwargs["kwargs"]
 
 
 def test_unsupported_provider_is_rejected(
@@ -597,7 +613,8 @@ async def test_resume_queues_the_decision_under_the_same_task_id(
     assert sent.args[0] == "src.application.tasks.resume_action"
     assert sent.kwargs["task_id"] == task_id
     assert sent.kwargs["args"] == [ActionType.PROPOSE_TOPIC, {"accepted": [0, 2]}]
-    assert sent.kwargs["kwargs"] == {"provider": "claude", "api_key": "sk-user"}
+    assert sent.kwargs["kwargs"]["provider"] == "claude"
+    assert unseal(sent.kwargs["kwargs"]["sealed_api_key"]) == "sk-user"
 
 
 async def test_resume_of_a_run_that_is_not_paused_is_409(

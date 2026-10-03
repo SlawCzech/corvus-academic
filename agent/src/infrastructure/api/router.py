@@ -24,6 +24,7 @@ from src.infrastructure.api.auth import Role, TokenUser, verify_access_token
 from src.infrastructure.celery_app import celery_app
 from src.infrastructure.checkpoints import delete as delete_checkpoints
 from src.infrastructure.database import get_db_session
+from src.infrastructure.key_transit import seal
 from src.infrastructure.model_catalog import load_model_catalog
 from src.infrastructure.models import AgentTaskModel
 from src.infrastructure.repositories import AgentTaskRepository
@@ -230,8 +231,9 @@ async def submit_action(
     if body.byok is not None:
         # Separate task arguments, never part of the context: the context is
         # what ends up in the graph state and therefore in the stored result.
+        # Sealed: the message sits in Redis for the whole run.
         kwargs["provider"] = body.byok.provider
-        kwargs["api_key"] = body.byok.api_key
+        kwargs["sealed_api_key"] = seal(body.byok.api_key)
 
     try:
         celery_app.send_task(
@@ -313,7 +315,7 @@ async def resume_action(
     kwargs: dict[str, Any] = {}
     if body.byok is not None:
         kwargs["provider"] = body.byok.provider
-        kwargs["api_key"] = body.byok.api_key
+        kwargs["sealed_api_key"] = seal(body.byok.api_key)
     await repo.update_status(task_id, TaskStatus.PENDING)
     try:
         celery_app.send_task(
