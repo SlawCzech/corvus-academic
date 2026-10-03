@@ -117,9 +117,11 @@ class FakeAgentClient(AgentClient):
             raise AgentUnavailableError("connection refused")
         return self.models
 
-    def completes_with(self, payload: dict[str, Any]) -> None:
+    def completes_with(
+        self, payload: dict[str, Any], usage: dict[str, Any] | None = None
+    ) -> None:
         """Arrange the next poll to report a finished action."""
-        self.next_status = AgentActionStatus("completed", payload, None)
+        self.next_status = AgentActionStatus("completed", payload, None, usage=usage)
 
     def runs_with(self, progress: dict[str, Any]) -> None:
         """Arrange the next poll to report a running action and how far it got."""

@@ -66,6 +66,11 @@ async def _key_for(provider: str | None, keys: KeyLoader | None) -> BYOK | None:
     return byok
 
 
+def _usage(model: AgentActionModel) -> dict[str, Any] | None:
+    stored: Any = model.usage
+    return cast(dict[str, Any], stored) if isinstance(stored, dict) else None
+
+
 def _to_domain(model: AgentActionModel) -> AgentAction:
     stored: Any = model.output
     output = cast(dict[str, Any], stored) if isinstance(stored, dict) else None
@@ -81,6 +86,7 @@ def _to_domain(model: AgentActionModel) -> AgentAction:
         error=model.error,
         error_code=model.error_code,
         provider=model.provider,
+        usage=_usage(model),
         accepted=model.accepted,
         accepted_at=model.accepted_at,
         created_at=model.created_at,
@@ -585,6 +591,8 @@ class ActionService:
             record.error = remote.error
         if remote.error_code is not None:
             record.error_code = remote.error_code
+        if remote.usage is not None:
+            record.usage = remote.usage
         await self._actions.update(record)
         action = _to_domain(record)
         if not action.is_finished:

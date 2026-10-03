@@ -64,6 +64,11 @@ class AgentTaskModel(Base):
     progress: Mapped[Any] = mapped_column(  # type: ignore[assignment]
         JSONB().with_variant(JSON(), "sqlite"), nullable=True, default=None
     )
+    # Tokens spent, totals and by model (`infrastructure/usage.py`). Added to
+    # after every run under the task, so a resumed review counts both halves.
+    usage: Mapped[Any] = mapped_column(  # type: ignore[assignment]
+        JSONB().with_variant(JSON(), "sqlite"), nullable=True, default=None
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

@@ -47,6 +47,13 @@ def progress_writes() -> Any:  # noqa: ANN401
         yield mock
 
 
+@pytest.fixture(autouse=True)
+def usage_writes() -> Any:  # noqa: ANN401
+    """And usage writes."""
+    with patch("src.application.tasks.record_task_usage") as mock:
+        yield mock
+
+
 def _final_state(**overrides: Any) -> dict[str, Any]:  # noqa: ANN401
     state: dict[str, Any] = {
         "action_id": ACTION_ID,
@@ -155,6 +162,74 @@ def test_progress_is_recorded_as_each_node_finishes(progress_writes: Any) -> Non
         {"steps": steps, "done": ["analyze_structure"]},
         {"steps": steps, "done": ["analyze_structure", "verify"]},
     ]
+
+
+def _spends_tokens(graph: MagicMock, tokens: int, then: Any = None) -> None:  # noqa: ANN401
+    """Make the graph report one model call's usage to the run's callbacks."""
+    from langchain_core.messages import AIMessage
+    from langchain_core.outputs import ChatGeneration, LLMResult
+
+    def _invoke(state: Any, config: Any = None) -> Any:  # noqa: ANN401
+        message = AIMessage(
+            content="",
+            usage_metadata={
+                "input_tokens": tokens,
+                "output_tokens": 0,
+                "total_tokens": tokens,
+            },
+            response_metadata={"model_name": "claude-sonnet-5-5"},
+        )
+        result = LLMResult(generations=[[ChatGeneration(message=message)]])
+        for callback in config["callbacks"]:
+            if hasattr(callback, "on_llm_end"):
+                callback.on_llm_end(result)
+        if isinstance(then, Exception):
+            raise then
+        return _final_state()
+
+    graph.invoke.side_effect = _invoke
+
+
+def test_tokens_are_recorded_before_the_final_status(
+    usage_writes: MagicMock, status_writes: MagicMock
+) -> None:
+    """`app` stops asking once the task is over — the count has to be there."""
+    graph = _mock_graph()
+    _spends_tokens(graph, 120)
+    calls = MagicMock()
+    calls.attach_mock(usage_writes, "usage")
+    calls.attach_mock(status_writes, "status")
+
+    with patch("src.application.tasks.build_action_graph", return_value=graph):
+        run_action.apply(
+            args=(ACTION_ID, ActionType.PROPOSE_TOPIC, STUDENT_ID, {}),
+            task_id="task-usage",
+        )
+
+    task_id, usage = usage_writes.call_args.args
+    assert task_id == "task-usage"
+    assert usage["total_tokens"] == 120
+    names = [c[0] for c in calls.mock_calls]
+    assert names.index("usage") < len(names) - 1
+    assert calls.mock_calls[-1].args[1] == TaskStatus.COMPLETED
+
+
+def test_a_run_that_raises_still_records_what_it_spent(
+    usage_writes: MagicMock,
+) -> None:
+    graph = _mock_graph()
+    _spends_tokens(graph, 50, then=RuntimeError("model went away"))
+
+    with (
+        patch("src.application.tasks.build_action_graph", return_value=graph),
+        pytest.raises(Exception),  # noqa: B017 — retry or the error itself
+    ):
+        run_action.apply(
+            args=(ACTION_ID, ActionType.PROPOSE_TOPIC, STUDENT_ID, {}),
+            task_id="task-raised",
+        ).get()
+
+    assert usage_writes.call_args.args[1]["total_tokens"] == 50
 
 
 def test_run_action_returns_the_actions_output() -> None:

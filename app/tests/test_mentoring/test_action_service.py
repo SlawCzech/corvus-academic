@@ -835,3 +835,31 @@ async def test_a_failure_the_promoter_can_fix_keeps_its_code(env: _Fixture) -> N
 
     assert refreshed.status is ActionStatus.FAILED
     assert refreshed.error_code == "provider_no_credits"
+
+
+async def test_the_tokens_an_action_spent_are_kept_with_it(env: _Fixture) -> None:
+    """Copied once the agent reports them, and still there when it is gone."""
+    student = await _student(env)
+    action = await env.actions.trigger(
+        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+    )
+    usage = {
+        "input_tokens": 12000,
+        "output_tokens": 800,
+        "total_tokens": 12800,
+        "by_model": {
+            "claude-sonnet-5-5": {
+                "input_tokens": 12000,
+                "output_tokens": 800,
+                "total_tokens": 12800,
+            }
+        },
+    }
+    env.agent.completes_with(topic_payload("Instytucje"), usage=usage)
+
+    refreshed = await env.actions.get_action(PROMOTOR, student.id, action.id, TOKEN)
+    assert refreshed.usage == usage
+
+    env.agent.unavailable = True
+    stored = (await env.actions.list_actions(PROMOTOR, student.id, TOKEN))[0]
+    assert stored.usage == usage

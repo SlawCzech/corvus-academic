@@ -6,6 +6,7 @@ from uuid import UUID
 
 import structlog
 from celery import Task, shared_task
+from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import Command
 
@@ -19,9 +20,14 @@ from src.infrastructure.checkpoints import delete as delete_checkpoints
 from src.infrastructure.checkpoints import open_checkpointer
 from src.infrastructure.llm_factory import ModelCredentials, use_credentials
 from src.infrastructure.provider_errors import classify as classify_provider_error
-from src.infrastructure.task_status import record_task_progress, record_task_status
+from src.infrastructure.task_status import (
+    record_task_progress,
+    record_task_status,
+    record_task_usage,
+)
 from src.infrastructure.tracing import flush as flush_traces
 from src.infrastructure.tracing import run_config
+from src.infrastructure.usage import UsageMeter
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -168,6 +174,9 @@ def _run_graph(
             task_id=task_id,
         )
         config.update(thread)
+        meter = UsageMeter()
+        callbacks = cast(list[BaseCallbackHandler], config.get("callbacks") or [])
+        config["callbacks"] = [*callbacks, meter]
 
         pending = _pending_steps(graph, config) if thread else ()
         graph_input: Any
@@ -182,6 +191,9 @@ def _run_graph(
             result = _stream(graph, graph_input, config, task_id, pending)
             paused = bool(thread) and bool(graph.get_state(config).interrupts)
         finally:
+            # Before the final status: `app` stops asking once the task is
+            # over. A run that raised spent its tokens all the same.
+            record_task_usage(task_id, meter.usage())
             flush_traces()
     payload = _result_payload(result)
 

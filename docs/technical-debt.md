@@ -146,9 +146,14 @@
   Sprawdza sam klucz, nie saldo — brak środków wychodzi przy akcji, z kodem
   `provider_no_credits`.
 
-- [ ] **Brak śladu kosztów** — nie zapisujemy, ile tokenów zużyła akcja. Na czyim
-  koncie poszła, widać od 2026-10-01 (`agent_actions.provider`, ADR 0011); ile
-  kosztowała — nadal nie. Przy BYOK to informacja, którą promotor chciałby widzieć.
+- [x] ~~**Brak śladu kosztów**~~ — od 2026-10-03 każda akcja ma `usage`: tokeny
+  wejścia i wyjścia, razem i per model, tak jak je raportuje dostawca (callback
+  `UsageMeter` na przebiegu grafu, `agent/src/infrastructure/usage.py`). Agent
+  dodaje do `analysis.agent_tasks.usage` po każdym przebiegu (wznowienie po pauzie
+  i retry się sumują), `app` kopiuje do `mentoring.agent_actions.usage`, UI pokazuje
+  pod wynikiem. Zostaje: **tokeny, nie złotówki** — cennik dostawcy zmienia się
+  częściej niż kod; przeliczenie można dołożyć w UI. Przebieg zabity w połowie
+  (OOM, kill) gubi swój licznik — liczy się dopiero na końcu przebiegu.
 
 ---
 

@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.action import TaskStatus
 from src.infrastructure.models import AgentTaskModel, GuidelineChunkModel
+from src.infrastructure.usage import Usage, merge_usage
 
 
 class AgentTaskRepository:
@@ -107,6 +108,19 @@ class AgentTaskRepository:
             return True
         model.progress = progress
         model.updated_at = datetime.now(UTC)
+        await self._session.commit()
+        return True
+
+
+    async def add_usage(self, task_id: str, usage: Usage) -> bool:
+        """Add one run's tokens to what the task has spent so far.
+
+        Written whatever the status — a cancelled run spent its tokens too.
+        """
+        model = await self.find_by_task_id(task_id)
+        if model is None:
+            return False
+        model.usage = merge_usage(model.usage, usage)
         await self._session.commit()
         return True
 

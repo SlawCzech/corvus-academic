@@ -203,3 +203,39 @@ describe("ActionResultView", () => {
     )
   })
 })
+
+describe("ActionResultView — tokens", () => {
+  const usage = {
+    input_tokens: 12000,
+    output_tokens: 800,
+    total_tokens: 12800,
+    by_model: {
+      "claude-sonnet-5-5": { input_tokens: 12000, output_tokens: 800, total_tokens: 12800 },
+    },
+  }
+
+  it("says what a finished action spent, and on which model", () => {
+    const action: AgentAction = {
+      ...base,
+      usage,
+      output: { output: { topics: [{ title: "Instytucje a wzrost" }] } },
+    }
+    render(<ActionResultView action={action} />)
+
+    const line = screen.getByTestId("token-usage")
+    expect(line.textContent?.replace(/\s+/g, " ")).toBe(
+      "Tokeny: 12 800 (wejście 12 000 · wyjście 800) · claude-sonnet-5-5",
+    )
+  })
+
+  it("says it for a failed action too — those tokens were spent", () => {
+    render(<ActionResultView action={{ ...base, status: "failed", error: "boom", usage }} />)
+    expect(screen.getByTestId("action-error")).toBeInTheDocument()
+    expect(screen.getByTestId("token-usage")).toBeInTheDocument()
+  })
+
+  it("stays silent for an action with no count", () => {
+    render(<ActionResultView action={{ ...base, output: { output: { topics: [{ title: "T" }] } } }} />)
+    expect(screen.queryByTestId("token-usage")).not.toBeInTheDocument()
+  })
+})

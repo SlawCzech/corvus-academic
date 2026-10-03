@@ -19,7 +19,11 @@ from sqlalchemy.ext.asyncio import (
 from src.domain.action import ActionType, TaskStatus
 from src.infrastructure.models import AgentTaskModel, Base
 from src.infrastructure.repositories import AgentTaskRepository
-from src.infrastructure.task_status import record_task_progress, record_task_status
+from src.infrastructure.task_status import (
+    record_task_progress,
+    record_task_status,
+    record_task_usage,
+)
 
 _SCHEMA_TRANSLATE = {"schema_translate_map": {"analysis": None}}
 
@@ -68,6 +72,25 @@ def test_progress_writes_through_and_swallows_failures() -> None:
 
     with patch("src.infrastructure.task_status._write_progress") as write:
         record_task_progress(None, progress)
+    write.assert_not_called()
+
+
+def test_usage_writes_through_and_swallows_failures() -> None:
+    usage: Any = {"input_tokens": 1, "output_tokens": 1, "total_tokens": 2}
+    with patch(
+        "src.infrastructure.task_status._write_usage", return_value=True
+    ) as write:
+        record_task_usage("task-1", usage)
+    assert write.call_args.args == ("task-1", usage)
+
+    with patch(
+        "src.infrastructure.task_status._write_usage", side_effect=OSError("db down")
+    ):
+        record_task_usage("task-1", usage)  # must not raise
+
+    with patch("src.infrastructure.task_status._write_usage") as write:
+        record_task_usage("task-1", None)
+        record_task_usage(None, usage)
     write.assert_not_called()
 
 
