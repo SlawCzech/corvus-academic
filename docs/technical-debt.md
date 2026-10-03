@@ -220,15 +220,14 @@
 Pierwszy dzień akcji na żywo na Claude (`claude-sonnet-5-5`). Co zostało świadomie
 odłożone:
 
-- [ ] **OpenAI niesprawdzone** — ścieżka istnieje i ma testy, ale żadna akcja nie
-  poszła na kluczu OpenAI. Model to `gpt-6.1-sol` (jest na liście modeli klucza);
-  dokumentacja OpenAI mówi o Responses API, a `ChatOpenAI` domyślnie woła Chat
-  Completions — do sprawdzenia pierwszą akcją.
+- [x] ~~**OpenAI niesprawdzone**~~ — sprawdzone 2026-10-01: `propose_topic` na
+  `gpt-6.1-sol` przez `ChatOpenAI`, 34 s ([demo-notes](demo-notes.md)). Zostaje: na
+  OpenAI nie ma kalibracji ani evals — Claude jest głównym dostawcą (decyzja 2026-10-02).
 
-- [ ] **Evals nie mają przebiegu na dostawcy** — `make eval MODEL=claude` działa od
-  2026-10-01, liczb jeszcze nie ma. Poziom `ANTHROPIC_EFFORT=medium` i ewentualny
-  podział modeli per węzeł (mały model na streszczenia rozdziałów) czekają na ten
-  pomiar. Dotychczasowe 0,61 / 0,67 sędziował qwen3, więc nie są wprost porównywalne.
+- [x] ~~**Evals nie mają przebiegu na dostawcy**~~ — przebiegi na `claude-sonnet-5-5`
+  (effort `medium`, sędzia ten sam model) od 2026-10-01, liczby w
+  [specs/ai-extensions.md](specs/ai-extensions.md). Effort `medium` został; podział
+  modeli per węzeł odpuszczony (decyzja 2026-10-02, [demo-notes](demo-notes.md)).
 
 - [ ] **Brak przełączenia po odmowie klasyfikatora** — Sonnet 5.5 może odmówić
   (`stop_reason: refusal`); zgłaszamy to wprost, ale nie ponawiamy na innym modelu.
