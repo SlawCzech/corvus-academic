@@ -1,4 +1,4 @@
-"""Redis-backed blacklist for revoked refresh tokens."""
+"""Redis-backed blacklist for revoked tokens, access and refresh alike."""
 
 import redis.asyncio as aioredis  # type: ignore[import-untyped]
 import structlog
@@ -14,14 +14,20 @@ def _get_redis() -> aioredis.Redis:  # type: ignore[type-arg]
     return aioredis.from_url(settings.redis_url, decode_responses=True)  # type: ignore[no-untyped-call]
 
 
-class RefreshTokenStore:
-    """Blacklist for refresh tokens identified by their jti claim."""
+class RevokedTokenStore:
+    """Blacklist for tokens identified by their jti claim.
+
+    One namespace for both kinds: a jti is a fresh UUID either way, and the
+    token's own ``type`` claim already keeps an access token out of /refresh.
+    """
 
     def __init__(self, client: aioredis.Redis | None = None) -> None:  # type: ignore[type-arg]
         self._redis: aioredis.Redis = client or _get_redis()  # type: ignore[type-arg]
 
     async def revoke(self, jti: str, ttl_seconds: int) -> None:
         """Add jti to the blacklist with an expiry matching the token's TTL."""
+        if ttl_seconds <= 0:
+            return  # already expired — nothing left to refuse
         try:
             await self._redis.setex(f"revoked_jti:{jti}", ttl_seconds, "1")  # type: ignore[misc]
         except RedisError:

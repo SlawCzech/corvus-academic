@@ -10,6 +10,8 @@ os.environ.setdefault("JWT_SECRET", "test-secret-key-that-is-long-enough-32ch")
 os.environ.setdefault("FERNET_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
 
 from src.identity.application.key_check import KeyVerdict  # noqa: E402
+from src.shared.settings import settings  # noqa: E402
+from tests.conftest import InMemoryTokenStore  # noqa: E402
 from tests.test_identity.conftest import (  # noqa: E402
     ADMIN_EMAIL,
     ADMIN_PASSWORD,
@@ -73,6 +75,43 @@ def test_get_me(client: TestClient) -> None:
     body: dict[str, Any] = resp.json()
     assert body["email"] == ADMIN_EMAIL
     assert body["role"] == "admin"
+
+
+# ---------- logout ----------
+
+
+def test_logout_revokes_the_access_token_in_use(
+    client: TestClient, token_store: InMemoryTokenStore
+) -> None:
+    token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    auth = {"Authorization": f"Bearer {token}"}
+
+    assert client.post("/auth/logout", headers=auth).status_code == 204
+
+    resp = client.get("/users/me", headers=auth)
+    assert resp.status_code == 401
+    assert resp.json()["detail"] == "Token revoked"
+    # Revoked for as long as the token would otherwise still be accepted.
+    (ttl,) = token_store.revoked.values()
+    assert 0 < ttl <= settings.access_token_expire_minutes * 60 + 1
+
+
+def test_logout_leaves_other_sessions_alone(client: TestClient) -> None:
+    first = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    second = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+
+    client.post("/auth/logout", headers={"Authorization": f"Bearer {first}"})
+
+    resp = client.get("/users/me", headers={"Authorization": f"Bearer {second}"})
+    assert resp.status_code == 200
+
+
+def test_logout_without_a_token_still_succeeds(client: TestClient) -> None:
+    assert client.post("/auth/logout").status_code == 204
+    resp = client.post(
+        "/auth/logout", headers={"Authorization": "Bearer not.a.token"}
+    )
+    assert resp.status_code == 204
 
 
 # ---------- /users CRUD ----------

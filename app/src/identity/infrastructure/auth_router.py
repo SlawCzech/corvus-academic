@@ -6,15 +6,17 @@ from typing import Annotated
 
 import structlog
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from src.identity.application.auth import (
     create_access_token,
     create_refresh_token,
+    decode_access_token,
     verify_refresh_token,
 )
 from src.identity.infrastructure.dependencies import (
     LoginEventRepoDep,
-    RefreshTokenStoreDep,
+    TokenStoreDep,
     UserServiceDep,
 )
 from src.identity.infrastructure.limiter import login_rate_limit
@@ -32,6 +34,10 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 _REFRESH_COOKIE = "refresh_token"
 _REFRESH_TTL = settings.refresh_token_expire_days * 24 * 3600
+
+# Logout must work for a caller whose token is already gone or expired, so a
+# missing header is not a 403 here the way it is everywhere else.
+_optional_bearer = HTTPBearer(auto_error=False)
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -87,7 +93,7 @@ async def login(
 async def refresh_token(
     response: Response,
     svc: UserServiceDep,
-    token_store: RefreshTokenStoreDep,
+    token_store: TokenStoreDep,
     refresh_token_cookie: str | None = Cookie(default=None, alias=_REFRESH_COOKIE),
 ) -> RefreshResponse:
     """Issue a new access token using the httpOnly refresh cookie."""
@@ -133,10 +139,25 @@ async def refresh_token(
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(
     response: Response,
-    token_store: RefreshTokenStoreDep,
+    token_store: TokenStoreDep,
+    bearer: Annotated[
+        HTTPAuthorizationCredentials | None, Depends(_optional_bearer)
+    ] = None,
     refresh_token_cookie: str | None = Cookie(default=None, alias=_REFRESH_COOKIE),
 ) -> None:
-    """Revoke the refresh token and clear the cookie."""
+    """Revoke the access token in use and the refresh token, clear the cookie.
+
+    Each is revoked for as long as it would otherwise still be accepted. A
+    token that is missing or already invalid is skipped, not an error: the
+    caller is logged out either way.
+    """
+    if bearer is not None:
+        try:
+            claims = decode_access_token(bearer.credentials)
+            remaining = claims.expires_at - datetime.now(UTC)
+            await token_store.revoke(claims.jti, int(remaining.total_seconds()) + 1)
+        except ValueError:
+            pass
     if refresh_token_cookie is not None:
         try:
             _user_id, jti = verify_refresh_token(refresh_token_cookie)

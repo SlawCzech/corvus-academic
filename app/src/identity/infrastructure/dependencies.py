@@ -13,7 +13,7 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.identity.application.auth import verify_access_token
+from src.identity.application.auth import decode_access_token
 from src.identity.application.key_check import KeyChecker
 from src.identity.application.user_service import UserService
 from src.identity.domain.user import Permission, User
@@ -24,7 +24,7 @@ from src.identity.infrastructure.repositories import (
     LoginEventRepository,
     UserRepository,
 )
-from src.identity.infrastructure.token_store import RefreshTokenStore
+from src.identity.infrastructure.token_store import RevokedTokenStore
 from src.shared.database import get_db_session
 
 _bearer = HTTPBearer()
@@ -33,18 +33,39 @@ _bearer = HTTPBearer()
 # ---------- providers ----------
 
 
-def get_current_user(
+def get_token_store() -> RevokedTokenStore:
+    """A fresh store per request — it holds nothing but a Redis handle.
+
+    Named, rather than a ``Depends(lambda: ...)``: a lambda dependency cannot
+    be overridden by name in tests, and every other provider in this file is
+    named for exactly that reason.
+    """
+    return RevokedTokenStore()
+
+
+async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(_bearer)],
+    token_store: Annotated[RevokedTokenStore, Depends(get_token_store)],
 ) -> User:
-    """FastAPI dependency — decode Bearer token and return the calling User."""
+    """FastAPI dependency — decode Bearer token and return the calling User.
+
+    A token logged out of is refused even though its signature still holds.
+    """
     try:
-        return verify_access_token(credentials.credentials)
+        claims = decode_access_token(credentials.credentials)
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(exc),
-            headers={"WWW-Authenticate": "Bearer"},
-        ) from exc
+        raise _unauthorized(str(exc)) from exc
+    if await token_store.is_revoked(claims.jti):
+        raise _unauthorized("Token revoked")
+    return claims.user
+
+
+def _unauthorized(detail: str) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=detail,
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 def require_admin(user: Annotated[User, Depends(get_current_user)]) -> User:
@@ -97,16 +118,6 @@ def get_user_service(
     return UserService(repo)
 
 
-def get_refresh_token_store() -> RefreshTokenStore:
-    """A fresh store per request — it holds nothing but a Redis handle.
-
-    Named, rather than the ``Depends(lambda: RefreshTokenStore())`` this
-    replaces: a lambda dependency cannot be overridden by name in tests, and
-    every other provider in this file is named for exactly that reason.
-    """
-    return RefreshTokenStore()
-
-
 def get_key_checker(request: Request) -> KeyChecker:
     """Check provider keys over the process-wide HTTP client."""
     client: httpx.AsyncClient = request.app.state.http_client
@@ -124,5 +135,5 @@ AccessRequestRepoDep = Annotated[
     AccessRequestRepository, Depends(get_access_request_repo)
 ]
 UserServiceDep = Annotated[UserService, Depends(get_user_service)]
-RefreshTokenStoreDep = Annotated[RefreshTokenStore, Depends(get_refresh_token_store)]
+TokenStoreDep = Annotated[RevokedTokenStore, Depends(get_token_store)]
 KeyCheckerDep = Annotated[KeyChecker, Depends(get_key_checker)]
