@@ -7,6 +7,7 @@ import type {
   AgentAction,
   CheckedReference,
   ReferenceStatus,
+  TokenUsage,
 } from "@/lib/api.types"
 
 const CARD = "rounded-lg border border-line p-3 text-[13px]"
@@ -131,7 +132,37 @@ function PartialAnalysisNotice({ errors }: { errors?: string[] }) {
   )
 }
 
-export default function ActionResultView({ action, selected, onSelect }: Props) {
+const NUMBER = new Intl.NumberFormat("pl-PL")
+
+/**
+ * What the action cost, in the provider's own unit. On a hosted model the
+ * promoter's account pays for exactly this; on the local one it is still a
+ * fair measure of how much the action read and wrote.
+ */
+function TokenUsageLine({ usage }: { usage: TokenUsage }) {
+  const models = Object.keys(usage.by_model)
+  return (
+    <p data-testid="token-usage" className="mt-3 text-[12px] text-muted">
+      Tokeny: {NUMBER.format(usage.total_tokens)} (wejście {NUMBER.format(usage.input_tokens)}{" "}
+      · wyjście {NUMBER.format(usage.output_tokens)})
+      {models.length > 0 && ` · ${models.join(", ")}`}
+    </p>
+  )
+}
+
+export default function ActionResultView(props: Props) {
+  const { action } = props
+  if (action.status !== "failed" && !action.output) return null
+  if (!action.usage) return <ActionResultBody {...props} />
+  return (
+    <div>
+      <ActionResultBody {...props} />
+      <TokenUsageLine usage={action.usage} />
+    </div>
+  )
+}
+
+function ActionResultBody({ action, selected, onSelect }: Props) {
   const result = action.output
   const output = result?.output
 

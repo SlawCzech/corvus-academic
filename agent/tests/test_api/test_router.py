@@ -204,8 +204,9 @@ def test_action_starts_pending(client: TestClient, dispatch: MagicMock) -> None:
     assert body["action_type"] == "propose_topic"
     assert body["action_id"] == _ACTION_BODY["action_id"]
     assert body["result"] is None
-    # Nothing has run yet: no steps to show.
+    # Nothing has run yet: no steps to show, nothing spent.
     assert body["progress"] is None
+    assert body["usage"] is None
 
 
 def test_unknown_task_is_404(client: TestClient) -> None:
@@ -273,6 +274,30 @@ async def test_completed_result_survives_without_celery(
     body = resp.json()
     assert body["status"] == "completed"
     assert body["result"]["output"]["topics"][0]["title"] == "Instytucje a wzrost"
+
+
+async def test_status_reports_the_tokens_spent(
+    client: TestClient, db_session: AsyncSession, dispatch: MagicMock
+) -> None:
+    task_id = str(uuid.uuid4())
+    await _store(db_session, task_id, TaskStatus.COMPLETED, result={"output": {}})
+    usage = {
+        "input_tokens": 900,
+        "output_tokens": 100,
+        "total_tokens": 1000,
+        "by_model": {
+            "claude-sonnet-5-5": {
+                "input_tokens": 900,
+                "output_tokens": 100,
+                "total_tokens": 1000,
+            }
+        },
+    }
+    await AgentTaskRepository(db_session).add_usage(task_id, usage)  # type: ignore[arg-type]
+
+    resp = client.get(f"/actions/{task_id}", headers=_auth(PROMOTOR_ID, "promotor"))
+
+    assert resp.json()["usage"] == usage
 
 
 async def test_failed_task_reports_its_error(

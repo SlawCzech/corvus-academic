@@ -150,6 +150,8 @@ class ActionStatusResponse(BaseModel):
     error_code: str | None = None
     # {"steps": [...], "done": [...]} — the graph's nodes and those finished.
     progress: dict[str, Any] | None = None
+    # Tokens spent so far, totals and by model; None when nothing reported any.
+    usage: dict[str, Any] | None = None
 
 
 class LocalModelResponse(BaseModel):
@@ -446,6 +448,8 @@ def _status_response(record: AgentTaskModel) -> ActionStatusResponse:
     progress = (
         cast(dict[str, Any], raw_progress) if isinstance(raw_progress, dict) else None
     )
+    raw_usage: Any = record.usage
+    usage = cast(dict[str, Any], raw_usage) if isinstance(raw_usage, dict) else None
     return ActionStatusResponse(
         task_id=task_id,
         action_id=record.action_id,
@@ -455,4 +459,5 @@ def _status_response(record: AgentTaskModel) -> ActionStatusResponse:
         error=record.error,
         error_code=record.error_code,
         progress=progress,
+        usage=usage,
     )

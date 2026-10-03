@@ -242,3 +242,29 @@ async def test_progress_never_touches_a_finished_task(
 
 async def test_update_progress_missing_row(repo: AgentTaskRepository) -> None:
     assert not await repo.update_progress("nope", {"steps": [], "done": []})
+
+
+# ---------- usage ----------
+
+
+async def test_add_usage_adds_each_run_to_the_task(repo: AgentTaskRepository) -> None:
+    await repo.save(_task("task-1", status=TaskStatus.RUNNING))
+    run = {
+        "input_tokens": 10,
+        "output_tokens": 2,
+        "total_tokens": 12,
+        "by_model": {"m": {"input_tokens": 10, "output_tokens": 2, "total_tokens": 12}},
+    }
+
+    assert await repo.add_usage("task-1", run)  # type: ignore[arg-type]
+    assert await repo.add_usage("task-1", run)  # type: ignore[arg-type]
+
+    found = await repo.find_by_task_id("task-1")
+    assert found is not None
+    assert found.usage["total_tokens"] == 24
+    assert found.usage["by_model"]["m"]["input_tokens"] == 20
+
+
+async def test_add_usage_missing_row(repo: AgentTaskRepository) -> None:
+    usage = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "by_model": {}}
+    assert not await repo.add_usage("nope", usage)  # type: ignore[arg-type]

@@ -50,6 +50,8 @@ class AgentActionStatus:
     # Set when the promoter can fix the failure themselves — no credits on
     # the provider account, a refused key. Opaque here: the frontend reads it.
     error_code: str | None = None
+    # Tokens spent so far — totals and by model — as the agent counts them.
+    usage: dict[str, Any] | None = None
 
 
 class AgentClient:
@@ -93,6 +95,7 @@ class AgentClient:
         error: Any = data.get("error")
         progress: Any = data.get("progress")
         error_code: Any = data.get("error_code")
+        usage: Any = data.get("usage")
         return AgentActionStatus(
             status=str(data["status"]),
             result=cast(dict[str, Any], result) if isinstance(result, dict) else None,
@@ -101,6 +104,7 @@ class AgentClient:
                 cast(dict[str, Any], progress) if isinstance(progress, dict) else None
             ),
             error_code=str(error_code) if error_code else None,
+            usage=cast(dict[str, Any], usage) if isinstance(usage, dict) else None,
         )
 
     async def resume_action(

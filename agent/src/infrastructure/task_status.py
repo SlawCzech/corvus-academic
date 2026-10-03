@@ -20,6 +20,7 @@ from sqlalchemy.pool import NullPool
 
 from src.infrastructure.repositories import AgentTaskRepository
 from src.infrastructure.settings import settings
+from src.infrastructure.usage import Usage
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -53,6 +54,30 @@ async def _write_progress(task_id: str, progress: dict[str, Any]) -> bool:
             )
     finally:
         await engine.dispose()
+
+
+async def _write_usage(task_id: str, usage: Usage) -> bool:
+    engine = create_async_engine(settings.database_url, poolclass=NullPool)
+    try:
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        async with factory() as session:
+            return await AgentTaskRepository(session).add_usage(task_id, usage)
+    finally:
+        await engine.dispose()
+
+
+def record_task_usage(task_id: str | None, usage: Usage | None) -> None:
+    """Add the tokens one run spent to its task, swallowing any failure.
+
+    A lost write undercounts what an action cost; it must never fail an
+    action that has its result.
+    """
+    if not task_id or usage is None:
+        return
+    try:
+        asyncio.run(_write_usage(task_id, usage))
+    except Exception as exc:
+        logger.warning("task_usage_write_failed", task_id=task_id, error=str(exc))
 
 
 def record_task_progress(task_id: str | None, progress: dict[str, Any]) -> None:

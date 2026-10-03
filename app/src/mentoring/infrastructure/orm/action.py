@@ -72,6 +72,10 @@ class AgentActionModel(Base):
     # The agent's code for a failure the promoter can act on; see the agent's
     # `ActionErrorCode`.
     error_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    # Tokens the agent reports the action spent, totals and by model.
+    usage: Mapped[Any] = mapped_column(  # type: ignore[assignment]
+        _JSON, nullable=True, default=None
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )

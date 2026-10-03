@@ -154,6 +154,9 @@ class ActionResponse(BaseModel):
     error_code: str | None = None
     # The provider whose account ran it; None for the self-hosted model.
     provider: str | None = None
+    # Tokens spent — {input_tokens, output_tokens, total_tokens, by_model};
+    # None before the agent reports any, and for actions older than the count.
+    usage: dict[str, Any] | None = None
     accepted: bool
     accepted_at: datetime | None
     created_at: datetime
@@ -175,6 +178,7 @@ def action_response(action: AgentAction) -> ActionResponse:
         error=action.error,
         error_code=action.error_code,
         provider=action.provider,
+        usage=action.usage,
         accepted=action.accepted,
         accepted_at=action.accepted_at,
         created_at=action.created_at,

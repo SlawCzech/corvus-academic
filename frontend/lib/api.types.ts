@@ -212,6 +212,17 @@ export type ActionErrorCode =
   | "provider_key_rejected"
   | "provider_rate_limited"
 
+export interface TokenCounts {
+  input_tokens: number
+  output_tokens: number
+  total_tokens: number
+}
+
+/** What an action spent, as the provider reported it; totals and by model. */
+export interface TokenUsage extends TokenCounts {
+  by_model: Record<string, TokenCounts>
+}
+
 export interface AgentAction {
   id: string
   student_id: string
@@ -226,6 +237,8 @@ export interface AgentAction {
   error_code?: ActionErrorCode | null
   /** The provider whose account ran it; null for a local model. */
   provider?: string | null
+  /** Null before the agent reports any, and for actions older than the count. */
+  usage?: TokenUsage | null
   accepted: boolean
   accepted_at: string | null
   created_at: string
