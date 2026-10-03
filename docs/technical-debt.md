@@ -83,9 +83,22 @@
 
 ### Bezpieczeństwo
 
-- [ ] **Brak revokacji access tokenów** — po wylogowaniu access token (15 min) pozostaje ważny do naturalnego wygaśnięcia. Naprawka: Redis JTI blacklist analogiczna do `RefreshTokenStore`, sprawdzana w `get_current_user`.
+- [x] ~~**Brak revokacji access tokenów**~~ — od 2026-10-03 access token ma `jti`,
+  `/auth/logout` wpisuje go na listę w Redis na resztę jego ważności, a
+  `get_current_user` ją sprawdza. Route `/api/auth/logout` we froncie wysyła teraz
+  token w `Authorization` — wcześniej wysyłał tylko refresh token, i to w JSON-ie,
+  którego backend nie czyta. Tokeny wydane przed tą zmianą (bez `jti`) są odrzucane:
+  jednorazowe ponowne logowanie.
 
-- [ ] **Fail-open w `RefreshTokenStore`** — jeśli Redis jest niedostępny, `is_revoked()` zwraca `False` (odwołane tokeny są akceptowane). Celowy kompromis dostępność vs. bezpieczeństwo — wymaga alertu/monitoringu na log event `token_store_check_failed_fail_open`.
+- [ ] **Refresh z UI nie działa** (znalezione 2026-10-03) — `app` oddaje refresh token
+  w `Set-Cookie` na ścieżce `/auth/refresh`, a route `/api/auth/login` we froncie
+  szuka go w JSON-ie (`data.refresh_token`), więc Next nigdy nie zapisuje ciasteczka
+  `refresh_token`, a `/api/auth/refresh` wysyła go w treści, której backend nie czyta.
+  Sesję w praktyce trzyma sam access token (12 h). Naprawka: przepisać `Set-Cookie` z
+  odpowiedzi logowania na ciasteczko Next i wysyłać je do `app` w nagłówku `Cookie`
+  (tak jak robi to już `/api/auth/logout`); dopiero wtedy da się skrócić access token.
+
+- [ ] **Fail-open w `RevokedTokenStore`** — jeśli Redis jest niedostępny, `is_revoked()` zwraca `False` (odwołane tokeny, od 2026-10-03 także access tokeny, są akceptowane). Celowy kompromis dostępność vs. bezpieczeństwo — wymaga alertu/monitoringu na log event `token_store_check_failed_fail_open`.
 
 ### Funkcjonalność
 

@@ -11,6 +11,7 @@ os.environ.setdefault("JWT_SECRET", "test-secret-key-that-is-long-enough-32ch")
 from src.identity.application.auth import (
     create_access_token,
     create_refresh_token,
+    decode_access_token,
     verify_access_token,
     verify_refresh_token,
 )
@@ -105,3 +106,29 @@ def test_refresh_tokens_have_unique_jti(admin_user: User) -> None:
     _, jti1 = create_refresh_token(admin_user)
     _, jti2 = create_refresh_token(admin_user)
     assert jti1 != jti2
+
+
+def test_each_access_token_has_its_own_jti(admin_user: User) -> None:
+    first = decode_access_token(create_access_token(admin_user))
+    second = decode_access_token(create_access_token(admin_user))
+    assert first.jti != second.jti
+    assert first.user.id == admin_user.id
+    assert first.expires_at > datetime.now(UTC)
+
+
+def test_access_token_without_jti_is_rejected(admin_user: User) -> None:
+    """A token that could never be revoked is not accepted at all."""
+    import jwt
+
+    from src.shared.settings import settings
+
+    payload = {
+        "sub": str(admin_user.id),
+        "email": admin_user.email,
+        "role": str(admin_user.role),
+        "type": "access",
+        "exp": datetime.now(UTC).timestamp() + 60,
+    }
+    token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+    with pytest.raises(ValueError, match="jti"):
+        verify_access_token(token)

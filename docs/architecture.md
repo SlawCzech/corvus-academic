@@ -287,7 +287,7 @@ corvus/
 │   │   │       ├── models.py        # SQLAlchemy — UserModel, LoginEventModel
 │   │   │       ├── repositories.py
 │   │   │       ├── secrets.py       # Fernet encryption kluczy API
-│   │   │       ├── token_store.py   # RefreshTokenStore (Redis, revocation)
+│   │   │       ├── token_store.py   # RevokedTokenStore (Redis, revocation)
 │   │   │       └── limiter.py       # rate limiting na /auth/login
 │   │   ├── mentoring/
 │   │   │   ├── domain/
@@ -612,11 +612,13 @@ który ludzie wyłączają przez `--no-verify`. Od tego jest CI.
   tokenu) **usunięte w Fazie 0** — ich jedyną ochroną była topologia sieci
   (gateway ich nie proxował); po scaleniu na publicznym porcie byłyby dziurą.
   Nic ich nie wołało
-- access token (15 min) + refresh token (30 dni) w httpOnly cookie,
+- access token (12 h, `ACCESS_TOKEN_EXPIRE_MINUTES=720`) + refresh token (30 dni) w httpOnly cookie,
   `samesite=strict`, ograniczony do path `/auth/refresh`; flaga `Secure`
   zależna od `ENVIRONMENT` (włączona tylko na produkcji, żeby lokalny HTTP działał)
-- refresh tokeny odwoływalne przez `RefreshTokenStore` (Redis, JTI blacklist)
-  — **ale bez rewokacji access tokenów** (patrz `technical-debt.md`)
+- access i refresh tokeny odwoływalne przez `RevokedTokenStore` (Redis, JTI
+  blacklist): `/auth/logout` odwołuje oba, każdy na tyle, ile jeszcze byłby
+  ważny, a `get_current_user` sprawdza listę przy każdym żądaniu (fail-open,
+  gdy Redis leży — patrz `technical-debt.md`)
 - klucze API użytkowników szyfrowane Fernetem w Postgres
 - każdy serwis ma non-root user w Dockerze
 - audyt logowań (`LoginEventModel`) — IP, user-agent, sukces/porażka
