@@ -112,8 +112,9 @@ Użytkownik
       → promotor wybiera przy akcji: własny klucz (BYOK) do Claude albo
         OpenAI — po jednym na dostawcę — albo Ollama (lokalny, domyślny);
         zapisany klucz nie jest używany, dopóki akcja o niego nie poprosi
-        klucz jedzie osobnym argumentem taska i żyje w ContextVar tylko na
-        czas przebiegu grafu — nigdy w stanie, który trafia do bazy
+        klucz jedzie osobnym argumentem taska, zaszyfrowany na czas kolejki
+        (ADR 0012), i żyje w ContextVar tylko na czas przebiegu grafu — nigdy
+        w stanie, który trafia do bazy
   → Postgres (zapis raportu)
   → frontend (polling → wyświetlenie raportu)
 ```
@@ -424,7 +425,8 @@ Zasady:
 - Klucze API użytkowników w Postgres jako zaszyfrowany `text`, nigdy plain text
 - Klucz usera (BYOK) odszyfrowywany wyłącznie w żądaniu, które go zaraz użyje,
   i tylko ten jeden, którego dostawcę wybrano dla akcji;
-  do agenta jedzie osobnym argumentem taska, nigdy w kontekście ani w stanie grafu
+  do agenta jedzie osobnym argumentem taska, nigdy w kontekście ani w stanie grafu;
+  w Redis leży zaszyfrowany (HKDF z `JWT_SECRET`), otwiera go dopiero worker
 - `FERNET_KEY` generowany raz: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
 
 ---
@@ -467,6 +469,9 @@ Promotor trzyma po jednym kluczu na dostawcę (`identity.user_api_keys`) i przy
 każdej akcji wybiera, na czym ona pójdzie; brak wyboru to model lokalny, a
 dostawca bez klucza to 409, nie cichy fallback —
 [ADR 0011](docs/adr/0011-a-key-per-provider-chosen-per-action.md).
+Klucz w kolejce Celery jest zaszyfrowany — przy late acks wiadomość leży w Redis
+przez cały przebieg i widać ją we Flower —
+[ADR 0012](docs/adr/0012-seal-the-provider-key-for-the-task-queue.md).
 
 ---
 

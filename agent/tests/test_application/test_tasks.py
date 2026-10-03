@@ -11,6 +11,7 @@ from src.application.tasks import _result_payload, run_action
 from src.domain.action import ActionErrorCode, ActionType, TaskStatus
 from src.domain.analysis import Finding, FindingSeverity, FindingSource
 from src.infrastructure.celery_app import celery_app
+from src.infrastructure.key_transit import seal
 from src.infrastructure.llm_factory import current_credentials
 from src.infrastructure.provider_errors import ProviderAccountError
 from tests.factories import ACTION_ID, STUDENT_ID
@@ -466,7 +467,7 @@ def test_credentials_are_in_effect_while_the_graph_runs() -> None:
     with patch("src.application.tasks.build_action_graph", return_value=graph):
         run_action.apply(
             args=(ACTION_ID, ActionType.PROPOSE_TOPIC, STUDENT_ID, {}),
-            kwargs={"provider": "claude", "api_key": "sk-user-key"},
+            kwargs={"provider": "claude", "sealed_api_key": seal("sk-user-key")},
         )
 
     assert seen[0] is not None
@@ -474,6 +475,26 @@ def test_credentials_are_in_effect_while_the_graph_runs() -> None:
     assert seen[0].api_key == "sk-user-key"
     # …and only while it runs.
     assert current_credentials() is None
+
+
+def test_a_key_that_will_not_open_fails_the_task_at_once(
+    status_writes: MagicMock,
+) -> None:
+    """Retrying cannot fix it, and running locally instead was not chosen."""
+    graph = _mock_graph()
+
+    with (
+        patch("src.application.tasks.build_action_graph", return_value=graph),
+        pytest.raises(ValueError, match="JWT_SECRET"),
+    ):
+        run_action.apply(
+            args=(ACTION_ID, ActionType.PROPOSE_TOPIC, STUDENT_ID, {}),
+            kwargs={"provider": "claude", "sealed_api_key": "not-a-sealed-key"},
+            task_id="task-unsealable",
+        ).get()
+
+    graph.invoke.assert_not_called()
+    assert status_writes.call_args.args[:2] == ("task-unsealable", TaskStatus.FAILED)
 
 
 def test_the_key_never_enters_the_graph_state() -> None:
@@ -488,7 +509,7 @@ def test_the_key_never_enters_the_graph_state() -> None:
                 STUDENT_ID,
                 {"detail": "coś"},
             ),
-            kwargs={"provider": "claude", "api_key": "sk-user-key"},
+            kwargs={"provider": "claude", "sealed_api_key": seal("sk-user-key")},
         )
 
     state: dict[str, Any] = graph.invoke.call_args[0][0]
@@ -501,7 +522,7 @@ def test_the_key_never_reaches_the_stored_result(status_writes: MagicMock) -> No
     with patch("src.application.tasks.build_action_graph", return_value=graph):
         result = run_action.apply(
             args=(ACTION_ID, ActionType.PROPOSE_TOPIC, STUDENT_ID, {}),
-            kwargs={"provider": "claude", "api_key": "sk-user-key"},
+            kwargs={"provider": "claude", "sealed_api_key": seal("sk-user-key")},
         )
 
     assert "sk-user-key" not in json.dumps(result.get(), default=str)

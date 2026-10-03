@@ -131,11 +131,13 @@
 
 ## BYOK (Faza 4)
 
-- [ ] **Klucz przechodzi przez brokera Redis w jawnej postaci** — jest argumentem
-  zadania Celery, więc leży w kolejce do momentu odebrania przez workera. Celery nie
-  zapisuje argumentów w result backendzie (`result_extended` wyłączone), więc ekspozycja
-  jest ulotna i wewnątrz sieci compose. Docelowo: przekazywać referencję zamiast klucza
-  i pozwolić workerowi odszyfrować go samodzielnie.
+- [x] ~~**Klucz przechodzi przez brokera Redis w jawnej postaci**~~ — od 2026-10-03
+  API agenta szyfruje klucz Fernetem (klucz wyprowadzony HKDF z `JWT_SECRET`), worker
+  odszyfrowuje go dopiero w tasku — [ADR 0012](adr/0012-seal-the-provider-key-for-the-task-queue.md).
+  Ekspozycja nie była „ulotna”: przy `acks_late` (ADR 0010) wiadomość leży w Redis przez
+  cały przebieg, a Flower pokazuje argumenty. Referencja zamiast klucza odrzucona —
+  dałaby workerowi `FERNET_KEY` do wszystkich zapisanych kluczy. Zostaje: skok
+  `app` → `agent` to jawny HTTP w sieci compose (TLS między serwisami, przy deployu).
 
 - [ ] **Nie można wybrać modelu u dostawcy** — BYOK używa stałych domyślnych
   (`claude-sonnet-5-5`, `gpt-6.1-sol`); parametr `model` dotyczy tylko Ollamy, bo to
