@@ -1,6 +1,8 @@
 # Notatki na demo — AI Showcase, poniedziałek 2026-10-05
 
-> Robocze. Scenariusz dogrywamy w niedzielę 2026-10-04.
+> Scenariusz ustalony 2026-10-04. Slajdy z notatkami prelegenta:
+> [Corvus — AI Showcase](https://claude.ai/artifact/6HxsCvzRhP5Ube1w1DMLpy) (16 slajdów).
+> Demo idzie z `main` — bez PR #4 (zliczanie tokenów, szyfrowanie klucza w kolejce), który wchodzi po demo.
 > Publiczność: mała grupa programistów. Temat: jak używamy AI w prywatnych projektach.
 > Format: **30 minut — prezentacja z demo w środku**, nie samo klikanie po aplikacji.
 > Fikstury: [specs/demo-fixtures.md](specs/demo-fixtures.md) · mechanizmy: [specs/ai-extensions.md](specs/ai-extensions.md)
@@ -12,15 +14,21 @@ się temu ufać”**. Na ekranie to formularze i przyciski — wszystko, co ciek
 jest pod spodem, więc trzeba to pokazać wprost. Samo klikanie po UI wygląda jak
 kolejna nakładka na model.
 
-## Układ 30 minut (szkic do niedzieli)
+## Scenariusz 30 minut
 
-| Czas | Część | Co |
-|---|---|---|
-| 3 min | Po co to jest | promotor, prace dyplomowe, siedem predefiniowanych akcji zamiast czatu |
-| 5 min | Co jest pod spodem | dwa serwisy, graf per akcja, klucz użytkownika, gdzie jest model, a gdzie go celowo nie ma |
-| 10 min | Demo | trzy sceny niżej |
-| 8 min | Problemy, z którymi trzeba było sobie poradzić | sekcja niżej — wybrać 3–4, resztę mieć na pytania |
-| 4 min | Jak to powstało + pytania | Claude Code, ADR-y, evals jako pętla zwrotna |
+| Czas | Część | Slajdy | Co |
+|---|---|---|---|
+| 0:00–3:00 | Po co to jest | 1–2 | teza; siedem akcji zamiast czatu; „infrastruktura przerośnięta celowo” |
+| 3:00–8:00 | Co jest pod spodem | 3–6 | dwa serwisy; graf recenzji; gdzie celowo nie ma modelu; kto co widzi |
+| 8:00–18:00 | Demo | 7–8 | rozgrzewka + trzy sceny niżej; slajd z evals |
+| 18:00–26:00 | Co poszło nie tak | 9–14 | cztery historie (niżej), reszta na pytania |
+| 26:00–30:00 | Jak to powstało + pytania | 15–16 | Claude Code z rusztowaniem; teza na zamknięcie |
+
+**Trik czasowy:** na slajdzie 3 (dwa serwisy) odpalić na żywo `verify_bibliography`
+dla Adamczewskiego (ok. 91 s) — wynik jest gotowy na scenę 2.
+
+**Zdanie na zamknięcie:** „Zaufanie do LLM-a nie bierze się z modelu, tylko z tego,
+co wokół niego zmierzysz — i czego mu nie dasz robić.”
 
 ## Mechanika AI do uwypuklenia
 
@@ -37,17 +45,27 @@ kolejna nakładka na model.
 | Klucz użytkownika per akcja | Klucz jedzie osobno, żyje w ContextVar na czas przebiegu, nie trafia do stanu ani checkpointu | ADR 0011, `llm_factory.py` |
 | Do Crossref idą tylko opisy bibliograficzne | Tekst pracy nigdy nie wychodzi poza dostawcę modelu | `nodes/bibliography.py` |
 
-## Trzy sceny (propozycja)
+## Demo: rozgrzewka i trzy sceny
 
-1. **Recenzja Kiepskiego z pauzą.** Recenzja odpalona przed wejściem; na żywo:
-   lista uwag z cytatami, odznaczenie jednej, wznowienie, recenzja bez niej.
-   Obok ślad w Langfuse. Mechanizmy: grounding, `Send`, `interrupt`, checkpoint.
-2. **Bibliografia Adamczewskiego.** Co rozstrzygnęła reguła, co agent, ile
-   wywołań zużył. Mechanizmy: ReAct jako dwa węzły, budżet narzędzi.
-3. **Slajd z evals.** Liczba, jak powstała, i wprost — czego jeszcze nie umie.
+0. **Rozgrzewka (1 min):** `propose_topic` dla Pawlaka na żywo, ok. 19 s. W trakcie
+   pokazać postęp kroków — dowód, że to nie nagranie.
+1. **Recenzja Kiepskiego z pauzą (ok. 4 min).** Odpalona przed wejściem z „Pokaż mi
+   uwagi…”, czeka na pauzie. Na żywo: lista uwag z cytatami → odznaczyć jedną →
+   wznowić → recenzja w ok. 7 s, bez odznaczonej uwagi. Obok ślad w Langfuse:
+   równoległe gałęzie, `Send`, pauza. Mechanizmy: grounding, `Send`, `interrupt`, checkpoint.
+2. **Bibliografia Adamczewskiego (ok. 3 min).** Wynik przebiegu z triku czasowego:
+   38 potwierdzonych, 1 niezgodna, 2 podejrzane, 3 spoza indeksu. Co rozstrzygnęła
+   reguła, co agent, ile wywołań zużył. Puenta: agent sam zauważył, że autorzy to
+   postaci z Trylogii.
+3. **Slajd z evals (ok. 2 min).** Lokalnie recall 0,61–0,67; Sonnet 5.5 0,83–1,00,
+   zero fałszywych zarzutów, rekomendacje 3/3 — i od razu granice (trzy prace,
+   jeden przebieg, sędzia ten sam model; liczby lokalne sędziował qwen3).
 
-Reszta akcji działa i jest „jest też to”, nie punkt programu.
-Krótkie akcje na żywo: `propose_topic` (Pawlak), `check_progress` (Miauczyński v1 → v2).
+Na pytania, gdy czas pozwoli: `check_progress` (Miauczyński v1 → v2, ok. 25 s).
+
+**Z „problemów” niżej idą na scenę cztery:** 1 (nadgorliwość, z wpadką z
+nieimportowanym promptem — osobny slajd), 3 (reguła też halucynuje), 2 (mały kontekst
+jako balast), 6 (mechanizm działa, funkcji nie ma). Punkty 4, 5, 7 i 8 — na pytania.
 
 ## Problemy, z którymi trzeba było sobie poradzić
 
@@ -122,8 +140,20 @@ wyszło na jaw, co pomogło, czego to uczy. Liczby są z przebiegów 2026-10-01/
 - **Jakość:** na lokalnym modelu recall 0,61–0,67 (gubi co trzecią wpisaną wadę);
   na Claude Sonnet 5.5 recall 1,00, zero fałszywych zarzutów, rekomendacje 3/3 —
   ale to trzy syntetyczne prace, jeden przebieg i ten sam model jako sędzia.
-- **Jak to powstało:** ADR-y, plan faz, `CLAUDE.md`, ok. 870 testów — budowane z
+- **Jak to powstało:** ADR-y, plan faz, `CLAUDE.md`, ok. 940 testów — budowane z
   Claude Code; to część odpowiedzi na temat showcase'u.
+
+## Pytania — odpowiedzi w jednym zdaniu
+
+| Pytanie | Odpowiedź |
+|---|---|
+| Czemu nie czat? | Akcja ma znany kontekst i kształt wyniku, więc da się ją zmierzyć (ADR 0005). |
+| Ile to kosztuje? | Recenzja 30–50 s na Sonnet 5.5; zliczanie tokenów jest w PR, wchodzi po demo. |
+| Mniejszy model na proste kroki? | To byłby model routing — kilka sekund zysku, druga zmienna w evals; odpuszczone 2026-10-02. |
+| Stroiłeś prompty pod testy? | Tak, na tych samych trzech pracach — fikstury demo to jedyny sprawdzian spoza zestawu. |
+| A model lokalny? | Działa, ale gubi co trzecią wpisaną wadę, a recenzja trwa ok. 10 minut. |
+| Bezpieczeństwo danych? | Tekst pracy tylko do dostawcy wybranego przy akcji; do Crossref tylko opisy bibliograficzne. |
+| OpenAI? | Działa, jako pokaz przełączenia; kalibracja i evals tylko na Claude. |
 
 ## Ustalenia z 2026-10-01 warte pokazania
 
@@ -153,14 +183,19 @@ wyszło na jaw, co pomogło, czego to uczy. Liczby są z przebiegów 2026-10-01/
 - Plan awaryjny: wyniki z próby zostają w historii studentów — przy padzie sieci
   pokazać zapisane.
 
-## Przed wejściem
+## Przed wejściem (ok. 30 min wcześniej)
 
+- Na hoście `main`, nie gałąź PR #4.
 - `make demo-reset PROMOTOR=<e-mail>` — stan wyjściowy, ten sam za każdym razem.
-- Odpalić recenzję Kiepskiego z „Pokaż mi uwagi…” i zostawić na pauzie.
-- Langfuse otwarty (`make langfuse-up`, http://localhost:3100).
-- Klucze Claude i OpenAI wpisane w ustawieniach promotora.
 - Saldo u obu dostawców sprawdzone i doładowane — 2026-10-02 środki na koncie
   Anthropic skończyły się w połowie evals (błąd 400 „credit balance is too low”).
+- Klucze Claude i OpenAI wpisane w ustawieniach promotora; **w ramce „Model” stoi Claude**.
+- `make langfuse-up`, http://localhost:3100 otwarte.
+- Odpalić recenzję Kiepskiego z „Pokaż mi uwagi…” i zostawić na pauzie.
+- Laptop na zasilaniu, usypianie wyłączone.
+- Karty w kolejności: slajdy → dashboard → Pawlak → Kiepski → Adamczewski → Langfuse.
+- Plan awaryjny: zrzuty z próby generalnej (lista uwag Kiepskiego, wynik bibliografii,
+  ślad w Langfuse) dołożone jako ukryte slajdy na końcu talii.
 
 ## Otwarte
 
@@ -188,4 +223,6 @@ wyszło na jaw, co pomogło, czego to uczy. Liczby są z przebiegów 2026-10-01/
 - [x] **Streszczenia rozdziałów zostają włączone (decyzja 2026-10-02).** Pomiar nie
   pokazał zysku w wykrywalności, kosztują ok. 10 s — zostają, bo pokazują
   fan-out (`Send`) w śladzie. Powiedzieć to wprost, z liczbą.
-- [ ] Próba generalna dwa razy od `demo-reset`, ze stoperem.
+- [x] Scenariusz i slajdy (2026-10-04).
+- [ ] Próba generalna dwa razy od `demo-reset`, ze stoperem — demo ≤ 10 min, problemy ≤ 8 min.
+- [ ] Zrzuty z próby jako ukryte slajdy awaryjne.
