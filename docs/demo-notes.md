@@ -1,7 +1,7 @@
 # Notatki na demo — AI Showcase, poniedziałek 2026-10-05
 
 > Scenariusz ustalony 2026-10-04. Slajdy z notatkami prelegenta:
-> [Corvus — AI Showcase](https://claude.ai/artifact/6HxsCvzRhP5Ube1w1DMLpy) (18 slajdów, po angielsku,
+> [Corvus — AI Showcase](https://claude.ai/artifact/6HxsCvzRhP5Ube1w1DMLpy) (15 slajdów, po angielsku,
 > ton informacyjny; notatki prelegenta też po angielsku). Szerszy materiał do przygotowania:
 > [Corvus talk — speaker briefing](https://claude.ai/code/artifact/3456f86c-75c6-4154-b9d3-50aaf7c6041a).
 > Demo idzie z `main` — bez PR #4 (zliczanie tokenów, szyfrowanie klucza w kolejce), który wchodzi po demo.
@@ -23,8 +23,8 @@ kolejna nakładka na model.
 | 0:00–3:00 | Po co to jest | 1–2 | teza; siedem akcji zamiast czatu; „infrastruktura przerośnięta celowo” |
 | 3:00–8:00 | Co jest pod spodem | 3–8 | kontenery; dwa serwisy; stack; graf recenzji; gdzie celowo nie ma modelu; kto co widzi |
 | 8:00–18:00 | Demo | 9–10 | rozgrzewka + trzy sceny niżej; slajd z evals |
-| 18:00–26:00 | Co poszło nie tak | 11–16 | cztery historie (niżej), reszta na pytania |
-| 26:00–30:00 | Jak to powstało + pytania | 17–18 | Claude Code z rusztowaniem; teza na zamknięcie |
+| 18:00–23:00 | Co poszło nie tak | 11–13 | cztery historie (niżej), reszta na pytania |
+| 23:00–30:00 | Jak to powstało + pytania | 14–15 | Claude Code z rusztowaniem; teza na zamknięcie |
 
 **Trik czasowy:** na slajdzie 4 (dwa serwisy, „Two services”) odpalić na żywo `verify_bibliography`
 dla Adamczewskiego (ok. 91 s) — wynik jest gotowy na scenę 2.
@@ -65,9 +65,9 @@ co wokół niego zmierzysz — i czego mu nie dasz robić.”
 
 Na pytania, gdy czas pozwoli: `check_progress` (Miauczyński v1 → v2, ok. 25 s).
 
-**Z „problemów” niżej idą na scenę cztery:** 1 (nadgorliwość, z wpadką z
-nieimportowanym promptem — osobny slajd), 3 (reguła też halucynuje), 2 (mały kontekst
-jako balast), 6 (mechanizm działa, funkcji nie ma). Punkty 4, 5, 7 i 8 — na pytania.
+**Z „problemów” niżej idą na scenę dwa:** 1 (nadgorliwość, z jednym zdaniem o
+nieimportowanym prompcie) i 3 (reguła też halucynuje). Reszta — na pytania; mały
+kontekst i pauza bez UI wypadły ze slajdów 2026-10-04 jako szczegóły developmentu.
 
 ## Problemy, z którymi trzeba było sobie poradzić
 
