@@ -1,7 +1,8 @@
 # Notatki na demo — AI Showcase, poniedziałek 2026-10-05
 
 > Scenariusz ustalony 2026-10-04. Slajdy z notatkami prelegenta:
-> [Corvus — AI Showcase](https://claude.ai/artifact/6HxsCvzRhP5Ube1w1DMLpy) (16 slajdów).
+> [Corvus — AI Showcase](https://claude.ai/artifact/6HxsCvzRhP5Ube1w1DMLpy) (17 slajdów, po angielsku,
+> ton informacyjny; notatki prelegenta też po angielsku).
 > Demo idzie z `main` — bez PR #4 (zliczanie tokenów, szyfrowanie klucza w kolejce), który wchodzi po demo.
 > Publiczność: mała grupa programistów. Temat: jak używamy AI w prywatnych projektach.
 > Format: **30 minut — prezentacja z demo w środku**, nie samo klikanie po aplikacji.
@@ -19,12 +20,12 @@ kolejna nakładka na model.
 | Czas | Część | Slajdy | Co |
 |---|---|---|---|
 | 0:00–3:00 | Po co to jest | 1–2 | teza; siedem akcji zamiast czatu; „infrastruktura przerośnięta celowo” |
-| 3:00–8:00 | Co jest pod spodem | 3–6 | dwa serwisy; graf recenzji; gdzie celowo nie ma modelu; kto co widzi |
-| 8:00–18:00 | Demo | 7–8 | rozgrzewka + trzy sceny niżej; slajd z evals |
-| 18:00–26:00 | Co poszło nie tak | 9–14 | cztery historie (niżej), reszta na pytania |
-| 26:00–30:00 | Jak to powstało + pytania | 15–16 | Claude Code z rusztowaniem; teza na zamknięcie |
+| 3:00–8:00 | Co jest pod spodem | 3–7 | dwa serwisy; stack; graf recenzji; gdzie celowo nie ma modelu; kto co widzi |
+| 8:00–18:00 | Demo | 8–9 | rozgrzewka + trzy sceny niżej; slajd z evals |
+| 18:00–26:00 | Co poszło nie tak | 10–15 | cztery historie (niżej), reszta na pytania |
+| 26:00–30:00 | Jak to powstało + pytania | 16–17 | Claude Code z rusztowaniem; teza na zamknięcie |
 
-**Trik czasowy:** na slajdzie 3 (dwa serwisy) odpalić na żywo `verify_bibliography`
+**Trik czasowy:** na slajdzie 3 (dwa serwisy, „Two services”) odpalić na żywo `verify_bibliography`
 dla Adamczewskiego (ok. 91 s) — wynik jest gotowy na scenę 2.
 
 **Zdanie na zamknięcie:** „Zaufanie do LLM-a nie bierze się z modelu, tylko z tego,
