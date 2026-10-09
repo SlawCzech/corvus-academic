@@ -1,8 +1,12 @@
 node_modules
 .next
 coverage
-*.test.ts
-*.test.tsx
+# Patterns match from the context root only — without **/ the tests under
+# components/__tests__ got into the image without vitest.setup.ts, and
+# `next build` failed type-checking them.
+**/*.test.ts
+**/*.test.tsx
+**/__tests__
 vitest.config.ts
 vitest.setup.ts
 .DS_Store
