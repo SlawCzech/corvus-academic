@@ -33,6 +33,8 @@ fi
 }
 
 export DEBIAN_FRONTEND=noninteractive
+# Ubuntu's needrestart would otherwise stop and ask which services to restart.
+export NEEDRESTART_MODE=a
 apt-get update -q
 apt-get upgrade -yq
 
