@@ -1,0 +1,145 @@
+# Production: one VPS, images from GHCR, only Caddy reachable from outside.
+#
+# Differences from infra/docker-compose.yml, and why:
+#   - images, not builds — CD builds them once (tagged with the commit) and
+#     the server only pulls; IMAGE_TAG picks the version, which is also how a
+#     deploy rolls back;
+#   - no `ports:` except Caddy's 80/443 — Postgres, Redis, the agent and
+#     Ollama answer only on the internal network. Docker's published ports
+#     bypass ufw, so "not published" is the only firewall that holds here;
+#   - no Flower, Jenkins or SonarQube — Flower would show every queued task,
+#     and the other two are CI tools;
+#   - Ollama holds only the embedding model (ADR 0012) — chat runs on the
+#     promoters' own keys.
+#
+# Used by infra/deploy/deploy.sh; secrets come from /srv/corvus/.env, which
+# never leaves the server (template: infra/deploy/env.production.example).
+
+name: corvus
+
+services:
+  caddy:
+    image: caddy:2.11-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      CORVUS_DOMAIN: ${CORVUS_DOMAIN:?set CORVUS_DOMAIN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+    restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/slawczech/corvus-frontend:${IMAGE_TAG:?IMAGE_TAG is set by deploy.sh}
+    environment:
+      APP_URL: http://app:8000
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+
+  app:
+    image: ghcr.io/slawczech/corvus-app:${IMAGE_TAG}
+    env_file: .env
+    environment:
+      ENVIRONMENT: production
+      LOCAL_MODELS_ENABLED: "false"
+      AGENT_URL: http://agent:8002
+      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql+asyncpg://corvus:${POSTGRES_PASSWORD}@postgres:5432/corvus
+      CORS_ORIGINS: '["https://${CORVUS_DOMAIN}"]'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  agent:
+    image: ghcr.io/slawczech/corvus-agent:${IMAGE_TAG}
+    env_file: .env
+    environment: &agent-env
+      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql+asyncpg://corvus:${POSTGRES_PASSWORD}@postgres:5432/corvus
+      OLLAMA_BASE_URL: http://ollama:11434
+      EMBEDDING_BASE_URL: http://ollama:11434
+      EMBEDDING_MODEL: nomic-embed-text
+      LANGCHAIN_TRACING_V2: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  agent-worker:
+    image: ghcr.io/slawczech/corvus-agent:${IMAGE_TAG}
+    command: celery -A src.infrastructure.celery_app worker --loglevel=info --concurrency=2
+    env_file: .env
+    environment: *agent-env
+    depends_on:
+      agent:
+        condition: service_healthy
+    # The image's HEALTHCHECK asks the HTTP API, which a worker does not
+    # serve; ask Celery over the broker instead (as in the dev compose).
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A src.infrastructure.celery_app inspect ping -d celery@$$HOSTNAME"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:0.40.2
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
+  # Pulls the embedding model once; a no-op when it is already there.
+  ollama-init:
+    image: ollama/ollama:0.40.2
+    entrypoint: ["ollama", "pull", "nomic-embed-text"]
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    depends_on:
+      - ollama
+    restart: "no"
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+  postgres:
+    image: ghcr.io/slawczech/corvus-postgres:${IMAGE_TAG}
+    environment:
+      POSTGRES_USER: corvus
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: corvus
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U corvus -d corvus"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
+  ollama_data:
+  redis_data:
+  postgres_data:

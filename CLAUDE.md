@@ -314,7 +314,9 @@ Pliki są w repo — poniżej tylko co gdzie leży i dlaczego tak:
 |---|---|
 | [.github/workflows/ci.yml](.github/workflows/ci.yml) | PR i push na `main`: `app`, `agent`, `frontend`, `migrations`, `sonarqube` |
 | [.pre-commit-config.yaml](.pre-commit-config.yaml) | `ruff --fix`, eslint, higiena plików, `detect-private-key` |
-| [infra/jenkins/Jenkinsfile](infra/jenkins/Jenkinsfile) | build → migracje → `compose up -d` → healthcheck |
+| [.github/workflows/cd.yml](.github/workflows/cd.yml) | po zielonym CI na `main`: obrazy → GHCR → ssh → `infra/deploy/deploy.sh` |
+| [infra/deploy/](infra/deploy/) | produkcja: compose bez portów poza Caddy, backup, setup serwera — [docs/deploy.md](docs/deploy.md) |
+| [infra/jenkins/Jenkinsfile](infra/jenkins/Jenkinsfile) | build → migracje → `compose up -d` → healthcheck (lokalnie; produkcja idzie przez `cd.yml`) |
 | [infra/sonarqube/sonar-project.properties](infra/sonarqube/sonar-project.properties) | trzy pakiety, jeden projekt |
 
 Zasady, które warto znać przed zmianą któregokolwiek z nich:
@@ -326,8 +328,10 @@ Zasady, które warto znać przed zmianą któregokolwiek z nich:
 - **Job `migrations` stawia schemat od zera** na obrazie `pgvector/pgvector:pg16`.
   Zwykły `postgres` przeszedłby CI i wywrócił się przy deployu na
   `CREATE EXTENSION vector`.
-- **Migracje w Jenkinsie idą przed `up -d`**, a produkcyjny `.env` pochodzi z
-  Jenkins credentials i jest kasowany w `post { always }`.
+- **Produkcja (`corvus.saek.dev`) wdraża się z `cd.yml`, nie z Jenkinsa.**
+  `.env` mieszka tylko na serwerze; `deploy.sh` czeka na healthchecki i sam
+  wraca do poprzedniego obrazu, gdy nowy nie wstanie. Bez lokalnych modeli
+  czatu (`LOCAL_MODELS_ENABLED=false`, ADR 0012), backup bazy codziennie.
 - **Sonar jest pomijany, gdy nie ma `SONAR_TOKEN`** — czerwony krzyżyk na każdym
   buildzie forka uczy ludzi ignorować czerwone krzyżyki.
 - **Hooki nie odpalają `pytest` ani `pyright`** — 55 s na commit to hook wyłączany

@@ -1,0 +1,27 @@
+# The only service reachable from outside. Caddy gets and renews the
+# Let's Encrypt certificate for {$CORVUS_DOMAIN} on its own — the DNS record
+# must point here (in Cloudflare: "DNS only", grey cloud) before the first
+# start, or the HTTP challenge has nowhere to land.
+
+{$CORVUS_DOMAIN} {
+	encode zstd gzip
+
+	# A thesis upload is capped at 25 MB by `app` (MAX_UPLOAD_BYTES); this
+	# only stops anything absurd before it reaches the Node server.
+	request_body {
+		max_size 30MB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+	# Caddy replaces any X-Forwarded-For the browser sent with the address
+	# it saw; the frontend passes that on, and `app` rate-limits logins by it.
+	reverse_proxy frontend:3000
+}
