@@ -10,7 +10,10 @@ const CATALOG: ModelCatalog = {
   ],
   local_available: true,
   byok: { claude: "claude-sonnet-5-5", openai: "gpt-6.1-sol" },
+  local_enabled: true,
 }
+
+const KEYS_ONLY: ModelCatalog = { ...CATALOG, available: [], local_enabled: false }
 
 describe("resolveModel", () => {
   it("runs locally when nothing was chosen and there is no key", () => {
@@ -18,6 +21,7 @@ describe("resolveModel", () => {
       selected: "local",
       withdrawn: null,
       missingKey: null,
+      needsKey: false,
     })
   })
 
@@ -72,5 +76,32 @@ describe("resolveModel", () => {
 
   it("ignores a provider it does not know", () => {
     expect(resolveModel("byok:deepmind", CATALOG, ["claude"]).selected).toBe("local")
+  })
+
+  describe("on a server without local models", () => {
+    it("takes a stored key when nothing was chosen", () => {
+      const choice = resolveModel("", KEYS_ONLY, ["openai"])
+      expect(choice.provider).toBe("openai")
+      expect(choice.needsKey).toBe(false)
+    })
+
+    it("treats a saved local model as no choice", () => {
+      expect(resolveModel("local", KEYS_ONLY, ["claude"]).provider).toBe("claude")
+      expect(resolveModel("gemma4:12b", KEYS_ONLY, ["claude"]).provider).toBe("claude")
+    })
+
+    it("cannot run without a key", () => {
+      const choice = resolveModel("", KEYS_ONLY, [])
+      expect(choice.needsKey).toBe(true)
+      expect(choice.provider).toBeUndefined()
+      expect(choice.model).toBeUndefined()
+    })
+
+    it("does not move a removed key's runs onto the other provider", () => {
+      const choice = resolveModel("byok:openai", KEYS_ONLY, ["claude"])
+      expect(choice.needsKey).toBe(true)
+      expect(choice.missingKey).toBe("openai")
+      expect(choice.provider).toBeUndefined()
+    })
   })
 })

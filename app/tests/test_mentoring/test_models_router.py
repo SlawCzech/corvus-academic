@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from main import app
 from src.mentoring.infrastructure.dependencies import get_agent_client
+from src.shared.settings import settings
 from tests.test_mentoring.conftest import (
     ADMIN_EMAIL,
     ADMIN_PASSWORD,
@@ -234,3 +235,77 @@ def test_an_enabled_model_goes_through(
 
     assert resp.status_code == 202, resp.text
     assert agent.submitted[0]["model"] == "llama3.1:latest"
+
+
+# ---------- a server without local models (ADR 0012) ----------
+
+
+@pytest.fixture
+def no_local_models(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "local_models_enabled", False)
+
+
+@pytest.mark.usefixtures("no_local_models")
+def test_without_local_models_promoters_are_offered_none(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+
+    body = client.get("/models", headers=headers).json()
+
+    assert body["local_enabled"] is False
+    assert body["available"] == []
+    # Which model a provider key runs on is still the agent's to say.
+    assert body["byok"]["openai"] == "gpt-4o"
+
+
+@pytest.mark.usefixtures("no_local_models")
+def test_without_local_models_an_action_needs_a_provider(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+
+    resp = client.post(
+        f"/students/{student_id}/actions",
+        json={"action_type": "propose_topic"},
+        headers=headers,
+    )
+
+    assert resp.status_code == 409
+    assert agent.submitted == []
+    history = client.get(f"/students/{student_id}/actions", headers=headers).json()
+    assert history == []
+
+
+@pytest.mark.usefixtures("no_local_models")
+def test_without_local_models_a_provider_key_still_runs(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+    client.patch(
+        "/settings/api-key",
+        json={"api_key": "sk-ant-user-key", "provider": "claude"},
+        headers=headers,
+    )
+
+    resp = client.post(
+        f"/students/{student_id}/actions",
+        json={"action_type": "propose_topic", "provider": "claude"},
+        headers=headers,
+    )
+
+    assert resp.status_code == 202, resp.text
+    assert agent.submitted[0]["byok"].provider == "claude"
+
+
+@pytest.mark.usefixtures("no_local_models")
+def test_the_admin_is_told_local_models_are_off(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    admin = login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+
+    body = client.get("/models/admin", headers=admin).json()
+
+    assert body["local_enabled"] is False

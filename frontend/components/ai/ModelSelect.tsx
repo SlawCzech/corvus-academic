@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import useSWR from "swr"
 import { fetcher } from "@/lib/api.client"
 import type { ApiKeyStatus, ModelCatalog } from "@/lib/api.types"
@@ -59,11 +60,14 @@ export default function ModelSelect({
   className,
   labelClassName,
 }: ModelSelectProps) {
-  const { selected, provider, withdrawn, missingKey, catalog, keys, error } =
+  const { selected, provider, withdrawn, missingKey, needsKey, catalog, keys, error } =
     useModelChoice(value)
+  const keysOnly = catalog?.local_enabled === false
 
   const unreachable =
-    provider === undefined && (error !== undefined || catalog?.local_available === false)
+    !keysOnly &&
+    provider === undefined &&
+    (error !== undefined || catalog?.local_available === false)
 
   const localOptions = (
     <>
@@ -79,6 +83,13 @@ export default function ModelSelect({
     </>
   )
 
+  const keyOptions = keys.map((p) => (
+    <option key={p} value={byokValue(p)}>
+      {PROVIDER_LABELS[p]}
+      {catalog?.byok[p] ? ` · ${catalog.byok[p]}` : ""}
+    </option>
+  ))
+
   return (
     <label className="block">
       <span className={labelClassName}>Model</span>
@@ -88,18 +99,20 @@ export default function ModelSelect({
         className={className}
         data-testid="model-select"
       >
-        {keys.length === 0 ? (
+        {keysOnly ? (
+          keys.length === 0 ? (
+            <option value="">Brak klucza API</option>
+          ) : (
+            <>
+              {selected === "" && <option value="">Wybierz klucz API</option>}
+              {keyOptions}
+            </>
+          )
+        ) : keys.length === 0 ? (
           localOptions
         ) : (
           <>
-            <optgroup label="Twoje klucze API">
-              {keys.map((p) => (
-                <option key={p} value={byokValue(p)}>
-                  {PROVIDER_LABELS[p]}
-                  {catalog?.byok[p] ? ` · ${catalog.byok[p]}` : ""}
-                </option>
-              ))}
-            </optgroup>
+            <optgroup label="Twoje klucze API">{keyOptions}</optgroup>
             <optgroup label="Modele lokalne">{localOptions}</optgroup>
           </>
         )}
@@ -115,10 +128,21 @@ export default function ModelSelect({
           domyślnego.
         </span>
       )}
-      {missingKey && (
+      {missingKey && !needsKey && (
         <span data-testid="model-key-missing" className="mt-1 block text-[11.5px] text-major-text">
           Klucz {PROVIDER_LABELS[missingKey]} z Twoich ustawień został usunięty —
           używam domyślnego modelu lokalnego.
+        </span>
+      )}
+      {needsKey && (
+        <span data-testid="model-needs-key" className="mt-1 block text-[11.5px] text-major-text">
+          {missingKey
+            ? `Klucz ${PROVIDER_LABELS[missingKey]} z Twoich ustawień został usunięty. `
+            : "Akcje działają na Twoim kluczu API do Claude albo OpenAI. "}
+          <Link href="/profile" className="underline">
+            Dodaj klucz w profilu
+          </Link>
+          .
         </span>
       )}
       {unreachable && (

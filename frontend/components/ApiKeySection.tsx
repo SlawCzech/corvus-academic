@@ -3,7 +3,7 @@
 import { useState } from "react"
 import useSWR from "swr"
 import { fetcher } from "@/lib/api.client"
-import type { ApiKeySaved, ApiKeyStatus } from "@/lib/api.types"
+import type { ApiKeySaved, ApiKeyStatus, ModelCatalog } from "@/lib/api.types"
 import { PROVIDER_LABELS, PROVIDERS, type Provider } from "@/lib/modelChoice"
 
 // "rejected": the provider refused the key, so it was not stored.
@@ -21,6 +21,9 @@ const STATUS_KEY = "/api/settings/api-key/status"
  */
 export default function ApiKeySection() {
   const { data: status, mutate } = useSWR<ApiKeyStatus>(STATUS_KEY, fetcher)
+  const { data: catalog } = useSWR<ModelCatalog>("/api/models", fetcher)
+  // A server without local models (ADR 0012): a key is what actions run on.
+  const keysOnly = catalog?.local_enabled === false
   const [provider, setProvider] = useState<Provider>("claude")
   const [apiKey, setApiKey] = useState("")
   const [showKey, setShowKey] = useState(false)
@@ -66,15 +69,20 @@ export default function ApiKeySection() {
   return (
     <section data-testid="api-key-section">
       <p className="mb-4 text-[13px] text-muted">
-        Możesz zapisać po jednym kluczu dla każdego dostawcy. Przy każdej akcji
-        wybierasz, czy idzie na któryś z nich, czy na model uruchomiony
-        lokalnie. Klucze są przechowywane zaszyfrowane i nigdy nie wracają w
-        odpowiedzi.
+        Możesz zapisać po jednym kluczu dla każdego dostawcy.{" "}
+        {keysOnly
+          ? "Akcje AI działają wyłącznie na Twoim kluczu — przy każdej wybierasz, na którym."
+          : "Przy każdej akcji wybierasz, czy idzie na któryś z nich, czy na model uruchomiony lokalnie."}{" "}
+        Klucze są przechowywane zaszyfrowane i nigdy nie wracają w odpowiedzi.
       </p>
 
       <div data-testid="api-key-status" className="mb-4 text-[13px]">
         {stored.length === 0 ? (
-          <span className="text-muted">Brak kluczy — akcje idą na model lokalny</span>
+          <span className={keysOnly ? "text-major-text" : "text-muted"}>
+            {keysOnly
+              ? "Brak kluczy — dodaj klucz, żeby uruchamiać akcje AI"
+              : "Brak kluczy — akcje idą na model lokalny"}
+          </span>
         ) : (
           <ul className="space-y-1.5">
             {stored.map((p) => (

@@ -177,7 +177,7 @@ function ActionPanelInner({
   // What actually gets sent: a saved model the admin has since withdrawn, or
   // a provider whose key was removed, falls back to the default local model
   // rather than getting the action refused.
-  const { provider, model: effectiveModel } = useModelChoice(model)
+  const { provider, model: effectiveModel, needsKey } = useModelChoice(model)
 
   const spec = ACTIONS.find((a) => a.type === selectedType) ?? null
   const shown = action && action.action_type === selectedType ? action : null
@@ -355,7 +355,7 @@ function ActionPanelInner({
             <button
               type="button"
               onClick={() => void start()}
-              disabled={running}
+              disabled={running || needsKey}
               data-testid="run-action"
               className="h-9 rounded-lg bg-accent px-4 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
             >

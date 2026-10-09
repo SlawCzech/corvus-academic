@@ -11,6 +11,7 @@ from src.mentoring.application.exceptions import (
     AgentUnavailableError,
     MissingContextError,
     ProviderKeyMissingError,
+    ProviderRequiredError,
     StudentNotFoundError,
     UnsupportedActionError,
 )
@@ -61,7 +62,7 @@ async def trigger_action(
     Returns immediately: the work happens in the agent's Celery worker, and
     the caller polls the action's own endpoint for the outcome. The run goes
     on the provider the promoter picked, with their own key for it, or — with
-    no provider — on the self-hosted model.
+    no provider — on the self-hosted model, where the server offers one.
     """
     try:
         action = await svc.trigger(
@@ -90,6 +91,13 @@ async def trigger_action(
     except ProviderKeyMissingError as exc:
         # Asked to run on a provider there is no stored key for.
         raise _no_key(exc) from exc
+    except ProviderRequiredError as exc:
+        # No provider picked, and this server runs no local models.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This server runs no local models — pick a provider "
+            "you have an API key for",
+        ) from exc
     except MissingContextError as exc:
         # The student's record does not hold what this action needs yet —
         # no draft uploaded, only one version, no rough notes to write up.

@@ -43,6 +43,14 @@ export default function ModelAdmin() {
     )
   }
   if (!data) return <p className="text-[13px] text-muted">Wczytywanie…</p>
+  if (!data.local_enabled) {
+    return (
+      <p className="rounded-lg border border-line bg-surface px-4 py-3 text-[13px] text-muted">
+        Modele lokalne są na tym serwerze wyłączone (<code>LOCAL_MODELS_ENABLED=false</code>).
+        Promotorzy uruchamiają akcje na własnych kluczach API do Claude albo OpenAI.
+      </p>
+    )
+  }
 
   return (
     <div>

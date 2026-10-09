@@ -18,14 +18,18 @@ const CATALOG = {
     { name: "qwen3:30b-a3b", parameter_size: "30.5B" },
   ],
   local_available: true,
+  local_enabled: true,
   byok: { claude: "claude-sonnet-4-20250514", openai: "gpt-4o" },
 }
 
-function stubApi(keyStatus: { configured: boolean; providers: string[] }): void {
+function stubApi(
+  keyStatus: { configured: boolean; providers: string[] },
+  catalog: object = CATALOG,
+): void {
   vi.stubGlobal(
     "fetch",
     vi.fn((url: string) => {
-      const body = url === "/api/models" ? CATALOG : keyStatus
+      const body = url === "/api/models" ? catalog : keyStatus
       return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }))
     }),
   )
@@ -53,6 +57,32 @@ function Tone() {
 
 describe("ModelSelect", () => {
   afterEach(() => vi.unstubAllGlobals())
+
+  describe("on a server without local models", () => {
+    const KEYS_ONLY = { ...CATALOG, available: [], local_enabled: false }
+
+    it("offers only the promoter's keys", async () => {
+      stubApi({ configured: true, providers: ["claude"] }, KEYS_ONLY)
+      render(<Model />)
+
+      expect(await screen.findByRole("option", { name: /Claude \(Anthropic\)/ })).toBeInTheDocument()
+      expect(screen.queryByRole("option", { name: /Domyślny/ })).not.toBeInTheDocument()
+      expect(screen.getByTestId("model-select")).toHaveValue("byok:claude")
+    })
+
+    it("sends a promoter without a key to the profile", async () => {
+      stubApi({ configured: false, providers: [] }, KEYS_ONLY)
+      render(<Model />)
+
+      expect(await screen.findByTestId("model-needs-key")).toHaveTextContent(
+        "Dodaj klucz w profilu",
+      )
+      expect(screen.getByRole("link", { name: "Dodaj klucz w profilu" })).toHaveAttribute(
+        "href",
+        "/profile",
+      )
+    })
+  })
 
   it("offers the installed models, with the server default first", async () => {
     stubApi({ configured: false, providers: [] })

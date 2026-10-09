@@ -325,6 +325,8 @@ export interface ModelCatalog {
   local_available: boolean
   /** Provider → the model a stored key runs on. */
   byok: Record<string, string>
+  /** False when this server offers no local models: every action needs a key. */
+  local_enabled: boolean
 }
 
 export interface AdminModel {
@@ -340,6 +342,7 @@ export interface AdminModelCatalog {
   models: AdminModel[]
   local_available: boolean
   server_default: string
+  local_enabled: boolean
 }
 
 export interface ApiKeyStatus {

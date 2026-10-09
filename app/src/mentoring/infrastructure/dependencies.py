@@ -123,7 +123,9 @@ def get_model_service(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     agent: Annotated[AgentClient, Depends(get_agent_client)],
 ) -> ModelService:
-    return ModelService(ModelSettingRepository(session), agent)
+    return ModelService(
+        ModelSettingRepository(session), agent, settings.local_models_enabled
+    )
 
 
 def require_model_admin(
