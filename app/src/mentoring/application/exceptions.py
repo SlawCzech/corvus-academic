@@ -40,6 +40,14 @@ class ProviderKeyMissingError(Exception):
     """
 
 
+class ProviderRequiredError(Exception):
+    """No provider was picked, and this server runs no local models.
+
+    Raised before anything is dispatched, like ProviderKeyMissingError: with
+    local models switched off there is nothing an action could fall back to.
+    """
+
+
 class MissingContextError(Exception):
     """The student's record does not yet hold what this action needs.
 

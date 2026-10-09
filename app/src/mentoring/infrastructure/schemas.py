@@ -312,6 +312,9 @@ class ModelCatalogResponse(BaseModel):
     available: list[LocalModelResponse]
     local_available: bool
     byok: dict[str, str]
+    # False when this server offers no local models at all — every action
+    # then needs one of the promoter's provider keys.
+    local_enabled: bool
 
 
 def model_catalog_response(catalog: PromoterCatalog) -> ModelCatalogResponse:
@@ -323,6 +326,7 @@ def model_catalog_response(catalog: PromoterCatalog) -> ModelCatalogResponse:
         ],
         local_available=catalog.local_available,
         byok=catalog.byok,
+        local_enabled=catalog.local_enabled,
     )
 
 
@@ -338,6 +342,7 @@ class AdminModelCatalogResponse(BaseModel):
     models: list[AdminModelResponse]
     local_available: bool
     server_default: str
+    local_enabled: bool
 
 
 def admin_model_catalog_response(catalog: AdminCatalog) -> AdminModelCatalogResponse:
@@ -354,6 +359,7 @@ def admin_model_catalog_response(catalog: AdminCatalog) -> AdminModelCatalogResp
         ],
         local_available=catalog.local_available,
         server_default=catalog.server_default,
+        local_enabled=catalog.local_enabled,
     )
 
 

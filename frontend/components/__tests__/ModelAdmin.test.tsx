@@ -11,6 +11,7 @@ import ModelAdmin from "../admin/ModelAdmin"
 function catalog(defaultName: string, enabled: string[]) {
   return {
     local_available: true,
+    local_enabled: true,
     server_default: "qwen3:30b-a3b",
     models: ["gemma4:12b", "qwen3:30b-a3b"].map((name) => ({
       name,

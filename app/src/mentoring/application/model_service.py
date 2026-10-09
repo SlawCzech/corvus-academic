@@ -10,6 +10,7 @@ from typing import Any, cast
 from uuid import UUID
 
 from src.mentoring.application.agent_client import AgentClient
+from src.mentoring.application.exceptions import ProviderRequiredError
 from src.mentoring.domain.model_policy import ModelPolicy
 from src.mentoring.infrastructure.repositories import ModelSettingRepository
 
@@ -26,6 +27,7 @@ class PromoterCatalog:
     available: list[OfferedModel]
     local_available: bool
     byok: dict[str, str]
+    local_enabled: bool = True
 
 
 @dataclass(frozen=True)
@@ -42,6 +44,7 @@ class AdminCatalog:
     models: list[AdminModelRow]
     local_available: bool
     server_default: str
+    local_enabled: bool = True
 
 
 @dataclass(frozen=True)
@@ -57,9 +60,15 @@ class ModelNotInstalledError(Exception):
 
 
 class ModelService:
-    def __init__(self, repo: ModelSettingRepository, agent: AgentClient) -> None:
+    def __init__(
+        self,
+        repo: ModelSettingRepository,
+        agent: AgentClient,
+        local_enabled: bool = True,
+    ) -> None:
         self._repo = repo
         self._agent = agent
+        self._local_enabled = local_enabled
 
     async def _installed(self, token: str) -> _Installed:
         data = await self._agent.list_models(token)
@@ -80,11 +89,26 @@ class ModelService:
 
         No agent call here: resolving happens on every action, and the
         admin's choice alone decides what is allowed.
+
+        Raises ProviderRequiredError when the server runs no local models:
+        a run that names no provider has nothing left to run on.
         """
+        if not self._local_enabled:
+            raise ProviderRequiredError
         return (await self._repo.policy()).resolve(requested)
 
     async def promoter_catalog(self, token: str) -> PromoterCatalog:
         installed = await self._installed(token)
+        if not self._local_enabled:
+            # The agent is still asked: it alone knows which model each
+            # provider key runs on.
+            return PromoterCatalog(
+                default=installed.server_default,
+                available=[],
+                local_available=False,
+                byok=installed.byok,
+                local_enabled=False,
+            )
         policy = await self._policy(installed.server_default)
         default = policy.default or installed.server_default
         available = [
@@ -119,6 +143,7 @@ class ModelService:
             models=rows,
             local_available=installed.local_available,
             server_default=installed.server_default,
+            local_enabled=self._local_enabled,
         )
 
     async def set_enabled(

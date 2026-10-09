@@ -10,6 +10,9 @@
  *   "byok:claude"  the promoter's key for that provider
  *   "local"        the default local model, chosen on purpose
  *   "gemma4:12b"   a local model by its tag
+ *
+ * A server can switch local models off (ADR 0012). Then only keys are
+ * offered, and without one nothing can run — `needsKey` says so.
  */
 
 import type { ModelCatalog } from "@/lib/api.types"
@@ -46,6 +49,8 @@ export interface ResolvedModel {
   withdrawn: string | null
   /** A saved provider whose key has since been removed. */
   missingKey: Provider | null
+  /** Nothing can run: the server has no local models and no key fits. */
+  needsKey: boolean
 }
 
 /**
@@ -64,8 +69,10 @@ export function resolveModel(
   catalog: ModelCatalog | undefined,
   keys: readonly string[] | undefined,
 ): ResolvedModel {
-  const none = { withdrawn: null, missingKey: null }
+  const none = { withdrawn: null, missingKey: null, needsKey: false }
   const local: ResolvedModel = { selected: LOCAL_DEFAULT, ...none }
+
+  if (catalog?.local_enabled === false) return keysOnly(value, keys)
 
   if (value === "") {
     const first = PROVIDERS.find((p) => keys?.includes(p))
@@ -88,4 +95,28 @@ export function resolveModel(
     return { selected: value, model: value, ...none }
   }
   return { ...local, withdrawn: value }
+}
+
+/**
+ * The same choice on a server without local models: a key, or nothing.
+ *
+ * A saved local model is no longer a choice, so it counts as no choice at
+ * all. A saved provider whose key is gone is not swapped for the other
+ * provider — that would bill a different account than the one picked.
+ */
+function keysOnly(value: string, keys: readonly string[] | undefined): ResolvedModel {
+  const none = { withdrawn: null, missingKey: null, needsKey: false }
+  const blocked: ResolvedModel = { selected: "", ...none, needsKey: true }
+
+  if (value.startsWith(BYOK_PREFIX)) {
+    const provider = value.slice(BYOK_PREFIX.length)
+    if (isProvider(provider)) {
+      if (keys === undefined || keys.includes(provider)) {
+        return { selected: value, provider, ...none }
+      }
+      return { ...blocked, missingKey: provider }
+    }
+  }
+  const first = PROVIDERS.find((p) => keys?.includes(p))
+  return first ? { selected: byokValue(first), provider: first, ...none } : blocked
 }

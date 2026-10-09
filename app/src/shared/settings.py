@@ -57,6 +57,12 @@ class Settings(BaseSettings):
     # or a deployment that runs `scripts/purge_drafts.py` from cron instead).
     retention_sweep_interval_hours: float = 24
 
+    # Whether promoters may run actions on the server's own models (Ollama).
+    # Off on a host without a GPU: every action then goes on the promoter's
+    # own provider key, and an action without one is refused — never queued
+    # for a model that would take an hour on CPU (ADR 0012).
+    local_models_enabled: bool = True
+
     cors_origins: list[str] = Field(
         default=["http://localhost:3000"],
         description="Allowed CORS origins",
