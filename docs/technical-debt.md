@@ -5,6 +5,41 @@
 
 ---
 
+## Przegląd bezpieczeństwa przed deployem (2026-10-09)
+
+Naprawione od razu: podatne zależności (Next.js — krytyczna, PyJWT, Starlette,
+urllib3), klucz BYOK widoczny w Flowerze i logach workera (`kwargsrepr`), limit
+logowań wspólny dla całego świata (brak `X-Forwarded-For`), otwarte
+przekierowanie w `/api/auth/refresh`, Node 20 po EOL, `.dockerignore`, przez
+który obraz frontendu w ogóle się nie budował, Redis zapisujący wiadomości
+tasków (z kluczem) na dysk. Sekretów w repo ani w historii gita nie ma.
+
+Zostaje:
+
+- [ ] **Odświeżanie sesji nie działa.** `app` ustawia refresh token jako cookie
+  na odpowiedzi do serwera Next.js (który je wyrzuca), a frontend czeka na
+  `refresh_token` w treści odpowiedzi — więc nigdy go nie dostaje. Sesja trwa tyle,
+  co access token (12 h), potem logowanie od nowa. Przy okazji: access token nie
+  jest sprawdzany w bazie, więc usunięty użytkownik i wylogowanie nie odcinają
+  ważnego tokenu przed upływem 12 h.
+- [ ] **Niepoprawny e-mail przy `POST /users` → 500, nie 422.** `ValueError`
+  z `UserRegistration` nie jest mapowany w `users_router.py` (np. adres w domenie
+  zarezerwowanej, jak `.local`).
+- [ ] **Brak Content-Security-Policy.** Caddy wysyła HSTS, `nosniff`,
+  `X-Frame-Options`, `Referrer-Policy`; CSP wymaga noncy dla skryptów inline
+  Next.js — osobna praca.
+- [ ] **`middleware.ts` → `proxy.ts`.** Next 16 zgłasza konwencję `middleware`
+  jako przestarzałą.
+- [ ] **Hydration mismatch ikony motywu** w `Sidebar` (słońce/księżyc zależne od
+  motywu po stronie klienta).
+- [ ] **`@testing-library/*` w `dependencies`** zamiast `devDependencies` —
+  `npm audit --omit=dev` pokazuje przez to vitest jako zależność produkcyjną.
+- [ ] **Parsowanie niezaufanych PDF/DOCX** w procesie `app` (limit rozmiaru jest,
+  limitu czasu i pamięci ekstrakcji nie ma). Przy kilku zaufanych testerach do
+  przyjęcia; przy otwartej rejestracji — do osobnego procesu z limitami.
+
+---
+
 ## Jakość kodu — stan faktyczny (zweryfikowany 2026-09-05)
 
 - [ ] **Martwa ścieżka „widzi wszystkich studentów”** (od ADR 0008, 2026-09-23) —
