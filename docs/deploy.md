@@ -1,6 +1,6 @@
 # Deploy: Corvus na `corvus.saek.dev`
 
-> Jeden VPS w UE, `docker compose`, Caddy z HTTPS, wdrożenie po każdym merge'u
+> Jeden VPS (OVHcloud, Kanada), `docker compose`, Caddy z HTTPS, wdrożenie po każdym merge'u
 > do `main`. Decyzje: [ADR 0012](adr/0012-a-server-without-local-models.md)
 > (bez lokalnych modeli czatu). Pliki serwera: [`infra/deploy/`](../infra/deploy/).
 
@@ -37,21 +37,29 @@ robot go nie wpisze:
 ssh-keygen -t ed25519 -f ~/.ssh/corvus_deploy -N "" -C "github-actions@corvus"
 ```
 
-### 2. Serwer w Hetznerze
+### 2. Serwer: OVHcloud VPS
 
-Console → nowy projekt → **Add Server**:
+Wybrany 2026-10-09: **VPS-2** (4 vCPU, 8 GB RAM, 75 GB SSD), Ubuntu 24.04, płatność
+miesięczna, bez opcji dodatkowych (kopie robi `backup.sh`, poza OVH).
 
-- **Location:** Falkenstein / Nuremberg (Niemcy) albo Helsinki. Prace studentów to
-  dane osobowe, więc tylko UE.
-- **Image:** Ubuntu 24.04.
-- **Type:** x86 (linia CX lub CPX), **co najmniej 4 GB RAM**. Nie ARM (CAX):
-  obrazy budowane są na `linux/amd64`.
-- **SSH keys:** dodaj zawartość `~/.ssh/id_ed25519.pub`. Wtedy nie dostaniesz
-  hasła roota mailem i dobrze.
-- **Backups:** opcjonalnie. To kopia całego dysku (+20% ceny). Nasz backup bazy
-  i tak działa niezależnie.
+Dlaczego OVH i dlaczego Kanada: Hetzner po dwóch podwyżkach w 2026 kosztował za
+8 GB kilka razy więcej, a jego tania linia była niedostępna. W OVH wszystkie
+europejskie lokalizacje VPS były wyprzedane. Kanada (Beauharnois) ma decyzję
+Komisji Europejskiej o odpowiednim poziomie ochrony danych, więc RODO jej nie
+wyklucza; testerom warto powiedzieć, gdzie stoi serwer. Gdy w UE zwolni się
+miejsce, przeprowadzka to ta sama instrukcja i odtworzenie z kopii.
 
-Zapisz IP serwera. Dalej jako `<IP>`.
+Obrazy budowane są na `linux/amd64`, więc serwer musi być x86 (OVH VPS jest).
+
+IP znajdziesz w panelu: **Bare Metal Cloud → Prywatne serwery wirtualne (VPS)**
+→ serwer → **IPv4**. Dalej jako `<IP>`.
+
+Pierwszy użytkownik na OVH to `ubuntu` (nie `root`). Jeśli klucz SSH nie został
+dodany przy zamówieniu, zaloguj się hasłem z maila i wyślij klucz:
+
+```bash
+ssh-copy-id ubuntu@<IP>
+```
 
 ### 3. DNS w Cloudflare
 
@@ -73,17 +81,17 @@ dig +short corvus.saek.dev
 ### 4. Przygotowanie serwera
 
 ```bash
-scp infra/deploy/setup-server.sh root@<IP>:
+scp infra/deploy/setup-server.sh ubuntu@<IP>:
 ```
 
 ```bash
-ssh root@<IP> 'bash setup-server.sh'
+ssh ubuntu@<IP> 'sudo bash setup-server.sh'
 ```
 
 Skrypt na końcu **wypisuje hasło do backupów**. Od razu zapisz je w menedżerze
 haseł: bez niego żadna kopia się nie odszyfruje.
 
-Od teraz logujesz się jako `deploy` (root i hasła są wyłączone):
+Od teraz logujesz się jako `deploy` (logowanie hasłem i na roota jest wyłączone):
 
 ```bash
 ssh deploy@<IP>

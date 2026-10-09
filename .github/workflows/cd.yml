@@ -55,7 +55,7 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
-          # Hetzner CX/CPX are x86. An ARM server (CAX) needs linux/arm64 here.
+          # The OVH VPS is x86. An ARM server would need linux/arm64 here.
           platforms: linux/amd64
           push: true
           tags: ${{ env.REGISTRY }}/corvus-${{ matrix.name }}:${{ env.SHA }}
