@@ -31,113 +31,32 @@ results, the way the promoter's own "delete student" does (ADR 0009), and
 then seeds them again. It needs the agent running; without it nothing is
 deleted. `--only` narrows either to the named fixture directories: one thesis
 changed, and the results already run for the other students should stay.
+
+The seeding itself is `DemoRoster` — the same code behind the "load demo
+students" button on an empty roster; this script adds the command line,
+`--reset` and `--as-of`.
 """
 
 import argparse
 import asyncio
 import sys
-import tomllib
-import uuid
-from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta
-from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from datetime import UTC, date, datetime
+from typing import TYPE_CHECKING
 
 from src.document.extractor import extract
-from src.mentoring.domain.student import ThesisType
+from src.mentoring.application.demo_roster import DemoStudent
+from src.mentoring.infrastructure.demo_fixtures import load, shift_days
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-    from src.guidelines.application.catalog import GuidelineCatalog
     from src.identity.infrastructure.models import UserModel
     from src.mentoring.application.agent_client import AgentClient
 
-_DATA = Path(__file__).parent / "seed_data" / "theses"
+__all__ = ["load", "reset_roster", "seed_roster", "shift_days"]
 
 
-@dataclass(frozen=True)
-class _Event:
-    """One step in a student's history: a meeting note, an uploaded version,
-    or the promoter accepting the latest version as final."""
-
-    at: datetime
-    note: str | None = None
-    draft: Path | None = None
-    accepted: bool = False
-
-
-@dataclass(frozen=True)
-class _SeedStudent:
-    full_name: str
-    index_number: str
-    field_of_study: str
-    thesis_type: ThesisType
-    topic: str | None
-    timeline: tuple[_Event, ...]
-
-
-def shift_days(latest: date, as_of: date) -> int:
-    """Whole weeks to move a timeline so `latest` lands 1–7 days before `as_of`."""
-    return ((as_of - latest).days - 1) // 7 * 7
-
-
-def _event(raw: dict[str, Any], directory: Path, shift: int) -> _Event:
-    day: date = raw["date"] + timedelta(days=shift)
-    at = datetime(day.year, day.month, day.day, 12, tzinfo=UTC)
-    draft = directory / raw["draft"] if "draft" in raw else None
-    if draft is not None and not draft.is_file():
-        raise FileNotFoundError(
-            f"{draft} is missing — build it with scripts/build_thesis_docx.py"
-        )
-    return _Event(
-        at=at,
-        note=raw.get("note"),
-        draft=draft,
-        accepted=bool(raw.get("accepted", False)),
-    )
-
-
-def load(
-    as_of: date | None = None, only: list[str] | None = None
-) -> list[_SeedStudent]:
-    """Read the fixtures; with `as_of`, moved to end in the week before it.
-
-    `only` keeps the named fixture directories. The shift is still worked out
-    from all of them, so one student reloaded lands where the rest already are.
-    """
-    files = [
-        (path, tomllib.loads(path.read_text(encoding="utf-8")))
-        for path in sorted(_DATA.glob("*/student.toml"))
-    ]
-    if only:
-        unknown = set(only) - {path.parent.name for path, _ in files}
-        if unknown:
-            raise ValueError(f"No such fixture: {', '.join(sorted(unknown))}")
-    shift = 0
-    if as_of is not None:
-        latest = max(e["date"] for _, raw in files for e in raw["timeline"])
-        shift = shift_days(latest, as_of)
-    students: list[_SeedStudent] = []
-    for path, raw in files:
-        if only and path.parent.name not in only:
-            continue
-        students.append(
-            _SeedStudent(
-                full_name=raw["full_name"],
-                index_number=raw["index_number"],
-                field_of_study=raw["field_of_study"],
-                thesis_type=ThesisType(raw["thesis_type"]),
-                topic=raw.get("topic"),
-                timeline=tuple(
-                    _event(e, path.parent, shift) for e in raw["timeline"]
-                ),
-            )
-        )
-    return students
-
-
-def dry_run(students: list[_SeedStudent]) -> None:
+def dry_run(students: list[DemoStudent]) -> None:
     for student in students:
         notes = sum(1 for e in student.timeline if e.note)
         print(f"{student.full_name} ({student.thesis_type}): {notes} note(s)")
@@ -150,14 +69,6 @@ def dry_run(students: list[_SeedStudent]) -> None:
                 print(f"  {day}  {event.draft.name}: {len(document.text)} chars")
             if event.accepted:
                 print(f"  {day}  latest version accepted as final")
-
-
-async def _guideline_set(
-    catalog: "GuidelineCatalog", thesis_type: ThesisType
-) -> uuid.UUID | None:
-    """The first set with a published version for this kind of thesis."""
-    summaries = await catalog.list_sets(str(thesis_type))
-    return summaries[0].guideline_set.id if summaries else None
 
 
 async def _promoter(session: "AsyncSession", email: str) -> "UserModel | None":
@@ -183,7 +94,7 @@ async def _promoter(session: "AsyncSession", email: str) -> "UserModel | None":
 async def reset_roster(
     session: "AsyncSession",
     promotor_email: str,
-    students: list[_SeedStudent],
+    students: list[DemoStudent],
     agent: "AgentClient",
 ) -> int:
     """Delete the demo students from the promoter's roster — and only those."""
@@ -237,12 +148,13 @@ async def reset_roster(
 
 
 async def seed_roster(
-    session: "AsyncSession", promotor_email: str, students: list[_SeedStudent]
+    session: "AsyncSession", promotor_email: str, students: list[DemoStudent]
 ) -> int:
     """Create the students that are not on the promoter's roster yet."""
     from src.guidelines.application.catalog import GuidelineCatalog
     from src.guidelines.infrastructure.orm import SourceFileModel
     from src.guidelines.infrastructure.repositories import CatalogRepository
+    from src.mentoring.application.demo_roster import DemoRoster
     from src.mentoring.application.draft_service import DraftService
     from src.mentoring.application.student_service import Caller, StudentService
     from src.mentoring.infrastructure.guidelines_adapter import (
@@ -259,84 +171,39 @@ async def seed_roster(
     user = await _promoter(session, promotor_email)
     if user is None:
         return 1
-    caller = Caller(user_id=user.id)
 
-    catalog = GuidelineCatalog(
-        CatalogRepository(session), SqlFileStore(session, SourceFileModel)
+    guidelines = CatalogGuidelineSource(
+        GuidelineCatalog(
+            CatalogRepository(session), SqlFileStore(session, SourceFileModel)
+        )
     )
     service = StudentService(
-        StudentRepository(session),
-        MeetingNoteRepository(session),
-        CatalogGuidelineSource(catalog),
+        StudentRepository(session), MeetingNoteRepository(session), guidelines
     )
     drafts = DraftService(
         service,
         ThesisDraftRepository(session),
         SqlFileStore(session, DraftFileModel),
     )
-
-    on_roster = {s.full_name for s in await service.list_students(caller)}
-    for seed_student in students:
-        if seed_student.full_name in on_roster:
-            print(f"{seed_student.full_name}: already on the roster — skipping")
-            continue
-
-        started = min(e.at for e in seed_student.timeline)
-        student = await service.create(
-            caller,
-            seed_student.full_name,
-            seed_student.field_of_study,
-            seed_student.thesis_type,
-            seed_student.index_number,
-            created_at=started,
-        )
-        set_id = await _guideline_set(catalog, seed_student.thesis_type)
-        if set_id is None:
+    report = await DemoRoster(service, drafts, guidelines).seed(
+        Caller(user_id=user.id), students
+    )
+    for name in report.skipped:
+        print(f"{name}: already on the roster — skipping")
+    for seeded in report.created:
+        if not seeded.guidelines:
             print(
-                f"  no published guidelines for {seed_student.thesis_type} "
-                f"theses — run seed_guidelines.py to have reviews use them"
+                f"  {seeded.full_name}: no published guidelines for this kind "
+                f"of thesis — run seed_guidelines.py to have reviews use them"
             )
-        await service.update(
-            caller,
-            student.id,
-            current_topic=seed_student.topic,
-            topic_set_at=started,
-            guideline_set_id=set_id,
-            set_guidelines=set_id is not None,
-        )
-
-        notes = versions = 0
-        latest_draft: uuid.UUID | None = None
-        for event in seed_student.timeline:
-            if event.note is not None:
-                await service.add_meeting_note(
-                    caller, student.id, event.note, occurred_at=event.at
-                )
-                notes += 1
-            if event.draft is not None:
-                view = await drafts.upload(
-                    caller,
-                    student.id,
-                    event.draft.name,
-                    event.draft.read_bytes(),
-                    uploaded_at=event.at,
-                )
-                latest_draft = view.draft.id
-                versions += 1
-            if event.accepted:
-                if latest_draft is None:
-                    raise ValueError(
-                        f"{seed_student.full_name}: 'accepted' before any version"
-                    )
-                await drafts.accept(caller, student.id, latest_draft, at=event.at)
         print(
-            f"{seed_student.full_name}: created with {notes} note(s) "
-            f"and {versions} thesis version(s)"
+            f"{seeded.full_name}: created with {seeded.notes} note(s) "
+            f"and {seeded.versions} thesis version(s)"
         )
     return 0
 
 
-async def seed(promotor_email: str, students: list[_SeedStudent], reset: bool) -> int:
+async def seed(promotor_email: str, students: list[DemoStudent], reset: bool) -> int:
     import httpx
 
     from src.mentoring.application.agent_client import AgentClient

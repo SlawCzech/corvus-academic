@@ -44,7 +44,9 @@ async function request(url: string, init?: RequestInit): Promise<Response> {
   if (res.status !== 401) return res
   if (!(await renewSession())) {
     // The refresh token is gone or rejected too: there is no session left to
-    // save, and every other call would fail the same way.
+    // save, and every other call would fail the same way. A full load on
+    // purpose: this is a plain module, not a component with a router.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     if (typeof window !== "undefined") window.location.assign("/login")
     return res
   }
@@ -117,6 +119,19 @@ export async function updateStudent(
   })
   if (!res.ok) return fail(res, "Nie udało się zapisać zmiany")
   return res.json() as Promise<Student>
+}
+
+/** Which demo students were added, and which were already on the roster. */
+export interface DemoSeedResult {
+  created: string[]
+  skipped: string[]
+}
+
+/** Put the demo students on the caller's roster — those not there yet. */
+export async function seedDemoStudents(): Promise<DemoSeedResult> {
+  const res = await request("/api/students/demo", { method: "POST" })
+  if (!res.ok) return fail(res, "Nie udało się wczytać przykładowych studentów")
+  return res.json() as Promise<DemoSeedResult>
 }
 
 const AGENT_DOWN =

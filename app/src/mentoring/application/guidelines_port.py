@@ -27,3 +27,8 @@ class GuidelineSource(Protocol):
     async def current_rubric(self, set_id: UUID) -> GuidelineRubric | None:
         """The published rubric actions are judged against today, if any."""
         ...
+
+    async def first_set_for(self, thesis_type: str) -> UUID | None:
+        """A published set for this kind of thesis, if the catalog has one —
+        what a student gets when nobody has picked a set for them."""
+        ...

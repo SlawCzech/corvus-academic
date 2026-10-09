@@ -370,3 +370,10 @@ class ModelEnabledRequest(BaseModel):
 
 class ModelDefaultRequest(BaseModel):
     name: str = Field(min_length=1, max_length=200)
+
+
+class DemoSeedResponse(BaseModel):
+    """Which demo students were added, and which were already there."""
+
+    created: list[str]
+    skipped: list[str]

@@ -171,4 +171,34 @@ describe("StudentList", () => {
       expect(fetchMock.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(false)
     })
   })
+
+  describe("an empty roster", () => {
+    it("offers the demo students, and shows them once loaded", async () => {
+      let roster: unknown[] = []
+      const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+        if (url === "/api/students/demo" && init?.method === "POST") {
+          roster = [STUDENTS[0]]
+          return Promise.resolve(
+            new Response(JSON.stringify({ created: ["Anna Aktywna"], skipped: [] }), {
+              status: 201,
+            }),
+          )
+        }
+        return Promise.resolve(new Response(JSON.stringify(roster), { status: 200 }))
+      })
+      vi.stubGlobal("fetch", fetchMock)
+      renderList()
+
+      await userEvent.click(await screen.findByTestId("load-demo-students"))
+
+      expect(await screen.findByText("Anna Aktywna")).toBeInTheDocument()
+      expect(screen.queryByTestId("demo-students-offer")).not.toBeInTheDocument()
+    })
+
+    it("does not offer them to a promoter who has students", async () => {
+      renderList()
+      expect(await screen.findByText("Anna Aktywna")).toBeInTheDocument()
+      expect(screen.queryByTestId("demo-students-offer")).not.toBeInTheDocument()
+    })
+  })
 })

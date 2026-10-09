@@ -28,6 +28,7 @@ from src.identity.infrastructure.repositories import ApiKeyRepository
 from src.mentoring.application.action_service import ActionService
 from src.mentoring.application.agent_client import BYOK, AgentClient, KeyLoader
 from src.mentoring.application.dashboard_service import DashboardService
+from src.mentoring.application.demo_roster import DemoRoster
 from src.mentoring.application.draft_service import DraftService
 from src.mentoring.application.model_service import ModelService
 from src.mentoring.application.student_deletion import StudentDeletionService
@@ -166,6 +167,14 @@ def get_draft_service(
     )
 
 
+def get_demo_roster(
+    students: Annotated[StudentService, Depends(get_student_service)],
+    drafts: Annotated[DraftService, Depends(get_draft_service)],
+    catalog: Annotated[GuidelineCatalog, Depends(get_catalog)],
+) -> DemoRoster:
+    return DemoRoster(students, drafts, CatalogGuidelineSource(catalog))
+
+
 def get_student_deletion_service(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     students: Annotated[StudentService, Depends(get_student_service)],
@@ -197,6 +206,7 @@ AgentClientDep = Annotated[AgentClient, Depends(get_agent_client)]
 StudentServiceDep = Annotated[StudentService, Depends(get_student_service)]
 ActionServiceDep = Annotated[ActionService, Depends(get_action_service)]
 DraftServiceDep = Annotated[DraftService, Depends(get_draft_service)]
+DemoRosterDep = Annotated[DemoRoster, Depends(get_demo_roster)]
 DashboardServiceDep = Annotated[DashboardService, Depends(get_dashboard_service)]
 StudentDeletionServiceDep = Annotated[
     StudentDeletionService, Depends(get_student_deletion_service)
