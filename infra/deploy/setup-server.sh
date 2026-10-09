@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# One-time preparation of a fresh Ubuntu 24.04 VPS for Corvus. Run as root:
+# One-time preparation of a fresh Ubuntu 24.04 VPS for Corvus. Run as root,
+# or with sudo from the provider's first user (`ubuntu` on OVH):
 #
-#   scp infra/deploy/setup-server.sh root@<ip>:
-#   ssh root@<ip> 'bash setup-server.sh'
+#   scp infra/deploy/setup-server.sh ubuntu@<ip>:
+#   ssh ubuntu@<ip> 'sudo bash setup-server.sh'
 #
 # What it does, in order — each step safe to repeat:
-#   1. a `deploy` user with root's SSH keys and the docker group; the account
-#      GitHub Actions logs in as;
+#   1. a `deploy` user with your SSH keys (the sudo caller's, or root's) and
+#      the docker group; the account GitHub Actions logs in as;
 #   2. SSH by key only — no passwords, no root login (log in as `deploy`
 #      and use sudo from now on);
 #   3. firewall: 22, 80, 443 in, nothing else;
@@ -14,13 +15,20 @@
 #   5. Docker (from Docker's own apt repository), gpg and rclone;
 #   6. /srv/corvus, the backup passphrase, and the daily backup at 03:15.
 #
-# Before running it: make sure `ssh root@<ip>` works with your key. After step 2
-# a password will no longer get you in.
+# Before running it: make sure you log in with your key, not a password.
+# After step 2 a password will no longer get you in.
 set -euo pipefail
 
-[ "$(id -u)" -eq 0 ] || { echo "run as root" >&2; exit 1; }
-[ -s /root/.ssh/authorized_keys ] || {
-    echo "no /root/.ssh/authorized_keys — add your SSH key first, or you will lock yourself out" >&2
+[ "$(id -u)" -eq 0 ] || { echo "run as root (or with sudo)" >&2; exit 1; }
+
+# Whose keys `deploy` inherits: the user who ran sudo, else root.
+if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != root ]; then
+    KEYS="$(getent passwd "$SUDO_USER" | cut -d: -f6)/.ssh/authorized_keys"
+else
+    KEYS=/root/.ssh/authorized_keys
+fi
+[ -s "$KEYS" ] || {
+    echo "no $KEYS — add your SSH key first (ssh-copy-id), or you will lock yourself out" >&2
     exit 1
 }
 
@@ -33,7 +41,7 @@ if ! id deploy >/dev/null 2>&1; then
     adduser --disabled-password --gecos "" deploy
 fi
 install -d -m 700 -o deploy -g deploy /home/deploy/.ssh
-install -m 600 -o deploy -g deploy /root/.ssh/authorized_keys /home/deploy/.ssh/authorized_keys
+install -m 600 -o deploy -g deploy "$KEYS" /home/deploy/.ssh/authorized_keys
 echo "deploy ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/deploy
 chmod 440 /etc/sudoers.d/deploy
 
@@ -43,7 +51,7 @@ PasswordAuthentication no
 KbdInteractiveAuthentication no
 PermitRootLogin no
 CONF
-systemctl reload ssh
+systemctl reload ssh 2>/dev/null || systemctl restart ssh
 
 # 3. firewall. Docker's published ports bypass ufw — which is why the
 # production compose publishes nothing but Caddy's 80 and 443.
