@@ -4,7 +4,7 @@ vi.mock("next/headers", () => ({
   cookies: () => Promise.resolve({ get: () => ({ value: "token-123" }) }),
 }))
 
-import { proxyFile } from "@/lib/appProxy"
+import { forwardedFor, proxyFile, safeRedirectPath } from "@/lib/appProxy"
 
 /**
  * `proxy()` reads every body as text and labels it JSON — fine for the API,
@@ -44,7 +44,9 @@ describe("proxyFile", () => {
     expect(res.headers.get("content-disposition")).toContain("attachment")
     expect(res.headers.get("x-content-type-options")).toBe("nosniff")
     expect(res.headers.get("x-internal")).toBeNull()
-    expect(fetchMock.mock.calls[0][1].headers).toEqual({ Authorization: "Bearer token-123" })
+    expect(fetchMock.mock.calls[0][1].headers).toEqual({
+      Authorization: "Bearer token-123",
+    })
   })
 
   it("keeps the upstream status of a refusal", async () => {
@@ -55,5 +57,31 @@ describe("proxyFile", () => {
     const res = await proxyFile("/students/s1/drafts/d9/file")
 
     expect(res.status).toBe(404)
+  })
+})
+
+describe("safeRedirectPath", () => {
+  it("keeps a path on this site", () => {
+    expect(safeRedirectPath("/students/42")).toBe("/students/42")
+  })
+
+  it.each(["https://evil.example", "//evil.example", "/\\evil.example", "students", ""])(
+    "refuses %s",
+    (value) => {
+      expect(safeRedirectPath(value)).toBeNull()
+    },
+  )
+})
+
+describe("forwardedFor", () => {
+  it("passes the browser's address on to app", () => {
+    const request = new Request("http://x/api/auth/login", {
+      headers: { "x-forwarded-for": "203.0.113.7" },
+    })
+    expect(forwardedFor(request)).toEqual({ "X-Forwarded-For": "203.0.113.7" })
+  })
+
+  it("adds nothing without a proxy in front", () => {
+    expect(forwardedFor(new Request("http://x/api/auth/login"))).toEqual({})
   })
 })

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 
-import { APP_URL } from "@/lib/appProxy"
+import { APP_URL, forwardedFor } from "@/lib/appProxy"
 
 /**
  * Public — submitted from the login screen before anyone is signed in, so
@@ -10,7 +10,7 @@ export async function POST(request: Request): Promise<Response> {
   const body = (await request.json()) as { email: string }
   const upstream = await fetch(`${APP_URL}/access-requests`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...forwardedFor(request) },
     body: JSON.stringify(body),
     cache: "no-store",
   })

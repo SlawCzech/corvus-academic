@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server"
 
-import { APP_URL } from "@/lib/appProxy"
+import { APP_URL, forwardedFor } from "@/lib/appProxy"
 import { ACCESS_COOKIE_MAX_AGE, REFRESH_COOKIE_MAX_AGE, getRole, homeFor } from "@/lib/auth"
 
 export async function POST(request: Request): Promise<Response> {
   const body = (await request.json()) as { email?: string; password?: string }
   const gatewayRes = await fetch(`${APP_URL}/auth/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...forwardedFor(request) },
     body: JSON.stringify(body),
   })
   if (!gatewayRes.ok) {
