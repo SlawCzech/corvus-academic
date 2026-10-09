@@ -9,6 +9,31 @@ import { NextResponse } from "next/server"
  */
 export const APP_URL = process.env.APP_URL ?? "http://localhost:8000"
 
+/**
+ * The browser's address, for `app`'s rate limits.
+ *
+ * Every request reaches `app` from this server, so without it all logins in
+ * the world share one limit — five a minute, then everyone is locked out.
+ * In production Caddy sets `X-Forwarded-For` to the address it saw, replacing
+ * whatever the browser sent; locally there is no proxy and nothing to pass.
+ */
+export function forwardedFor(request: Request): Record<string, string> {
+  const forwarded = request.headers.get("x-forwarded-for")
+  return forwarded ? { "X-Forwarded-For": forwarded } : {}
+}
+
+/**
+ * Where to send the browser after a refresh: a path on this site, or home.
+ * `new URL("//evil.example", base)` and absolute URLs leave the site, so
+ * anything but a single-slash path is refused.
+ */
+export function safeRedirectPath(value: string | null): string | null {
+  if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
+    return null
+  }
+  return value
+}
+
 interface ProxyInit {
   method?: string
   /** Serialised as a JSON request body. */

@@ -525,6 +525,20 @@ def test_the_key_is_sealed_before_it_reaches_the_broker(
     assert "api_key" not in dispatch.call_args.kwargs["kwargs"]
 
 
+def test_monitoring_never_shows_the_key(
+    client: TestClient, dispatch: MagicMock
+) -> None:
+    """Flower and the worker log print `kwargsrepr`, not the kwargs."""
+    body = {**_ACTION_BODY, "byok": {"provider": "claude", "api_key": "sk-user-key"}}
+    client.post("/actions", json=body, headers=_auth(PROMOTOR_ID, "promotor"))
+
+    sent = dispatch.call_args.kwargs
+    shown = sent["kwargsrepr"]
+    # Not even sealed: the token is the key, given the JWT secret.
+    assert sent["kwargs"]["sealed_api_key"] not in shown
+    assert "claude" in shown
+
+
 def test_action_without_byok_sends_no_credentials(
     client: TestClient, dispatch: MagicMock
 ) -> None:
@@ -615,6 +629,7 @@ async def test_resume_queues_the_decision_under_the_same_task_id(
     assert sent.kwargs["args"] == [ActionType.PROPOSE_TOPIC, {"accepted": [0, 2]}]
     assert sent.kwargs["kwargs"]["provider"] == "claude"
     assert unseal(sent.kwargs["kwargs"]["sealed_api_key"]) == "sk-user"
+    assert sent.kwargs["kwargs"]["sealed_api_key"] not in sent.kwargs["kwargsrepr"]
 
 
 async def test_resume_of_a_run_that_is_not_paused_is_409(

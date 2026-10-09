@@ -1,11 +1,11 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { IconSparkles } from "@tabler/icons-react";
-import { seedDemoStudents } from "@/lib/api.client";
+import { useState } from "react"
+import { IconSparkles } from "@tabler/icons-react"
+import { seedDemoStudents } from "@/lib/api.client"
 
 interface DemoStudentsOfferProps {
-  onLoaded: () => void;
+  onLoaded: () => void
 }
 
 /**
@@ -13,24 +13,20 @@ interface DemoStudentsOfferProps {
  * theses built to exercise the AI actions (docs/specs/demo-fixtures.md).
  * Once loaded they are ordinary students — deleted the ordinary way.
  */
-export default function DemoStudentsOffer({
-  onLoaded,
-}: DemoStudentsOfferProps) {
-  const [busy, setBusy] = useState(false);
-  const [failure, setFailure] = useState<string | null>(null);
+export default function DemoStudentsOffer({ onLoaded }: DemoStudentsOfferProps) {
+  const [busy, setBusy] = useState(false)
+  const [failure, setFailure] = useState<string | null>(null)
 
   async function load(): Promise<void> {
-    setBusy(true);
-    setFailure(null);
+    setBusy(true)
+    setFailure(null)
     try {
-      await seedDemoStudents();
-      onLoaded();
+      await seedDemoStudents()
+      onLoaded()
     } catch (err) {
-      setFailure(
-        err instanceof Error ? err.message : "Nie udało się wczytać studentów",
-      );
+      setFailure(err instanceof Error ? err.message : "Nie udało się wczytać studentów")
     } finally {
-      setBusy(false);
+      setBusy(false)
     }
   }
 
@@ -43,10 +39,9 @@ export default function DemoStudentsOffer({
         Nie masz jeszcze żadnych studentów.
       </p>
       <p className="mt-1.5 max-w-2xl text-[13px] text-muted-strong">
-        Możesz zacząć od przykładowych: siedmioro fikcyjnych studentów z
-        notatkami ze spotkań i pracami o różnej jakości — z celowo zaszytymi
-        błędami, żeby było widać, co znajdują akcje AI. Usuwasz ich jak każdego
-        innego studenta, kiedy przejdziesz na własne prace.
+        Możesz zacząć od przykładowych: siedmioro fikcyjnych studentów z notatkami ze spotkań i
+        pracami o różnej jakości — z celowo zaszytymi błędami, żeby było widać, co znajdują akcje
+        AI. Usuwasz ich jak każdego innego studenta, kiedy przejdziesz na własne prace.
       </p>
       <button
         type="button"
@@ -58,9 +53,7 @@ export default function DemoStudentsOffer({
         <IconSparkles size={15} stroke={2} />
         {busy ? "Wczytuję…" : "Wczytaj przykładowych studentów"}
       </button>
-      {failure && (
-        <p className="mt-2 text-[12.5px] text-critical-text">{failure}</p>
-      )}
+      {failure && <p className="mt-2 text-[12.5px] text-critical-text">{failure}</p>}
     </div>
-  );
+  )
 }

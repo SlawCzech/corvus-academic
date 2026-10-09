@@ -177,6 +177,18 @@ class ModelCatalogResponse(BaseModel):
 # ---------- endpoints ----------
 
 
+def _shown(kwargs: dict[str, Any]) -> str:
+    """Task kwargs as Celery events, Flower and worker logs may show them.
+
+    The promoter's key travels in the message, sealed (`key_transit`). Sealed
+    is not shown: whoever also holds the JWT secret opens the token, and a
+    monitoring page has no use for it either way.
+    """
+    if "sealed_api_key" not in kwargs:
+        return repr(kwargs)
+    return repr({**kwargs, "sealed_api_key": "***"})
+
+
 @router.get(
     "/models",
     response_model=ModelCatalogResponse,
@@ -245,6 +257,7 @@ async def submit_action(
                 body.context,
             ],
             kwargs=kwargs,
+            kwargsrepr=_shown(kwargs),
             task_id=task_id,
         )
     except Exception as exc:
@@ -322,6 +335,7 @@ async def resume_action(
             _RESUME_TASK,
             args=[record.action_type, body.decision],
             kwargs=kwargs,
+            kwargsrepr=_shown(kwargs),
             task_id=task_id,
         )
     except Exception as exc:

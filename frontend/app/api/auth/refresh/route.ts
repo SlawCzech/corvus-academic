@@ -1,7 +1,7 @@
 import { cookies } from "next/headers"
 import { NextResponse, type NextRequest } from "next/server"
 
-import { APP_URL } from "@/lib/appProxy"
+import { APP_URL, safeRedirectPath } from "@/lib/appProxy"
 import { ACCESS_COOKIE_MAX_AGE } from "@/lib/auth"
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   // The middleware sends a browser here mid-navigation and wants it sent
   // onwards; the API client calls the same route from a fetch and wants an
   // answer, not a redirect to a page it would have to parse as HTML.
-  const redirect = request.nextUrl.searchParams.get("redirect")
+  const redirect = safeRedirectPath(request.nextUrl.searchParams.get("redirect"))
   const response = redirect
     ? NextResponse.redirect(new URL(redirect, request.url))
     : NextResponse.json({ ok: true })
