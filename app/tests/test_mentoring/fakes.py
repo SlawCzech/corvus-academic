@@ -217,3 +217,13 @@ class FakeGuidelineSource:
     async def current_rubric(self, set_id: UUID) -> GuidelineRubric | None:
         entry = self.sets.get(set_id)
         return entry[1] if entry else None
+
+    async def first_set_for(self, thesis_type: str) -> UUID | None:
+        return next(
+            (
+                set_id
+                for set_id, (kind, rubric) in self.sets.items()
+                if kind == thesis_type and rubric
+            ),
+            None,
+        )

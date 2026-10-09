@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import useSWR from "swr"
 import { IconSearch, IconPlus, IconTrash, IconX } from "@tabler/icons-react"
 import DeleteStudentConfirm from "@/components/students/DeleteStudentConfirm"
+import DemoStudentsOffer from "@/components/students/DemoStudentsOffer"
 import StatusSelect from "@/components/students/StatusSelect"
 import StudentForm from "@/components/students/StudentForm"
 import { timeAgo } from "@/components/students/format"
@@ -174,13 +175,11 @@ export default function StudentList() {
         <p className="text-[13px] text-critical-text">Nie udało się pobrać listy.</p>
       )}
 
-      {filtered && filtered.length === 0 && (
+      {students?.length === 0 && <DemoStudentsOffer onLoaded={() => void mutate()} />}
+
+      {filtered && filtered.length === 0 && students?.length !== 0 && (
         <p className="text-[13.5px] text-muted">
-          {students?.length === 0
-            ? "Nie masz jeszcze żadnych studentów."
-            : narrowed
-              ? "Brak wyników."
-              : "Brak studentów w tej grupie."}
+          {narrowed ? "Brak wyników." : "Brak studentów w tej grupie."}
         </p>
       )}
 

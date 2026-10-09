@@ -23,3 +23,7 @@ class CatalogGuidelineSource:
         if version is None:
             return None
         return GuidelineRubric(version_id=version.id, rubric_md=version.rubric_md)
+
+    async def first_set_for(self, thesis_type: str) -> UUID | None:
+        summaries = await self._catalog.list_sets(thesis_type)
+        return summaries[0].guideline_set.id if summaries else None

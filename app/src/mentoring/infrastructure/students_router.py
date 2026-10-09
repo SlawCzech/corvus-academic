@@ -11,14 +11,17 @@ from src.mentoring.application.exceptions import (
     StudentNotFoundError,
 )
 from src.mentoring.domain.student import StudentStatus
+from src.mentoring.infrastructure.demo_fixtures import load as load_demo
 from src.mentoring.infrastructure.dependencies import (
     CallerDep,
+    DemoRosterDep,
     StudentDeletionServiceDep,
     StudentServiceDep,
     TokenDep,
 )
 from src.mentoring.infrastructure.errors import not_found
 from src.mentoring.infrastructure.schemas import (
+    DemoSeedResponse,
     MeetingNoteCreateRequest,
     MeetingNoteResponse,
     StudentCreateRequest,
@@ -59,6 +62,30 @@ async def create_student(
         "student_created", student_id=str(student.id), promotor_id=str(caller.user_id)
     )
     return student_response(student)
+
+
+@router.post(
+    "/demo", response_model=DemoSeedResponse, status_code=status.HTTP_201_CREATED
+)
+async def seed_demo_students(
+    caller: CallerDep, roster: DemoRosterDep
+) -> DemoSeedResponse:
+    """Put the demo students on the caller's roster — those not there yet.
+
+    For someone trying Corvus out: seven fictional students with notes and
+    theses built to exercise the AI actions. They are ordinary students once
+    created, removed with the ordinary delete.
+    """
+    report = await roster.seed(caller, load_demo())
+    logger.info(
+        "demo_students_seeded",
+        promotor_id=str(caller.user_id),
+        created=len(report.created),
+        skipped=len(report.skipped),
+    )
+    return DemoSeedResponse(
+        created=[s.full_name for s in report.created], skipped=report.skipped
+    )
 
 
 @router.get("", response_model=list[StudentResponse])
