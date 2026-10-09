@@ -113,8 +113,11 @@ services:
 
   redis:
     image: redis:7-alpine
-    volumes:
-      - redis_data:/data
+    # Memory only. A queued task's message carries the promoter's API key
+    # until the run ends (acks_late), and Redis's default snapshots would
+    # write it to disk. A Redis restart loses only queued work; the action's
+    # status lives in Postgres.
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -141,5 +144,4 @@ volumes:
   caddy_data:
   caddy_config:
   ollama_data:
-  redis_data:
   postgres_data:
