@@ -113,16 +113,15 @@ scp infra/deploy/env.production.example deploy@<IP>:/srv/corvus/.env
 ssh deploy@<IP>
 ```
 
-Na serwerze wygeneruj wartości i wpisz je do `/srv/corvus/.env` (`nano /srv/corvus/.env`):
+Na serwerze jedno polecenie losuje sekrety i wpisuje je do pliku:
 
 ```bash
-openssl rand -hex 24                                   # POSTGRES_PASSWORD
-python3 -c "import secrets; print(secrets.token_urlsafe(48))"   # JWT_SECRET
-openssl rand -base64 18                                # ADMIN_PASSWORD
-docker run --rm python:3.12-slim sh -c "pip -q install cryptography && python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'"   # FERNET_KEY
+cd /srv/corvus && chmod 600 .env && sed -i -e "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$(openssl rand -hex 24)|" -e "s|^JWT_SECRET=.*|JWT_SECRET=$(openssl rand -hex 32)|" -e "s|^FERNET_KEY=.*|FERNET_KEY=$(openssl rand -base64 32 | tr '+/' '-_')|" -e "s|^ADMIN_PASSWORD=.*|ADMIN_PASSWORD=$(openssl rand -base64 18 | tr '+/' '-_')|" .env
 ```
 
-Potem `chmod 600 /srv/corvus/.env`.
+Ręcznie (`nano .env`) zostają `ADMIN_EMAIL` (inny niż adres Twojego konta
+promotora, ADR 0008; nie musi to być działająca skrzynka) i `CROSSREF_MAILTO`.
+
 
 **`FERNET_KEY`, `POSTGRES_PASSWORD` i `ADMIN_PASSWORD` skopiuj do menedżera haseł.**
 Zgubiony `FERNET_KEY` oznacza, że zapisane klucze API testerów stają się
