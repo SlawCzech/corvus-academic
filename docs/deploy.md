@@ -131,14 +131,24 @@ nieodszyfrowywalne, nawet z kopii. Nie używaj wartości z lokalnego `.env`.
 
 Masz już konto Cloudflare, więc R2 jest najprostszy (darmowe 10 GB).
 
-1. Cloudflare → **R2** → Create bucket `corvus-backups` (lokalizacja: EU).
+1. Cloudflare → **R2** → Create bucket `corvus-backups` (location hint: Western Europe).
+   W ustawieniach bucketu reguła cyklu życia: usuwanie obiektów po 60 dniach.
 2. R2 → **Manage API tokens** → Create token: *Object Read & Write*, tylko ten
    bucket. Zapisz *Access Key ID*, *Secret Access Key* i *endpoint*
    (`https://<account-id>.r2.cloudflarestorage.com`).
-3. Na serwerze, jako `deploy`:
+3. Na serwerze, jako `deploy`. Polecenie zaczyna się od spacji, więc nie trafia
+   do historii basha, a `> /dev/null` jest konieczne, bo `rclone config create`
+   wypisuje całą konfigurację **razem z sekretem**. R2 nie obsługuje `acl`
+   (odpowiada wtedy 501 Not Implemented) i chce `region=auto`:
 
 ```bash
-rclone config create r2 s3 provider=Cloudflare access_key_id=<ID> secret_access_key=<SECRET> endpoint=<ENDPOINT> no_check_bucket=true
+ rclone config create r2 s3 provider=Cloudflare access_key_id=<ID> secret_access_key=<SECRET> endpoint=<ENDPOINT> region=auto no_check_bucket=true > /dev/null
+```
+
+   Test:
+
+```bash
+echo test > /tmp/test.txt && rclone copy /tmp/test.txt r2:corvus-backups && rclone ls r2:corvus-backups && rclone deletefile r2:corvus-backups/test.txt && rm /tmp/test.txt
 ```
 
 4. W `/srv/corvus/.env`: `BACKUP_REMOTE=r2:corvus-backups`.
