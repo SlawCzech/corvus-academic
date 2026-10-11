@@ -12,7 +12,7 @@
 #      and use sudo from now on);
 #   3. firewall: 22, 80, 443 in, nothing else;
 #   4. automatic security updates;
-#   5. Docker (from Docker's own apt repository), gpg and rclone;
+#   5. Docker (from Docker's own apt repository), gpg, and rclone from rclone.org;
 #   6. /srv/corvus, the backup passphrase, and the daily backup at 03:15.
 #
 # Before running it: make sure you log in with your key, not a password.
@@ -92,7 +92,15 @@ cat > /etc/docker/daemon.json <<'CONF'
 { "log-driver": "json-file", "log-opts": { "max-size": "20m", "max-file": "5" } }
 CONF
 systemctl restart docker
-apt-get install -yq gnupg rclone
+apt-get install -yq gnupg
+# rclone from rclone.org, not Ubuntu's: the archive's 1.60 (2022) answers
+# R2 uploads with 501 Not Implemented on the first attempt.
+if ! rclone version 2>/dev/null | head -1 | grep -qvE 'v1\.(5|6)[0-9]\.'; then
+    apt-get remove -yq rclone >/dev/null 2>&1 || true
+    curl -fsSL -o /tmp/rclone.deb https://downloads.rclone.org/rclone-current-linux-amd64.deb
+    dpkg -i /tmp/rclone.deb
+    rm -f /tmp/rclone.deb
+fi
 
 # 6. the app's directory, backup passphrase, daily backup
 install -d -m 750 -o deploy -g deploy /srv/corvus /srv/corvus/backups
