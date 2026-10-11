@@ -237,7 +237,7 @@ def test_an_enabled_model_goes_through(
     assert agent.submitted[0]["model"] == "llama3.1:latest"
 
 
-# ---------- a server without local models (ADR 0012) ----------
+# ---------- a server without local models (ADR 0013) ----------
 
 
 @pytest.fixture

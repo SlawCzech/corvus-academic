@@ -1,7 +1,7 @@
 # Deploy: Corvus na `corvus.saek.dev`
 
 > Jeden VPS (OVHcloud, Kanada), `docker compose`, Caddy z HTTPS, wdrożenie po każdym merge'u
-> do `main`. Decyzje: [ADR 0012](adr/0012-a-server-without-local-models.md)
+> do `main`. Decyzje: [ADR 0013](adr/0013-a-server-without-local-models.md)
 > (bez lokalnych modeli czatu). Pliki serwera: [`infra/deploy/`](../infra/deploy/).
 
 ## Jak to wygląda
@@ -196,7 +196,7 @@ Admin → **Użytkownicy** → dodaj konto z rolą `promotor`. Hasło przekaż t
 innym kanałem niż e-mail z loginem. Tester po zalogowaniu:
 
 1. **Profil** → dodaje swój klucz API do Claude albo OpenAI (bez klucza akcje AI
-   się nie uruchomią, ADR 0012),
+   się nie uruchomią, ADR 0013),
 2. **Studenci** → „Wczytaj przykładowych studentów”: siedmioro fikcyjnych
    studentów z pracami do testowania. Usuwa ich, kiedy przejdzie na własne.
 

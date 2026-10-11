@@ -8,20 +8,18 @@
 ## Przegląd bezpieczeństwa przed deployem (2026-10-09)
 
 Naprawione od razu: podatne zależności (Next.js — krytyczna, PyJWT, Starlette,
-urllib3), klucz BYOK widoczny w Flowerze i logach workera (`kwargsrepr`), limit
+urllib3), klucz BYOK widoczny w Flowerze i logach workera (`kwargsrepr`; sam
+klucz w wiadomości jest od PR #4 zaszyfrowany — ADR 0012), limit
 logowań wspólny dla całego świata (brak `X-Forwarded-For`), otwarte
 przekierowanie w `/api/auth/refresh`, Node 20 po EOL, `.dockerignore`, przez
-który obraz frontendu w ogóle się nie budował, Redis zapisujący wiadomości
-tasków (z kluczem) na dysk. Sekretów w repo ani w historii gita nie ma.
+który obraz frontendu w ogóle się nie budował. Sekretów w repo ani w historii gita nie ma.
 
 Zostaje:
 
-- [ ] **Odświeżanie sesji nie działa.** `app` ustawia refresh token jako cookie
-  na odpowiedzi do serwera Next.js (który je wyrzuca), a frontend czeka na
-  `refresh_token` w treści odpowiedzi — więc nigdy go nie dostaje. Sesja trwa tyle,
-  co access token (12 h), potem logowanie od nowa. Przy okazji: access token nie
-  jest sprawdzany w bazie, więc usunięty użytkownik i wylogowanie nie odcinają
-  ważnego tokenu przed upływem 12 h.
+- [ ] **Odświeżanie sesji** — patrz „Refresh z UI nie działa” niżej (zapisane
+  2026-10-03). Na produkcji to znaczy: logowanie od nowa co 12 h. Wylogowanie
+  odcina już access token (PR #4); usunięcie użytkownika nadal nie — token
+  działa do wygaśnięcia, bo `get_current_user` nie pyta bazy.
 - [ ] **Niepoprawny e-mail przy `POST /users` → 500, nie 422.** `ValueError`
   z `UserRegistration` nie jest mapowany w `users_router.py` (np. adres w domenie
   zarezerwowanej, jak `.local`).

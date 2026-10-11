@@ -9,7 +9,7 @@
 #     bypass ufw, so "not published" is the only firewall that holds here;
 #   - no Flower, Jenkins or SonarQube — Flower would show every queued task,
 #     and the other two are CI tools;
-#   - Ollama holds only the embedding model (ADR 0012) — chat runs on the
+#   - Ollama holds only the embedding model (ADR 0013) — chat runs on the
 #     promoters' own keys.
 #
 # Used by infra/deploy/deploy.sh; secrets come from /srv/corvus/.env, which
@@ -113,11 +113,12 @@ services:
 
   redis:
     image: redis:7-alpine
-    # Memory only. A queued task's message carries the promoter's API key
-    # until the run ends (acks_late), and Redis's default snapshots would
-    # write it to disk. A Redis restart loses only queued work; the action's
-    # status lives in Postgres.
-    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    # Persistent on purpose: Redis holds the list of revoked access tokens
+    # (logout), which a restart must not forget, and the queued tasks. The
+    # promoter's key in a task message is sealed (ADR 0012), so a snapshot on
+    # disk holds a token, not the key.
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -144,4 +145,5 @@ volumes:
   caddy_data:
   caddy_config:
   ollama_data:
+  redis_data:
   postgres_data:

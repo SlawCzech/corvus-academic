@@ -22,7 +22,7 @@ const STATUS_KEY = "/api/settings/api-key/status"
 export default function ApiKeySection() {
   const { data: status, mutate } = useSWR<ApiKeyStatus>(STATUS_KEY, fetcher)
   const { data: catalog } = useSWR<ModelCatalog>("/api/models", fetcher)
-  // A server without local models (ADR 0012): a key is what actions run on.
+  // A server without local models (ADR 0013): a key is what actions run on.
   const keysOnly = catalog?.local_enabled === false
   const [provider, setProvider] = useState<Provider>("claude")
   const [apiKey, setApiKey] = useState("")
