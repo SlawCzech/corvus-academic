@@ -1,4 +1,4 @@
-# ADR 0012: A server without local models
+# ADR 0013: A server without local models
 
 - Status: Accepted
 - Date: 2026-10-09

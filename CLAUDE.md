@@ -331,7 +331,7 @@ Zasady, które warto znać przed zmianą któregokolwiek z nich:
 - **Produkcja (`corvus.saek.dev`) wdraża się z `cd.yml`, nie z Jenkinsa.**
   `.env` mieszka tylko na serwerze; `deploy.sh` czeka na healthchecki i sam
   wraca do poprzedniego obrazu, gdy nowy nie wstanie. Bez lokalnych modeli
-  czatu (`LOCAL_MODELS_ENABLED=false`, ADR 0012), backup bazy codziennie.
+  czatu (`LOCAL_MODELS_ENABLED=false`, ADR 0013), backup bazy codziennie.
 - **Sonar jest pomijany, gdy nie ma `SONAR_TOKEN`** — czerwony krzyżyk na każdym
   buildzie forka uczy ludzi ignorować czerwone krzyżyki.
 - **Hooki nie odpalają `pytest` ani `pyright`** — 55 s na commit to hook wyłączany
@@ -476,6 +476,9 @@ dostawca bez klucza to 409, nie cichy fallback —
 Klucz w kolejce Celery jest zaszyfrowany — przy late acks wiadomość leży w Redis
 przez cały przebieg i widać ją we Flower —
 [ADR 0012](docs/adr/0012-seal-the-provider-key-for-the-task-queue.md).
+Na produkcji nie ma lokalnych modeli czatu: `LOCAL_MODELS_ENABLED=false`, akcja
+bez dostawcy to 409, embeddingi zostają na lokalnej Ollamie —
+[ADR 0013](docs/adr/0013-a-server-without-local-models.md).
 
 ---
 

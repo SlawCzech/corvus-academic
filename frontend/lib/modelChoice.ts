@@ -11,7 +11,7 @@
  *   "local"        the default local model, chosen on purpose
  *   "gemma4:12b"   a local model by its tag
  *
- * A server can switch local models off (ADR 0012). Then only keys are
+ * A server can switch local models off (ADR 0013). Then only keys are
  * offered, and without one nothing can run — `needsKey` says so.
  */
 
