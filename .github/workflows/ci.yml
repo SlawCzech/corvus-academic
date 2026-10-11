@@ -18,9 +18,9 @@ jobs:
       run:
         working-directory: app
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: app/uv.lock
@@ -46,7 +46,7 @@ jobs:
           ADMIN_PASSWORD: ci-admin-password-123
           AGENT_URL: http://agent:8002
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: coverage-app
@@ -59,9 +59,9 @@ jobs:
       run:
         working-directory: agent
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: agent/uv.lock
@@ -81,7 +81,7 @@ jobs:
           DATABASE_URL: postgresql+asyncpg://user:pass@localhost:5432/thesis_reviewer
           JWT_SECRET: ci-secret-key-that-is-long-enough-32ch
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: coverage-agent
@@ -93,9 +93,9 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -130,8 +130,8 @@ jobs:
       ADMIN_PASSWORD: ci-admin-password-123
       AGENT_URL: http://agent:8002
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
 
@@ -158,11 +158,11 @@ jobs:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: coverage-*
           path: coverage
