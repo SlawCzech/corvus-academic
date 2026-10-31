@@ -234,6 +234,7 @@ def get_student_deletion_service(
         ThesisDraftRepository(session),
         SqlFileStore(session, DraftFileModel),
         agent,
+        ThesisFragmentRepository(session),
     )
 
 
@@ -242,7 +243,13 @@ def get_dashboard_service(
     students: Annotated[StudentService, Depends(get_student_service)],
     actions: Annotated[ActionService, Depends(get_action_service)],
 ) -> DashboardService:
-    return DashboardService(students, AgentActionRepository(session), actions)
+    return DashboardService(
+        students,
+        AgentActionRepository(session),
+        actions,
+        ThesisPartRepository(session),
+        ThesisFragmentRepository(session),
+    )
 
 
 # ---------- Annotated aliases — what every endpoint actually types ----------

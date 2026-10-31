@@ -12,7 +12,11 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from src.mentoring.application.action_service import ActionInProgress
-from src.mentoring.application.dashboard_service import DashboardSummary
+from src.mentoring.application.dashboard_service import (
+    DashboardSummary,
+    FragmentAwaiting,
+    PartOverdue,
+)
 from src.mentoring.application.draft_service import DraftView
 from src.mentoring.application.model_service import AdminCatalog, PromoterCatalog
 from src.mentoring.application.timeline_service import (
@@ -416,12 +420,52 @@ def timeline_response(timeline: WorkTimeline) -> TimelineResponse:
     )
 
 
+class FragmentAwaitingResponse(BaseModel):
+    fragment_id: uuid.UUID
+    student_id: uuid.UUID
+    student_name: str
+    part_name: str
+    round_number: int
+    received_on: date
+
+
+def fragment_awaiting_response(item: FragmentAwaiting) -> FragmentAwaitingResponse:
+    return FragmentAwaitingResponse(
+        fragment_id=item.fragment_id,
+        student_id=item.student_id,
+        student_name=item.student_name,
+        part_name=item.part_name,
+        round_number=item.round_number,
+        received_on=item.received_on,
+    )
+
+
+class PartOverdueResponse(BaseModel):
+    part_id: uuid.UUID
+    student_id: uuid.UUID
+    student_name: str
+    part_name: str
+    due_on: date
+
+
+def part_overdue_response(item: PartOverdue) -> PartOverdueResponse:
+    return PartOverdueResponse(
+        part_id=item.part_id,
+        student_id=item.student_id,
+        student_name=item.student_name,
+        part_name=item.part_name,
+        due_on=item.due_on,
+    )
+
+
 class DashboardSummaryResponse(BaseModel):
     active_students: int
     without_topic: int
     actions_in_progress: int
     awaiting_input: list[ActionInProgressResponse]
     recent_activity: list[RecentActivityResponse]
+    awaiting_feedback: list[FragmentAwaitingResponse]
+    overdue_parts: list[PartOverdueResponse]
 
 
 def action_in_progress_response(item: ActionInProgress) -> ActionInProgressResponse:
@@ -452,6 +496,10 @@ def dashboard_summary_response(summary: DashboardSummary) -> DashboardSummaryRes
             )
             for a in summary.recent_activity
         ],
+        awaiting_feedback=[
+            fragment_awaiting_response(f) for f in summary.awaiting_feedback
+        ],
+        overdue_parts=[part_overdue_response(p) for p in summary.overdue_parts],
     )
 
 

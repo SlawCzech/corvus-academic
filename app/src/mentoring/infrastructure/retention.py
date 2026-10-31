@@ -16,6 +16,7 @@ from src.mentoring.infrastructure.orm import DraftFileModel
 from src.mentoring.infrastructure.repositories import (
     StudentRepository,
     ThesisDraftRepository,
+    ThesisFragmentRepository,
 )
 from src.shared.database import session_factory
 from src.shared.sql_file_store import SqlFileStore
@@ -24,12 +25,13 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
 async def sweep_once(now: datetime | None = None) -> int:
-    """Run one sweep in a fresh session; return how many versions were purged."""
+    """Run one sweep in a fresh session; return how many items were purged."""
     async with session_factory() as session:
         service = RetentionService(
             StudentRepository(session),
             ThesisDraftRepository(session),
             SqlFileStore(session, DraftFileModel),
+            fragments=ThesisFragmentRepository(session),
         )
         return await service.sweep(now or datetime.now(UTC))
 
