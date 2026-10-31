@@ -318,7 +318,7 @@ function ActionResultBody({ action, selected, onSelect }: Props) {
 const REFERENCE_LABELS: Record<ReferenceStatus, string> = {
   suspicious: "Podejrzana",
   mismatch: "Niezgodna z rekordem",
-  not_indexed: "Nie w Crossref",
+  not_indexed: "Poza indeksami",
   unchecked: "Niesprawdzona",
   website: "Strona www",
   verified: "Potwierdzona",
@@ -344,9 +344,10 @@ const REFERENCE_ORDER: ReferenceStatus[] = [
 ]
 
 /**
- * The bibliography, grouped by what the check established. "Nie w Crossref"
- * is not an accusation — Crossref holds few Polish books — while a
- * "Podejrzana" entry claims a journal Crossref would know, and it does not.
+ * The bibliography, grouped by what the check established. "Poza indeksami"
+ * is not an accusation — no source holds typescripts, reports or older
+ * articles — while a "Podejrzana" entry claims a journal Crossref or a
+ * publisher the catalogues would know, and they do not.
  */
 function BibliographyCheck({ references }: { references: CheckedReference[] }) {
   if (references.length === 0) {

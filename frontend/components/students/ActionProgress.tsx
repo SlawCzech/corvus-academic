@@ -20,9 +20,9 @@ const STEP_LABELS: Record<string, string> = {
   draft_meeting_note: "Szkic notatki",
   review_fragment: "Czytanie fragmentu",
   extract_references: "Lista pozycji",
-  match_references: "Dopasowanie w Crossref",
+  match_references: "Dopasowanie w Crossref i katalogach",
   investigate: "Dochodzenie agenta",
-  tools: "Wyszukiwania w Crossref",
+  tools: "Wyszukiwania w źródłach",
   report: "Werdykty",
 }
 
