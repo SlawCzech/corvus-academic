@@ -365,6 +365,11 @@ class ThesisFragmentRepository:
         await self._session.commit()
         await self._session.refresh(model)
 
+    async def delete(self, model: ThesisFragmentModel) -> None:
+        """Delete one fragment and commit."""
+        await self._session.delete(model)
+        await self._session.commit()
+
     async def find_by_id(self, fragment_id: uuid.UUID) -> ThesisFragmentModel | None:
         """Return one fragment, or None."""
         return await self._session.get(ThesisFragmentModel, fragment_id)

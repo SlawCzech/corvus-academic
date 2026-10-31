@@ -30,10 +30,12 @@ from src.mentoring.application.agent_client import BYOK, AgentClient, KeyLoader
 from src.mentoring.application.dashboard_service import DashboardService
 from src.mentoring.application.demo_roster import DemoRoster
 from src.mentoring.application.draft_service import DraftService
+from src.mentoring.application.fragment_feedback import FragmentFeedbackService
 from src.mentoring.application.fragment_service import FragmentService
 from src.mentoring.application.model_service import ModelService
 from src.mentoring.application.student_deletion import StudentDeletionService
 from src.mentoring.application.student_service import Caller, StudentService
+from src.mentoring.application.timeline_service import TimelineService
 from src.mentoring.infrastructure.guidelines_adapter import CatalogGuidelineSource
 from src.mentoring.infrastructure.orm import DraftFileModel
 from src.mentoring.infrastructure.repositories import (
@@ -184,6 +186,35 @@ def get_fragment_service(
     )
 
 
+def get_fragment_feedback_service(
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    students: Annotated[StudentService, Depends(get_student_service)],
+    actions: Annotated[ActionService, Depends(get_action_service)],
+) -> FragmentFeedbackService:
+    return FragmentFeedbackService(
+        students,
+        ThesisPartRepository(session),
+        ThesisFragmentRepository(session),
+        SqlFileStore(session, DraftFileModel),
+        actions,
+    )
+
+
+def get_timeline_service(
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    students: Annotated[StudentService, Depends(get_student_service)],
+    drafts: Annotated[DraftService, Depends(get_draft_service)],
+    actions: Annotated[ActionService, Depends(get_action_service)],
+) -> TimelineService:
+    return TimelineService(
+        students,
+        ThesisPartRepository(session),
+        ThesisFragmentRepository(session),
+        drafts,
+        actions,
+    )
+
+
 def get_demo_roster(
     students: Annotated[StudentService, Depends(get_student_service)],
     drafts: Annotated[DraftService, Depends(get_draft_service)],
@@ -224,6 +255,10 @@ StudentServiceDep = Annotated[StudentService, Depends(get_student_service)]
 ActionServiceDep = Annotated[ActionService, Depends(get_action_service)]
 DraftServiceDep = Annotated[DraftService, Depends(get_draft_service)]
 FragmentServiceDep = Annotated[FragmentService, Depends(get_fragment_service)]
+FragmentFeedbackServiceDep = Annotated[
+    FragmentFeedbackService, Depends(get_fragment_feedback_service)
+]
+TimelineServiceDep = Annotated[TimelineService, Depends(get_timeline_service)]
 DemoRosterDep = Annotated[DemoRoster, Depends(get_demo_roster)]
 DashboardServiceDep = Annotated[DashboardService, Depends(get_dashboard_service)]
 StudentDeletionServiceDep = Annotated[

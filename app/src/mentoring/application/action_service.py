@@ -447,6 +447,36 @@ class ActionService:
         )
         return _to_domain(record)
 
+    async def mark_used(
+        self, caller: Caller, student_id: UUID, action_id: UUID
+    ) -> None:
+        """Record that the promoter worked from this run's result.
+
+        Accepting with nothing to apply. Saving feedback twice, or from a run
+        still in progress, is not an error: there is just nothing to mark.
+        """
+        record = await self._require_record(caller, student_id, action_id)
+        action = _to_domain(record)
+        if action.can_be_accepted:
+            action.accept()
+            record.accepted = action.accepted
+            record.accepted_at = action.accepted_at
+            await self._actions.update(record)
+
+    async def runs_on_fragment(
+        self, student_id: UUID, fragment_id: UUID
+    ) -> list[UUID]:
+        """Every `review_fragment` run on a fragment, whatever became of it."""
+        records = await self._actions.find_by_student(
+            student_id, action_type=str(ActionType.REVIEW_FRAGMENT)
+        )
+        return [
+            r.id
+            for r in records
+            if cast(dict[str, str], r.input_ref or {}).get("fragment_id")
+            == str(fragment_id)
+        ]
+
     # ---------- internals ----------
 
     async def _assemble(
