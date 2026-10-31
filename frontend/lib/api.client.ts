@@ -2,12 +2,15 @@ import type {
   AdminModelCatalog,
   AgentAction,
   ActionType,
+  Fragment,
+  FragmentVerdict,
   GuidelineSetDetail,
   GuidelineVersion,
   MeetingNote,
   Student,
   StudentStatus,
   ThesisDraft,
+  ThesisPart,
   Thresholds,
   ThesisType,
   University,
@@ -217,6 +220,113 @@ export function draftFileUrl(studentId: string, draftId: string): string {
   return `/api/students/${studentId}/drafts/${draftId}/file`
 }
 
+// ---------- parts and fragments ----------
+
+export async function addPart(
+  studentId: string,
+  name: string,
+  dueOn: string | null,
+): Promise<ThesisPart> {
+  const res = await request(`/api/students/${studentId}/parts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, due_on: dueOn }),
+  })
+  if (!res.ok) return fail(res, "Nie udało się dodać części")
+  return res.json() as Promise<ThesisPart>
+}
+
+export async function updatePart(
+  studentId: string,
+  partId: string,
+  changes: { name?: string; position?: number; due_on?: string | null },
+): Promise<ThesisPart[]> {
+  const res = await request(`/api/students/${studentId}/parts/${partId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(changes),
+  })
+  if (!res.ok) return fail(res, "Nie udało się zmienić części")
+  return res.json() as Promise<ThesisPart[]>
+}
+
+export async function deletePart(studentId: string, partId: string): Promise<void> {
+  const res = await request(`/api/students/${studentId}/parts/${partId}`, {
+    method: "DELETE",
+  })
+  if (!res.ok) return fail(res, "Nie udało się usunąć części")
+}
+
+export interface NewFragment {
+  partName: string
+  file: File | null
+  text: string | null
+  receivedOn: string
+  question: string | null
+}
+
+export async function uploadFragment(
+  studentId: string,
+  fragment: NewFragment,
+): Promise<Fragment> {
+  const form = new FormData()
+  form.append("part_name", fragment.partName)
+  form.append("received_on", fragment.receivedOn)
+  if (fragment.file) form.append("file", fragment.file)
+  if (fragment.text) form.append("text", fragment.text)
+  if (fragment.question) form.append("question", fragment.question)
+  const res = await request(`/api/students/${studentId}/fragments`, {
+    method: "POST",
+    body: form,
+  })
+  if (!res.ok) return fail(res, "Nie udało się zapisać fragmentu")
+  return res.json() as Promise<Fragment>
+}
+
+export interface FragmentFeedback {
+  verdict: FragmentVerdict
+  feedback: string | null
+  /** The run the text started from, when the promoter worked from its draft. */
+  sourceActionId: string | null
+  nextDueOn: string | null
+}
+
+export async function saveFragmentFeedback(
+  studentId: string,
+  fragmentId: string,
+  feedback: FragmentFeedback,
+): Promise<Fragment> {
+  const res = await request(
+    `/api/students/${studentId}/fragments/${fragmentId}/feedback`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        verdict: feedback.verdict,
+        feedback: feedback.feedback,
+        source_action_id: feedback.sourceActionId,
+        next_due_on: feedback.nextDueOn,
+      }),
+    },
+  )
+  if (!res.ok) return fail(res, "Nie udało się zapisać feedbacku")
+  return res.json() as Promise<Fragment>
+}
+
+export async function deleteFragment(
+  studentId: string,
+  fragmentId: string,
+): Promise<void> {
+  const res = await request(`/api/students/${studentId}/fragments/${fragmentId}`, {
+    method: "DELETE",
+  })
+  if (!res.ok) return fail(res, "Nie udało się usunąć fragmentu")
+}
+
+export function fragmentFileUrl(studentId: string, fragmentId: string): string {
+  return `/api/students/${studentId}/fragments/${fragmentId}/file`
+}
+
 // ---------- AI actions ----------
 
 export interface ActionOptions {
@@ -232,6 +342,8 @@ export interface ActionOptions {
   reviewTone?: string
   /** generate_review only: pause after the analyses to pick the findings. */
   reviewFindingsFirst?: boolean
+  /** review_fragment only: the fragment it reads. */
+  fragmentId?: string
 }
 
 export async function triggerAction(
@@ -251,6 +363,7 @@ export async function triggerAction(
       language: options?.language || "pl",
       review_tone: options?.reviewTone || "auto",
       review_findings_first: options?.reviewFindingsFirst ?? false,
+      fragment_id: options?.fragmentId ?? null,
     }),
   })
   if (!res.ok) return fail(res, "Nie udało się uruchomić akcji")

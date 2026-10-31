@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import AnalysisResultView from "@/components/AnalysisResult"
+import { fragmentReview } from "@/lib/fragmentFeedback"
 import type {
   ActionErrorCode,
   AgentAction,
@@ -284,6 +285,24 @@ function ActionResultBody({ action, selected, onSelect }: Props) {
           <Bullets title="Ustalenia" items={output?.agreed_actions} />
         </div>
       )
+
+    case "review_fragment": {
+      const review = fragmentReview(result)
+      return (
+        <div data-testid="fragment-review">
+          <p className="whitespace-pre-wrap text-[13px] text-muted-strong">
+            {review?.summary}
+          </p>
+          {review?.answer && (
+            <p className="mt-3 text-[13px] text-muted-strong">{review.answer}</p>
+          )}
+          <Bullets title="Co działa" items={review?.strengths} />
+          <Bullets title="Co już poprawione" items={review?.addressed} />
+          <Bullets title="Do zmiany" items={review?.changes.map((c) => c.point)} />
+          <Bullets title="Do dodania" items={review?.additions} />
+        </div>
+      )
+    }
 
     default:
       // evaluate_methodology and generate_review both speak findings/scores.

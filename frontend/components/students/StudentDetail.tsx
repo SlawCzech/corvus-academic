@@ -12,6 +12,7 @@ import LatestResults from "@/components/students/LatestResults"
 import StudentDetailsCard from "@/components/students/StudentDetailsCard"
 import StudentSubNav, { type Section } from "@/components/students/StudentSubNav"
 import TopicCard from "@/components/students/TopicCard"
+import WorkTimeline from "@/components/students/WorkTimeline"
 import { ACTION_LABELS } from "@/components/students/format"
 import { isUnfinished } from "@/hooks/useAction"
 import { IconTrash } from "@tabler/icons-react"
@@ -284,6 +285,8 @@ export default function StudentDetail({
             </div>
           </div>
         )}
+
+        {section === "timeline" && <WorkTimeline studentId={studentId} />}
 
         {section === "actions" && (
           <div>

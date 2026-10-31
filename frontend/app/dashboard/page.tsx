@@ -17,6 +17,10 @@ import { timeAgo } from "@/components/students/format"
 import { fetcher } from "@/lib/api.client"
 import type { DashboardSummary } from "@/lib/api.types"
 
+function formatDay(day: string): string {
+  return new Date(`${day}T12:00:00`).toLocaleDateString("pl-PL")
+}
+
 const ACTION_LABELS: Record<string, string> = {
   propose_topic: "propozycja tematu",
   defence_questions: "pytania na obronę",
@@ -171,6 +175,52 @@ export default function DashboardPage() {
         <p className="text-[13px] text-critical-text">
           Nie udało się pobrać podsumowania.
         </p>
+      )}
+
+      {summary && summary.awaiting_feedback.length > 0 && (
+        <div
+          data-testid="awaiting-feedback"
+          className="mb-4 rounded-xl border border-line bg-surface p-5"
+        >
+          <h2 className="mb-2 text-[13px] font-semibold text-foreground">
+            Czeka na feedback
+          </h2>
+          {summary.awaiting_feedback.map((item) => (
+            <Link
+              key={item.fragment_id}
+              href={`/students/${item.student_id}?section=timeline`}
+              className="flex items-center justify-between border-b border-line/60 py-2.5 text-[13.5px] last:border-none hover:text-accent"
+            >
+              <span className="text-foreground">
+                <strong className="font-semibold">{item.student_name}</strong> —{" "}
+                {item.part_name}, runda {item.round_number}
+              </span>
+              <span className="text-muted">{formatDay(item.received_on)}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {summary && summary.overdue_parts.length > 0 && (
+        <div
+          data-testid="overdue-parts"
+          className="mb-4 rounded-xl border border-line bg-surface p-5"
+        >
+          <h2 className="mb-2 text-[13px] font-semibold text-foreground">Po terminie</h2>
+          {summary.overdue_parts.map((item) => (
+            <Link
+              key={item.part_id}
+              href={`/students/${item.student_id}?section=timeline`}
+              className="flex items-center justify-between border-b border-line/60 py-2.5 text-[13.5px] last:border-none hover:text-accent"
+            >
+              <span className="text-foreground">
+                <strong className="font-semibold">{item.student_name}</strong> —{" "}
+                {item.part_name}
+              </span>
+              <span className="text-muted">{formatDay(item.due_on)}</span>
+            </Link>
+          ))}
+        </div>
       )}
 
       {summary && (
