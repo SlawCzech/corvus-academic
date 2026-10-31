@@ -22,9 +22,15 @@ function formatBytes(bytes: number): string {
 interface FileUploadProps {
   onFileSelect: (file: File) => void
   disabled?: boolean
+  /** What the box invites the promoter to drop. */
+  prompt?: string
 }
 
-export default function FileUpload({ onFileSelect, disabled }: FileUploadProps) {
+export default function FileUpload({
+  onFileSelect,
+  disabled,
+  prompt = "Drag & drop your thesis",
+}: FileUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [rejectionError, setRejectionError] = useState<string | null>(null)
 
@@ -75,9 +81,9 @@ export default function FileUpload({ onFileSelect, disabled }: FileUploadProps) 
       >
         <input {...getInputProps()} data-testid="file-input" />
         <p className="text-[15px] font-medium text-foreground">
-          {isDragActive ? "Drop the file here…" : "Drag & drop your thesis"}
+          {isDragActive ? "Drop the file here…" : prompt}
         </p>
-        <p className="mt-1 text-[13px] text-muted">PDF or DOCX, max 50 MB</p>
+        <p className="mt-1 text-[13px] text-muted">PDF or DOCX, max 25 MB</p>
       </div>
 
       {selectedFile && (

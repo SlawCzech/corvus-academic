@@ -35,12 +35,12 @@ verdict = "on_track"
 feedback = """Teraz rozdział ma obie strony i widać, po co jest w tej pracy. Można go na razie zostawić i przejść do metodologii."""
 
 [[timeline]]
-date = 2026-05-05
-part = "Rozdział 3: wyniki badania"
-due = 2026-05-19
-
-[[timeline]]
 date = 2026-05-12
 fragment = "fragments/metodologia.md"
 part = "Rozdział 2: metodologia"
 question = "Czy dziesięć wywiadów ma sens?"
+
+[[timeline]]
+date = 2026-05-13
+part = "Rozdział 3: wyniki badania"
+due = 2026-05-10
