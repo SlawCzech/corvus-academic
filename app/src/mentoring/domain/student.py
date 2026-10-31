@@ -40,6 +40,11 @@ def _require_text(value: str, field_name: str) -> str:
     return stripped
 
 
+def _optional_text(value: str | None) -> str | None:
+    """Return the stripped value, or None if there is nothing in it."""
+    return (value or "").strip() or None
+
+
 @dataclass
 class Student:
     """A student supervised by one promoter across the whole thesis lifecycle."""
@@ -64,12 +69,19 @@ class Student:
     # The university requirements this thesis is judged against — an id in the
     # guideline catalog, another bounded context.
     guideline_set_id: UUID | None = None
+    # What the promoter agreed with the student: what the thesis is about and
+    # what it sets out to do. Optional, and context for the model, not a
+    # checklist: see ADR 0015.
+    research_area: str | None = None
+    research_aim: str | None = None
 
     def __post_init__(self) -> None:
         self.full_name = _require_text(self.full_name, "full_name")
         self.field_of_study = _require_text(self.field_of_study, "field_of_study")
         if self.index_number is not None:
             self.index_number = _require_text(self.index_number, "index_number")
+        self.research_area = _optional_text(self.research_area)
+        self.research_aim = _optional_text(self.research_aim)
 
     @property
     def has_topic(self) -> bool:
@@ -108,6 +120,14 @@ class Student:
             if index_number is not None
             else None
         )
+
+    def set_research_area(self, area: str | None) -> None:
+        """Set the research area, or clear it with ``None`` or blank text."""
+        self.research_area = _optional_text(area)
+
+    def set_research_aim(self, aim: str | None) -> None:
+        """Set the agreed aim, or clear it with ``None`` or blank text."""
+        self.research_aim = _optional_text(aim)
 
     def change_thesis_type(self, thesis_type: ThesisType) -> None:
         """Switch the kind of thesis the student writes.
