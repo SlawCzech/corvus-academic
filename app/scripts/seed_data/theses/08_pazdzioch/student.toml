@@ -3,6 +3,9 @@ index_number = "101428"
 field_of_study = "Zarządzanie"
 thesis_type = "bachelor"
 topic = "Handel bazarowy w dobie e-commerce na przykładzie wrocławskiego targowiska"
+research_area = "Zarządzanie w handlu detalicznym"
+research_aim = """Cel: ustalić, dlaczego część sprzedawców targowiska utrzymuje obroty mimo rozwoju handlu internetowego.
+Hipoteza: o utrzymaniu obrotów decydują stali klienci i osobiste relacje, a nie cena."""
 
 [[timeline]]
 date = 2026-02-10

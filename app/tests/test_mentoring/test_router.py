@@ -368,3 +368,35 @@ def test_listing_notes_of_other_promotors_student_is_404(client: TestClient) -> 
     mine = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
     resp = client.get(f"/students/{created['id']}/meeting-notes", headers=mine)
     assert resp.status_code == 404
+
+
+def test_research_area_and_aim_are_kept_and_cleared(client: TestClient) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    created = client.post(
+        "/students",
+        json={
+            "full_name": "Jan Kowalski",
+            "field_of_study": "Ekonomia",
+            "thesis_type": "bachelor",
+            "research_area": "ekonomia instytucjonalna",
+            "research_aim": "Cel: zbadać X.",
+        },
+        headers=headers,
+    )
+    assert created.status_code == 201, created.text
+    body = created.json()
+    assert body["research_area"] == "ekonomia instytucjonalna"
+    assert body["research_aim"] == "Cel: zbadać X."
+
+    # Left out: kept. Sent as null: cleared.
+    student_id = body["id"]
+    renamed = client.patch(
+        f"/students/{student_id}", json={"full_name": "Jan K."}, headers=headers
+    )
+    assert renamed.json()["research_aim"] == "Cel: zbadać X."
+
+    cleared = client.patch(
+        f"/students/{student_id}", json={"research_aim": None}, headers=headers
+    )
+    assert cleared.json()["research_aim"] is None
+    assert cleared.json()["research_area"] == "ekonomia instytucjonalna"

@@ -37,6 +37,18 @@ def _document_map(draft: ThesisDraft) -> dict[str, Any]:
     return outline_payload(draft.content)
 
 
+def _research(student: Student) -> dict[str, Any]:
+    """What the promoter agreed with the student, for actions that judge purpose.
+
+    Neither is required, so `agent` says how to read them only when one is
+    there. Structure and requirements stay without them: see ADR 0015.
+    """
+    return {
+        "research_area": student.research_area,
+        "research_aim": student.research_aim,
+    }
+
+
 def _thesis_metadata(student: Student) -> dict[str, Any]:
     """The metadata block the review nodes expect."""
     return {
@@ -93,7 +105,9 @@ def assemble_evaluate_methodology_context(
             "text": latest_draft.content,
             "document_map": _document_map(latest_draft),
             "thesis_type": str(student.thesis_type),
+            "field_of_study": student.field_of_study,
             "current_topic": student.current_topic,
+            **_research(student),
             "version_number": latest_draft.version_number,
             "detail": detail,
         },
@@ -120,6 +134,9 @@ def assemble_check_progress_context(
         "previous_text": previous.content,
         "previous_version": previous.version_number,
         "current_topic": student.current_topic,
+        "field_of_study": student.field_of_study,
+        "thesis_type": str(student.thesis_type),
+        **_research(student),
         "detail": detail,
     }
 
@@ -152,7 +169,9 @@ def assemble_review_fragment_context(
             {"name": other.name, "state": str(state)} for other, state in other_parts
         ],
         "field_of_study": student.field_of_study,
+        "thesis_type": str(student.thesis_type),
         "current_topic": student.current_topic,
+        **_research(student),
         "recent_notes": [n.content for n in recent_notes[:_MAX_NOTES]],
         "detail": detail or fragment.question,
     }
@@ -198,6 +217,7 @@ def assemble_defence_questions_context(
         "current_topic": student.current_topic,
         "field_of_study": student.field_of_study,
         "thesis_type": str(student.thesis_type),
+        **_research(student),
         "version_number": latest_draft.version_number,
         "detail": detail,
     }
@@ -245,6 +265,7 @@ def assemble_generate_review_context(
             "document_map": _document_map(latest_draft),
             "metadata": _thesis_metadata(student),
             "thesis_type": str(student.thesis_type),
+            **_research(student),
             "review_tone": review_tone,
             "version_number": latest_draft.version_number,
             "detail": detail,

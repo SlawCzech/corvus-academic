@@ -176,3 +176,18 @@ def test_handwritten_note_is_not_ai_drafted() -> None:
 
 def test_note_from_accepted_action_is_ai_drafted() -> None:
     assert _note(source_action_id=uuid.uuid4()).is_ai_drafted is True
+
+
+def test_research_fields_are_optional_and_blank_means_none() -> None:
+    student = _student(research_area="  ")
+    assert student.research_area is None
+
+    student.set_research_area(" ekonomia instytucjonalna ")
+    student.set_research_aim("Cel: zbadać X.")
+    assert student.research_area == "ekonomia instytucjonalna"
+    assert student.research_aim == "Cel: zbadać X."
+
+    student.set_research_area(None)
+    student.set_research_aim("   ")
+    assert student.research_area is None
+    assert student.research_aim is None
