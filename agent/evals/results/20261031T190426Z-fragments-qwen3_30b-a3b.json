@@ -1,0 +1,105 @@
+{
+  "model": "qwen3:30b-a3b",
+  "judge": "qwen3:30b-a3b",
+  "passed": 4,
+  "cases": [
+    {
+      "case_id": "poza-tematem",
+      "model": "qwen3:30b-a3b",
+      "seconds": 49.5,
+      "error": null,
+      "direction": "needs_changes",
+      "problems": [],
+      "output": {
+        "summary": "Fragment przedstawia Rozdział 1 pt. 'Historia naukowego zarządzania', obejmujący sekcje na temat zasad Taylora w naukowym zarządzaniu, innowacji Henry'ego Forda na linii montażowej oraz pięciu funkcji kierowniczych Henriego Fayola. Opisuje badania Taylora nad czasem wykonywania zadań w stalowni Midvale, zastosowanie teorii Taylora przez Forda w produkcji samochodów oraz zasady Fayola z zakresu planowania i kontroli. Tekst precyzyjnie podsumowuje teorie zarządzania z 20. wieku, ale nie łączy ich z tematem pracy, który dotyczy wpływu pracy zdalnej na wydajność zespołów programistycznych. Rozdział skupia się na zarządzaniu z początku XX wieku, pomijając współczesne aspekty pracy zdalnej i wydajności zespołów IT, co tworzy wyraźny rozryw z tematem pracy.",
+        "answer": "",
+        "direction": "needs_changes",
+        "strengths": [
+          "Dokładne przedstawienie zasad Taylora w kontekście jego prac."
+        ],
+        "changes": [
+          {
+            "point": "Rozdział 1. Historia naukowego zarządzania nie jest zgodny z tematem pracy, który dotyczy wpływu pracy zdalnej na wydajność zespołów programistycznych.",
+            "quote": "Rozdział 1. Historia naukowego zarządzania"
+          }
+        ],
+        "additions": [],
+        "addressed": [],
+        "next_step": "Przeformułować rozdział 1, skupiając się na literaturze dotyczącej pracy zdalnej w zespołach programistycznych."
+      },
+      "passed": true
+    },
+    {
+      "case_id": "runda-druga",
+      "model": "qwen3:30b-a3b",
+      "seconds": 47.5,
+      "error": null,
+      "direction": "needs_additions",
+      "problems": [],
+      "output": {
+        "summary": "Rozdział 2 przedstawia metodologię badania, skupiając się na metodzie ankiety internetowej przeprowadzonej wśród klientów trzech wrocławskich banków spółdzielczych. W sekcji 2.1 opisano zastosowanie metody ankiety zawierającej dwadzieścia pytań zamkniętych dotyczących korzystania z bankowości mobilnej. W 2.2 wyjaśniono dobór próby celowej, skupiający się na klientach, którzy w ciągu ostatniego roku zaczęli korzystać z aplikacji mobilnej, oraz uzasadniono wybór banków spółdzielczych ze względu na starszą grupę klientów, która w tym kontekście jest szczególnie interesująca. Sekcja 2.3 opisuje przebieg badania, w tym okres udostępnienia ankiety w aplikacjach banków w październiku 2025 roku przez cztery tygodnie, z otrzymaniem 214 odpowiedzi.",
+        "answer": "",
+        "direction": "needs_additions",
+        "strengths": [
+          "Jasne uzasadnienie wyboru banków spółdzielczych z uwagi na charakterystykę klientów (starsza grupa) i celowość próby celowej."
+        ],
+        "changes": [],
+        "additions": [
+          "Opisz strukturę ankiety, w tym jakie bloki pytań zawiera i skąd pochodzą ich elementy (np. na podstawie analizy literatury)."
+        ],
+        "addressed": [
+          "Zdokumentowano uzasadnienie wyboru próby celowej i charakterystyki klientów banków spółdzielczych."
+        ],
+        "next_step": "Opisz strukturę ankiety, uwzględniając bloki pytań i ich źródła."
+      },
+      "passed": true
+    },
+    {
+      "case_id": "solidny-rozdzial",
+      "model": "qwen3:30b-a3b",
+      "seconds": 62.4,
+      "error": null,
+      "direction": "on_track",
+      "problems": [],
+      "output": {
+        "summary": "Rozdział 1 omawia teoretyczne podstawy analizy bezrobocia osób z wyższym wykształceniem, koncentrując się na trzech kluczowych obszarach. W sekcji 1.1 przedstawiona jest teoria kapitału ludzkiego Beckera i Schultza, podkreślająca inwestycyjny charakter wykształcenia, oraz empiryczne dowody Mincera o związkach między długością nauki a płacą. Sekcja 1.2 przedstawia teorię sygnalizacji Spence'a, która wyjaśnia bezrobocie absolwentów jako wynik zbyt dużej liczby dyplomów w stosunku do stanowisk. Autor podkreśla kontrast między tymi teoriami jako kluczowy dla analizy problemu. W sekcji 1.3 omówione są badania nad niedopasowaniem kwalifikacji, w tym polskie badania z Bilansu Kapitału Ludzkiego, które wskazują na braki w kompetencjach miękkich. Praca zapowiada, że te wyniki zostaną powiązane z sytuacją absolwentów we Wrocławiu w części empirycznej.",
+        "answer": "",
+        "direction": "on_track",
+        "strengths": [
+          "Jasne przedstawienie kontrastu między teorią kapitału ludzkiego a teorią sygnalizacji, kluczowego dla analizy bezrobocia absolwentów."
+        ],
+        "changes": [],
+        "additions": [],
+        "addressed": [],
+        "next_step": "Kontynuuj pisanie rozdziału."
+      },
+      "passed": true
+    },
+    {
+      "case_id": "urwany-rozdzial",
+      "model": "qwen3:30b-a3b",
+      "seconds": 25.0,
+      "error": null,
+      "direction": "on_track",
+      "problems": [],
+      "output": {
+        "summary": "Fragment obejmuje Rozdział 2: Metodologia badania, który definiuje główne pytanie badawcze dotyczące wpływu pracy zdalnej na wydajność zespołów programistycznych w małych firmach. Omówione są szczegółowe pytania badawcze dotyczące zmian w liczbie zadań, czasie reakcji na błędy oraz ocenie przez programistów. Opisano metodę studium wielu przypadków obejmujące cztery firmy, z wykorzystaniem danych ilościowych z systemów zarządzania zadaniami (2019–2023) oraz jakościowych z dwunastu wywiadów z kierownikami. Przedstawiono plan analizy obejmujący porównanie statystyk przed i po wprowadzeniu pracy zdalnej oraz kodowanie wywiadów według kategorii wyłonionych z literatury. Fragment kończy się w trakcie opisu procedury kodowania.",
+        "answer": "",
+        "direction": "on_track",
+        "strengths": [
+          "Jasna definicja problemu badawczego i zgodność pytań z tematem rozdziału"
+        ],
+        "changes": [
+          {
+            "point": "Użycie czasu przeszłego w formułowaniu problemu badawczego, co nie odpowiada tematowi dotyczącemu aktualnego wpływu pracy zdalnej.",
+            "quote": "jak praca zdalna wpłynęła"
+          }
+        ],
+        "additions": [],
+        "addressed": [],
+        "next_step": "Kontynuować opis przebiegu analizy, w tym szczegóły kodowania wywiadów."
+      },
+      "passed": true
+    }
+  ]
+}

@@ -59,6 +59,11 @@ Bez modelu sprawdzane są limity list, brak ocen liczbowych i ostrych sformułow
 Sędzia czyta sam feedback (bez podsumowania) i odpowiada, czy zachęca do dalszej
 pracy, oraz czy padło to, co paść miało, i nie padło to, co nie miało.
 
+Ostatni przebieg (2026-10-31, `qwen3:30b-a3b`): 4 z 4. Przypadki graniczne
+(`poza-tematem`, `solidny-rozdzial`) przeszły też po trzy razy osobno, bo jedna
+reguła w prompcie potrafi przesunąć model w drugą stronę. Na Claude jeszcze
+niepuszczone. Podsumowania mają 90–115 słów, w jednym akapicie.
+
 ## Co znaczą liczby
 
 - **recall** — ile wpisanych wad recenzja nazwała. Główna liczba.
