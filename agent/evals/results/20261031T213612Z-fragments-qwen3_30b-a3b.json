@@ -1,0 +1,90 @@
+{
+  "model": "qwen3:30b-a3b",
+  "judge": "qwen3:30b-a3b",
+  "passed": 2,
+  "cases": [
+    {
+      "case_id": "cel-nie-caly",
+      "model": "qwen3:30b-a3b",
+      "seconds": 35.8,
+      "error": null,
+      "direction": "on_track",
+      "problems": [],
+      "output": {
+        "summary": "Fragment obejmuje trzy sekcje: 1.1 o zaangażowaniu pracownika z odwołaniem się do Meyer i Allen, 1.2 o czynnikach powodujących rotację z wykorzystaniem modelu Herzberga i teorii osadzenia, 1.3 o elastyczności czasu pracy z uwzględnieniem jej praktycznej realizacji w małych firmach usługowych. Autor przedstawia kluczowe teorie zarządzania zasobami ludzkimi, zwracając uwagę na różnice między zadowoleniem a zaangażowaniem oraz na warunki powodujące odejście pracowników. W sekcji 1.3 podkreśla, że elastyczność czasu w małych firmach często opiera się na nieformalnych ustalenich, co utrudnia porównania między organizacjami.",
+        "answer": "",
+        "direction": "on_track",
+        "strengths": [
+          "Poprawne rozróżnienie zaangażowania pracownika od zadowolenia z pracy, z odwołaniem się do Meyer i Allen"
+        ],
+        "changes": [
+          {
+            "point": "Ustalić, że 'realna elastyczność' jest kluczowym elementem badania, zgodnie z hipotezą o niższej rotacji w firmach z taką elastycznością",
+            "quote": "efekt zależy od tego, czy elastyczność jest realna, czy tylko deklarowana"
+          }
+        ],
+        "additions": [
+          "Wskazanie braku badań dotyczących elastyczności czasu pracy w małych firmach usługowych jako kluczowego braku w literaturze"
+        ],
+        "addressed": [],
+        "next_step": "Kontynuować pisanie rozdziału 1, dodając analizę braków literatury w kontekście małych firm usługowych."
+      },
+      "passed": true
+    },
+    {
+      "case_id": "dryf-od-celu",
+      "model": "qwen3:30b-a3b",
+      "seconds": 43.5,
+      "error": null,
+      "direction": "needs_changes",
+      "problems": [],
+      "output": {
+        "summary": "Rozdział 2. Metodologia badania opisuje badanie ilościowe skierowane do sprzedawców na wrocławskich targowiskach, skupiające się na ocenie wysokości opłat targowych oraz działań zarządcy. Zaprojektowano ankietę przeprowadzoną wśród sprzedawców obecnych w wybranym tygodniu, z zakładanym zwrotem 60 ankiet. Respondenci muszą prowadzić stoiska co najmniej od roku. Kwestionariusz zawiera pytania na pięciostopniowej skali dotyczące opłat, infrastruktury, czystości i kontaktu z zarządcą, z planem porównania wyników między targowiskami i innymi miastami.",
+        "answer": "",
+        "direction": "needs_changes",
+        "strengths": [
+          "Jasna struktura rozdziału metodologicznego oraz szczegółowe określenie skali pomiaru w kwestionariuszu."
+        ],
+        "changes": [
+          {
+            "point": "Metodologia skupia się na opinii sprzedawców, podczas gdy cel badania dotyczy zachowań klientów.",
+            "quote": "Badanie dotyczy tego, jak sprzedawcy na targowiskach oceniają wysokość opłat targowych oraz działania zarządcy."
+          }
+        ],
+        "additions": [
+          "Zwróć uwagę na zgodność metodyki z celem badania, skupiając się na opinii klientów, a nie sprzedawców."
+        ],
+        "addressed": [],
+        "next_step": "Przeprowadź zmiany w metodologii, skupiając badanie na kliencie, a nie sprzedawcy."
+      },
+      "passed": true
+    },
+    {
+      "case_id": "runda-druga",
+      "model": "qwen3:30b-a3b",
+      "seconds": 77.6,
+      "error": null,
+      "direction": "needs_additions",
+      "problems": [
+        "not encouraging"
+      ],
+      "output": {
+        "summary": "Rozdział 2 przedstawia metodologię badania, opisując przeprowadzenie ankiety internetowej wśród klientów trzech wrocławskich banków spółdzielczych, zawierającej dwadzieścia pytań zamkniętych na temat korzystania z bankowości mobilnej. W sekcji 2.2 wyjaśniono wybór metody dobioru próby celowej, skupiającej się na klientach, którzy w ciągu ostatniego roku zaczęli korzystać z aplikacji mobilnych, oraz uzasadniono wybór banków spółdzielczych z powodu starszego wieku ich klientów, co czyni zmiany zachowań w tej grupie szczególnie interesującą. Otrzymano 214 odpowiedzi, co autor ocenia jako wystarczające do wnioskowania w obrębie badanej grupy. Przebieg badania opisano jako udostępnienie ankiety w aplikacjach banków w październiku 2025 roku przez cztery tygodnie.",
+        "answer": "Dobór próby został uzasadniony, brakuje jednak opisu struktury ankiety.",
+        "direction": "needs_additions",
+        "strengths": [
+          "Uzasadniono dobór próby celowej dla grupy klientów, którzy zaczęli korzystać z bankowości mobilnej w ciągu ostatniego roku, oraz podano liczbę otrzymanych odpowiedzi (214), co wspiera adekwatność próbki."
+        ],
+        "changes": [],
+        "additions": [
+          "Opisz strukturę ankiety, wskazując bloki pytań i ich źródła."
+        ],
+        "addressed": [
+          "Dobór próby został uzasadniony w sekcji 2.2"
+        ],
+        "next_step": "Uzupełnij opis struktury ankiety, podając konkretnie bloki pytań i ich źródła."
+      },
+      "passed": false
+    }
+  ]
+}

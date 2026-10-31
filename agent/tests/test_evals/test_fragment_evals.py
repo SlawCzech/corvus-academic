@@ -51,6 +51,9 @@ def test_every_case_loads_and_says_what_it_expects() -> None:
     cases = load_cases()
 
     assert {c.id for c in cases} == {
+        "cel-nie-caly",
+        "dryf-od-celu",
+        "obszar-bez-wymagan",
         "poza-tematem",
         "runda-druga",
         "solidny-rozdzial",
