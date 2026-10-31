@@ -9,6 +9,7 @@ from typing import Any
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from src.application.brief import render_brief
 from src.application.excerpt import render_document_block
 from src.application.prompts import defence_questions as prompts
 from src.application.replies import DEFENCE_QUESTIONS
@@ -30,11 +31,7 @@ _EXPECTED_QUESTIONS = 3
 
 
 def _user_message(ctx: dict[str, Any]) -> str:
-    lines = [
-        f"Thesis topic: {ctx.get('current_topic') or 'not settled yet'}",
-        f"Field of study: {ctx.get('field_of_study') or 'unspecified'}",
-        f"Thesis type: {ctx.get('thesis_type') or 'bachelor'}",
-    ]
+    lines = [render_brief(ctx)]
     if ctx.get("detail"):
         lines.append(f"Supervisor's instructions: {ctx['detail']}")
     lines.append(render_document_block(ctx, head_chars=_MAX_TEXT_CHARS))

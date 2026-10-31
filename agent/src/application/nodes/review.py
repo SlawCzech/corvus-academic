@@ -7,6 +7,7 @@ from uuid import UUID
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from src.application.brief import render_research
 from src.application.excerpt import render_document_block
 from src.application.replies import RECOMMENDATIONS, review_reply_for
 from src.application.scoring import score_bands, within_band
@@ -380,7 +381,8 @@ def generate_review(state: ActionState) -> ReviewUpdate:
             f"Thesis title: {meta.get('title', 'Unknown')}\n"
             f"Author: {meta.get('author', 'Unknown')}\n"
             f"Type: {meta.get('thesis_type', 'bachelor')}\n"
-            f"Field: {meta.get('field_of_study', 'Unknown')}\n\n"
+            f"Field: {meta.get('field_of_study', 'Unknown')}\n"
+            f"{render_research(ctx)}\n"
             f"Guidelines:\n{ctx.get('guidelines', '')}\n\n"
             f"Accumulated findings:\n{findings_summary or 'None'}\n\n"
             f"Allowed recommendation (decided by the findings): "

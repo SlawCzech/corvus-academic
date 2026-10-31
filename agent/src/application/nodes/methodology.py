@@ -3,6 +3,7 @@
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from src.application.brief import render_brief
 from src.application.excerpt import render_document_block
 from src.application.prompts import methodology as prompts
 from src.application.replies import FINDINGS
@@ -31,7 +32,10 @@ def analyze_methodology(state: ActionState) -> AnalysisUpdate:
                 content=prompts.get_system_prompt(state.get("language", "pl"))
             ),
             HumanMessage(
-                content=(f"{document}\n\nGuidelines:\n{ctx.get('guidelines', '')}")
+                content=(
+                    f"{render_brief(ctx)}\n\n{document}\n\n"
+                    f"Guidelines:\n{ctx.get('guidelines', '')}"
+                )
             ),
         ]
         data = invoke_structured(llm, messages, FINDINGS, node="methodology")

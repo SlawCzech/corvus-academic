@@ -28,6 +28,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.types import Send
 from typing_extensions import TypedDict
 
+from src.application.brief import render_brief
 from src.application.chapters import frame, split_chapters
 from src.application.prompts import coherence as prompts
 from src.application.replies import DIGEST, FINDINGS
@@ -111,6 +112,15 @@ def digest_chapter(task: ChapterTask) -> DigestUpdate:
     }
 
 
+# Only this node compares the two, so a drift is reported once. Major at most:
+# the agreement may have moved on without the field being updated.
+_AGREED_AIM = (
+    "If the agreed aim is given and the thesis's own stated aim differs from it "
+    "in substance, report that as one finding, major at most, and ask the "
+    "supervisor to confirm which aim stands."
+)
+
+
 def _render_digests(digests: list[dict[str, Any]]) -> str:
     lines: list[str] = []
     for digest in sorted(digests, key=lambda d: int(d.get("index", 0))):
@@ -140,6 +150,7 @@ def check_coherence(state: ActionState) -> AnalysisUpdate:
                 ),
                 HumanMessage(
                     content=(
+                        f"{render_brief(ctx, reading=_AGREED_AIM)}\n\n"
                         f"## Introduction\n\n{introduction or '(not found)'}\n\n"
                         f"## The body, part by part (digests)\n\n"
                         f"{_render_digests(digests)}\n"
