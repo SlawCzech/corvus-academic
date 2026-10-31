@@ -1,0 +1,24 @@
+{
+  "id": "runda-druga",
+  "description": "Round 2: the student justified the sample, as asked, but still does not describe the questionnaire. The draft should say both, and open nothing new.",
+  "context": {
+    "current_topic": "Korzystanie z bankowości mobilnej przez klientów banków spółdzielczych",
+    "field_of_study": "Finanse i rachunkowość",
+    "part_name": "Rozdział 2: metodologia",
+    "round_number": 2,
+    "other_parts": [
+      {"name": "Rozdział 1: przegląd literatury", "state": "on_track"}
+    ],
+    "previous_verdict": "needs_changes",
+    "previous_feedback": "Metoda pasuje do tematu. Dwie rzeczy do zrobienia: proszę uzasadnić dobór próby i opisać, z czego składa się ankieta, czyli jakie bloki pytań zawiera i skąd się wzięły.",
+    "previous_text": "Rozdział 2. Metodologia badania\n\n2.1. Metoda\n\nBadanie przeprowadzono metodą ankiety internetowej wśród klientów trzech wrocławskich banków spółdzielczych. Ankieta zawierała dwadzieścia pytań zamkniętych o korzystanie z bankowości mobilnej.\n\n2.2. Przebieg badania\n\nAnkietę udostępniono w aplikacjach trzech banków w październiku 2025 roku."
+  },
+  "acceptable_directions": ["needs_additions", "needs_changes"],
+  "must_say": [
+    "The student has justified the choice of sample, as the supervisor asked.",
+    "The questionnaire's structure or the origin of its questions is still not described."
+  ],
+  "must_not_say": [
+    "The sample selection is not justified."
+  ]
+}

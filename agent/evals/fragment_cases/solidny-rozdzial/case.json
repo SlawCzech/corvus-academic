@@ -1,0 +1,21 @@
+{
+  "id": "solidny-rozdzial",
+  "description": "A sound literature chapter, on topic. Tests that the model does not go looking for trouble.",
+  "context": {
+    "current_topic": "Bezrobocie osób z wyższym wykształceniem na przykładzie Wrocławia",
+    "field_of_study": "Ekonomia",
+    "part_name": "Rozdział 1: przegląd literatury",
+    "round_number": 1,
+    "other_parts": [
+      {"name": "Wstęp", "state": "on_track"},
+      {"name": "Rozdział 2: badanie", "state": "not_submitted"}
+    ]
+  },
+  "acceptable_directions": ["on_track"],
+  "must_say": [],
+  "must_not_say": [
+    "The chapter has no conclusions or summary.",
+    "The fragment has no bibliography or reference list.",
+    "The research part or empirical data are missing."
+  ]
+}
