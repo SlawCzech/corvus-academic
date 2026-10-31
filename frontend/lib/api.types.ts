@@ -84,6 +84,7 @@ export type ActionType =
   | "defence_questions"
   | "generate_review"
   | "verify_bibliography"
+  | "review_fragment"
 
 export type ActionStatus =
   | "pending"
@@ -192,6 +193,25 @@ export interface ActionInProgress {
   updated_at: string
 }
 
+/** A fragment the promoter still owes an answer. */
+export interface FragmentAwaiting {
+  fragment_id: string
+  student_id: string
+  student_name: string
+  part_name: string
+  round_number: number
+  received_on: string
+}
+
+/** A part past its deadline, with nothing handed in for it since. */
+export interface PartOverdue {
+  part_id: string
+  student_id: string
+  student_name: string
+  part_name: string
+  due_on: string
+}
+
 export interface DashboardSummary {
   active_students: number
   without_topic: number
@@ -199,6 +219,8 @@ export interface DashboardSummary {
   /** Of those, the ones paused until the promoter answers. */
   awaiting_input: ActionInProgress[]
   recent_activity: RecentActivity[]
+  awaiting_feedback: FragmentAwaiting[]
+  overdue_parts: PartOverdue[]
 }
 
 // The agent's graph steps for a running action, and those already finished.
@@ -245,6 +267,79 @@ export interface AgentAction {
   updated_at: string
   // Unfinished actions only.
   progress?: ActionProgress | null
+}
+
+// ---------- parts and fragments ----------
+
+export type FragmentVerdict = "on_track" | "needs_changes" | "needs_additions"
+
+export type PartState = FragmentVerdict | "not_submitted" | "awaiting_feedback"
+
+/** What `review_fragment` returns: a summary and a draft, never a grade. */
+export interface FragmentReview {
+  summary: string
+  answer: string
+  direction: FragmentVerdict
+  strengths: string[]
+  changes: { point: string; quote: string }[]
+  additions: string[]
+  addressed: string[]
+  next_step: string
+}
+
+export interface ThesisPart {
+  id: string
+  student_id: string
+  name: string
+  position: number
+  due_on: string | null
+}
+
+export interface PartEntry extends ThesisPart {
+  rounds: number
+  state: PartState
+}
+
+export interface Fragment {
+  id: string
+  student_id: string
+  part_id: string
+  round_number: number
+  received_on: string
+  question: string | null
+  filename: string | null
+  format: string
+  pages: number
+  char_count: number
+  preview: string
+  has_file: boolean
+  purged_at: string | null
+  review_action_id: string | null
+  /** Null until the promoter has answered. */
+  verdict: FragmentVerdict | null
+  feedback: string | null
+  feedback_at: string | null
+  created_at: string
+}
+
+export interface FragmentEntry extends Fragment {
+  part_name: string
+  /** Lives in the AI run; null without one. */
+  summary: string | null
+  review: AgentAction | null
+}
+
+export interface TimelineEvent {
+  kind: "fragment" | "note" | "draft"
+  on: string
+  fragment: FragmentEntry | null
+  note: MeetingNote | null
+  draft: ThesisDraft | null
+}
+
+export interface Timeline {
+  parts: PartEntry[]
+  events: TimelineEvent[]
 }
 
 // ---------- guideline catalog ----------

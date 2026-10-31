@@ -8,11 +8,18 @@ import {
   IconFiles,
   IconMessage2,
   IconHistory,
+  IconTimeline,
 } from "@tabler/icons-react"
 import StatusSelect from "@/components/students/StatusSelect"
 import type { Student } from "@/lib/api.types"
 
-export type Section = "overview" | "actions" | "drafts" | "notes" | "history"
+export type Section =
+  | "overview"
+  | "timeline"
+  | "actions"
+  | "drafts"
+  | "notes"
+  | "history"
 
 export function isSection(value: string): value is Section {
   return SECTIONS.some((s) => s.key === value)
@@ -20,6 +27,7 @@ export function isSection(value: string): value is Section {
 
 const SECTIONS: { key: Section; label: string; icon: typeof IconEye }[] = [
   { key: "overview", label: "Przegląd", icon: IconEye },
+  { key: "timeline", label: "Przebieg pracy", icon: IconTimeline },
   { key: "actions", label: "Akcje AI", icon: IconSparkles },
   { key: "drafts", label: "Wersje pracy", icon: IconFiles },
   { key: "notes", label: "Notatki ze spotkań", icon: IconMessage2 },
