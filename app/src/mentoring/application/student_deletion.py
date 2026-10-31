@@ -36,7 +36,7 @@ class StudentDeletionService:
         drafts: ThesisDraftRepository,
         files: FileStore,
         agent: AgentClient,
-        fragments: ThesisFragmentRepository | None = None,
+        fragments: ThesisFragmentRepository,
     ) -> None:
         self._students = students
         self._student_rows = student_rows
@@ -63,11 +63,7 @@ class StudentDeletionService:
         for draft in drafts:
             if draft.file_id is not None:
                 await self._files.delete(draft.file_id)
-        fragments = (
-            await self._fragments.find_by_student(student.id)
-            if self._fragments is not None
-            else []
-        )
+        fragments = await self._fragments.find_by_student(student.id)
         for fragment in fragments:
             if fragment.file_id is not None:
                 await self._files.delete(fragment.file_id)

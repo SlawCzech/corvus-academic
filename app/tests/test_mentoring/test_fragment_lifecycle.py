@@ -61,7 +61,7 @@ class _Env:
         )
         self.fragment_rows = fragments
         self.retention = RetentionService(
-            StudentRepository(session), drafts, files, fragments=fragments
+            StudentRepository(session), drafts, fragments, files
         )
         self.deletion = StudentDeletionService(
             self.students,

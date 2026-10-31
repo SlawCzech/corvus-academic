@@ -1,8 +1,9 @@
 """Fill a promoter's roster with the demo students, their notes and theses.
 
-Seven fictional students from `scripts/seed_data/theses/` — six with a thesis
+Eight fictional students from `scripts/seed_data/theses/` — six with a thesis
 built to exercise the AI actions (see `docs/specs/demo-fixtures.md` and each
-`EXPECTED.md`), one with meeting notes only. Everything goes through the
+`EXPECTED.md`), one with meeting notes only, one with fragments of a thesis
+still being written. Everything goes through the
 mentoring services, so the result is exactly what the UI would have produced:
 uploads are extracted, versions numbered, files stored.
 
@@ -25,7 +26,7 @@ hold students (ADR 0008). A student whose name is already on that promoter's
 roster is left alone, so the script is safe to run again. `--dry-run` touches
 no database: it reads the data and extracts every thesis file.
 
-`--reset` first deletes the demo students from that roster — the seven named
+`--reset` first deletes the demo students from that roster — the eight named
 in the fixtures, nobody else — with their notes, versions, files and AI
 results, the way the promoter's own "delete student" does (ADR 0009), and
 then seeds them again. It needs the agent running; without it nothing is
@@ -108,6 +109,7 @@ async def reset_roster(
         MeetingNoteRepository,
         StudentRepository,
         ThesisDraftRepository,
+        ThesisFragmentRepository,
     )
     from src.shared.sql_file_store import SqlFileStore
 
@@ -132,6 +134,7 @@ async def reset_roster(
         ThesisDraftRepository(session),
         SqlFileStore(session, DraftFileModel),
         agent,
+        ThesisFragmentRepository(session),
     )
 
     demo_names = {s.full_name for s in students}
@@ -156,6 +159,7 @@ async def seed_roster(
     from src.guidelines.infrastructure.repositories import CatalogRepository
     from src.mentoring.application.demo_roster import DemoRoster
     from src.mentoring.application.draft_service import DraftService
+    from src.mentoring.application.fragment_service import FragmentService
     from src.mentoring.application.student_service import Caller, StudentService
     from src.mentoring.infrastructure.guidelines_adapter import (
         CatalogGuidelineSource,
@@ -165,6 +169,8 @@ async def seed_roster(
         MeetingNoteRepository,
         StudentRepository,
         ThesisDraftRepository,
+        ThesisFragmentRepository,
+        ThesisPartRepository,
     )
     from src.shared.sql_file_store import SqlFileStore
 
@@ -185,7 +191,13 @@ async def seed_roster(
         ThesisDraftRepository(session),
         SqlFileStore(session, DraftFileModel),
     )
-    report = await DemoRoster(service, drafts, guidelines).seed(
+    fragments = FragmentService(
+        service,
+        ThesisPartRepository(session),
+        ThesisFragmentRepository(session),
+        SqlFileStore(session, DraftFileModel),
+    )
+    report = await DemoRoster(service, drafts, guidelines, fragments).seed(
         Caller(user_id=user.id), students
     )
     for name in report.skipped:
@@ -198,7 +210,8 @@ async def seed_roster(
             )
         print(
             f"{seeded.full_name}: created with {seeded.notes} note(s) "
-            f"and {seeded.versions} thesis version(s)"
+            f"{seeded.versions} thesis version(s) "
+            f"and {seeded.fragments} fragment(s)"
         )
     return 0
 

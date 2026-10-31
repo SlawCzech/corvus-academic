@@ -1,0 +1,46 @@
+full_name = "Marian Paździoch"
+index_number = "101428"
+field_of_study = "Zarządzanie"
+thesis_type = "bachelor"
+topic = "Handel bazarowy w dobie e-commerce na przykładzie wrocławskiego targowiska"
+
+[[timeline]]
+date = 2026-02-10
+note = """Temat ustalony: handel bazarowy wobec sprzedaży internetowej, na przykładzie targowiska, które zna od podszewki. Prosiłem o wstęp na początek marca. Uprzedziłem, że praca nie może być wyłącznie obroną stoiska z cytrynami."""
+
+[[timeline]]
+date = 2026-03-03
+fragment = "fragments/wstep.md"
+part = "Wstęp"
+verdict = "on_track"
+feedback = """Dobry początek. Problem jest postawiony jasno, a przykład targowiska dobrze go osadza. Proszę pisać dalej, zaczynając od przeglądu literatury."""
+
+[[timeline]]
+date = 2026-03-24
+fragment = "fragments/literatura_runda_1.md"
+part = "Rozdział 1: przegląd literatury"
+question = "Czy ta literatura wystarczy do tematu?"
+verdict = "needs_additions"
+feedback = """Kierunek jest dobry: opis formatów handlu detalicznego prowadzi do tematu. Brakuje jednak drugiej strony. Proszę dodać literaturę o tym, jak e-commerce zmienia zachowania klientów, bo bez niej rozdział mówi tylko o bazarze."""
+
+[[timeline]]
+date = 2026-04-08
+note = """Omówiliśmy rozdział pierwszy. Zgodził się, że e-commerce musi wejść do przeglądu literatury. Rozdział drugi ma opisać, jak zbierze dane od sprzedawców; pomysł na wywiady wydaje się rozsądny."""
+
+[[timeline]]
+date = 2026-04-21
+fragment = "fragments/literatura_runda_2.md"
+part = "Rozdział 1: przegląd literatury"
+verdict = "on_track"
+feedback = """Teraz rozdział ma obie strony i widać, po co jest w tej pracy. Można go na razie zostawić i przejść do metodologii."""
+
+[[timeline]]
+date = 2026-05-05
+part = "Rozdział 3: wyniki badania"
+due = 2026-05-19
+
+[[timeline]]
+date = 2026-05-12
+fragment = "fragments/metodologia.md"
+part = "Rozdział 2: metodologia"
+question = "Czy dziesięć wywiadów ma sens?"

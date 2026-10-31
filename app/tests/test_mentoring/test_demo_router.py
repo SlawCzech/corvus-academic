@@ -16,7 +16,7 @@ from tests.test_mentoring.conftest import (
 )
 from tests.test_mentoring.fakes import FakeAgentClient
 
-DEMO_STUDENTS = 7
+DEMO_STUDENTS = 8
 
 
 @pytest.fixture

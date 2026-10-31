@@ -12,6 +12,8 @@ from src.mentoring.infrastructure.orm import (
     MeetingNoteModel,
     StudentModel,
     ThesisDraftModel,
+    ThesisFragmentModel,
+    ThesisPartModel,
 )
 from tests.test_mentoring.conftest import ADMIN_EMAIL, PROMOTOR_EMAIL, PROMOTOR_UUID
 from tests.test_mentoring.fakes import FakeAgentClient
@@ -24,20 +26,39 @@ async def _count(session: AsyncSession, model: type) -> int:
 def test_every_student_has_a_history_and_all_but_one_a_thesis() -> None:
     students = load()
 
-    assert len(students) == 7
+    assert len(students) == 8
     assert all(any(e.note for e in s.timeline) for s in students)
     without_thesis = [s for s in students if not any(e.draft for e in s.timeline)]
-    assert [s.full_name for s in without_thesis] == ["Kazimierz Pawlak"]
-    assert without_thesis[0].topic is None
+    assert {s.full_name for s in without_thesis} == {
+        "Kazimierz Pawlak",
+        "Marian Paździoch",
+    }
+    pawlak = next(s for s in without_thesis if s.full_name == "Kazimierz Pawlak")
+    assert pawlak.topic is None
+
+
+async def test_a_student_mid_writing_comes_with_parts_and_rounds(
+    db_session: AsyncSession,
+) -> None:
+    assert await seed_roster(db_session, PROMOTOR_EMAIL, load()) == 0
+
+    assert await _count(db_session, ThesisPartModel) == 4
+    fragments = (await db_session.execute(select(ThesisFragmentModel))).scalars().all()
+    assert len(fragments) == 4
+    assert sorted(f.round_number for f in fragments) == [1, 1, 1, 2]
+    assert sum(1 for f in fragments if f.verdict is None) == 1
+    # One part is planned, with a deadline nothing was handed in for.
+    parts = (await db_session.execute(select(ThesisPartModel))).scalars().all()
+    assert [p.name for p in parts if p.due_on] == ["Rozdział 3: wyniki badania"]
 
 
 async def test_seed_fills_the_promoters_roster(db_session: AsyncSession) -> None:
     assert await seed_roster(db_session, PROMOTOR_EMAIL, load()) == 0
 
     students = (await db_session.execute(select(StudentModel))).scalars().all()
-    assert len(students) == 7
+    assert len(students) == 8
     assert {s.promotor_id for s in students} == {PROMOTOR_UUID}
-    assert await _count(db_session, MeetingNoteModel) == 21
+    assert await _count(db_session, MeetingNoteModel) == 23
     # Six theses, one of them in two versions.
     assert await _count(db_session, ThesisDraftModel) == 7
 
@@ -157,7 +178,7 @@ async def test_running_it_again_adds_nothing(db_session: AsyncSession) -> None:
     await seed_roster(db_session, PROMOTOR_EMAIL, load())
     assert await seed_roster(db_session, PROMOTOR_EMAIL, load()) == 0
 
-    assert await _count(db_session, StudentModel) == 7
+    assert await _count(db_session, StudentModel) == 8
     assert await _count(db_session, ThesisDraftModel) == 7
 
 
@@ -191,7 +212,7 @@ async def test_reset_deletes_the_demo_students_and_nobody_else(
 
     left = (await db_session.execute(select(StudentModel))).scalars().all()
     assert [s.full_name for s in left] == ["Ktoś Inny"]
-    assert len(agent.deleted_students) == 7
+    assert len(agent.deleted_students) == 8
     # Nothing of theirs is stranded: notes, versions and the files themselves.
     assert await _count(db_session, MeetingNoteModel) == 0
     assert await _count(db_session, ThesisDraftModel) == 0
@@ -203,8 +224,8 @@ async def test_reset_then_seed_gives_the_same_roster(db_session: AsyncSession) -
     await reset_roster(db_session, PROMOTOR_EMAIL, load(), FakeAgentClient())
     assert await seed_roster(db_session, PROMOTOR_EMAIL, load()) == 0
 
-    assert await _count(db_session, StudentModel) == 7
-    assert await _count(db_session, MeetingNoteModel) == 21
+    assert await _count(db_session, StudentModel) == 8
+    assert await _count(db_session, MeetingNoteModel) == 23
     assert await _count(db_session, ThesisDraftModel) == 7
     assert await _count(db_session, DraftFileModel) == 7
 
@@ -218,7 +239,7 @@ async def test_reset_deletes_nothing_without_the_agent(
 
     assert await reset_roster(db_session, PROMOTOR_EMAIL, load(), agent) == 1
 
-    assert await _count(db_session, StudentModel) == 7
+    assert await _count(db_session, StudentModel) == 8
     assert await _count(db_session, ThesisDraftModel) == 7
 
 
@@ -251,4 +272,4 @@ async def test_resetting_one_student_leaves_the_others_as_they_were(
     assert len(agent.deleted_students) == 1
     changed = {name for name in before if before[name] != after[name]}
     assert changed == {"Jan Paweł Adamczewski"}
-    assert await _count(db_session, StudentModel) == 7
+    assert await _count(db_session, StudentModel) == 8

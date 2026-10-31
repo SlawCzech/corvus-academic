@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from src.mentoring.application.demo_roster import DemoEvent, DemoStudent
+from src.mentoring.domain.fragment import FragmentVerdict
 from src.mentoring.domain.student import ThesisType
 
 # src/mentoring/infrastructure → app/
@@ -32,11 +33,22 @@ def _event(raw: dict[str, Any], directory: Path, shift: int) -> DemoEvent:
         raise FileNotFoundError(
             f"{draft} is missing — build it with scripts/build_thesis_docx.py"
         )
+    fragment = directory / raw["fragment"] if "fragment" in raw else None
+    if fragment is not None and not fragment.is_file():
+        raise FileNotFoundError(f"{fragment} is missing")
+    verdict = raw.get("verdict")
+    due: date | None = raw.get("due")
     return DemoEvent(
         at=at,
         note=raw.get("note"),
         draft=draft,
         accepted=bool(raw.get("accepted", False)),
+        fragment=fragment,
+        part=raw.get("part"),
+        question=raw.get("question"),
+        verdict=FragmentVerdict(verdict) if verdict else None,
+        feedback=raw.get("feedback"),
+        due=due + timedelta(days=shift) if due else None,
     )
 
 

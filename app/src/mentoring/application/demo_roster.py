@@ -1,6 +1,6 @@
 """Demo students: a ready-made roster for someone trying Corvus out.
 
-The same seven fictional students `scripts/seed_demo.py` gives a promoter
+The same eight fictional students `scripts/seed_demo.py` gives a promoter
 from the command line (see `docs/specs/demo-fixtures.md`), here behind a
 button: a tester starts from theses with planted defects instead of hunting
 for a PDF. Everything goes through the mentoring services, so the result is
@@ -14,24 +14,36 @@ student is and how to put one on a roster.
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 from src.mentoring.application.draft_service import DraftService
+from src.mentoring.application.fragment_service import (
+    FragmentService,
+    FragmentUpload,
+)
 from src.mentoring.application.guidelines_port import GuidelineSource
 from src.mentoring.application.student_service import Caller, StudentService
+from src.mentoring.domain.fragment import FragmentVerdict
 from src.mentoring.domain.student import ThesisType
 
 
 @dataclass(frozen=True)
 class DemoEvent:
     """One step in a student's history: a meeting note, an uploaded version,
-    or the promoter accepting the latest version as final."""
+    the promoter accepting the latest version as final, a fragment of a part
+    with whatever the promoter said about it, or a part planned ahead."""
 
     at: datetime
     note: str | None = None
     draft: Path | None = None
     accepted: bool = False
+    fragment: Path | None = None
+    part: str | None = None
+    question: str | None = None
+    verdict: FragmentVerdict | None = None
+    feedback: str | None = None
+    due: date | None = None
 
 
 @dataclass(frozen=True)
@@ -50,6 +62,7 @@ class SeededStudent:
     notes: int
     versions: int
     guidelines: bool
+    fragments: int = 0
 
 
 @dataclass
@@ -67,16 +80,18 @@ class DemoRoster:
         students: StudentService,
         drafts: DraftService,
         guidelines: GuidelineSource,
+        fragments: FragmentService,
     ) -> None:
         self._students = students
         self._drafts = drafts
         self._guidelines = guidelines
+        self._fragments = fragments
 
     async def seed(self, caller: Caller, demo: list[DemoStudent]) -> DemoSeedReport:
         """Create the demo students that are not on the caller's roster yet.
 
         Safe to repeat: a name already on the roster is skipped, so a tester
-        who deleted two of the seven gets exactly those two back.
+        who deleted two of the eight gets exactly those two back.
         """
         report = DemoSeedReport()
         on_roster = {s.full_name for s in await self._students.list_students(caller)}
@@ -107,7 +122,7 @@ class DemoRoster:
             set_guidelines=set_id is not None,
         )
 
-        notes = versions = 0
+        notes = versions = fragments = 0
         latest_draft: uuid.UUID | None = None
         for event in seed.timeline:
             if event.note is not None:
@@ -129,9 +144,41 @@ class DemoRoster:
                 if latest_draft is None:
                     raise ValueError(f"{seed.full_name}: 'accepted' before any version")
                 await self._drafts.accept(caller, student.id, latest_draft, at=event.at)
+            if event.fragment is not None:
+                await self._seed_fragment(caller, student.id, event)
+                fragments += 1
+            elif event.part is not None:
+                await self._fragments.add_part(
+                    caller, student.id, event.part, event.due
+                )
         return SeededStudent(
             full_name=seed.full_name,
             notes=notes,
+            fragments=fragments,
             versions=versions,
             guidelines=set_id is not None,
         )
+
+    async def _seed_fragment(
+        self, caller: Caller, student_id: uuid.UUID, event: DemoEvent
+    ) -> None:
+        if event.fragment is None or event.part is None:  # pragma: no cover
+            raise ValueError("A fragment needs a file and a part")
+        fragment = await self._fragments.upload(
+            caller,
+            student_id,
+            event.part,
+            FragmentUpload(text=event.fragment.read_text(encoding="utf-8")),
+            question=event.question,
+            received_on=event.at.date(),
+            uploaded_at=event.at,
+        )
+        if event.verdict is not None:
+            await self._fragments.answer(
+                caller,
+                student_id,
+                fragment.id,
+                event.verdict,
+                event.feedback,
+                at=event.at,
+            )

@@ -37,6 +37,7 @@ from src.mentoring.infrastructure.repositories import (
     MeetingNoteRepository,
     StudentRepository,
     ThesisDraftRepository,
+    ThesisFragmentRepository,
 )
 from src.shared.sql_file_store import SqlFileStore
 from tests.test_mentoring.fakes import FakeAgentClient, docx_bytes, note_payload
@@ -63,7 +64,12 @@ class _Env:
             self.students, AgentActionRepository(session), drafts, agent
         )
         self.deletion = StudentDeletionService(
-            self.students, StudentRepository(session), drafts, files, agent
+            self.students,
+            StudentRepository(session),
+            drafts,
+            files,
+            agent,
+            ThesisFragmentRepository(session),
         )
 
     async def count(self, model: Any, **where: object) -> int:  # noqa: ANN401

@@ -72,7 +72,7 @@ async def seed_demo_students(
 ) -> DemoSeedResponse:
     """Put the demo students on the caller's roster — those not there yet.
 
-    For someone trying Corvus out: seven fictional students with notes and
+    For someone trying Corvus out: eight fictional students with notes and
     theses built to exercise the AI actions. They are ordinary students once
     created, removed with the ordinary delete.
     """
