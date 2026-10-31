@@ -24,11 +24,13 @@ function today(): string {
 export default function FragmentUploadForm({
   studentId,
   parts,
+  hasTopic,
   onSaved,
   onClose,
 }: {
   studentId: string
   parts: PartEntry[]
+  hasTopic: boolean
   onSaved: () => void
   onClose: () => void
 }) {
@@ -39,6 +41,7 @@ export default function FragmentUploadForm({
       key={`${defaults.model}:${defaults.language}`}
       studentId={studentId}
       parts={parts}
+      hasTopic={hasTopic}
       initialModel={defaults.model}
       language={defaults.language}
       onSaved={onSaved}
@@ -50,6 +53,7 @@ export default function FragmentUploadForm({
 function Form({
   studentId,
   parts,
+  hasTopic,
   initialModel,
   language,
   onSaved,
@@ -57,6 +61,7 @@ function Form({
 }: {
   studentId: string
   parts: PartEntry[]
+  hasTopic: boolean
   initialModel: string
   language: string
   onSaved: () => void
@@ -211,6 +216,12 @@ function Form({
           {needsKey && (
             <p className="mt-1 text-[12.5px] text-muted">
               Bez klucza API fragment zapisze się bez podsumowania.
+            </p>
+          )}
+          {!hasTopic && (
+            <p data-testid="no-topic-warning" className="mt-1 text-[12.5px] text-major-text">
+              Student nie ma ustalonego tematu, więc AI nie oceni, czy fragment do niego
+              pasuje. Temat ustawisz w Przeglądzie.
             </p>
           )}
         </div>

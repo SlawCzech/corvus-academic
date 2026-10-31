@@ -287,7 +287,9 @@ export default function StudentDetail({
           </div>
         )}
 
-        {section === "timeline" && <WorkTimeline studentId={studentId} />}
+        {section === "timeline" && (
+          <WorkTimeline studentId={studentId} hasTopic={student.current_topic !== null} />
+        )}
 
         {section === "actions" && (
           <div>

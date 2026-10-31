@@ -127,10 +127,10 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-function show(): void {
+function show(hasTopic = true): void {
   render(
     <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
-      <WorkTimeline studentId="s1" />
+      <WorkTimeline studentId="s1" hasTopic={hasTopic} />
     </SWRConfig>,
   )
 }
@@ -149,6 +149,26 @@ describe("fragmentFeedbackDraft", () => {
 })
 
 describe("WorkTimeline", () => {
+  it("warns that the AI cannot judge fit without a topic", async () => {
+    const user = userEvent.setup()
+    current = timeline(null)
+    show(false)
+
+    await user.click(await screen.findByRole("button", { name: "Dodaj fragment" }))
+
+    expect(screen.getByTestId("no-topic-warning")).toHaveTextContent("nie ma ustalonego tematu")
+  })
+
+  it("does not warn once the topic is settled", async () => {
+    const user = userEvent.setup()
+    current = timeline(null)
+    show()
+
+    await user.click(await screen.findByRole("button", { name: "Dodaj fragment" }))
+
+    expect(screen.queryByTestId("no-topic-warning")).not.toBeInTheDocument()
+  })
+
   it("shows the summary, and the draft in the box with the AI's suggestion", async () => {
     show()
 

@@ -84,6 +84,8 @@ export interface NewStudent {
   field_of_study: string
   thesis_type: string
   index_number?: string | null
+  research_area?: string | null
+  research_aim?: string | null
 }
 
 export async function createStudent(student: NewStudent): Promise<Student> {
@@ -106,6 +108,8 @@ export interface StudentChanges {
   field_of_study?: string
   thesis_type?: ThesisType
   index_number?: string | null
+  research_area?: string | null
+  research_aim?: string | null
   current_topic?: string | null
   status?: StudentStatus
   guideline_set_id?: string | null

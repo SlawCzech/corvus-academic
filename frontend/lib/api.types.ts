@@ -34,6 +34,8 @@ export interface Student {
   thesis_type: ThesisType
   current_topic: string | null
   current_topic_set_at: string | null
+  research_area: string | null
+  research_aim: string | null
   status: StudentStatus
   created_at: string
   updated_at: string
