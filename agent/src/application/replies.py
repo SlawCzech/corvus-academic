@@ -201,6 +201,30 @@ class ProgressReply(_Reply):
 PROGRESS = TypeAdapter(ProgressReply)
 
 
+class FragmentChangeReply(_Reply):
+    point: Text
+    quote: str = ""
+
+
+class FragmentReviewReply(_Reply):
+    summary: Text
+    answer: str = ""
+    direction: Annotated[
+        Literal["on_track", "needs_changes", "needs_additions"],
+        BeforeValidator(_lower),
+    ]
+    strengths: list[str] = Field(default_factory=list[str])
+    changes: list[FragmentChangeReply] = Field(
+        default_factory=list[FragmentChangeReply]
+    )
+    additions: list[str] = Field(default_factory=list[str])
+    addressed: list[str] = Field(default_factory=list[str])
+    next_step: str = ""
+
+
+FRAGMENT_REVIEW = TypeAdapter(FragmentReviewReply)
+
+
 class MeetingNoteReply(_Reply):
     content: Text
     topics_discussed: list[str] = Field(default_factory=list[str])
