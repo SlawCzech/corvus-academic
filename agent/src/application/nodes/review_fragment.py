@@ -34,8 +34,11 @@ def _within(text: str, budget: int | None) -> str:
 _ONE_PART = (
     "This fragment is one part of the thesis, so it is not expected to carry out "
     "the whole aim or to settle a hypothesis. Ask only whether it leads towards "
-    "them. If it plainly heads somewhere else, treat that as you would a fragment "
-    "off the topic."
+    "them. Tying it to the aim explicitly is for a later part, so a missing link "
+    "is at most a suggestion and leaves the direction on_track. Only if the "
+    "fragment plainly heads somewhere else, as when a method studies other people "
+    "or another question than the aim names, treat it as you would a fragment off "
+    "the topic."
 )
 _MASTER_LEVEL = (
     "Level: a master's thesis written as an article, not a first piece of "

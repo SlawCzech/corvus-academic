@@ -277,9 +277,16 @@ Zostaje:
   tekst bywa jedyną drogą.
 - [ ] **Kolejka na dashboardzie nie ma paginacji** — przy kilku studentach zbędna,
   przy kilkudziesięciu trzeba ją przyciąć.
-- [ ] **`review_fragment` na żywo przez Celery niesprawdzony** — graf przeszedł przez
-  evals na prawdziwym modelu, `app` przez testy z fałszywym agentem, a UI w
-  przeglądarce bez agenta. Całość z workerem i Redisem wymaga `make dev`.
+- [x] **`review_fragment` na żywo przez Celery** — przeszło 2026-10-31 przez prawdziwego
+  workera i Redis, na Claude, w tym ścieżka odrzuconego klucza.
+- [ ] **Evalsy fragmentów tylko na `qwen3`** — produkcja działa na kluczach
+  użytkowników, a ton na Claude nie był mierzony.
+- [ ] **Pełna recenzja bez evala po zmianie kontekstu** — metodologia, spójność i
+  recenzja dostały blok z ADR 0015, a `make eval` nie był po tym puszczony do końca.
+- [ ] **Przypadki graniczne fragmentów są niestabilne na `qwen3`** — `cel-nie-caly` i
+  `runda-druga` przechodzą 2 z 3 powtórzeń. Werdykt i tak ustawia promotor.
+- [ ] **Poziom magisterki przy fragmentach bez evala** — `review_fragment` dostaje typ
+  pracy, ale żaden przypadek nie sprawdza, czy to zmienia wynik.
 
 ---
 

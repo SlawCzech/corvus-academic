@@ -1,0 +1,22 @@
+{
+  "id": "dryf-od-celu",
+  "description": "A decent method for the wrong question: the topic still fits, but the survey measures fees and the market's manager, and the agreed aim is about why customers stay. Only the aim shows it, so this is what the field is for.",
+  "context": {
+    "current_topic": "Handel bazarowy w dobie e-commerce na przykładzie wrocławskich targowisk",
+    "field_of_study": "Zarządzanie",
+    "thesis_type": "bachelor",
+    "research_area": "Zarządzanie w handlu detalicznym",
+    "research_aim": "Cel: ustalić, dlaczego część klientów pozostaje przy zakupach na targowisku mimo rozwoju handlu internetowego.\nHipoteza: o pozostaniu klientów decydują osobiste relacje ze sprzedawcą, a nie cena.",
+    "part_name": "Rozdział 2: metodologia",
+    "round_number": 1,
+    "other_parts": [
+      {"name": "Rozdział 1: przegląd literatury", "state": "on_track"},
+      {"name": "Rozdział 3: wyniki badania", "state": "not_submitted"}
+    ]
+  },
+  "acceptable_directions": ["needs_changes", "needs_additions"],
+  "must_say": [
+    "The planned survey does not address the agreed aim: it asks about fees and the market's manager, not why customers stay or their relations with sellers."
+  ],
+  "must_not_say": []
+}

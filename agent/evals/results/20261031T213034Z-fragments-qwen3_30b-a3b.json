@@ -1,0 +1,181 @@
+{
+  "model": "qwen3:30b-a3b",
+  "judge": "qwen3:30b-a3b",
+  "passed": 5,
+  "cases": [
+    {
+      "case_id": "cel-nie-caly",
+      "model": "qwen3:30b-a3b",
+      "seconds": 83.2,
+      "error": null,
+      "direction": "needs_additions",
+      "problems": [
+        "direction needs_additions"
+      ],
+      "output": {
+        "summary": "Rozdział 1 omawia motywację i rotację pracowników z perspektywy zarządzania zasobami ludzkimi. W sekcji 1.1 przedstawione są koncepcje zaangażowania pracowników, w tym trzy składniki określone przez Meyer i Allen (afektywny, normatywny, trwania), które opisują emocjonalne przywiązanie, zobowiązanie i koszty odejścia. Sekcja 1.2 analizuje przyczyny rotacji, odwołując się do modelu Herzberga (czynniki higieniczne i motywujące) oraz teorii osadzenia w pracy (Mitchell), podkreślając wieloczynnikowość decyzji o opuszczeniu stanowiska. W sekcji 1.3 omówiona jest elastyczność czasu pracy jako narzędzie budowania zaangażowania, z uwzględnieniem specyfiki małych firm usługowych, gdzie elastyczność często wynika z nieformalnych ustaleń z właścicielem, co utrudnia porównania między organizacjami.",
+        "answer": "",
+        "direction": "needs_additions",
+        "strengths": [
+          "Wspomnienie kontekstu małych firm usługowych w sekcji 1.3, podkreślającego nieformalne ustalenia jako kluczowy czynnik",
+          "Łączenie modelu Herzberga z teorią osadzenia w pracy (Mitchell) w kontekście rotacji"
+        ],
+        "changes": [],
+        "additions": [
+          "Wskazanie w sekcji 1.3 związku pomiędzy elastycznością czasu pracy, zaangażowaniem pracownika a niższą rotacją."
+        ],
+        "addressed": [],
+        "next_step": "Kontynuować pisanie rozdziału."
+      },
+      "passed": false
+    },
+    {
+      "case_id": "dryf-od-celu",
+      "model": "qwen3:30b-a3b",
+      "seconds": 38.4,
+      "error": null,
+      "direction": "needs_changes",
+      "problems": [],
+      "output": {
+        "summary": "Rozdział 2. Metodologia badania przedstawia podejście ilościowe, skupiające się na ocenie przez sprzedawców wysokości opłat targowych i działań zarządcy. Badanie obejmuje ankietę przeprowadzoną wśród sprzedawców na trzech wrocławskich targowiskach, z zakładanym zwrotem 60 ankiet. Respondenci to osoby prowadzące stoiska co najmniej od roku. Narzędzie badawcze to kwestionariusz z pytaniami o wysokość opłat, infrastrukturę, czystość i kontakt z zarządcą, z odpowiedziami w pięciostopniowej skali. Wyniki mają zostać przedstawione w tabelach i porównane z opłatami w innych miastach.",
+        "answer": "",
+        "direction": "needs_changes",
+        "strengths": [
+          "Jasna struktura rozdziału metodologii (pytanie, respondent, narzędzie)"
+        ],
+        "changes": [
+          {
+            "point": "Badanie powinno skupiać się na klientach, a nie sprzedawcach, zgodnie z celem pracy.",
+            "quote": "Badanie dotyczy tego, jak sprzedawcy na targowiskach oceniają wysokość opłat targowych oraz działania zarządcy."
+          }
+        ],
+        "additions": [],
+        "addressed": [],
+        "next_step": "Przerób metodologię, skupiając się na badaniu klientów zamiast sprzedawców."
+      },
+      "passed": true
+    },
+    {
+      "case_id": "obszar-bez-wymagan",
+      "model": "qwen3:30b-a3b",
+      "seconds": 42.7,
+      "error": null,
+      "direction": "on_track",
+      "problems": [],
+      "output": {
+        "summary": "Rozdział 1 przedstawia podstawy teoretyczne, koncentrując się na pojęciu instytucji w ekonomii, w tym na podziale Acemoglu i Robinsona na instytucje włączające i wyzyskujące. Następnie analizuje biurokrację jako koszt prowadzenia firmy, odwołując się do raportów Banku Światowego Doing Business, jednocześnie zauważając krytykę dotyczącą pomiaru przepisów na papierze zamiast praktyki. W części poświęconej Polsce podkreśla rolę gmin w decyzjach lokalnych dla przedsiębiorców, proponując czas wydawania pozwoleń budowlanych jako miarę jakości instytucji lokalnych, która zostanie powiązana z liczbą nowo zarejestrowanych firm w dalszej części pracy.",
+        "answer": "",
+        "direction": "on_track",
+        "strengths": [
+          "Poprawne połączenie teorii instytucjonalnej (Acemoglu i Robinson) z kosztami biurokratycznymi dla przedsiębiorstw",
+          "Jasne łączenie kontekstu polskiego z gminami jako podstawy pomiaru jakości instytucji"
+        ],
+        "changes": [],
+        "additions": [],
+        "addressed": [],
+        "next_step": "Kontynuuj rozwijanie podstaw teoretycznych, koncentrując się na lokalnych mechanizmach instytucjonalnych w gminach."
+      },
+      "passed": true
+    },
+    {
+      "case_id": "poza-tematem",
+      "model": "qwen3:30b-a3b",
+      "seconds": 53.6,
+      "error": null,
+      "direction": "needs_changes",
+      "problems": [],
+      "output": {
+        "summary": "Fragment zawiera Rozdział 1 pt. 'Historia naukowego zarządzania', w którym omówiono podstawy naukowego zarządzania Fredericka Taylora oparte na badaniu czasu wykonywania czynności w przemyśle, zastosowanie tych zasad przez Henry'ego Forda w linii montażowej oraz pięć funkcji kierowniczych Henri Fayola. Tekst przedstawia historyczne konteksty zarządzania w przedsiębiorstwach produkcyjnych, odnosząc się do prac Taylora z 1911 roku, Forda z 1913 roku oraz zasad Fayola, które są wciąż cytowane w podręcznikach.",
+        "answer": "",
+        "direction": "needs_changes",
+        "strengths": [
+          "Precyzyjna identyfikacja kluczowych postaci w zarządzaniu historycznym i ich podstawowych przyczynków (studiów czasu-ruchu Taylora, linii montażowej Forda, pięciu funkcji Fayola)."
+        ],
+        "changes": [
+          {
+            "point": "Tytuł rozdziału i treść skupiają się na teoriach zarządzania przed erą pracy zdalnej, co nie jest zgodne z tematem pracy dotyczącym wpływu pracy zdalnej na zespoły programistyczne.",
+            "quote": "Rozdział 1. Historia naukowego zarządzania"
+          }
+        ],
+        "additions": [],
+        "addressed": [],
+        "next_step": "Przesunąć skupienie przegląd literatury na źródła dotyczące pracy zdalnej, efektywności zespołów programistycznych oraz zarządzania w małych firmach."
+      },
+      "passed": true
+    },
+    {
+      "case_id": "runda-druga",
+      "model": "qwen3:30b-a3b",
+      "seconds": 76.8,
+      "error": null,
+      "direction": "on_track",
+      "problems": [
+        "direction on_track"
+      ],
+      "output": {
+        "summary": "Fragment obejmuje Rozdział 2 (Metodologia) pracy licencjackiej na temat korzystania z bankowości mobilnej przez klientów banków spółdzielczych. Opisuje metodę badania w postaci internetowej ankiety z 20 zamkniętymi pytaniami skierowanych do klientów trzech wrocławskich banków spółdzielczych. Sekcja 2.2 wyjaśnia dobór próby celowej dla klientów korzystających z aplikacji mobilnej w ciągu ostatniego roku, uzasadniając wybór banków spółdzielczych z powodu starszej grupy klientów, która jest kluczowa dla analizy zmian zachowań. Badanie przeprowadzono w październiku 2025 r. przez cztery tygodnie, uzyskując 214 odpowiedzi, z uwzględnieniem ograniczeń w uogólnianiu.",
+        "answer": "",
+        "direction": "on_track",
+        "strengths": [
+          "Uzasadniono dobór próby celowej, w tym wybór banków spółdzielczych i powody dla starszej grupy klientów."
+        ],
+        "changes": [],
+        "additions": [
+          "Opisz strukturę ankiety, wskazując bloki pytań i ich źródła."
+        ],
+        "addressed": [
+          "Uzasadniono dobór próby"
+        ],
+        "next_step": "Opisz strukturę ankiety, wskazując bloki pytań i ich źródła."
+      },
+      "passed": false
+    },
+    {
+      "case_id": "solidny-rozdzial",
+      "model": "qwen3:30b-a3b",
+      "seconds": 23.0,
+      "error": null,
+      "direction": "on_track",
+      "problems": [],
+      "output": {
+        "summary": "Fragment obejmuje Rozdział 1: Kapitał ludzki a rynek pracy absolwentów, przedstawiając teorie kapitału ludzkiego (Becker, Schultz), teorię sygnalizacji (Spence) oraz koncepcję niedopasowania kwalifikacji (Hartoga, Freeman). Autor argumentuje, że teorie kapitału ludzkiego i sygnalizacji prowadzą do odmiennych wniosków dotyczących przyczyn bezrobocia absolwentów, co jest kluczowe dla tej pracy. Wskazuje na zastosowanie tych teorii w kontekście Polski, odnosząc się do badań z Bilansu Kapitału Ludzkiego, które wskazują na braki kompetencji miękkich u pracodawców. Fragment zakończony jest uwagą o powrocie do tych koncepcji w części empirycznej, odnosząc się do Wrocławia.",
+        "answer": "",
+        "direction": "on_track",
+        "strengths": [
+          "Jasna i konkretna kontrastowa prezentacja teorii kapitału ludzkiego i sygnalizacji, która bezpośrednio łączy się z tematem bezrobocia absolwentów."
+        ],
+        "changes": [],
+        "additions": [],
+        "addressed": [],
+        "next_step": "Kontynuuj pisanie rozdziału 1."
+      },
+      "passed": true
+    },
+    {
+      "case_id": "urwany-rozdzial",
+      "model": "qwen3:30b-a3b",
+      "seconds": 22.8,
+      "error": null,
+      "direction": "on_track",
+      "problems": [],
+      "output": {
+        "summary": "Rozdział 2 opisuje metodologię badania, skupiając się na problemie wpływu pracy zdalnej na wydajność zespołów programistycznych w małych firmach. Autor definiuje główne pytanie badawcze oraz trzy szczególne kwestie: zmiany w liczbie zamkniętych zadań, czasie reakcji na błędy oraz ocenie pracy przez programistów. Metodologia obejmuje studium przypadków czterech firm zatrudniających 20-50 osób, wykorzystując dane z systemów zarządzania zadaniami (2019-2023) oraz 12 wywiadów z kierownikami. Przyjęto połączenie danych ilościowych i jakościowych, planując porównanie statystyk przed i po przejściu na pracę zdalną oraz zakodowanie wywiadów zgodnie z literaturą.",
+        "answer": "",
+        "direction": "on_track",
+        "strengths": [
+          "Jasno sformułowane pytania badawcze łączące się z tematem pracą zdalną i wydajnością zespołów programistycznych."
+        ],
+        "changes": [
+          {
+            "point": "Uzupełnienie brakującego kontynuacji w opisie analizy",
+            "quote": "Wywiady zostaną zakodowane według kategorii wyłonionych z literatury, a następnie"
+          }
+        ],
+        "additions": [],
+        "addressed": [],
+        "next_step": "Kontynuuj opis przebiegu analizy, uzupełniając brakującą część sekcji 2.3."
+      },
+      "passed": true
+    }
+  ]
+}

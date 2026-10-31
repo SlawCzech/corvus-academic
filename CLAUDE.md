@@ -195,6 +195,7 @@ corvus/
 │   │   │   └── review.py     # encje: Review, Score
 │   │   ├── application/
 │   │   │   ├── graph.py      # build_action_graph — graf per typ akcji
+│   │   │   ├── brief.py      # temat, kierunek, typ, obszar i cel jednym blokiem
 │   │   │   ├── excerpt.py    # fragment + mapa całości + reguły dla węzłów
 │   │   │   │                   czytających tekst pracy (patrz `document/outline.py`)
 │   │   │   ├── nodes/        # structure, methodology, requirements, review,
@@ -491,6 +492,10 @@ akcje czytają „ostatnią wersję”: część pracy ma rundy, werdykt ustawia
 student nie ma konta, a kalendarz to oś czasu —
 [ADR 0014](docs/adr/0014-thesis-fragments-in-rounds.md) ·
 [plan](docs/specs/thesis-fragments-plan.md).
+Promotor może podać obszar badawczy i ustalony cel z hipotezami. To kontekst, nie
+wymagania: węzły oceniające sens pracy dostają je we wspólnym bloku
+(`application/brief.py`), a reguła czytania pojawia się tylko, gdy pola są wypełnione —
+[ADR 0015](docs/adr/0015-research-area-and-aim-on-the-student.md).
 
 ---
 

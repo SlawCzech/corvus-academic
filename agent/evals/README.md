@@ -90,3 +90,17 @@ zaskakującą liczbę da się przeczytać, zamiast puszczać jeszcze raz.
 |---|---|---|---|---|---|---|---|---|
 | 2026-09-30 | punkt wyjścia (przed structured output i weryfikacją cytatów) | qwen3:30b-a3b | 0.61 | 1 | 0 | 0 | 1 | 1552 s |
 | 2026-09-30 | + structured output, cytaty i weryfikacja (punkty 3–4) | qwen3:30b-a3b | 0.67 | 0 | 3 | 0 | 0 | 1846 s |
+
+### Obszar i cel (ADR 0015)
+
+Trzy przypadki na ryzyka nowych pól, `qwen3:30b-a3b`, 2026-10-31, po trzy powtórzenia
+tam, gdzie wynik bywał różny:
+
+| Przypadek | Co sprawdza | Wynik |
+|---|---|---|
+| `dryf-od-celu` | ankieta bada nie tych ludzi, co cel: widać to tylko z pola | 4/4 |
+| `obszar-bez-wymagan` | obszar nie staje się listą lektur | 1/1 |
+| `cel-nie-caly` | cel nie psuje dobrego rozdziału | 2/3 po zaostrzeniu reguły |
+
+`runda-druga` wyszła 2/3: kierunek za każdym razem dobry, raz sędzia uznał ton za
+mało zachęcający. Na Claude nie mierzone.
