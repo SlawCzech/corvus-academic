@@ -84,6 +84,8 @@ Użytkownik
       │                  rubryka wybranego zestawu wytycznych jedzie w kontekście
       ├─ /students/{id}/drafts — upload wersji pracy (plik + tekst), pobranie,
       │                  akceptacja wersji finalnej, retencja (ADR 0006)
+      ├─ /students/{id}/fragments, /parts, /timeline — fragmenty pracy w rundach,
+      │                  feedback promotora, oś czasu (ADR 0014)
       └─ /guidelines/* — katalog wytycznych; zapis pod /guidelines/admin
   → agent :8002 (POST /actions, GET /actions/{task_id})
   → Celery task (broker: Redis) → agent-worker
@@ -103,6 +105,9 @@ Użytkownik
         (Weryfikacja: bez modelu — cytat każdej uwagi musi być w tekście,
          duplikaty z różnych analiz scalane; `agent/src/application/grounding.py`)
       → draft_meeting_note:   [Szkic notatki]
+      → review_fragment:      [Podsumowanie i łagodny feedback do fragmentu]
+        (praca w toku: bez punktów i ocen, nie wytyka tego, czego jeszcze nie ma;
+         kolejna runda dostaje poprzedni feedback; bez rubryki wytycznych)
       → verify_bibliography:  [Lista pozycji] → [Crossref, potem katalogi bibliotek
                               (Biblioteka Narodowa, Open Library), bez modelu]
                               → [Agent ⇄ narzędzia tych źródeł]* → [Werdykty]
@@ -163,9 +168,10 @@ corvus/
 │   │   │                          admin}_router, router (agreguje), models,
 │   │   │                          repositories, secrets, token_store, limiter
 │   │   ├── mentoring/
-│   │   │   ├── domain/       # student.py, draft.py, action.py, retention.py
+│   │   │   ├── domain/       # student.py, draft.py, fragment.py, action.py, retention.py
 │   │   │   ├── application/  # student_service (Caller, reguła własności),
-│   │   │   │                   draft_service, retention_service, context,
+│   │   │   │                   draft_service, fragment_service, fragment_feedback,
+│   │   │   │                   timeline_service, retention_service, context,
 │   │   │   │                   guidelines_port, agent_client,
 │   │   │   │                   action_service, exceptions
 │   │   │   └── infrastructure/  # dependencies, schemas, errors,
@@ -193,7 +199,8 @@ corvus/
 │   │   │   │                   czytających tekst pracy (patrz `document/outline.py`)
 │   │   │   ├── nodes/        # structure, methodology, requirements, review,
 │   │   │   │                   propose_topic, defence_questions,
-│   │   │   │                   check_progress, draft_meeting_note
+│   │   │   │                   check_progress, draft_meeting_note,
+│   │   │   │                   review_fragment
 │   │   │   └── tasks.py      # Celery: run_action
 │   │   └── infrastructure/
 │   │       ├── llm_factory.py   # BYOK (ContextVar) → Claude/OpenAI, inaczej Ollama
@@ -479,6 +486,11 @@ przez cały przebieg i widać ją we Flower —
 Na produkcji nie ma lokalnych modeli czatu: `LOCAL_MODELS_ENABLED=false`, akcja
 bez dostawcy to 409, embeddingi zostają na lokalnej Ollamie —
 [ADR 0013](docs/adr/0013-a-server-without-local-models.md).
+Fragmenty pracy (rozdział, część literaturowa) to osobny byt niż wersje pracy, bo
+akcje czytają „ostatnią wersję”: część pracy ma rundy, werdykt ustawia promotor,
+student nie ma konta, a kalendarz to oś czasu —
+[ADR 0014](docs/adr/0014-thesis-fragments-in-rounds.md) ·
+[plan](docs/specs/thesis-fragments-plan.md).
 
 ---
 

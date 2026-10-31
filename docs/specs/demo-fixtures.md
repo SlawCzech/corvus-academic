@@ -1,6 +1,6 @@
 # Demo fixtures — theses of varying quality
 
-> Status: cast and titles agreed 2026-09-30. Written: Anioł (#1), Ochódzki (#2), Kiepski (#3), Kargul (#4), Miauczyński (#5, v1 and v2), Adamczewski (#6) — all six done.
+> Status: cast and titles agreed 2026-09-30. Written: Anioł (#1), Ochódzki (#2), Kiepski (#3), Kargul (#4), Miauczyński (#5, v1 and v2), Adamczewski (#6) — all six done. Added 2026-10-31: Paździoch (#8), fragments of a thesis still being written.
 > Fixtures: `app/scripts/seed_data/theses/<nn>_<name>/` — `thesis.md`,
 > `EXPECTED.md`, built DOCX. Build: `uv run scripts/build_thesis_docx.py <dir>`
 > (from `app/`).
@@ -65,12 +65,16 @@ Adamczewski has the thesis decided before the research.
   (Kiepski) breaks a concrete requirement so RAG has something to find.
 - **Students.** Theses hang off seeded students with meeting notes, so the demo
   opens on a populated roster. Plus Kazimierz Pawlak: meeting notes only, no
-  thesis — counterpart to Kargul and the `propose_topic` case.
+  thesis — counterpart to Kargul and the `propose_topic` case. And Marian
+  Paździoch: no whole thesis either, but a topic, four fragments in rounds, one
+  waiting for feedback and one part past its deadline — the "Przebieg pracy" case
+  (ADR 0014). `fragments/do_wgrania_rozdzial_3.docx` is left unused, to upload by
+  hand.
 
 ## Seeding
 
 `make seed-demo PROMOTOR=<e-mail>` (`app/scripts/seed_demo.py`) gives an existing
-promoter account all seven students. Each fixture directory has a `student.toml`:
+promoter account all eight students. Each fixture directory has a `student.toml`:
 the student's details, topic, and a dated timeline of meeting notes and uploaded
 versions. The script goes through `StudentService` and `DraftService`, so uploads
 are extracted and versioned exactly as in the UI. Students already on the roster

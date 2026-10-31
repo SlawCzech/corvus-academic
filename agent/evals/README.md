@@ -38,6 +38,27 @@ Znana rzecz spoza klucza: w `pokolenie-z` „Kozioł” stoi po „Koźmińskim�
 polskim porządku alfabetycznym powinien przed. Model, który to wyłapie, ma
 rację; w wyniku liczy się to jako `unmatched`.
 
+## Fragmenty (`review_fragment`)
+
+Osobny zestaw w `fragment_cases/`, bo ta akcja nie zwraca uwag z wagą, a jej
+najważniejszego wymogu, łagodnego tonu, nie utrzyma żaden test jednostkowy.
+
+```bash
+make eval-fragments                         # qwen3:30b-a3b, wszystkie przypadki
+make eval-fragments MODEL=claude            # ANTHROPIC_API_KEY
+```
+
+| id | co w nim siedzi |
+|---|---|
+| `solidny-rozdzial` | dobry rozdział na temat; model nie ma czego szukać na siłę |
+| `urwany-rozdzial` | dobry rozdział urwany w połowie zdania; nie wolno mu tego wytknąć |
+| `poza-tematem` | sprawny rozdział nie na temat; jedyny, który ma wrócić `needs_changes` |
+| `runda-druga` | druga runda: jedna z dwóch próśb wykonana; szkic ma powiedzieć jedno i drugie |
+
+Bez modelu sprawdzane są limity list, brak ocen liczbowych i ostrych sformułowań.
+Sędzia czyta sam feedback (bez podsumowania) i odpowiada, czy zachęca do dalszej
+pracy, oraz czy padło to, co paść miało, i nie padło to, co nie miało.
+
 ## Co znaczą liczby
 
 - **recall** — ile wpisanych wad recenzja nazwała. Główna liczba.
