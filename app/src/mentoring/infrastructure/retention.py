@@ -30,8 +30,8 @@ async def sweep_once(now: datetime | None = None) -> int:
         service = RetentionService(
             StudentRepository(session),
             ThesisDraftRepository(session),
+            ThesisFragmentRepository(session),
             SqlFileStore(session, DraftFileModel),
-            fragments=ThesisFragmentRepository(session),
         )
         return await service.sweep(now or datetime.now(UTC))
 

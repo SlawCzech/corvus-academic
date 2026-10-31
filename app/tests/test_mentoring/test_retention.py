@@ -20,6 +20,7 @@ from src.mentoring.infrastructure.repositories import (
     MeetingNoteRepository,
     StudentRepository,
     ThesisDraftRepository,
+    ThesisFragmentRepository,
 )
 from src.shared.sql_file_store import SqlFileStore
 from tests.test_mentoring.conftest import PROMOTOR_EMAIL, PROMOTOR_PASSWORD, login
@@ -192,7 +193,10 @@ async def test_sweep_purges_text_and_file_and_keeps_the_row(
     second = await drafts.upload(_CALLER, student.id, "v2.docx", docx_bytes("Dwa"))
     await drafts.accept(_CALLER, student.id, second.draft.id)
     sweep = RetentionService(
-        StudentRepository(session), ThesisDraftRepository(session), files
+        StudentRepository(session),
+        ThesisDraftRepository(session),
+        ThesisFragmentRepository(session),
+        files,
     )
 
     assert await sweep.sweep(datetime.now(UTC) + timedelta(days=1)) == 0

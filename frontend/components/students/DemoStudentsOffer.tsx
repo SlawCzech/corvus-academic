@@ -9,7 +9,7 @@ interface DemoStudentsOfferProps {
 }
 
 /**
- * An empty roster's way in: seven fictional students with meeting notes and
+ * An empty roster's way in: eight fictional students with meeting notes and
  * theses built to exercise the AI actions (docs/specs/demo-fixtures.md).
  * Once loaded they are ordinary students — deleted the ordinary way.
  */
@@ -39,7 +39,7 @@ export default function DemoStudentsOffer({ onLoaded }: DemoStudentsOfferProps) 
         Nie masz jeszcze żadnych studentów.
       </p>
       <p className="mt-1.5 max-w-2xl text-[13px] text-muted-strong">
-        Możesz zacząć od przykładowych: siedmioro fikcyjnych studentów z notatkami ze spotkań i
+        Możesz zacząć od przykładowych: ośmioro fikcyjnych studentów z notatkami ze spotkań i
         pracami o różnej jakości — z celowo zaszytymi błędami, żeby było widać, co znajdują akcje
         AI. Usuwasz ich jak każdego innego studenta, kiedy przejdziesz na własne prace.
       </p>

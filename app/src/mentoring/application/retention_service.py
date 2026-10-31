@@ -36,9 +36,9 @@ class RetentionService:
         self,
         students: StudentRepository,
         drafts: ThesisDraftRepository,
+        fragments: ThesisFragmentRepository,
         files: FileStore,
         policy: RetentionPolicy | None = None,
-        fragments: ThesisFragmentRepository | None = None,
     ) -> None:
         self._students = students
         self._drafts = drafts
@@ -72,8 +72,6 @@ class RetentionService:
 
     async def _purge_fragments(self, student: Student, now: datetime) -> int:
         """Purge a student's fragments that are due. Does not commit."""
-        if self._fragments is None:
-            return 0
         models = {m.id: m for m in await self._fragments.find_by_student(student.id)}
         due = self._policy.fragments_to_purge(
             student, [fragment_to_domain(m) for m in models.values()], now

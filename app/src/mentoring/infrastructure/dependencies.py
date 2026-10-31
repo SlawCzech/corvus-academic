@@ -189,11 +189,12 @@ def get_fragment_service(
 def get_fragment_feedback_service(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     students: Annotated[StudentService, Depends(get_student_service)],
+    fragments: Annotated[FragmentService, Depends(get_fragment_service)],
     actions: Annotated[ActionService, Depends(get_action_service)],
 ) -> FragmentFeedbackService:
     return FragmentFeedbackService(
         students,
-        ThesisPartRepository(session),
+        fragments,
         ThesisFragmentRepository(session),
         SqlFileStore(session, DraftFileModel),
         actions,
@@ -219,8 +220,9 @@ def get_demo_roster(
     students: Annotated[StudentService, Depends(get_student_service)],
     drafts: Annotated[DraftService, Depends(get_draft_service)],
     catalog: Annotated[GuidelineCatalog, Depends(get_catalog)],
+    fragments: Annotated[FragmentService, Depends(get_fragment_service)],
 ) -> DemoRoster:
-    return DemoRoster(students, drafts, CatalogGuidelineSource(catalog))
+    return DemoRoster(students, drafts, CatalogGuidelineSource(catalog), fragments)
 
 
 def get_student_deletion_service(

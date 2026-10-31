@@ -327,6 +327,53 @@ class FragmentService:
             raise FragmentNotFoundError(str(fragment_id))
         return found
 
+    async def answer(
+        self,
+        caller: Caller,
+        student_id: UUID,
+        fragment_id: UUID,
+        verdict: FragmentVerdict,
+        feedback: str | None = None,
+        source_action_id: UUID | None = None,
+        next_due_on: date | None = None,
+        at: datetime | None = None,
+    ) -> ThesisFragment:
+        """Save what the promoter told the student. Saving again corrects it.
+
+        `source_action_id` says the text started from that run's draft. It must
+        be the run the fragment points at: a draft nobody was shown cannot have
+        been used. `next_due_on` sets the deadline of this fragment's part.
+        `at` is for seeding a history.
+
+        Raises ValueError for a run that is not this fragment's.
+        """
+        student = await self._students.get(caller, student_id)
+        model = await self._require_fragment(student, fragment_id)
+        if source_action_id is not None and source_action_id != model.review_action_id:
+            raise ValueError("That run is not this fragment's latest")
+
+        fragment = fragment_to_domain(model)
+        fragment.record_feedback(
+            verdict, feedback, at or datetime.now(UTC), source_action_id
+        )
+        model.verdict = str(fragment.verdict)
+        model.feedback = fragment.feedback
+        model.feedback_at = fragment.feedback_at
+        model.feedback_source_action_id = fragment.feedback_source_action_id
+        if next_due_on is not None:
+            part = await self._parts.find_by_id(model.part_id)
+            if part is not None:
+                part.due_on = next_due_on
+        await self._fragments.update(model)
+        logger.info(
+            "fragment_feedback_recorded",
+            student_id=str(student.id),
+            fragment_id=str(model.id),
+            verdict=str(verdict),
+            ai_drafted=source_action_id is not None,
+        )
+        return fragment_to_domain(model)
+
     # ---------- internals ----------
 
     @staticmethod
