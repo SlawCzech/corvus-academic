@@ -1,0 +1,21 @@
+{
+  "id": "urwany-rozdzial",
+  "description": "A good chapter that stops mid-sentence, as work in progress does. The ending must not become the feedback.",
+  "context": {
+    "current_topic": "Wpływ pracy zdalnej na wydajność zespołów programistycznych w małych firmach",
+    "field_of_study": "Zarządzanie",
+    "part_name": "Rozdział 2: metodologia",
+    "round_number": 1,
+    "other_parts": [
+      {"name": "Rozdział 1: przegląd literatury", "state": "on_track"},
+      {"name": "Rozdział 3: wyniki", "state": "not_submitted"}
+    ]
+  },
+  "acceptable_directions": ["on_track"],
+  "must_say": [],
+  "must_not_say": [
+    "The chapter is unfinished, cut off, or stops mid-sentence, as a problem to fix.",
+    "The chapter has no conclusions or summary.",
+    "The results of the research are missing."
+  ]
+}

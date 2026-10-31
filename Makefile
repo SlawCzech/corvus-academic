@@ -4,7 +4,7 @@ COMPOSE = docker compose -f infra/docker-compose.yml
 COMPOSE_DEV = $(COMPOSE) -f infra/docker-compose.override.yml
 
 .PHONY: help up build down down-volumes logs ps restart migrate ingest-guidelines seed-guidelines seed-demo demo-reset purge-drafts \
-        dev dev-build eval eval-maps langfuse-up langfuse-down \
+        dev dev-build eval eval-fragments eval-maps langfuse-up langfuse-down \
         front-up front-down front-restart front-logs front-dev \
         shell-app shell-agent
 
@@ -91,6 +91,10 @@ front-dev:  ## Run the Next.js dev server locally with hot reload (Ctrl+C to sto
 
 eval:  ## Score a model on the eval cases (MODEL=qwen3:30b-a3b|claude|openai JUDGE=… CASES="a b")
 	cd agent && uv run python -m evals.run --model $(or $(MODEL),qwen3:30b-a3b) \
+		$(if $(JUDGE),--judge $(JUDGE)) $(if $(CASES),--cases $(CASES))
+
+eval-fragments:  ## Score review_fragment: tone and direction (MODEL=… JUDGE=… CASES="a b")
+	cd agent && uv run python -m evals.fragments --model $(or $(MODEL),qwen3:30b-a3b) \
 		$(if $(JUDGE),--judge $(JUDGE)) $(if $(CASES),--cases $(CASES))
 
 eval-maps:  ## Recompute each eval case's document map with app's outline (after editing a thesis)

@@ -1,0 +1,20 @@
+{
+  "id": "poza-tematem",
+  "description": "A competent chapter about the wrong thing: the history of scientific management in a thesis on remote work. The one case that should not come back on track.",
+  "context": {
+    "current_topic": "Wpływ pracy zdalnej na wydajność zespołów programistycznych w małych firmach",
+    "field_of_study": "Zarządzanie",
+    "part_name": "Rozdział 1: przegląd literatury",
+    "round_number": 1,
+    "other_parts": [
+      {"name": "Rozdział 2: metodologia", "state": "not_submitted"}
+    ]
+  },
+  "acceptable_directions": ["needs_changes"],
+  "must_say": [
+    "The chapter does not lead to the thesis topic: it says nothing about remote work or programming teams."
+  ],
+  "must_not_say": [
+    "The chapter has no conclusions or summary."
+  ]
+}
