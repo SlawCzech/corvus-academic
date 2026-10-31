@@ -38,6 +38,7 @@ from .nodes.promoter_review import promoter_review
 from .nodes.propose_topic import propose_topic
 from .nodes.requirements import check_requirements
 from .nodes.review import generate_review
+from .nodes.review_fragment import review_fragment
 from .nodes.structure import analyze_structure
 from .nodes.verify import verify
 from .state import ActionState
@@ -220,6 +221,10 @@ def build_action_graph(
         case ActionType.DEFENCE_QUESTIONS:
             return _build_single_node_graph(
                 "defence_questions", defence_questions, checkpointer
+            )
+        case ActionType.REVIEW_FRAGMENT:
+            return _build_single_node_graph(
+                "review_fragment", review_fragment, checkpointer
             )
         case _:
             raise ValueError(f"No graph for action type: {action_type!r}")
