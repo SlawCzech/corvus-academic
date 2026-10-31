@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 from langchain_core.messages import AIMessage
 
 from src.application.graph import build_action_graph
-from src.application.nodes.review_fragment import review_fragment
+from src.application.nodes.review_fragment import _context_lines, review_fragment
 from src.application.prompts.review_fragment import get_system_prompt
 from src.application.state import ActionState
 from src.domain.action import ActionType
@@ -238,3 +238,16 @@ def test_the_graph_is_one_node() -> None:
     graph = build_action_graph(ActionType.REVIEW_FRAGMENT)
 
     assert "review_fragment" in graph.get_graph().nodes
+
+
+def test_a_master_thesis_is_not_read_as_a_first_piece_of_research() -> None:
+    message = _context_lines({"thesis_type": "master_article"})
+
+    assert any("master's thesis" in line for line in message)
+
+
+def test_the_aim_reaches_the_fragment_as_orientation() -> None:
+    message = "\n".join(_context_lines({"research_aim": "Hipoteza: X."}))
+
+    assert "Hipoteza: X." in message
+    assert "not expected to carry out the whole aim" in message

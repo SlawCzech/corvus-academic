@@ -5,6 +5,7 @@ from typing import Any
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from src.application.brief import render_brief
 from src.application.excerpt import reading_budget
 from src.application.prompts import check_progress as prompts
 from src.application.replies import PROGRESS
@@ -33,7 +34,7 @@ def _user_message(ctx: dict[str, Any]) -> str:
     previous = str(ctx.get("previous_text", ""))
     current = str(ctx.get("current_text", ""))
     lines = [
-        f"Thesis topic: {ctx.get('current_topic') or 'not settled yet'}",
+        render_brief(ctx),
         f"Previous version (v{ctx.get('previous_version', '?')}):\n{_slice(previous)}",
         f"Current version (v{ctx.get('current_version', '?')}):\n{_slice(current)}",
     ]
