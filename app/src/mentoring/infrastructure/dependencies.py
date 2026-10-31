@@ -30,6 +30,7 @@ from src.mentoring.application.agent_client import BYOK, AgentClient, KeyLoader
 from src.mentoring.application.dashboard_service import DashboardService
 from src.mentoring.application.demo_roster import DemoRoster
 from src.mentoring.application.draft_service import DraftService
+from src.mentoring.application.fragment_service import FragmentService
 from src.mentoring.application.model_service import ModelService
 from src.mentoring.application.student_deletion import StudentDeletionService
 from src.mentoring.application.student_service import Caller, StudentService
@@ -41,6 +42,8 @@ from src.mentoring.infrastructure.repositories import (
     ModelSettingRepository,
     StudentRepository,
     ThesisDraftRepository,
+    ThesisFragmentRepository,
+    ThesisPartRepository,
 )
 from src.shared.database import get_db_session
 from src.shared.settings import settings
@@ -167,6 +170,18 @@ def get_draft_service(
     )
 
 
+def get_fragment_service(
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    students: Annotated[StudentService, Depends(get_student_service)],
+) -> FragmentService:
+    return FragmentService(
+        students,
+        ThesisPartRepository(session),
+        ThesisFragmentRepository(session),
+        SqlFileStore(session, DraftFileModel),
+    )
+
+
 def get_demo_roster(
     students: Annotated[StudentService, Depends(get_student_service)],
     drafts: Annotated[DraftService, Depends(get_draft_service)],
@@ -206,6 +221,7 @@ AgentClientDep = Annotated[AgentClient, Depends(get_agent_client)]
 StudentServiceDep = Annotated[StudentService, Depends(get_student_service)]
 ActionServiceDep = Annotated[ActionService, Depends(get_action_service)]
 DraftServiceDep = Annotated[DraftService, Depends(get_draft_service)]
+FragmentServiceDep = Annotated[FragmentService, Depends(get_fragment_service)]
 DemoRosterDep = Annotated[DemoRoster, Depends(get_demo_roster)]
 DashboardServiceDep = Annotated[DashboardService, Depends(get_dashboard_service)]
 StudentDeletionServiceDep = Annotated[

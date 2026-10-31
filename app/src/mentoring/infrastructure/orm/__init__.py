@@ -22,6 +22,10 @@ files must not break.
 from src.mentoring.infrastructure.orm.action import AgentActionModel
 from src.mentoring.infrastructure.orm.base import Base
 from src.mentoring.infrastructure.orm.draft import DraftFileModel, ThesisDraftModel
+from src.mentoring.infrastructure.orm.fragment import (
+    ThesisFragmentModel,
+    ThesisPartModel,
+)
 from src.mentoring.infrastructure.orm.model_setting import ModelSettingModel
 from src.mentoring.infrastructure.orm.student import MeetingNoteModel, StudentModel
 
@@ -33,4 +37,6 @@ __all__ = [
     "ModelSettingModel",
     "StudentModel",
     "ThesisDraftModel",
+    "ThesisFragmentModel",
+    "ThesisPartModel",
 ]
