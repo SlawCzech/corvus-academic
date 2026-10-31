@@ -13,6 +13,8 @@ from src.mentoring.infrastructure.orm import (
     ModelSettingModel,
     StudentModel,
     ThesisDraftModel,
+    ThesisFragmentModel,
+    ThesisPartModel,
 )
 
 
@@ -272,6 +274,116 @@ class ThesisDraftRepository:
         result = await self._session.execute(
             select(func.max(ThesisDraftModel.version_number)).where(
                 ThesisDraftModel.student_id == student_id
+            )
+        )
+        current: int | None = result.scalar_one_or_none()
+        return (current or 0) + 1
+
+
+class ThesisPartRepository:
+    """Async store for the parts of a thesis."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def save(self, model: ThesisPartModel) -> None:
+        """Persist a new part and commit."""
+        self._session.add(model)
+        await self._session.commit()
+        await self._session.refresh(model)
+
+    async def commit(self) -> None:
+        """Commit in-place changes to parts already persisted."""
+        await self._session.commit()
+
+    async def delete(self, model: ThesisPartModel) -> None:
+        """Delete one part and commit."""
+        await self._session.delete(model)
+        await self._session.commit()
+
+    async def find_by_id(self, part_id: uuid.UUID) -> ThesisPartModel | None:
+        """Return one part, or None."""
+        return await self._session.get(ThesisPartModel, part_id)
+
+    async def find_by_student(self, student_id: uuid.UUID) -> list[ThesisPartModel]:
+        """Return a student's parts in the promoter's order."""
+        result = await self._session.execute(
+            select(ThesisPartModel)
+            .where(ThesisPartModel.student_id == student_id)
+            .order_by(ThesisPartModel.position)
+        )
+        return list(result.scalars().all())
+
+    async def find_by_name(
+        self, student_id: uuid.UUID, name: str
+    ) -> ThesisPartModel | None:
+        """Return the part with this name, whatever its case."""
+        result = await self._session.execute(
+            select(ThesisPartModel).where(
+                ThesisPartModel.student_id == student_id,
+                func.lower(ThesisPartModel.name) == name.lower(),
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def next_position(self, student_id: uuid.UUID) -> int:
+        """Return the position that puts a new part last."""
+        result = await self._session.execute(
+            select(func.max(ThesisPartModel.position)).where(
+                ThesisPartModel.student_id == student_id
+            )
+        )
+        current: int | None = result.scalar_one_or_none()
+        return (current or 0) + 1
+
+
+class ThesisFragmentRepository:
+    """Async store for the fragments handed in for a thesis."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def save(self, model: ThesisFragmentModel) -> None:
+        """Persist a fragment and commit."""
+        self._session.add(model)
+        await self._session.commit()
+        await self._session.refresh(model)
+
+    async def update(self, model: ThesisFragmentModel) -> None:
+        """Commit in-place changes to an already-persisted fragment."""
+        await self._session.commit()
+        await self._session.refresh(model)
+
+    async def find_by_id(self, fragment_id: uuid.UUID) -> ThesisFragmentModel | None:
+        """Return one fragment, or None."""
+        return await self._session.get(ThesisFragmentModel, fragment_id)
+
+    async def find_by_student(self, student_id: uuid.UUID) -> list[ThesisFragmentModel]:
+        """Return a student's fragments, the latest handed in first."""
+        result = await self._session.execute(
+            select(ThesisFragmentModel)
+            .where(ThesisFragmentModel.student_id == student_id)
+            .order_by(
+                ThesisFragmentModel.received_on.desc(),
+                ThesisFragmentModel.created_at.desc(),
+            )
+        )
+        return list(result.scalars().all())
+
+    async def count_by_part(self, part_id: uuid.UUID) -> int:
+        """Return how many rounds a part has."""
+        result = await self._session.execute(
+            select(func.count())
+            .select_from(ThesisFragmentModel)
+            .where(ThesisFragmentModel.part_id == part_id)
+        )
+        return result.scalar_one()
+
+    async def next_round_number(self, part_id: uuid.UUID) -> int:
+        """Return the round the next fragment of this part is."""
+        result = await self._session.execute(
+            select(func.max(ThesisFragmentModel.round_number)).where(
+                ThesisFragmentModel.part_id == part_id
             )
         )
         current: int | None = result.scalar_one_or_none()

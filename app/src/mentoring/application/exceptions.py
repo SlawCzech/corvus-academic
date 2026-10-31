@@ -23,6 +23,18 @@ class DraftNotFoundError(Exception):
     """Raised when a draft, or its file, does not exist for this student."""
 
 
+class FragmentNotFoundError(Exception):
+    """Raised when a fragment, or its file, does not exist for this student."""
+
+
+class PartNotFoundError(Exception):
+    """Raised when a part of the thesis does not exist for this student."""
+
+
+class PartConflictError(Exception):
+    """A part cannot change as asked: its name is taken, or it has fragments."""
+
+
 class ActionNotFoundError(Exception):
     """Raised when an action does not exist, or belongs to another student."""
 

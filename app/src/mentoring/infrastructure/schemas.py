@@ -6,7 +6,7 @@ other is exactly the mistake this pairing exists to make obvious.
 """
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -16,6 +16,7 @@ from src.mentoring.application.dashboard_service import DashboardSummary
 from src.mentoring.application.draft_service import DraftView
 from src.mentoring.application.model_service import AdminCatalog, PromoterCatalog
 from src.mentoring.domain.action import ActionType, AgentAction
+from src.mentoring.domain.fragment import ThesisFragment, ThesisPart
 from src.mentoring.domain.student import (
     MeetingNote,
     Student,
@@ -252,6 +253,85 @@ class ActionInProgressResponse(BaseModel):
     status: str
     created_at: datetime
     updated_at: datetime
+
+
+# ---------- parts and fragments ----------
+
+
+class PartCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    due_on: date | None = None
+
+
+class PartUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    position: int | None = None
+    # A null here clears the deadline; leaving the field out keeps it.
+    due_on: date | None = None
+
+
+class PartResponse(BaseModel):
+    id: uuid.UUID
+    student_id: uuid.UUID
+    name: str
+    position: int
+    due_on: date | None
+
+
+def part_response(part: ThesisPart) -> PartResponse:
+    return PartResponse(
+        id=part.id,
+        student_id=part.student_id,
+        name=part.name,
+        position=part.position,
+        due_on=part.due_on,
+    )
+
+
+class FragmentResponse(BaseModel):
+    """A fragment. Its text is never sent back wholesale, as with a version."""
+
+    id: uuid.UUID
+    student_id: uuid.UUID
+    part_id: uuid.UUID
+    round_number: int
+    received_on: date
+    question: str | None
+    filename: str | None
+    format: str
+    pages: int
+    char_count: int
+    preview: str
+    has_file: bool
+    purged_at: datetime | None
+    review_action_id: uuid.UUID | None
+    verdict: str | None
+    feedback: str | None
+    feedback_at: datetime | None
+    created_at: datetime
+
+
+def fragment_response(fragment: ThesisFragment) -> FragmentResponse:
+    return FragmentResponse(
+        id=fragment.id,
+        student_id=fragment.student_id,
+        part_id=fragment.part_id,
+        round_number=fragment.round_number,
+        received_on=fragment.received_on,
+        question=fragment.question,
+        filename=fragment.filename,
+        format=fragment.format,
+        pages=fragment.pages,
+        char_count=fragment.char_count,
+        preview=fragment.preview,
+        has_file=fragment.has_file,
+        purged_at=fragment.purged_at,
+        review_action_id=fragment.review_action_id,
+        verdict=str(fragment.verdict) if fragment.verdict else None,
+        feedback=fragment.feedback,
+        feedback_at=fragment.feedback_at,
+        created_at=fragment.created_at,
+    )
 
 
 class DashboardSummaryResponse(BaseModel):
