@@ -1,5 +1,5 @@
 import StudentDetail from "@/components/students/StudentDetail"
-import { isSection } from "@/components/students/StudentSubNav"
+import { isSection } from "@/components/students/sections"
 
 export default async function StudentPage({
   params,

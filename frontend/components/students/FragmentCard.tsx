@@ -147,7 +147,7 @@ function Summary({
         <>
           {review?.status === "failed" && (
             <p className="mb-1 text-[13px] text-critical-text">
-              {review.error ?? "Nie udało się przygotować podsumowania"}
+              Nie udało się przygotować podsumowania.
             </p>
           )}
           {entry.preview && (

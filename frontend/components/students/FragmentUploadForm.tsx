@@ -164,7 +164,11 @@ function Form({
       </div>
       <div className="mb-4">
         {source === "file" ? (
-          <FileUpload onFileSelect={setFile} disabled={busy} />
+          <FileUpload
+            onFileSelect={setFile}
+            disabled={busy}
+            prompt="Upuść tu plik z fragmentem albo kliknij"
+          />
         ) : (
           <textarea
             value={text}

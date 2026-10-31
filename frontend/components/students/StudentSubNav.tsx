@@ -11,19 +11,8 @@ import {
   IconTimeline,
 } from "@tabler/icons-react"
 import StatusSelect from "@/components/students/StatusSelect"
+import type { Section } from "@/components/students/sections"
 import type { Student } from "@/lib/api.types"
-
-export type Section =
-  | "overview"
-  | "timeline"
-  | "actions"
-  | "drafts"
-  | "notes"
-  | "history"
-
-export function isSection(value: string): value is Section {
-  return SECTIONS.some((s) => s.key === value)
-}
 
 const SECTIONS: { key: Section; label: string; icon: typeof IconEye }[] = [
   { key: "overview", label: "Przegląd", icon: IconEye },
