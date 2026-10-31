@@ -158,6 +158,8 @@ def get_action_service(
         agent,
         CatalogGuidelineSource(catalog),
         models,
+        ThesisPartRepository(session),
+        ThesisFragmentRepository(session),
     )
 
 

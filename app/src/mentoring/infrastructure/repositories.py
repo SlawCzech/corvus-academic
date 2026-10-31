@@ -140,14 +140,25 @@ class AgentActionRepository:
     async def delete(self, model: AgentActionModel) -> None:
         """Delete one action and commit.
 
-        A meeting note written from it keeps its text and loses only the
-        provenance — set explicitly, as ``ON DELETE SET NULL`` would, so it
-        does not depend on the database enforcing foreign keys.
+        A meeting note written from it, and a fragment reviewed by it, keep
+        what they hold and lose only the link — set explicitly, as
+        ``ON DELETE SET NULL`` would, so it does not depend on the database
+        enforcing foreign keys.
         """
         await self._session.execute(
             update(MeetingNoteModel)
             .where(MeetingNoteModel.source_action_id == model.id)
             .values(source_action_id=None)
+        )
+        await self._session.execute(
+            update(ThesisFragmentModel)
+            .where(ThesisFragmentModel.review_action_id == model.id)
+            .values(review_action_id=None)
+        )
+        await self._session.execute(
+            update(ThesisFragmentModel)
+            .where(ThesisFragmentModel.feedback_source_action_id == model.id)
+            .values(feedback_source_action_id=None)
         )
         await self._session.delete(model)
         await self._session.commit()

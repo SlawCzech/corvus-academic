@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from src.mentoring.application.exceptions import (
     ActionNotFoundError,
     AgentUnavailableError,
+    FragmentNotFoundError,
     MissingContextError,
     ProviderKeyMissingError,
     ProviderRequiredError,
@@ -77,8 +78,9 @@ async def trigger_action(
             provider=body.provider,
             keys=keys,
             review_findings_first=body.review_findings_first,
+            fragment_id=body.fragment_id,
         )
-    except StudentNotFoundError as exc:
+    except (StudentNotFoundError, FragmentNotFoundError) as exc:
         raise not_found(exc) from exc
     except UnsupportedActionError as exc:
         raise HTTPException(

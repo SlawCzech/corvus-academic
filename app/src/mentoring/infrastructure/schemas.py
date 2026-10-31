@@ -127,6 +127,8 @@ class ActionTriggerRequest(BaseModel):
     # generate_review only: pause after the analyses so the promoter can
     # untick the findings the review must not use.
     review_findings_first: bool = False
+    # review_fragment only: the fragment it reads.
+    fragment_id: uuid.UUID | None = None
 
 
 class ActionResumeRequest(BaseModel):
