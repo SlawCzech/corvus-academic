@@ -138,6 +138,7 @@ app :8000
   │      (VIEW_ALL_STUDENTS); cudzy student to 404, nie 403
   │
   ├──► /students/{id}/drafts  — wersje pracy
+  ├──► /students/{id}/fragments, /parts, /timeline  — fragmenty w rundach, oś czasu
   │      POST   → limit 25 MB, format sprawdzony po zawartości, ekstrakcja
   │               in-process (PyMuPDF / python-docx); plik i tekst zapisane
   │               jako wersja N+1; nowa wersja zdejmuje akceptację
@@ -194,6 +195,8 @@ app :8000
                               (mode="review_only" → sama recenzja)
          propose_topic        [propose_topic]
          defence_questions    [defence_questions]     — 3 pytania na obronę
+         review_fragment      [review_fragment]       — podsumowanie i łagodny feedback
+                                                        do fragmentu (ADR 0014)
          check_progress       [check_progress]        — porównanie 2 wersji
          evaluate_methodology [analyze_methodology]   — ten sam węzeł, osobno
          draft_meeting_note   [draft_meeting_note]

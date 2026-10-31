@@ -268,6 +268,21 @@ Zostaje:
 
 ---
 
+## Fragmenty i przebieg pracy (2026-10-31)
+
+- [ ] **Przenoszenie fragmentu między częściami** — pomyłkę naprawia się przez
+  usunięcie i ponowne wgranie.
+- [ ] **Fragment wklejony zapisuje się bez pliku** — po retencji nie zostaje nic do
+  pobrania, ale też wcześniej nie było; dotyczy też PDF-ów z OCR-em, gdzie wklejony
+  tekst bywa jedyną drogą.
+- [ ] **Kolejka na dashboardzie nie ma paginacji** — przy kilku studentach zbędna,
+  przy kilkudziesięciu trzeba ją przyciąć.
+- [ ] **`review_fragment` na żywo przez Celery niesprawdzony** — graf przeszedł przez
+  evals na prawdziwym modelu, `app` przez testy z fałszywym agentem, a UI w
+  przeglądarce bez agenta. Całość z workerem i Redisem wymaga `make dev`.
+
+---
+
 ## Moduł AI na dostawcy (2026-10-01)
 
 Pierwszy dzień akcji na żywo na Claude (`claude-sonnet-5-5`). Co zostało świadomie
@@ -309,5 +324,4 @@ odłożone:
 
 ---
 
-*Ostatnia aktualizacja: 2026-10-01 (pierwsze akcje na dostawcy; katalogi biblioteczne;
-pełny tekst dla modeli hostowanych)*
+*Ostatnia aktualizacja: 2026-10-31 (fragmenty i przebieg pracy)*

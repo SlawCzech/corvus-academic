@@ -1,6 +1,6 @@
 # Thesis fragments and the work timeline — implementation plan
 
-> Status: approved 2026-10-31, not started. Decision record: [ADR 0014](../adr/0014-thesis-fragments-in-rounds.md).
+> Status: approved and built 2026-10-31, on branch `claude/project-status-tasks-31b03f`. Decision record: [ADR 0014](../adr/0014-thesis-fragments-in-rounds.md).
 
 ## Why
 
@@ -121,13 +121,16 @@ All under `/students/{id}`, with the usual ownership rule (`StudentService.get`,
   ```
 
 - **Grounding:** a `changes` item whose quote is not in the fragment is dropped,
-  using `grounding.ThesisText`. `verify_findings` itself does not fit: it works
-  on `Finding`s with severities, which this action deliberately lacks.
+  using `grounding.ThesisText`, before the cap is applied. `verify_findings`
+  itself does not fit: it works on `Finding`s with severities, which this action
+  deliberately lacks. A direction that needs work and has none left to name
+  comes back `on_track`.
 
 ### Prompt rules
 
-The prompt lives in `prompts/review_fragment.py` and reuses "THE BAR" from
-`scopes.py`.
+The prompt lives in `prompts/review_fragment.py`. It states the level of a
+diploma thesis itself: `scopes.CALIBRATION` comes with severities, which this
+action deliberately has not got.
 
 Summary:
 - One or two paragraphs saying what the fragment covers and argues, neutral,
@@ -174,17 +177,17 @@ Feedback:
 
 | # | Commit | Status |
 |---|---|---|
-| 1 | `docs:` ADR 0014 and this spec | ⬜ |
-| 2 | `feat(mentoring):` parts and fragments — domain, migration, repositories, upload and download | ⬜ |
-| 3 | `feat(mentoring):` feedback on a fragment, and the timeline read | ⬜ |
-| 4 | `feat(mentoring):` retention and hard delete cover fragments | ⬜ |
-| 5 | `feat(agent):` `review_fragment` — prompt, reply, node, graph | ⬜ |
-| 6 | `feat(mentoring):` run `review_fragment` on a fragment, with the previous round | ⬜ |
-| 7 | `feat(agent):` eval cases for a fragment review | ⬜ |
-| 8 | `feat(frontend):` "Przebieg pracy" — part map, timeline, upload, feedback | ⬜ |
-| 9 | `feat:` waiting fragments and overdue parts on the dashboard | ⬜ |
-| 10 | `feat:` fragment fixtures, and fragments on the demo students | ⬜ |
-| 11 | `docs:` CLAUDE.md, architecture, technical debt | ⬜ |
+| 1 | `docs:` ADR 0014 and this spec | ✅ |
+| 2 | `feat(mentoring):` parts of a thesis, and fragments handed in for them | ✅ |
+| 3 | `feat(agent):` `review_fragment` — prompt, reply, node, graph | ✅ |
+| 4 | `feat(mentoring):` run `review_fragment` on a fragment, with the round before it | ✅ |
+| 5 | `feat(mentoring):` feedback on a fragment, and the work timeline | ✅ |
+| 6 | `feat(mentoring):` retention, hard delete and the dashboard reach fragments | ✅ |
+| 7 | `feat(frontend):` "Przebieg pracy" — parts, timeline, upload, feedback, dashboard | ✅ |
+| 8 | `feat:` a demo student mid-writing, with parts, rounds and a missed deadline | ✅ |
+| 9 | `feat(agent):` evals for `review_fragment` | ✅ |
+| 10 | `fix(frontend):` a link to a student's section no longer breaks the page | ✅ |
+| 11 | `docs:` CLAUDE.md, architecture, technical debt | ✅ |
 
 ## Evals
 
@@ -197,8 +200,9 @@ Tone is the requirement that tests cannot hold, so it is measured:
 | Chapter off the thesis topic | `needs_changes`, naming the mismatch |
 | Round 2 that fixes one of two points | `addressed` has the fixed one, the other stays, no new minor points |
 
-Each run checks the caps, grounded quotes, and the absence of scores, and a judge
-scores whether the feedback reads as encouragement to continue.
+`make eval-fragments` runs them. Each run checks the caps, the absence of grades
+and of harsh wording, and a judge scores whether the feedback reads as
+encouragement to continue. Results in [agent/evals/README.md](../../agent/evals/README.md).
 
 ## Out of scope — next steps
 
