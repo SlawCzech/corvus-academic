@@ -22,6 +22,7 @@ class ActionType(StrEnum):
     DEFENCE_QUESTIONS = "defence_questions"
     GENERATE_REVIEW = "generate_review"
     VERIFY_BIBLIOGRAPHY = "verify_bibliography"
+    REVIEW_FRAGMENT = "review_fragment"
 
 
 class ActionStatus(StrEnum):

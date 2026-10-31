@@ -27,13 +27,19 @@ from src.mentoring.application.context import (
     assemble_evaluate_methodology_context,
     assemble_generate_review_context,
     assemble_propose_topic_context,
+    assemble_review_fragment_context,
     assemble_verify_bibliography_context,
 )
 from src.mentoring.application.draft_service import to_domain as draft_to_domain
 from src.mentoring.application.exceptions import (
     ActionNotFoundError,
+    FragmentNotFoundError,
     ProviderKeyMissingError,
     UnsupportedActionError,
+)
+from src.mentoring.application.fragment_service import (
+    fragment_to_domain,
+    part_to_domain,
 )
 from src.mentoring.application.guidelines_port import (
     GuidelineRubric,
@@ -46,11 +52,14 @@ from src.mentoring.application.student_service import (
 )
 from src.mentoring.domain.action import ActionStatus, ActionType, AgentAction
 from src.mentoring.domain.draft import ThesisDraft
+from src.mentoring.domain.fragment import latest_rounds, part_state
 from src.mentoring.domain.student import Student
 from src.mentoring.infrastructure.orm import AgentActionModel
 from src.mentoring.infrastructure.repositories import (
     AgentActionRepository,
     ThesisDraftRepository,
+    ThesisFragmentRepository,
+    ThesisPartRepository,
 )
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
@@ -113,6 +122,8 @@ class ActionService:
         agent: AgentClient,
         guidelines: GuidelineSource | None = None,
         models: ModelService | None = None,
+        parts: ThesisPartRepository | None = None,
+        fragments: ThesisFragmentRepository | None = None,
     ) -> None:
         self._students = students
         self._actions = actions
@@ -120,6 +131,8 @@ class ActionService:
         self._agent = agent
         self._guidelines = guidelines
         self._models = models
+        self._parts = parts
+        self._fragments = fragments
 
     # ---------- trigger ----------
 
@@ -136,6 +149,7 @@ class ActionService:
         provider: str | None = None,
         keys: KeyLoader | None = None,
         review_findings_first: bool = False,
+        fragment_id: UUID | None = None,
     ) -> AgentAction:
         """Record and dispatch one action for a student the caller can see.
 
@@ -147,6 +161,9 @@ class ActionService:
 
         `review_findings_first` pauses a review after its analyses, for the
         promoter to pick the findings the review may use (see `resume`).
+
+        `fragment_id` is what a `review_fragment` runs on; the fragment then
+        points at this run, the latest of any before it.
 
         Raises ProviderKeyMissingError when `provider` names a provider the
         promoter has no key for.
@@ -161,7 +178,7 @@ class ActionService:
             # not a failed action in the student's history.
             model = await self._models.resolve(model)
         context, input_ref = await self._assemble(
-            caller, student, action_type, detail, review_tone
+            caller, student, action_type, detail, review_tone, fragment_id
         )
         if review_findings_first and action_type is ActionType.GENERATE_REVIEW:
             context["promoter_reviews_findings"] = True
@@ -182,6 +199,8 @@ class ActionService:
             updated_at=now,
         )
         await self._actions.save(record)
+        if action_type is ActionType.REVIEW_FRAGMENT:
+            await self._point_fragment_at(record)
 
         try:
             task_id = await self._agent.submit_action(
@@ -437,6 +456,7 @@ class ActionService:
         action_type: ActionType,
         detail: str | None,
         review_tone: str = "auto",
+        fragment_id: UUID | None = None,
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         """Gather what this action needs, and the provenance of what was used.
 
@@ -507,10 +527,63 @@ class ActionService:
                     assemble_check_progress_context(student, latest, detail),
                     base_ref | self._draft_ref(latest),
                 )
+            case ActionType.REVIEW_FRAGMENT:
+                return await self._assemble_fragment(
+                    caller, student, fragment_id, detail, base_ref
+                )
             case _:  # pragma: no cover — every ActionType is handled above
                 raise UnsupportedActionError(
                     f"No context assembly for action type: {action_type}"
                 )
+
+    async def _assemble_fragment(
+        self,
+        caller: Caller,
+        student: Student,
+        fragment_id: UUID | None,
+        detail: str | None,
+        base_ref: dict[str, Any],
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Gather one fragment, the round before it, and what surrounds it."""
+        if fragment_id is None or self._parts is None or self._fragments is None:
+            raise UnsupportedActionError("review_fragment needs a fragment_id")
+        models = await self._fragments.find_by_student(student.id)
+        fragments = [fragment_to_domain(m) for m in models]
+        fragment = next((f for f in fragments if f.id == fragment_id), None)
+        if fragment is None:
+            raise FragmentNotFoundError(str(fragment_id))
+
+        parts = [
+            part_to_domain(m) for m in await self._parts.find_by_student(student.id)
+        ]
+        part = next(p for p in parts if p.id == fragment.part_id)
+        earlier = [
+            f
+            for f in fragments
+            if f.part_id == part.id and f.round_number < fragment.round_number
+        ]
+        previous = max(earlier, key=lambda f: f.round_number, default=None)
+        latest = latest_rounds(fragments)
+        other_parts = [
+            (p, part_state(latest.get(p.id))) for p in parts if p.id != part.id
+        ]
+        notes = await self._students.list_meeting_notes(caller, student.id)
+        return (
+            assemble_review_fragment_context(
+                student, part, fragment, previous, other_parts, notes, detail
+            ),
+            base_ref | {"fragment_id": str(fragment.id), "part_id": str(part.id)},
+        )
+
+    async def _point_fragment_at(self, record: AgentActionModel) -> None:
+        """Make this run the one the fragment shows."""
+        ref = cast(dict[str, str], record.input_ref)
+        if self._fragments is None:  # pragma: no cover — checked in _assemble
+            return
+        fragment = await self._fragments.find_by_id(UUID(ref["fragment_id"]))
+        if fragment is not None:
+            fragment.review_action_id = record.id
+            await self._fragments.update(fragment)
 
     async def _rubric(self, student: Student) -> GuidelineRubric | None:
         """The rubric in force for the student's chosen guideline set."""

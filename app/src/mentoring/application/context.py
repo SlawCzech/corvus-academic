@@ -16,6 +16,7 @@ from typing import Any
 from src.document.outline import outline_payload
 from src.mentoring.application.exceptions import MissingContextError
 from src.mentoring.domain.draft import ThesisDraft
+from src.mentoring.domain.fragment import PartState, ThesisFragment, ThesisPart
 from src.mentoring.domain.student import MeetingNote, Student
 
 # How much history is worth sending. Small on purpose — the point is to give
@@ -121,6 +122,47 @@ def assemble_check_progress_context(
         "current_topic": student.current_topic,
         "detail": detail,
     }
+
+
+def assemble_review_fragment_context(
+    student: Student,
+    part: ThesisPart,
+    fragment: ThesisFragment,
+    previous: ThesisFragment | None,
+    other_parts: Sequence[tuple[ThesisPart, PartState]],
+    recent_notes: Sequence[MeetingNote],
+    detail: str | None = None,
+) -> dict[str, Any]:
+    """Build the context for a word on one fragment.
+
+    What is around it says what it is not expected to be: the names of the
+    other parts keep the model from asking this one for them. The previous
+    round is what makes a later round a follow-up rather than a fresh start.
+    Its text may be purged while the feedback on it stays.
+
+    No guidelines, on purpose: formal requirements are for the finished thesis.
+    """
+    if fragment.is_purged:
+        raise MissingContextError("This fragment's text has been purged")
+    context: dict[str, Any] = {
+        "text": fragment.content,
+        "part_name": part.name,
+        "round_number": fragment.round_number,
+        "other_parts": [
+            {"name": other.name, "state": str(state)} for other, state in other_parts
+        ],
+        "field_of_study": student.field_of_study,
+        "current_topic": student.current_topic,
+        "recent_notes": [n.content for n in recent_notes[:_MAX_NOTES]],
+        "detail": detail or fragment.question,
+    }
+    if previous is not None:
+        context["previous_verdict"] = (
+            str(previous.verdict) if previous.verdict else None
+        )
+        context["previous_feedback"] = previous.feedback
+        context["previous_text"] = previous.text
+    return context
 
 
 def assemble_draft_meeting_note_context(

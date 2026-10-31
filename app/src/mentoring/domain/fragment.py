@@ -5,6 +5,7 @@ A fragment is not a version of the thesis (`draft.py`): the actions that read
 ADR 0014.
 """
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from enum import StrEnum
@@ -143,6 +144,16 @@ class ThesisFragment:
         self.text = None
         self.file_id = None
         self.purged_at = at
+
+
+def latest_rounds(fragments: Iterable[ThesisFragment]) -> dict[UUID, ThesisFragment]:
+    """Each part's latest round, by part id."""
+    latest: dict[UUID, ThesisFragment] = {}
+    for fragment in fragments:
+        current = latest.get(fragment.part_id)
+        if current is None or fragment.round_number > current.round_number:
+            latest[fragment.part_id] = fragment
+    return latest
 
 
 def part_state(latest: ThesisFragment | None) -> PartState:
