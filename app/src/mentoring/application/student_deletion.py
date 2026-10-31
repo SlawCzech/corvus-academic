@@ -4,9 +4,10 @@ Retention (ADR 0006) empties a version and keeps its row, so the history
 still says which version each result was about. Deleting the student leaves
 no history to keep: every row goes, and so does every file.
 
-The files need their own step. A version points at its file, not the other
-way round, so no cascade from the student ever reaches `draft_files`; left
-to the database, deleting a student would strand its theses there for good.
+The files need their own step. A version or a fragment points at its file,
+not the other way round, so no cascade from the student ever reaches
+`draft_files`; left to the database, deleting a student would strand their
+work there for good.
 """
 
 from uuid import UUID
@@ -18,6 +19,7 @@ from src.mentoring.application.student_service import Caller, StudentService
 from src.mentoring.infrastructure.repositories import (
     StudentRepository,
     ThesisDraftRepository,
+    ThesisFragmentRepository,
 )
 from src.shared.files import FileStore
 
@@ -34,15 +36,17 @@ class StudentDeletionService:
         drafts: ThesisDraftRepository,
         files: FileStore,
         agent: AgentClient,
+        fragments: ThesisFragmentRepository | None = None,
     ) -> None:
         self._students = students
         self._student_rows = student_rows
         self._drafts = drafts
         self._files = files
         self._agent = agent
+        self._fragments = fragments
 
     async def delete(self, caller: Caller, student_id: UUID, token: str) -> None:
-        """Delete the student, their notes, versions, files and AI results.
+        """Delete the student, their notes, work, files and AI results.
 
         The agent's copies of the results go first — reviews and proposed
         topics are the student's data too. If the agent cannot be reached,
@@ -59,10 +63,19 @@ class StudentDeletionService:
         for draft in drafts:
             if draft.file_id is not None:
                 await self._files.delete(draft.file_id)
+        fragments = (
+            await self._fragments.find_by_student(student.id)
+            if self._fragments is not None
+            else []
+        )
+        for fragment in fragments:
+            if fragment.file_id is not None:
+                await self._files.delete(fragment.file_id)
         await self._student_rows.delete(student.id)
         logger.info(
             "student_deleted",
             student_id=str(student.id),
             promotor_id=str(caller.user_id),
             versions=len(drafts),
+            fragments=len(fragments),
         )

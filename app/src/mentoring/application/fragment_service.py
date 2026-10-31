@@ -100,6 +100,21 @@ def fragment_to_orm(fragment: ThesisFragment) -> ThesisFragmentModel:
     )
 
 
+async def purge_fragment(
+    model: ThesisFragmentModel, files: FileStore, at: datetime
+) -> ThesisFragment:
+    """Drop one fragment's text and file; keep the row. Does not commit."""
+    fragment = fragment_to_domain(model)
+    file_id = fragment.file_id
+    fragment.purge(at)
+    model.text = fragment.text
+    model.file_id = fragment.file_id
+    model.purged_at = fragment.purged_at
+    if file_id is not None:
+        await files.delete(file_id)
+    return fragment
+
+
 @dataclass(frozen=True)
 class FragmentUpload:
     """What was handed in: a file, or text pasted from a mail."""

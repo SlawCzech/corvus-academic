@@ -423,3 +423,55 @@ def test_another_promoter_reaches_neither_feedback_nor_timeline(
         client.delete(f"{url}/fragments/{fragment['id']}", headers=other).status_code
         == 404
     )
+
+
+def test_the_dashboard_lists_what_waits_and_what_is_overdue(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+    waiting = _paste(client, headers, student_id, part_name="Rozdział 1")
+    answered = _paste(client, headers, student_id, part_name="Rozdział 2")
+    client.put(
+        f"/students/{student_id}/fragments/{answered['id']}/feedback",
+        json={"verdict": "on_track"},
+        headers=headers,
+    )
+    parts = f"/students/{student_id}/parts"
+    for name, due_on in (("Rozdział 3", "2020-01-01"), ("Rozdział 4", "2999-01-01")):
+        client.post(parts, json={"name": name, "due_on": due_on}, headers=headers)
+
+    summary = client.get("/dashboard/summary", headers=headers).json()
+
+    assert [f["fragment_id"] for f in summary["awaiting_feedback"]] == [waiting["id"]]
+    assert summary["awaiting_feedback"][0]["student_name"] == "Jan Kowalski"
+    assert summary["awaiting_feedback"][0]["part_name"] == "Rozdział 1"
+    assert [p["part_name"] for p in summary["overdue_parts"]] == ["Rozdział 3"]
+
+
+def test_a_graduates_fragments_are_nobodys_to_do(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+    _paste(client, headers, student_id)
+    client.patch(
+        f"/students/{student_id}", json={"status": "graduated"}, headers=headers
+    )
+
+    summary = client.get("/dashboard/summary", headers=headers).json()
+
+    assert summary["awaiting_feedback"] == []
+
+
+def test_the_dashboard_shows_nothing_of_another_promoters_students(
+    client: TestClient, agent: FakeAgentClient
+) -> None:
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    other = login(client, OTHER_PROMOTOR_EMAIL, OTHER_PROMOTOR_PASSWORD)
+    student_id = _new_student(client, headers)
+    _paste(client, headers, student_id)
+
+    summary = client.get("/dashboard/summary", headers=other).json()
+
+    assert summary["awaiting_feedback"] == []

@@ -1,7 +1,8 @@
 """Async repositories for persisting mentoring data."""
 
 import uuid
-from datetime import UTC, datetime
+from collections.abc import Sequence
+from datetime import UTC, date, datetime
 
 from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -76,7 +77,7 @@ class StudentRepository:
     async def delete(self, student_id: uuid.UUID) -> None:
         """Delete a student and every record of theirs, in one commit.
 
-        Notes, actions and versions are deleted by statement rather than left
+        Notes, fragments, actions and versions are deleted by statement rather than left
         to ``ON DELETE CASCADE``: the result is the same in Postgres, and it
         does not depend on a database enforcing foreign keys (SQLite, in
         tests, does not). The versions' files are not rows of these tables —
@@ -85,6 +86,14 @@ class StudentRepository:
         """
         await self._session.execute(
             delete(MeetingNoteModel).where(MeetingNoteModel.student_id == student_id)
+        )
+        await self._session.execute(
+            delete(ThesisFragmentModel).where(
+                ThesisFragmentModel.student_id == student_id
+            )
+        )
+        await self._session.execute(
+            delete(ThesisPartModel).where(ThesisPartModel.student_id == student_id)
         )
         await self._session.execute(
             delete(AgentActionModel).where(AgentActionModel.student_id == student_id)
@@ -325,6 +334,32 @@ class ThesisPartRepository:
         )
         return list(result.scalars().all())
 
+    async def find_overdue(
+        self, student_ids: Sequence[uuid.UUID], today: date
+    ) -> list[ThesisPartModel]:
+        """Return parts past their deadline, the longest overdue first.
+
+        A fragment clears a part's deadline, so one still set is still unmet.
+        """
+        result = await self._session.execute(
+            select(ThesisPartModel)
+            .where(
+                ThesisPartModel.student_id.in_(student_ids),
+                ThesisPartModel.due_on < today,
+            )
+            .order_by(ThesisPartModel.due_on)
+        )
+        return list(result.scalars().all())
+
+    async def find_by_ids(
+        self, part_ids: Sequence[uuid.UUID]
+    ) -> list[ThesisPartModel]:
+        """Return the parts with these ids, in no particular order."""
+        result = await self._session.execute(
+            select(ThesisPartModel).where(ThesisPartModel.id.in_(part_ids))
+        )
+        return list(result.scalars().all())
+
     async def find_by_name(
         self, student_id: uuid.UUID, name: str
     ) -> ThesisPartModel | None:
@@ -383,6 +418,20 @@ class ThesisFragmentRepository:
                 ThesisFragmentModel.received_on.desc(),
                 ThesisFragmentModel.created_at.desc(),
             )
+        )
+        return list(result.scalars().all())
+
+    async def find_awaiting_feedback(
+        self, student_ids: Sequence[uuid.UUID]
+    ) -> list[ThesisFragmentModel]:
+        """Return fragments nobody has answered yet, the longest waiting first."""
+        result = await self._session.execute(
+            select(ThesisFragmentModel)
+            .where(
+                ThesisFragmentModel.student_id.in_(student_ids),
+                ThesisFragmentModel.verdict.is_(None),
+            )
+            .order_by(ThesisFragmentModel.received_on)
         )
         return list(result.scalars().all())
 
