@@ -11,6 +11,10 @@
 #                                    Restart that container after editing main.py.
 services:
   frontend:
+    # Own tag: the `deps` stage has `next` but no build, the default image has
+    # the build but no `next`. Sharing `infra-frontend` meant whichever was
+    # built last won, and `npm run dev` died on `next: not found`.
+    image: infra-frontend-dev
     build:
       target: deps
     volumes:
