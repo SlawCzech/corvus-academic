@@ -1,0 +1,42 @@
+<!--
+  ClickHouse's own diagnostics, trimmed for a laptop.
+
+  Out of the box the server logs at `trace` level, rotates 10 × 1 GB files and
+  keeps its system tables (trace_log, text_log, metric_log…) forever. With
+  Langfuse holding a few MB of traces, that diagnostics grew to ~5 GB and,
+  together with the container's stdout log, filled Docker's disk — which took
+  Corvus's Postgres down with it (2026-10-04).
+
+  Nothing here touches Langfuse's own tables in `default`.
+-->
+<clickhouse>
+    <logger>
+        <level>warning</level>
+        <size>50M</size>
+        <count>2</count>
+    </logger>
+
+    <!-- Profiling and metrics tables nobody reads on a dev box. -->
+    <trace_log remove="1"/>
+    <text_log remove="1"/>
+    <metric_log remove="1"/>
+    <query_metric_log remove="1"/>
+    <asynchronous_metric_log remove="1"/>
+    <processors_profile_log remove="1"/>
+    <opentelemetry_span_log remove="1"/>
+    <part_log remove="1"/>
+
+    <!-- Kept for debugging slow queries, but only for a few days. -->
+    <query_log replace="1">
+        <database>system</database>
+        <table>query_log</table>
+        <engine>ENGINE = MergeTree PARTITION BY event_date ORDER BY event_time TTL event_date + INTERVAL 3 DAY DELETE</engine>
+        <flush_interval_milliseconds>7500</flush_interval_milliseconds>
+    </query_log>
+    <error_log replace="1">
+        <database>system</database>
+        <table>error_log</table>
+        <engine>ENGINE = MergeTree PARTITION BY event_date ORDER BY event_time TTL event_date + INTERVAL 3 DAY DELETE</engine>
+        <flush_interval_milliseconds>7500</flush_interval_milliseconds>
+    </error_log>
+</clickhouse>
