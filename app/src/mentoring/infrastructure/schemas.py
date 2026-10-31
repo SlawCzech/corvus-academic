@@ -15,8 +15,14 @@ from src.mentoring.application.action_service import ActionInProgress
 from src.mentoring.application.dashboard_service import DashboardSummary
 from src.mentoring.application.draft_service import DraftView
 from src.mentoring.application.model_service import AdminCatalog, PromoterCatalog
+from src.mentoring.application.timeline_service import (
+    FragmentEntry,
+    PartEntry,
+    TimelineEvent,
+    WorkTimeline,
+)
 from src.mentoring.domain.action import ActionType, AgentAction
-from src.mentoring.domain.fragment import ThesisFragment, ThesisPart
+from src.mentoring.domain.fragment import FragmentVerdict, ThesisFragment, ThesisPart
 from src.mentoring.domain.student import (
     MeetingNote,
     Student,
@@ -333,6 +339,80 @@ def fragment_response(fragment: ThesisFragment) -> FragmentResponse:
         feedback=fragment.feedback,
         feedback_at=fragment.feedback_at,
         created_at=fragment.created_at,
+    )
+
+
+class FragmentFeedbackRequest(BaseModel):
+    verdict: FragmentVerdict
+    feedback: str | None = Field(default=None, max_length=20000)
+    # The run the text started from, when the promoter worked from its draft.
+    source_action_id: uuid.UUID | None = None
+    next_due_on: date | None = None
+
+
+class PartEntryResponse(PartResponse):
+    rounds: int
+    state: str
+
+
+def part_entry_response(entry: PartEntry) -> PartEntryResponse:
+    return PartEntryResponse(
+        **part_response(entry.part).model_dump(),
+        rounds=entry.rounds,
+        state=str(entry.state),
+    )
+
+
+class FragmentEntryResponse(FragmentResponse):
+    part_name: str
+    summary: str | None
+    review: ActionResponse | None
+
+
+def fragment_entry_response(entry: FragmentEntry) -> FragmentEntryResponse:
+    return FragmentEntryResponse(
+        **fragment_response(entry.fragment).model_dump(),
+        part_name=entry.part_name,
+        summary=entry.summary,
+        review=action_response(entry.review) if entry.review else None,
+    )
+
+
+class TimelineEventResponse(BaseModel):
+    kind: Literal["fragment", "note", "draft"]
+    on: date
+    fragment: FragmentEntryResponse | None = None
+    note: MeetingNoteResponse | None = None
+    draft: DraftResponse | None = None
+
+
+def timeline_event_response(event: TimelineEvent) -> TimelineEventResponse:
+    if event.fragment is not None:
+        return TimelineEventResponse(
+            kind="fragment",
+            on=event.on,
+            fragment=fragment_entry_response(event.fragment),
+        )
+    if event.note is not None:
+        return TimelineEventResponse(
+            kind="note", on=event.on, note=note_response(event.note)
+        )
+    if event.draft is None:  # pragma: no cover — one of the three is always set
+        raise ValueError("A timeline event holds nothing")
+    return TimelineEventResponse(
+        kind="draft", on=event.on, draft=draft_response(event.draft)
+    )
+
+
+class TimelineResponse(BaseModel):
+    parts: list[PartEntryResponse]
+    events: list[TimelineEventResponse]
+
+
+def timeline_response(timeline: WorkTimeline) -> TimelineResponse:
+    return TimelineResponse(
+        parts=[part_entry_response(p) for p in timeline.parts],
+        events=[timeline_event_response(e) for e in timeline.events],
     )
 
 

@@ -8,21 +8,32 @@ import structlog
 from fastapi import APIRouter, Form, HTTPException, Response, UploadFile, status
 
 from src.mentoring.application.exceptions import (
+    ActionNotFoundError,
+    AgentUnavailableError,
     FragmentNotFoundError,
     PartConflictError,
     PartNotFoundError,
     StudentNotFoundError,
 )
 from src.mentoring.application.fragment_service import FragmentUpload
-from src.mentoring.infrastructure.dependencies import CallerDep, FragmentServiceDep
+from src.mentoring.infrastructure.dependencies import (
+    CallerDep,
+    FragmentFeedbackServiceDep,
+    FragmentServiceDep,
+    TimelineServiceDep,
+    TokenDep,
+)
 from src.mentoring.infrastructure.errors import not_found
 from src.mentoring.infrastructure.schemas import (
+    FragmentFeedbackRequest,
     FragmentResponse,
     PartCreateRequest,
     PartResponse,
     PartUpdateRequest,
+    TimelineResponse,
     fragment_response,
     part_response,
+    timeline_response,
 )
 from src.shared.downloads import attachment_response, read_upload
 
@@ -171,3 +182,74 @@ async def download_fragment(
     except (StudentNotFoundError, FragmentNotFoundError) as exc:
         raise not_found(exc) from exc
     return attachment_response(stored, data)
+
+
+@router.put(
+    "/{student_id}/fragments/{fragment_id}/feedback", response_model=FragmentResponse
+)
+async def record_feedback(
+    student_id: uuid.UUID,
+    fragment_id: uuid.UUID,
+    body: FragmentFeedbackRequest,
+    caller: CallerDep,
+    svc: FragmentFeedbackServiceDep,
+) -> FragmentResponse:
+    """Save the promoter's verdict and feedback. Saving again corrects them."""
+    try:
+        fragment = await svc.record(
+            caller,
+            student_id,
+            fragment_id,
+            body.verdict,
+            feedback=body.feedback,
+            source_action_id=body.source_action_id,
+            next_due_on=body.next_due_on,
+        )
+    except (
+        StudentNotFoundError,
+        FragmentNotFoundError,
+        ActionNotFoundError,
+    ) as exc:
+        raise not_found(exc) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
+        ) from exc
+    return fragment_response(fragment)
+
+
+@router.delete(
+    "/{student_id}/fragments/{fragment_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+async def delete_fragment(
+    student_id: uuid.UUID,
+    fragment_id: uuid.UUID,
+    caller: CallerDep,
+    token: TokenDep,
+    svc: FragmentFeedbackServiceDep,
+) -> None:
+    """Take back a mistaken upload, with its file and its AI runs."""
+    try:
+        await svc.delete(caller, student_id, fragment_id, token)
+    except (StudentNotFoundError, FragmentNotFoundError) as exc:
+        raise not_found(exc) from exc
+    except AgentUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The analysis service is unavailable",
+        ) from exc
+
+
+@router.get("/{student_id}/timeline", response_model=TimelineResponse)
+async def get_timeline(
+    student_id: uuid.UUID,
+    caller: CallerDep,
+    token: TokenDep,
+    svc: TimelineServiceDep,
+) -> TimelineResponse:
+    """Return the student's parts, and everything that happened, newest first."""
+    try:
+        timeline = await svc.timeline(caller, student_id, token)
+    except StudentNotFoundError as exc:
+        raise not_found(exc) from exc
+    return timeline_response(timeline)
