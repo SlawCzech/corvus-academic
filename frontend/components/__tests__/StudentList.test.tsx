@@ -28,6 +28,8 @@ function student(id: string, name: string, status: string, topic: string | null)
     thesis_type: "bachelor",
     current_topic: topic,
     current_topic_set_at: null,
+    research_area: null,
+    research_aim: null,
     status,
     created_at: "2026-09-01T10:00:00Z",
     updated_at: "2026-09-01T10:00:00Z",

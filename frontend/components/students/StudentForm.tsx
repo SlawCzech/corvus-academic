@@ -26,6 +26,8 @@ export default function StudentForm({ student, onSaved, onCancel }: StudentFormP
   const [fieldOfStudy, setFieldOfStudy] = useState(student?.field_of_study ?? "")
   const [indexNumber, setIndexNumber] = useState(student?.index_number ?? "")
   const [thesisType, setThesisType] = useState<ThesisType>(student?.thesis_type ?? "bachelor")
+  const [researchArea, setResearchArea] = useState(student?.research_area ?? "")
+  const [researchAim, setResearchAim] = useState(student?.research_aim ?? "")
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -41,6 +43,8 @@ export default function StudentForm({ student, onSaved, onCancel }: StudentFormP
       field_of_study: fieldOfStudy,
       thesis_type: thesisType,
       index_number: indexNumber.trim() || null,
+      research_area: researchArea.trim() || null,
+      research_aim: researchAim.trim() || null,
     }
     try {
       if (editing) {
@@ -50,6 +54,8 @@ export default function StudentForm({ student, onSaved, onCancel }: StudentFormP
         setFullName("")
         setFieldOfStudy("")
         setIndexNumber("")
+        setResearchArea("")
+        setResearchAim("")
         onSaved(created)
       }
     } catch (err) {
@@ -108,6 +114,34 @@ export default function StudentForm({ student, onSaved, onCancel }: StudentFormP
               </option>
             ))}
           </select>
+        </label>
+        <label className="block sm:col-span-2">
+          <span className="mb-1 block text-[12px] text-muted">
+            Obszar badawczy (opcjonalnie)
+          </span>
+          <input
+            value={researchArea}
+            onChange={(e) => setResearchArea(e.target.value)}
+            maxLength={255}
+            placeholder="np. ekonomia instytucjonalna, zarządzanie zasobami ludzkimi"
+            className={inputClass}
+          />
+        </label>
+        <label className="block sm:col-span-2">
+          <span className="mb-1 block text-[12px] text-muted">
+            Cel i hipotezy (opcjonalnie)
+          </span>
+          <textarea
+            value={researchAim}
+            onChange={(e) => setResearchAim(e.target.value)}
+            maxLength={4000}
+            rows={3}
+            placeholder="Cel pracy i pytania badawcze lub hipotezy, tak jak je ustaliliście"
+            className={inputClass}
+          />
+          <span className="mt-1 block text-[12px] text-muted">
+            AI traktuje to jako kontekst, nie listę wymagań.
+          </span>
         </label>
       </div>
 
