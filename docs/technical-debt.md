@@ -143,11 +143,13 @@ Zostaje:
 
 - [ ] **Brak password reset flow** — użytkownik nie może odzyskać zapomnianego hasła. Wymaga integracji SMTP i tokenu jednorazowego (np. krótkotrwały JWT wysyłany na e-mail).
 
-- [ ] **Brak weryfikacji czy worker Celery działa** — zadanie trafia do kolejki cicho; jeśli
-  worker nie chodzi, akcja zostaje w statusie `pending` w nieskończoność. Faza 2 załatwiła
-  część problemu (padnięcie brokera przy wysyłce daje teraz `failed` + 503), ale martwy
-  worker nadal jest niewidoczny. Naprawka: endpoint `GET /health/worker` sprawdzający
-  `celery_app.control.inspect().ping()`.
+- [x] ~~**Brak weryfikacji czy worker Celery działa**~~ — od 2026-11-01 agent ma
+  `GET /health/worker` (503 bez workera), a `/health` w `app` pokazuje to w
+  `services.worker`. HTTP zostaje 200, bo `deploy.sh` czyta tylko status — sama akcja
+  nadal czeka w `pending`, widać to w body i monitoringu. Pierwotny opis: zadanie trafia
+  do kolejki cicho; jeśli worker nie chodzi, akcja zostaje w statusie `pending` w
+  nieskończoność. Faza 2 załatwiła część problemu (padnięcie brokera przy wysyłce daje
+  teraz `failed` + 503), ale martwy worker nadal był niewidoczny.
 
 - [ ] **Brak soft delete użytkowników** — `DELETE /users/{id}` usuwa rekord na twardo. Rozważyć pole `deleted_at` i filtrowanie w zapytaniach.
 
@@ -155,7 +157,10 @@ Zostaje:
 
 - [ ] **Brak metryk Prometheus / OpenTelemetry** — nie ma wglądu w liczbę requestów, błędów, czas odpowiedzi. Rozważyć `prometheus-fastapi-instrumentator` lub OTEL SDK.
 
-- [ ] **Brak access logu HTTP** — logi są w logice biznesowej, ale żaden middleware nie zapisuje każdego żądania (metoda, ścieżka, status, czas). Naprawka: middleware `structlog` na poziomie ASGI.
+- [x] ~~**Brak access logu HTTP**~~ — od 2026-11-01 `access_log_middleware` w `app`
+  (metoda, ścieżka bez query stringa, status, czas; bez `/health`); access log uvicorna
+  wyłączony w `entrypoint.sh`. Pierwotny opis: logi są w logice biznesowej, ale żaden
+  middleware nie zapisuje każdego żądania.
 
 ### Drobne
 
