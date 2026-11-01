@@ -75,4 +75,9 @@ async def change_password(
     svc: UserServiceDep,
 ) -> None:
     """Change the current user's password."""
-    await svc.change_password(user.id, body.new_password)
+    try:
+        await svc.change_password(user.id, body.new_password)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
+        ) from exc
