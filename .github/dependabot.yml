@@ -65,3 +65,7 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+    # A new major cannot read the old data directory, and CD deploys on merge.
+    ignore:
+      - dependency-name: postgres
+        update-types: ["version-update:semver-major"]
