@@ -86,6 +86,8 @@ def load(
                 thesis_type=ThesisType(raw["thesis_type"]),
                 topic=raw.get("topic"),
                 timeline=tuple(_event(e, path.parent, shift) for e in raw["timeline"]),
+                research_area=raw.get("research_area"),
+                research_aim=raw.get("research_aim"),
             )
         )
     return students

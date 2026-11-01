@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SWRConfig } from "swr"
@@ -233,6 +233,15 @@ describe("ActionPanel", () => {
     // Still on what they picked, not pulled over to the running review.
     expect(screen.getByTestId("run-action")).toBeEnabled()
     expect(screen.queryByTestId("action-status")).not.toBeInTheDocument()
+  })
+
+  it("groups the tiles by the stage of the work", () => {
+    renderPanel()
+
+    const stage = screen.getByRole("region", { name: "Gotowa całość" })
+    expect(within(stage).getByRole("button", { name: "Napisz recenzję" })).toBeInTheDocument()
+    expect(within(stage).queryByRole("button", { name: "Pytania na obronę" })).toBeNull()
+    expect(screen.getAllByRole("region")).toHaveLength(3)
   })
 
   it("offers every action as a tile, and shrinks them to a strip once one is chosen", async () => {

@@ -23,6 +23,8 @@ const STUDENT = {
   index_number: "159293",
   current_topic: null,
   current_topic_set_at: null,
+  research_area: null,
+  research_aim: null,
   status: "active",
   created_at: "2026-03-01T10:00:00Z",
   updated_at: "2026-03-01T10:00:00Z",
@@ -74,6 +76,8 @@ describe("StudentDetail — overview", () => {
             ...("current_topic" in body
               ? {
                   current_topic_set_at: body.current_topic ? "2026-09-24T10:00:00Z" : null,
+                  research_area: null,
+                  research_aim: null,
                 }
               : {}),
           }
@@ -152,6 +156,8 @@ describe("StudentDetail — overview", () => {
         field_of_study: "Zarządzanie",
         thesis_type: "master_article",
         index_number: null,
+        research_area: null,
+        research_aim: null,
       },
     ])
   })

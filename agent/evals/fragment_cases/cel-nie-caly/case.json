@@ -1,0 +1,24 @@
+{
+  "id": "cel-nie-caly",
+  "description": "A sound theory chapter of a thesis with a hypothesis about small firms. It cannot test that yet: the agreed aim must not turn a good chapter into one that fails it.",
+  "context": {
+    "current_topic": "Elastyczny czas pracy a rotacja pracowników w małych firmach usługowych",
+    "field_of_study": "Zarządzanie",
+    "thesis_type": "bachelor",
+    "research_area": "Zarządzanie zasobami ludzkimi",
+    "research_aim": "Cel: ustalić, czy elastyczny czas pracy ogranicza rotację w małych firmach usługowych.\nHipoteza: w firmach z realnie elastycznym czasem pracy rotacja jest niższa niż w pozostałych.",
+    "part_name": "Rozdział 1: przegląd literatury",
+    "round_number": 1,
+    "other_parts": [
+      {"name": "Rozdział 2: metodologia", "state": "not_submitted"},
+      {"name": "Rozdział 3: wyniki badania", "state": "not_submitted"}
+    ]
+  },
+  "acceptable_directions": ["on_track"],
+  "must_say": [],
+  "must_not_say": [
+    "The chapter does not verify, test or answer the hypothesis.",
+    "The chapter does not carry out the aim of the thesis.",
+    "The chapter lacks empirical data or results from the firms."
+  ]
+}

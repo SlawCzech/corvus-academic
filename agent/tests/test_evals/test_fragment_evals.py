@@ -51,6 +51,9 @@ def test_every_case_loads_and_says_what_it_expects() -> None:
     cases = load_cases()
 
     assert {c.id for c in cases} == {
+        "cel-nie-caly",
+        "dryf-od-celu",
+        "obszar-bez-wymagan",
         "poza-tematem",
         "runda-druga",
         "solidny-rozdzial",
@@ -87,10 +90,17 @@ def test_the_summary_is_not_what_the_student_reads() -> None:
         (_output(next_step="Ocena: 3 z tego rozdziału."), "grade"),
         (_output(next_step="Rozdział wart 4/5."), "grade"),
         (_output(next_step="To niedopuszczalne."), "harsh"),
+        (_output(next_step="To krytyczny błąd."), "harsh"),
     ],
 )
 def test_the_plain_checks_catch(output: dict[str, Any], problem: str) -> None:
     assert any(problem in p for p in plain_checks(_case(), output))
+
+
+def test_a_critical_reading_of_sources_is_praise() -> None:
+    output = _output(next_step="Dobre, krytyczne podejście do źródeł.")
+
+    assert not any("harsh" in p for p in plain_checks(_case(), output))
 
 
 def test_the_score_counts_the_judges_reading() -> None:

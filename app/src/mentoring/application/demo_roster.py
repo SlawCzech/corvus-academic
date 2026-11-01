@@ -54,6 +54,8 @@ class DemoStudent:
     thesis_type: ThesisType
     topic: str | None
     timeline: tuple[DemoEvent, ...]
+    research_area: str | None = None
+    research_aim: str | None = None
 
 
 @dataclass
@@ -111,6 +113,8 @@ class DemoRoster:
             seed.thesis_type,
             seed.index_number,
             created_at=started,
+            research_area=seed.research_area,
+            research_aim=seed.research_aim,
         )
         set_id = await self._guidelines.first_set_for(str(seed.thesis_type))
         await self._students.update(

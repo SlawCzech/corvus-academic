@@ -1,0 +1,90 @@
+{
+  "model": "qwen3:30b-a3b",
+  "judge": "qwen3:30b-a3b",
+  "passed": 2,
+  "cases": [
+    {
+      "case_id": "cel-nie-caly",
+      "model": "qwen3:30b-a3b",
+      "seconds": 55.6,
+      "error": null,
+      "direction": "needs_additions",
+      "problems": [
+        "direction needs_additions"
+      ],
+      "output": {
+        "summary": "Rozdział 1 fragmentuje teorię zarządzania zasobami ludzkimi w kontekście rotacji pracowników. W sekcji 1.1 omawia się różnicę między zadowoleniem a zaangażowaniem, cytując Meyer i Allen z ich trzema składnikami zaangażowania: afektywnym, normatywnym i trwania. Sekcja 1.2 przedstawia model Herzberga i badania Mitchell z analizą czynników powodujących odejście pracowników, w tym pojęcie 'osadzenia w pracy'. W sekcji 1.3 omawiane są elastyczne formy czasu pracy jako narzędzie budowania przywiązania, z podkreśleniem, że ich efektywność zależy od rzeczywistej realizacji, co w małych firmach usługowych jest często nieformalne. Fragment nie wchodzi w szczegóły powiązań między elastycznością a rotacją, ale buduje teoretyczną podstawę poprzez omówienie kluczowych koncepcji związanych z zachowaniami pracowników.",
+        "answer": "",
+        "direction": "needs_additions",
+        "strengths": [
+          "Precyzyjna charakterystyka różnicy między zadowoleniem a zaangażowaniem z cytowaniem Meyer i Allen.",
+          "Wspomnienie pojęcia 'osadzenia w pracy' Mitchell i współautorów jako wyjaśnienia utrzymania pracowników mimo niezadowolenia.",
+          "Zwrócenie uwagi na nierealną elastyczność w małych firmach jako kluczowy czynnik dla dalszych badań."
+        ],
+        "changes": [
+          {
+            "point": "Jawne połączenie budowania przywiązania z redukcją rotacji w kontekście małych firm.",
+            "quote": "Elastyczne formy czasu pracy opisywane są w literaturze jako narzędzie budowania przywiązania, ponieważ dają pracownikowi poczucie kontroli."
+          }
+        ],
+        "additions": [
+          "Wspomnienie badań łączących elastyczny czas pracy bezpośrednio z rotacją w sektorze usługowym."
+        ],
+        "addressed": [],
+        "next_step": "Kontynuować pisanie rozdziału 1, uwzględniając źródła łączące elastyczny czas pracy z rotacją pracowników."
+      },
+      "passed": false
+    },
+    {
+      "case_id": "dryf-od-celu",
+      "model": "qwen3:30b-a3b",
+      "seconds": 37.4,
+      "error": null,
+      "direction": "needs_changes",
+      "problems": [],
+      "output": {
+        "summary": "Rozdział 2 przedstawia metodologię badania skupiającą się na ocenie przez sprzedawców wysokości opłat targowych i działań zarządcy. Badanie stosuje podejście ilościowe, przeprowadzając ankietę wśród sprzedawców na trzech wrocławskich targowiskach, z zakładanym zwrotem 60 ankiet. Respondenci to osoby prowadzące stoiska minimum od roku. Kwestionariusz obejmuje pytania o opłaty, infrastrukturę, czystość oraz kontakt z zarządcą, z odpowiedziami w skali pięciostopniowej. Wyniki mają być porównane dla każdego targowiska i z innymi miastami.",
+        "answer": "",
+        "direction": "needs_changes",
+        "strengths": [
+          "Jasno zdefiniowane podejście ilościowe i lokalizacja badania na wrocławskich targowiskach, co jest zgodne z tematem pracy."
+        ],
+        "changes": [
+          {
+            "point": "Badanie dotyczy oceny sprzedawców, podczas gdy cel pracy dotyczy zachowań klientów, co nie oddaje głównego celu badania.",
+            "quote": "Badanie dotyczy tego, jak sprzedawcy na targowiskach oceniają wysokość opłat targowych oraz działania zarządcy."
+          }
+        ],
+        "additions": [],
+        "addressed": [],
+        "next_step": "Przeprowadzić korektę pytania badawczego, skupiając się na perspektywie klientów, a nie sprzedawców."
+      },
+      "passed": true
+    },
+    {
+      "case_id": "runda-druga",
+      "model": "qwen3:30b-a3b",
+      "seconds": 47.2,
+      "error": null,
+      "direction": "needs_additions",
+      "problems": [],
+      "output": {
+        "summary": "Rozdział 2 przedstawia metodologię badania, obejmując metodę ankiety internetowej, dobór próby oraz przebieg badania. W sekcji 2.1 opisano przeprowadzenie badania wśród klientów trzech wrocławskich banków spółdzielczych za pomocą 20 zamkniętych pytań dotyczących korzystania z bankowości mobilnej. Sekcja 2.2 wyjaśnia dobór próby celowej skupiającej się na klientach korzystających z aplikacji mobilnej od roku, oraz uzasadnia wybór banków spółdzielczych z uwagi na starszą grupę klientów. Sekcja 2.3 opisuje okres przeprowadzenia badania w październiku 2025 roku przez cztery tygodnie, z uzyskaniem 214 odpowiedzi.",
+        "answer": "",
+        "direction": "needs_additions",
+        "strengths": [
+          "W sekcji 2.2 jasno uzasadniono dobór próby celowej, w tym kryteria wyboru klientów i uzasadnienie wyboru banków spółdzielczych."
+        ],
+        "changes": [],
+        "additions": [
+          "Opis struktury ankiety, w tym bloków pytań i ich źródeł."
+        ],
+        "addressed": [
+          "Uzasadnienie dobioru próby celowej (sekcja 2.2)."
+        ],
+        "next_step": "Opisz strukturę ankiety, w tym bloki pytań i ich źródła."
+      },
+      "passed": true
+    }
+  ]
+}

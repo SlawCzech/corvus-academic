@@ -1,0 +1,79 @@
+{
+  "model": "qwen3:30b-a3b",
+  "judge": "qwen3:30b-a3b",
+  "passed": 3,
+  "cases": [
+    {
+      "case_id": "cel-nie-caly",
+      "model": "qwen3:30b-a3b",
+      "seconds": 63.0,
+      "error": null,
+      "direction": "on_track",
+      "problems": [],
+      "output": {
+        "summary": "Rozdział 1 obejmuje trzy sekcje: 1.1 poświęconą zaangażowaniu pracowników (cytując Meyer i Allen o trzech składnikach), 1.2 analizującą przyczyny rotacji z wykorzystaniem modelu Herzberga i koncepcji osadzenia w pracy (Mitchell), oraz 1.3 omawiającą elastyczność czasu pracy jako narzędzie budowania przywiązania, z podkreśleniem różnicy między rzeczywistą a deklarowaną elastycznością w małych firmach. Tekst wykorzystuje kluczowe źródła z zarządzania zasobami ludzkimi, łącząc teorię zaangażowania z procesami rotacji i analizując kontekst małych firm usługowych.",
+        "answer": "",
+        "direction": "on_track",
+        "strengths": [
+          "Dobrze zintegrowanie modelu Herzberga z przyczynami rotacji w sekcji 1.2."
+        ],
+        "changes": [],
+        "additions": [],
+        "addressed": [],
+        "next_step": "Kontynuuj pisanie rozdziału."
+      },
+      "passed": true
+    },
+    {
+      "case_id": "dryf-od-celu",
+      "model": "qwen3:30b-a3b",
+      "seconds": 46.8,
+      "error": null,
+      "direction": "needs_changes",
+      "problems": [],
+      "output": {
+        "summary": "Rozdział 2 przedstawia metodologię badania, skupiając się na badaniu opinii sprzedawców na wrocławskich targowiskach. Badanie jest zdefiniowane jako ilościowe, oparte na ankiecie wysłanej do sprzedawców na trzech targowiskach, z planowanym zwrotem około 60 ankiet. Respondenci to osoby prowadzące stoiska co najmniej od roku. Kwestionariusz obejmuje pytania o opłaty targowe, infrastrukturę, czystość oraz kontakt z zarządcą, z odpowiedziami w pięciostopniowej skali. Wyniki mają zostać porównane z opłatami w innych miastach.",
+        "answer": "",
+        "direction": "needs_changes",
+        "strengths": [
+          "Jasne opisanie metody ilościowej i struktury kwestionariusza, w tym skali pięciostopniowej i planowanej analizy porównawczej."
+        ],
+        "changes": [
+          {
+            "point": "Badanie skupia się na opinii sprzedawców, podczas gdy cel pracy dotyczy zachowań klientów, co wymaga zmiany kierunku badania.",
+            "quote": "Badanie dotyczy tego, jak sprzedawcy na targowiskach oceniają wysokość opłat targowych oraz działania zarządcy."
+          }
+        ],
+        "additions": [],
+        "addressed": [],
+        "next_step": "Skupić badanie na perspektywach klientów, a nie sprzedawców, aby zgodnie z celem pracy."
+      },
+      "passed": true
+    },
+    {
+      "case_id": "runda-druga",
+      "model": "qwen3:30b-a3b",
+      "seconds": 47.9,
+      "error": null,
+      "direction": "needs_additions",
+      "problems": [],
+      "output": {
+        "summary": "Rozdział 2 obejmuje metodologię badania, opisując metodę ankiety internetowej przeprowadzonej wśród klientów trzech wrocławskich banków spółdzielczych. W punkcie 2.2 wyjaśniono wybór próby celowej, skupiając się na klientach, którzy w ciągu ostatniego roku zaczęli korzystać z aplikacji mobilnej, oraz uzasadniono wybór banków spółdzielczych ze względu na starszą grupę klientów, co jest istotne dla badania zmian zachowań. Podano liczbę odpowiedzi (214) i zaznaczono ograniczenia w uogólnianiu wyników. Przebieg badania w punkcie 2.3 przedstawiono jako udostępnienie ankiety w aplikacjach banków w październiku 2025 r. przez cztery tygodnie.",
+        "answer": "",
+        "direction": "needs_additions",
+        "strengths": [
+          "Zdecydowanie wskazano na powód wyboru próby celowej, łącząc ją z tematem badania o zmianie zachowań w grupie starszych klientów."
+        ],
+        "changes": [],
+        "additions": [
+          "Opis struktury ankiety, w tym bloków pytań i ich źródeł."
+        ],
+        "addressed": [
+          "uzasadnienie doboru próby"
+        ],
+        "next_step": "Opisz strukturę ankiety, w tym jakie bloki pytań zawiera i skąd pochodzą."
+      },
+      "passed": true
+    }
+  ]
+}

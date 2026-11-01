@@ -38,6 +38,8 @@ export default function StudentDetailsCard({ student, onChange }: Props) {
     ["Kierunek", student.field_of_study],
     ["Nr indeksu", student.index_number ?? "—"],
     ["Typ pracy", THESIS_TYPE_LABELS[student.thesis_type]],
+    ["Obszar badawczy", student.research_area ?? "—"],
+    ["Cel i hipotezy", student.research_aim ?? "—"],
   ]
 
   return (
@@ -58,7 +60,7 @@ export default function StudentDetailsCard({ student, onChange }: Props) {
         {rows.map(([label, value]) => (
           <div key={label} className="contents">
             <dt className="text-muted">{label}</dt>
-            <dd className="text-foreground">{value}</dd>
+            <dd className="whitespace-pre-line text-foreground">{value}</dd>
           </div>
         ))}
       </dl>

@@ -1,0 +1,23 @@
+{
+  "id": "obszar-bez-wymagan",
+  "description": "A sound chapter in institutional economics that cites neither North nor Williamson. The area must not become a reading list.",
+  "context": {
+    "current_topic": "Jakość instytucji lokalnych a przedsiębiorczość w polskich gminach",
+    "field_of_study": "Ekonomia",
+    "thesis_type": "bachelor",
+    "research_area": "Ekonomia instytucjonalna",
+    "part_name": "Rozdział 1: podstawy teoretyczne",
+    "round_number": 1,
+    "other_parts": [
+      {"name": "Rozdział 2: dane i metoda", "state": "not_submitted"}
+    ]
+  },
+  "acceptable_directions": ["on_track"],
+  "must_say": [],
+  "must_not_say": [
+    "The chapter should cite or draw on Douglass North.",
+    "The chapter should cite or draw on Oliver Williamson or Ronald Coase.",
+    "The chapter is missing the classics or founding authors of institutional economics.",
+    "The chapter should use transaction cost theory."
+  ]
+}

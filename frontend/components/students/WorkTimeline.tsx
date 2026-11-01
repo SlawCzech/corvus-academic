@@ -25,7 +25,13 @@ function formatDay(day: string): string {
  * "Przebieg pracy": where the thesis stands, part by part, and how it got
  * there. Fragments, meeting notes and whole versions on one line of time.
  */
-export default function WorkTimeline({ studentId }: { studentId: string }) {
+export default function WorkTimeline({
+  studentId,
+  hasTopic,
+}: {
+  studentId: string
+  hasTopic: boolean
+}) {
   const [adding, setAdding] = useState(false)
   const { data, error, mutate } = useSWR<Timeline>(
     `/api/students/${studentId}/timeline`,
@@ -67,6 +73,7 @@ export default function WorkTimeline({ studentId }: { studentId: string }) {
         <FragmentUploadForm
           studentId={studentId}
           parts={data?.parts ?? []}
+          hasTopic={hasTopic}
           onSaved={refresh}
           onClose={() => setAdding(false)}
         />

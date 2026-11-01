@@ -42,14 +42,18 @@ class StudentCreateRequest(BaseModel):
     field_of_study: str = Field(min_length=1, max_length=255)
     thesis_type: ThesisType
     index_number: str | None = Field(default=None, max_length=50)
+    research_area: str | None = Field(default=None, max_length=255)
+    research_aim: str | None = Field(default=None, max_length=4000)
 
 
 class StudentUpdateRequest(BaseModel):
     full_name: str | None = Field(default=None, min_length=1, max_length=255)
     field_of_study: str | None = Field(default=None, min_length=1, max_length=255)
     thesis_type: ThesisType | None = None
-    # These three: sent as null to clear, left out to keep.
+    # These five: sent as null to clear, left out to keep.
     index_number: str | None = Field(default=None, min_length=1, max_length=50)
+    research_area: str | None = Field(default=None, min_length=1, max_length=255)
+    research_aim: str | None = Field(default=None, min_length=1, max_length=4000)
     current_topic: str | None = Field(default=None, min_length=1)
     guideline_set_id: uuid.UUID | None = None
     status: StudentStatus | None = None
@@ -64,6 +68,8 @@ class StudentResponse(BaseModel):
     thesis_type: str
     current_topic: str | None
     current_topic_set_at: datetime | None
+    research_area: str | None
+    research_aim: str | None
     status: str
     created_at: datetime
     updated_at: datetime
@@ -81,6 +87,8 @@ def student_response(student: Student) -> StudentResponse:
         thesis_type=str(student.thesis_type),
         current_topic=student.current_topic,
         current_topic_set_at=student.current_topic_set_at,
+        research_area=student.research_area,
+        research_aim=student.research_aim,
         status=str(student.status),
         created_at=student.created_at,
         updated_at=student.updated_at,

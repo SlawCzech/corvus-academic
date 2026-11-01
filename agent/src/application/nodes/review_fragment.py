@@ -5,11 +5,13 @@ from typing import Any, cast
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from src.application.brief import render_brief
 from src.application.excerpt import reading_budget
 from src.application.grounding import ThesisText
 from src.application.prompts import review_fragment as prompts
 from src.application.replies import FRAGMENT_REVIEW, FragmentChangeReply
 from src.application.structured import invoke_structured
+from src.domain.analysis import ThesisType
 from src.infrastructure.llm_factory import get_llm
 from src.infrastructure.provider_errors import raise_if_provider_error
 
@@ -28,13 +30,31 @@ def _within(text: str, budget: int | None) -> str:
     return text[:budget] + "\n\n[...cut here: you have not seen the rest...]"
 
 
+# A fragment does not carry the thesis, so the aim only says where it should lead.
+_ONE_PART = (
+    "This fragment is one part of the thesis, so it is not expected to carry out "
+    "the whole aim or to settle a hypothesis. Ask only whether it leads towards "
+    "them. Tying it to the aim explicitly is for a later part, so a missing link "
+    "is at most a suggestion and leaves the direction on_track. Only if the "
+    "fragment plainly heads somewhere else, as when a method studies other people "
+    "or another question than the aim names, treat it as you would a fragment off "
+    "the topic."
+)
+_MASTER_LEVEL = (
+    "Level: a master's thesis written as an article, not a first piece of "
+    "research: the argument and the method may be expected to hold more firmly, "
+    "and the tone stays the same."
+)
+
+
 def _context_lines(ctx: dict[str, Any]) -> list[str]:
     lines = [
-        f"Thesis topic: {ctx.get('current_topic') or 'not settled yet'}",
-        f"Field of study: {ctx.get('field_of_study') or 'unspecified'}",
+        render_brief(ctx, reading=_ONE_PART),
         f"This part of the thesis: {ctx.get('part_name') or 'unnamed'}",
         f"Round: {ctx.get('round_number', 1)}",
     ]
+    if ctx.get("thesis_type") == ThesisType.MASTER_ARTICLE:
+        lines.append(_MASTER_LEVEL)
     others = cast(list[dict[str, str]], ctx.get("other_parts") or [])
     if others:
         names = ", ".join(f"{p['name']} ({p['state']})" for p in others)

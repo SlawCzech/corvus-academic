@@ -130,3 +130,24 @@ def test_without_a_rubric_the_key_is_absent_so_the_agent_loads_its_own() -> None
     context = assemble_generate_review_context(_student(), _draft(_LONG_THESIS))
 
     assert "guidelines" not in context
+
+
+def test_a_full_review_carries_what_was_agreed_with_the_student() -> None:
+    student = _student("Instytucje a wzrost")
+    student.research_area = "ekonomia instytucjonalna"
+    student.research_aim = "Cel: zbadać X."
+
+    context = assemble_generate_review_context(student, _draft("Tekst pracy."))
+
+    assert context["research_area"] == "ekonomia instytucjonalna"
+    assert context["research_aim"] == "Cel: zbadać X."
+
+
+def test_methodology_hears_the_field_as_well_as_the_topic() -> None:
+    student = _student("Instytucje a wzrost")
+
+    context = assemble_evaluate_methodology_context(student, _draft("Tekst pracy."))
+
+    assert context["current_topic"] == "Instytucje a wzrost"
+    assert context["field_of_study"] == student.field_of_study
+    assert context["research_aim"] is None

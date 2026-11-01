@@ -51,6 +51,8 @@ def to_domain(model: StudentModel) -> Student:
         accepted_draft_id=model.accepted_draft_id,
         draft_accepted_at=model.draft_accepted_at,
         guideline_set_id=model.guideline_set_id,
+        research_area=model.research_area,
+        research_aim=model.research_aim,
     )
 
 
@@ -77,6 +79,8 @@ def _to_orm(student: Student) -> StudentModel:
         accepted_draft_id=student.accepted_draft_id,
         draft_accepted_at=student.draft_accepted_at,
         guideline_set_id=student.guideline_set_id,
+        research_area=student.research_area,
+        research_aim=student.research_aim,
     )
 
 
@@ -128,6 +132,8 @@ class StudentService:
         thesis_type: ThesisType,
         index_number: str | None = None,
         created_at: datetime | None = None,
+        research_area: str | None = None,
+        research_aim: str | None = None,
     ) -> Student:
         """Add a student to the caller's roster.
 
@@ -143,6 +149,8 @@ class StudentService:
             field_of_study=field_of_study,
             thesis_type=thesis_type,
             index_number=index_number,
+            research_area=research_area,
+            research_aim=research_aim,
             created_at=added,
             updated_at=added,
         )
@@ -182,6 +190,10 @@ class StudentService:
         set_index_number: bool = False,
         clear_topic: bool = False,
         topic_set_at: datetime | None = None,
+        research_area: str | None = None,
+        set_research_area: bool = False,
+        research_aim: str | None = None,
+        set_research_aim: bool = False,
     ) -> Student:
         """Edit the student: details, topic, lifecycle status, guideline set.
 
@@ -202,6 +214,10 @@ class StudentService:
         student.update_details(full_name=full_name, field_of_study=field_of_study)
         if set_index_number:
             student.set_index_number(index_number)
+        if set_research_area:
+            student.set_research_area(research_area)
+        if set_research_aim:
+            student.set_research_aim(research_aim)
         if thesis_type is not None:
             student.change_thesis_type(thesis_type)
         if clear_topic:
@@ -217,6 +233,8 @@ class StudentService:
         model.full_name = student.full_name
         model.field_of_study = student.field_of_study
         model.index_number = student.index_number
+        model.research_area = student.research_area
+        model.research_aim = student.research_aim
         model.thesis_type = str(student.thesis_type)
         model.current_topic = student.current_topic
         model.current_topic_set_at = student.current_topic_set_at
