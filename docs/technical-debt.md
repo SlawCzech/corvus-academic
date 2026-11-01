@@ -279,12 +279,15 @@ Zostaje:
   przy kilkudziesięciu trzeba ją przyciąć.
 - [x] **`review_fragment` na żywo przez Celery** — przeszło 2026-10-31 przez prawdziwego
   workera i Redis, na Claude, w tym ścieżka odrzuconego klucza.
-- [ ] **Evalsy fragmentów tylko na `qwen3`** — produkcja działa na kluczach
-  użytkowników, a ton na Claude nie był mierzony.
-- [ ] **Pełna recenzja bez evala po zmianie kontekstu** — metodologia, spójność i
-  recenzja dostały blok z ADR 0015, a `make eval` nie był po tym puszczony do końca.
+- [x] **Evalsy fragmentów tylko na `qwen3`** — zmierzone 2026-11-01 na Claude:
+  prompt dawał 3 z 7, po strojeniu 20 z 21 (`agent/evals/README.md`).
+- [x] **Pełna recenzja bez evala po zmianie kontekstu** — puszczona 2026-11-01 na
+  Claude, poziom sprzed zmian. Na `qwen3` nadal niezmierzona.
 - [ ] **Przypadki graniczne fragmentów są niestabilne na `qwen3`** — `cel-nie-caly` i
-  `runda-druga` przechodzą 2 z 3 powtórzeń. Werdykt i tak ustawia promotor.
+  `runda-druga` przechodziły 2 z 3 powtórzeń, a po strojeniu pod Claude `qwen3` nie
+  był mierzony. Werdykt i tak ustawia promotor.
+- [ ] **Na Claude `obszar-bez-wymagan` przechodzi 2 z 3** — raz obszar zamienił się w
+  podpowiedź teorii.
 - [ ] **Poziom magisterki przy fragmentach bez evala** — `review_fragment` dostaje typ
   pracy, ale żaden przypadek nie sprawdza, czy to zmienia wynik.
 

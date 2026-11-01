@@ -1,0 +1,196 @@
+{
+  "model": "claude",
+  "judge": "claude",
+  "passed": 6,
+  "cases": [
+    {
+      "case_id": "cel-nie-caly",
+      "model": "claude",
+      "seconds": 7.8,
+      "error": null,
+      "direction": "on_track",
+      "problems": [],
+      "output": {
+        "summary": "Przekazany fragment to początek rozdziału przeglądowego, podzielony na trzy krótkie podrozdziały. W pierwszym odróżniono zadowolenie z pracy od zaangażowania i przedstawiono trójskładnikowy model Meyera i Allena (afektywne, normatywne i trwania). Drugi podrozdział omawia przyczyny odejść: dwuczynnikowy model Herzberga, wielość powodów decyzji o odejściu (przełożony, brak rozwoju, oferty rynkowe) oraz pojęcie osadzenia w pracy Mitchella i współautorów. Trzeci podrozdział ujmuje elastyczny czas pracy jako narzędzie budowania przywiązania przez poczucie kontroli, zaznacza, że efekt zależy od tego, czy elastyczność jest realna, a nie tylko deklarowana, i wspomina, że w małych firmach usługowych bywa ona wynikiem nieformalnych ustaleń z właścicielem. Tekst opiera się na kilku klasycznych pozycjach teoretycznych i ma charakter opisowy.",
+        "answer": "",
+        "direction": "on_track",
+        "strengths": [
+          "Rozdział ma czytelną logikę: od zaangażowania, przez przyczyny odejść, do elastyczności czasu pracy, więc prowadzi do tematu pracy.",
+          "Trafne jest rozróżnienie elastyczności realnej i deklarowanej oraz uwaga o nieformalnych ustaleniach w małych firmach. Dokładnie to dotyka sformułowania hipotezy.",
+          "Dobór klasycznych ujęć (Meyer i Allen, Herzberg, Mitchell) to solidna baza pojęciowa."
+        ],
+        "changes": [],
+        "additions": [
+          "Podrozdział 1.3 jest najkrótszy, a jest najbliższy tematowi. Warto go rozbudować o konkretne badania empiryczne nad elastycznym czasem pracy i rotacją lub intencją odejścia, w miarę możliwości także w małych firmach lub usługach.",
+          "Warto rozważyć krótkie wyjaśnienie, co w pracy będzie znaczyć „realnie elastyczny czas pracy” i jak rozumiana jest rotacja. Pomoże to później w metodologii.",
+          "Można dodać kilka zdań łączących podrozdziały 1.1 i 1.2 z elastycznością, np. przez które mechanizmy (kontrola, osadzenie, zaangażowanie afektywne) elastyczność mogłaby ograniczać odejścia."
+        ],
+        "addressed": [],
+        "next_step": "Rozbuduj podrozdział 1.3 o konkretne badania empiryczne łączące elastyczny czas pracy z rotacją i dopisz, jak rozumiesz „realną” elastyczność."
+      },
+      "passed": true
+    },
+    {
+      "case_id": "dryf-od-celu",
+      "model": "claude",
+      "seconds": 7.7,
+      "error": null,
+      "direction": "needs_changes",
+      "problems": [],
+      "output": {
+        "summary": "Przekazano rozdział drugi, poświęcony metodologii badania. Badanie ma dotyczyć tego, jak sprzedawcy na targowiskach oceniają wysokość opłat targowych oraz działania zarządcy. Przyjęto podejście ilościowe: ankietę skierowaną do sprzedawców na trzech wrocławskich targowiskach.\n\nRespondentami mają być wszyscy sprzedawcy obecni w wybranym tygodniu, prowadzący stoiska co najmniej od roku, a zakładany zwrot to około 60 ankiet. Kwestionariusz zawiera pytania o wysokość opłaty, częstotliwość jej zmian, stan infrastruktury, czystość, ochronę targowiska i kontakt z zarządcą, z odpowiedziami w skali pięciostopniowej. Wyniki mają być przedstawione w tabelach osobno dla każdego targowiska i porównane z wysokością opłat w innych miastach.",
+        "answer": "",
+        "direction": "needs_changes",
+        "strengths": [
+          "Opis jest konkretny i czytelny: wiadomo, ile targowisk, jaka technika, jaka skala odpowiedzi i jaki zakładany zwrot.",
+          "Dobór respondentów ma jasne kryterium (staż co najmniej rok), a wybór ankiety jako techniki jest sam w sobie rozsądny dla pierwszej pracy badawczej."
+        ],
+        "changes": [
+          {
+            "point": "Badanie dotyczy innej grupy i innego pytania niż uzgodniony cel. Cel brzmi: dlaczego część klientów zostaje przy zakupach na targowisku mimo rozwoju e-commerce, a hipoteza dotyczy relacji ze sprzedawcą kontra cena. Tymczasem ankietuje się sprzedawców o opłatach targowych i zarządcy, więc wyniki nie pozwolą ani zrealizować celu, ani sprawdzić hipotezy. Proponuję przeprojektować badanie tak, by respondentami byli klienci targowisk, a kwestionariusz mierzył motywy pozostania: relacje ze sprzedawcą, cenę, świeżość i jakość, wygodę, nawyk, porównanie z zakupami online. Sprzedawców można ewentualnie zostawić jako uzupełniające źródło perspektywy. Poprawki w doborze próby i narzędziu wynikną wtedy z nowego pytania.",
+            "quote": "Badanie dotyczy tego, jak sprzedawcy na targowiskach oceniają wysokość opłat targowych oraz działania zarządcy."
+          }
+        ],
+        "additions": [],
+        "addressed": [],
+        "next_step": "Sformułuj pytania badawcze wprost z uzgodnionego celu i hipotezy, a potem na nowo opisz respondentów (klientów) i kwestionariusz."
+      },
+      "passed": true
+    },
+    {
+      "case_id": "obszar-bez-wymagan",
+      "model": "claude",
+      "seconds": 7.4,
+      "error": null,
+      "direction": "on_track",
+      "problems": [
+        "said: The chapter should use transaction cost theory."
+      ],
+      "output": {
+        "summary": "Przekazany fragment to początek rozdziału teoretycznego, składający się z trzech krótkich podrozdziałów. Pierwszy definiuje instytucje jako reguły gry (prawo, zwyczaje, egzekwowanie) i przywołuje podział Acemoglu i Robinsona na instytucje włączające i wyzyskujące oraz ich tezę o historycznych źródłach różnic w zamożności krajów. Drugi przedstawia biurokrację jako koszt dla małej firmy, powołuje się na raporty Doing Business Banku Światowego i krytykę, że mierzą one przepisy, a nie praktykę urzędów. Trzeci wskazuje, że decyzje wobec lokalnego przedsiębiorcy zapadają głównie w gminie, proponuje czas wydawania pozwoleń budowlanych jako miarę jakości instytucji lokalnych i zapowiada zestawienie jej z liczbą nowo rejestrowanych firm.",
+        "answer": "",
+        "direction": "on_track",
+        "strengths": [
+          "Rozdział ma czytelną logikę: od ogólnej definicji instytucji, przez koszt biurokracji dla firmy, do poziomu gminy. Prowadzi to wprost do tematu pracy.",
+          "Dobrze, że przy Doing Business pojawia się krytyka (przepisy na papierze a praktyka). To uzasadnia wybór miary opartej na faktycznym czasie decyzji w gminach."
+        ],
+        "changes": [],
+        "additions": [
+          "Podrozdział 1.3 warto rozbudować: dlaczego czas wydawania pozwoleń budowlanych oddaje jakość instytucji, a nie np. skalę inwestycji czy obłożenie urzędu. Dobrze byłoby też wskazać ograniczenia tej miary.",
+          "Brakuje wyraźnego łącznika między instytucjami a przedsiębiorczością: mechanizmu (koszty transakcyjne, niepewność, korupcja), którym sprawne instytucje wpływają na zakładanie firm. Warto go krótko opisać i, jeśli się uda, dodać 1–2 badania empiryczne na poziomie regionalnym lub lokalnym, w tym polskie.",
+          "Warto zaznaczyć, że Acemoglu i Robinson opisują poziom państw i długi okres, a praca dotyczy gmin w jednym kraju. Jedno zdanie o tym, co z tej teorii da się przenieść na poziom lokalny, pomoże uzasadnić dobór ram teoretycznych."
+        ],
+        "addressed": [],
+        "next_step": "Rozwiń podrozdział 1.3 o mechanizm łączący jakość instytucji z powstawaniem firm i o uzasadnienie wybranej miary, a potem pisz dalej."
+      },
+      "passed": false
+    },
+    {
+      "case_id": "poza-tematem",
+      "model": "claude",
+      "seconds": 6.5,
+      "error": null,
+      "direction": "needs_changes",
+      "problems": [],
+      "output": {
+        "summary": "Przekazany fragment otwiera rozdział pierwszy zatytułowany „Historia naukowego zarządzania” i składa się z trzech krótkich podrozdziałów. W pierwszym opisano Fredericka Taylora: jego pracę w stalowni Midvale, pomiary czasu czynności oraz zasady naukowego zarządzania (podział pracy, dobór pracowników, płaca zależna od wyników) z książki z 1911 roku. W drugim przedstawiono Henry'ego Forda, wprowadzenie linii montażowej w 1913 roku, skrócenie czasu montażu modelu T oraz podwyżkę płac do pięciu dolarów dziennie. W trzecim omówiono Henriego Fayola, jego pięć funkcji kierowniczych i czternaście zasad zarządzania. Tekst ma charakter opisowo-historyczny, nie zawiera odwołań do konkretnych publikacji poza tytułem dzieła Taylora i nie odnosi się do pracy zdalnej, zespołów programistycznych ani małych firm.",
+        "answer": "",
+        "direction": "needs_changes",
+        "strengths": [
+          "Podrozdziały są przejrzyste, a opis każdej postaci jest zwięzły i zrozumiały.",
+          "Wybór klasyków (Taylor, Ford, Fayol) to sensowny punkt wyjścia do rozmowy o kontroli i organizacji pracy."
+        ],
+        "changes": [
+          {
+            "point": "Cały rozdział opowiada historię klasycznego zarządzania, a temat pracy dotyczy wpływu pracy zdalnej na wydajność zespołów programistycznych w małych firmach. Warto przebudować rozdział tak, by przegląd literatury dotyczył tematu pracy: pracy zdalnej, wydajności zespołów IT/programistów, specyfiki małych firm. Klasyków można zostawić najwyżej jako krótkie tło (np. akapit o tym, jak Taylor i Fayol rozumieli kontrolę i pomiar wydajności, w kontraście do pracy zdalnej), ale nie jako trzon rozdziału.",
+            "quote": "Rozdział 1. Historia naukowego zarządzania"
+          }
+        ],
+        "additions": [],
+        "addressed": [],
+        "next_step": "Zastanów się nad układem rozdziału wokół trzech pojęć z tematu (praca zdalna, wydajność zespołów programistycznych, małe firmy) i zbierz po kilka źródeł empirycznych do każdego z nich."
+      },
+      "passed": true
+    },
+    {
+      "case_id": "runda-druga",
+      "model": "claude",
+      "seconds": 7.2,
+      "error": null,
+      "direction": "needs_additions",
+      "problems": [],
+      "output": {
+        "summary": "Przekazany fragment to rozdział metodologiczny pracy o korzystaniu z bankowości mobilnej przez klientów banków spółdzielczych. Opisuje badanie metodą ankiety internetowej wśród klientów trzech wrocławskich banków spółdzielczych; ankieta liczyła dwadzieścia pytań zamkniętych o korzystanie z bankowości mobilnej. Osobny podrozdział uzasadnia dobór próby: celowy, obejmujący klientów, którzy w ciągu ostatniego roku zaczęli korzystać z aplikacji mobilnej. Banki spółdzielcze wybrano, ponieważ ich klienci są starsi niż w bankach komercyjnych. Uzyskano 214 odpowiedzi, co według autora pozwala wnioskować w obrębie badanej grupy, ale nie uogólniać na wszystkich klientów banków. Ostatni podrozdział podaje, że ankietę udostępniono w aplikacjach trzech banków w październiku 2025 roku, a odpowiedzi zbierano cztery tygodnie.",
+        "answer": "",
+        "direction": "needs_additions",
+        "strengths": [
+          "Uzasadnienie doboru próby jest teraz konkretne: wiadomo, dlaczego dobór celowy i dlaczego banki spółdzielcze.",
+          "Uczciwie zaznaczono, że wyniki dotyczą badanej grupy i nie pozwalają na uogólnienia."
+        ],
+        "changes": [],
+        "additions": [
+          "Nadal brakuje opisu ankiety, o który prosiłem: z jakich bloków pytań się składa (np. częstość i zakres korzystania, motywy, bariery, metryczka) i skąd się wzięły (literatura z rozdziału 1, wzorowanie na istniejących badaniach, własne pomysły). Warto powiązać bloki z pytaniami badawczymi i rozdziałem 1.",
+          "Skoro interesują Państwa osoby, które zaczęły korzystać z aplikacji w ciągu ostatniego roku, proszę dopisać, jak to sprawdzono (pytanie filtrujące w ankiecie?) oraz jak ankieta trafiła do respondentów, żeby było jasne, kogo dotyczy 214 odpowiedzi."
+        ],
+        "addressed": [
+          "Uzasadniono dobór próby (dobór celowy, wybór banków spółdzielczych, ograniczenia wnioskowania)."
+        ],
+        "next_step": "Dopisz podrozdział opisujący strukturę ankiety: bloki pytań i źródła, z których pochodzą."
+      },
+      "passed": true
+    },
+    {
+      "case_id": "solidny-rozdzial",
+      "model": "claude",
+      "seconds": 7.5,
+      "error": null,
+      "direction": "on_track",
+      "problems": [],
+      "output": {
+        "summary": "Przekazany fragment to początek rozdziału pierwszego, poświęconego kapitałowi ludzkiemu i rynkowi pracy absolwentów. Składa się z trzech krótkich podrozdziałów. W pierwszym omówiono teorię kapitału ludzkiego (Becker, Schultz, Mincer): wykształcenie jako inwestycja podnosząca płace i wydajność, przy czym bezrobocie osób wykształconych ma być zjawiskiem przejściowym. W drugim przedstawiono teorię sygnalizacji Spence'a, według której dyplom sygnalizuje zdolności, a nadmiar dyplomów osłabia ten sygnał. Autor stwierdza, że przeciwstawienie obu teorii jest kluczowe dla pracy. Trzeci podrozdział dotyczy niedopasowania kwalifikacji (Hartog, Freeman), rozróżnia nadmierne wykształcenie i niedopasowanie kierunkowe oraz przywołuje polskie dane z Bilansu Kapitału Ludzkiego, według których pracodawcy częściej zgłaszają braki kompetencji miękkich. Zapowiedziano powrót do tych ustaleń w części empirycznej, w odniesieniu do Wrocławia.",
+        "answer": "",
+        "direction": "on_track",
+        "strengths": [
+          "Rozdział ma czytelną, logiczną konstrukcję: od teorii kapitału ludzkiego, przez sygnalizację, do niedopasowania kwalifikacji, czyli stopniowo zbliża się do zjawiska bezrobocia absolwentów.",
+          "Dobrze, że zestawiasz dwie teorie jako konkurencyjne wyjaśnienia i zaznaczasz, dlaczego to ważne dla pracy. Daje to oś argumentacji.",
+          "Zapowiedź powrotu do danych BKL we Wrocławiu dobrze łączy część teoretyczną z empiryczną."
+        ],
+        "changes": [],
+        "additions": [
+          "Warto pokazać, jakie konkretne, sprawdzalne oczekiwania wynikają z każdej teorii (np. dla struktury bezrobotnych absolwentów wg kierunków czy czasu poszukiwania pracy), aby rozdział 2 mógł je zweryfikować na danych wrocławskich.",
+          "Rozważ krótki podrozdział o bezrobociu absolwentów w Polsce i na rynku wrocławskim (np. dane GUS/PUP), choćby jako kontekst. Obecnie rozdział jest czysto teoretyczny, a temat dotyczy konkretnego miasta."
+        ],
+        "addressed": [],
+        "next_step": "Dopisz krótko, jakie hipotezy lub oczekiwania wynikają z każdej z teorii, a potem dodaj kontekst empiryczny dotyczący bezrobocia absolwentów."
+      },
+      "passed": true
+    },
+    {
+      "case_id": "urwany-rozdzial",
+      "model": "claude",
+      "seconds": 12.8,
+      "error": null,
+      "direction": "on_track",
+      "problems": [],
+      "output": {
+        "summary": "Przekazany fragment to początek rozdziału metodologicznego pracy o wpływie pracy zdalnej na wydajność zespołów programistycznych w małych firmach. Najpierw formułuje główny problem badawczy oraz pytania szczegółowe: zmiany w liczbie zamkniętych zadań, w czasie reakcji na błędy i w ocenie pracy przez samych programistów. Następnie opisuje metodę: studium wielu przypadków w czterech firmach zatrudniających od 20 do 50 osób. Dane pochodzą z zanonimizowanych statystyk systemów do zarządzania zadaniami z lat 2019–2023 oraz z dwunastu wywiadów z kierownikami zespołów. Zapowiedziano porównanie statystyk sprzed przejścia na pracę zdalną i po nim, osobno dla każdej firmy, oraz kodowanie wywiadów według kategorii wyłonionych z literatury. Ostatnie zdanie urywa się w połowie.",
+        "answer": "",
+        "direction": "on_track",
+        "strengths": [
+          "Rozdział jest spójny z tematem: pytania badawcze, metoda i źródła danych odpowiadają na pytanie o wpływ pracy zdalnej na wydajność.",
+          "Triangulacja danych z systemów zadaniowych i wywiadów to dobry pomysł, a jej cel (sprawdzenie, czy deklaracje kierowników potwierdzają się w liczbach) jest jasno wyrażony.",
+          "Analiza osobno dla każdej firmy pasuje do logiki studium wielu przypadków."
+        ],
+        "changes": [],
+        "additions": [
+          "Warto uzasadnić, jak w danych z lat 2019–2023 wyznaczysz moment przejścia na pracę zdalną i jak oddzielisz jej wpływ od innych zmian z tego okresu (pandemia, rotacja, zmiana projektów). Wystarczy krótki akapit o ograniczeniach.",
+          "Pytanie o ocenę pracy przez programistów nie ma w opisanej próbie własnego źródła, bo wywiady dotyczą tylko kierowników. Można dodać krótką ankietę wśród programistów albo zawęzić to pytanie do perspektywy kierowników.",
+          "Przydałoby się wyjaśnić, co w tej pracy znaczy „wydajność” i jak liczba zamkniętych zadań oraz czas reakcji na błędy mają ją mierzyć, także przy zadaniach o różnej wielkości."
+        ],
+        "addressed": [],
+        "next_step": "Pisz dalej opis analizy wywiadów w 2.3, a potem dopisz krótko, jak zdefiniujesz i zmierzysz wydajność oraz jak ujmiesz ograniczenia porównania przed i po."
+      },
+      "passed": true
+    }
+  ]
+}
