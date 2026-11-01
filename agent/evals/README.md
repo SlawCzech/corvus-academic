@@ -18,7 +18,8 @@ potrzebuje Postgresa, Celery ani `app`. Pełen przebieg na qwen3:30b-a3b to ok.
 25 minut.
 
 Recenzję próbną puszcza `--action trial_review`, ale klucz odpowiedzi mierzy tylko
-uwagi, więc nie mówi nic o jakości jej zaleceń. Raport liczy też `advice in reviews`: sformułowania w gotowej recenzji, które
+uwagi, więc nie mówi nic o jakości jej zaleceń; od tego jest `make eval-trial`. Raport
+liczy też `advice in reviews`: sformułowania w gotowej recenzji, które
 zlecają coś autorowi albo planują obronę. Ma być 0: praca jest skończona, a tekst
 idzie do systemu uczelni. Recenzji próbnej to nie dotyczy.
 
@@ -118,6 +119,30 @@ wersja tego przypadku przechodziła także bez reguły, bo notatka sama mówiła
 okazję”. Stąd zasada: przypadek na regułę trzeba sprawdzić bez reguły. Na qwen3 nie
 mierzone.
 
+## Rady recenzji próbnej i mail do studenta (`trial_review`, `draft_student_email`)
+
+Te same trzy prace: pełny graf próbny, potem mail z jego wyniku, tak jak składa go
+`app`.
+
+```bash
+make eval-trial MODEL=claude                # ANTHROPIC_API_KEY
+```
+
+Sędzia czyta recenzję i odpowiada, czy przy każdej poważnej wpisanej wadzie mówi, gdzie
+jest problem i co zrobić, czy na początku stoi rzecz najważniejsza i które zalecenia
+pasują do każdej pracy. Przy mailu czyta też uwagi, bo mail ma prawo z nich korzystać, i
+wypisuje, co dodano ponad nie, czy student ruszy z samego maila, jaki jest ton i co
+zdradza płeć studenta albo promotora. Bez modelu: pozdrowienie i podpis, numerowana
+lista do pięciu punktów, brak punktacji, obrony, AI i markdownu. Procentów ten filtr
+nie łapie, bo bywają wynikami z pracy.
+
+Pierwszy przebieg (2026-11-01, `claude-sonnet-5-5`, jeden przebieg, więc to wrażenie,
+nie średnia): 2 z 3 po obu stronach, 38–40 s na pracę. Każda poważna wada dostała
+drogę wyjścia. `pokolenie-z` wpada na trzech zaleceniach uznanych za ogólne („rozbudować
+wstęp o charakterystykę literatury”), a mail na pomyłce sędziego: „odbywała się” mówi o
+praktyce, nie o studencie. Prompt maila wcześniej podpowiadał „przeczytałem” i przez to
+zdradzał płeć promotora; ten sam eval to wyłapał.
+
 ## Co znaczą liczby
 
 - **recall** — ile wpisanych wad recenzja nazwała. Główna liczba.
@@ -144,6 +169,7 @@ zaskakującą liczbę da się przeczytać, zamiast puszczać jeszcze raz.
 |---|---|---|---|---|---|---|---|---|
 | 2026-09-30 | punkt wyjścia (przed structured output i weryfikacją cytatów) | qwen3:30b-a3b | 0.61 | 1 | 0 | 0 | 1 | 1552 s |
 | 2026-09-30 | + structured output, cytaty i weryfikacja (punkty 3–4) | qwen3:30b-a3b | 0.67 | 0 | 3 | 0 | 0 | 1846 s |
+| 2026-11-01 | po rozdzieleniu recenzji (ADR 0018), `advice in reviews` 0 | claude-sonnet-5-5 | 0.83 | 1 | 7 | 0 | 0 | 87 s |
 
 ### Obszar i cel (ADR 0015)
 

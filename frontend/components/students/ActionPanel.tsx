@@ -9,6 +9,7 @@ import {
   IconFileText,
   IconGitCompare,
   IconLayoutGrid,
+  IconMail,
   IconMessageQuestion,
   IconMicroscope,
   IconNotes,
@@ -80,6 +81,13 @@ const ACTIONS: ActionSpec[] = [
     icon: IconFileSearch,
   },
   {
+    type: "draft_student_email",
+    label: "Mail do studenta",
+    hint: "Szkic maila z najnowszej recenzji próbnej",
+    icon: IconMail,
+    detailLabel: "Co dodać od siebie (opcjonalnie)",
+  },
+  {
     type: "generate_review",
     label: "Recenzja finalna",
     hint: "Ocena gotowej pracy do systemu uczelni",
@@ -88,7 +96,7 @@ const ACTIONS: ActionSpec[] = [
   {
     type: "defence_questions",
     label: "Pytania na obronę",
-    hint: "Trzy pytania z ostatniej wersji pracy",
+    hint: "Trzy ogólne pytania o pracę",
     icon: IconMessageQuestion,
   },
 ]
@@ -104,7 +112,13 @@ const STAGES: { title: string; note: string; types: ActionType[] }[] = [
   {
     title: "Gotowa całość",
     note: "Gdy jest już cała praca",
-    types: ["evaluate_methodology", "verify_bibliography", "trial_review", "generate_review"],
+    types: [
+      "evaluate_methodology",
+      "verify_bibliography",
+      "trial_review",
+      "draft_student_email",
+      "generate_review",
+    ],
   },
   {
     title: "Obrona",
@@ -488,6 +502,25 @@ function ActionPanelInner({
 
               {shown.accepted && (
                 <p className="mt-3 text-[13px] text-muted">Zaakceptowano.</p>
+              )}
+
+              {shown.action_type === "trial_review" && shown.status === "completed" && (
+                <div
+                  data-testid="suggest-email"
+                  className="mt-5 flex items-center justify-between gap-4 rounded-lg border border-line bg-surface-alt p-3.5"
+                >
+                  <p className="text-[13px] text-muted-strong">
+                    Z tej recenzji powstanie szkic maila do studenta, bez punktów i oceny.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => choose("draft_student_email")}
+                    className="flex h-9 shrink-0 items-center gap-2 rounded-lg border border-accent px-3.5 text-[13px] font-semibold text-accent-hover hover:bg-accent-soft transition-colors"
+                  >
+                    <IconMail size={15} stroke={1.75} />
+                    Napisz mail
+                  </button>
+                </div>
               )}
 
               {FULL_REVIEWS.includes(shown.action_type) &&

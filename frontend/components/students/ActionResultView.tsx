@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import AnalysisResultView from "@/components/AnalysisResult"
+import StudentEmail from "@/components/students/StudentEmail"
 import { fragmentReview } from "@/lib/fragmentFeedback"
 import type {
   ActionErrorCode,
@@ -285,6 +286,9 @@ function ActionResultBody({ action, selected, onSelect }: Props) {
           <Bullets title="Ustalenia" items={output?.agreed_actions} />
         </div>
       )
+
+    case "draft_student_email":
+      return <StudentEmail subject={output?.subject ?? ""} body={output?.body ?? ""} />
 
     case "review_fragment": {
       const review = fragmentReview(result)

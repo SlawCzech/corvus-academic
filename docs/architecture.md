@@ -201,6 +201,7 @@ app :8000
          check_progress       [check_progress]        — porównanie 2 wersji
          evaluate_methodology [analyze_methodology]   — ten sam węzeł, osobno
          draft_meeting_note   [draft_meeting_note]
+         draft_student_email  [draft_student_email]
        Nieznany typ akcji → 422 przy żądaniu, zamiast zadania, które i tak by padło.
        Gdy student ma wybrany zestaw, rubrykę opublikowanej wersji wkłada do
        kontekstu `app` (klucz `guidelines`), a `input_ref` akcji zapisuje
@@ -356,7 +357,8 @@ corvus/
 │   │   │   │   ├── propose_topic.py
 │   │   │   │   ├── defence_questions.py
 │   │   │   │   ├── check_progress.py
-│   │   │   │   └── draft_meeting_note.py
+│   │   │   │   ├── draft_meeting_note.py
+│   │   │   │   └── draft_student_email.py
 │   │   │   ├── prompts/          # system prompty per węzeł + wytyczne
 │   │   │   └── tasks.py          # Celery: run_action
 │   │   └── infrastructure/

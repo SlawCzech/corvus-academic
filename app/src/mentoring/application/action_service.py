@@ -24,6 +24,7 @@ from src.mentoring.application.context import (
     assemble_check_progress_context,
     assemble_defence_questions_context,
     assemble_draft_meeting_note_context,
+    assemble_draft_student_email_context,
     assemble_evaluate_methodology_context,
     assemble_generate_review_context,
     assemble_propose_topic_context,
@@ -521,6 +522,12 @@ class ActionService:
                     assemble_draft_meeting_note_context(student, notes, detail),
                     base_ref | {"note_ids": [str(n.id) for n in notes]},
                 )
+            case ActionType.DRAFT_STUDENT_EMAIL:
+                trial = await self._latest_trial_review(student.id)
+                return (
+                    assemble_draft_student_email_context(student, trial, detail),
+                    base_ref | {"trial_review_id": str(trial.id) if trial else None},
+                )
             case ActionType.EVALUATE_METHODOLOGY:
                 latest = await self._latest_drafts(student.id, 1)
                 rubric = await self._rubric(student)
@@ -624,6 +631,14 @@ class ActionService:
             ),
             base_ref | {"fragment_id": str(fragment.id), "part_id": str(part.id)},
         )
+
+    async def _latest_trial_review(self, student_id: UUID) -> AgentAction | None:
+        """The newest trial review that finished; the list comes newest first."""
+        records = await self._actions.find_by_student(
+            student_id, action_type=str(ActionType.TRIAL_REVIEW)
+        )
+        finished = (_to_domain(r) for r in records)
+        return next((a for a in finished if a.status is ActionStatus.COMPLETED), None)
 
     async def _point_fragment_at(self, record: AgentActionModel) -> None:
         """Make this run the one the fragment shows."""

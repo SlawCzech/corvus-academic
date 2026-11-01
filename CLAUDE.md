@@ -113,6 +113,9 @@ Użytkownik
         (Weryfikacja: bez modelu — cytat każdej uwagi musi być w tekście,
          duplikaty z różnych analiz scalane; `agent/src/application/grounding.py`)
       → draft_meeting_note:   [Szkic notatki]
+      → draft_student_email:  [Szkic maila z najnowszej recenzji próbnej]
+        (czyta tekst recenzji i uwagi, nie pracę; bez punktów, ocen i obrony;
+         Corvus nic nie wysyła, promotor kopiuje, ADR 0019)
       → review_fragment:      [Podsumowanie i łagodny feedback do fragmentu]
         (praca w toku: bez punktów i ocen, nie wytyka tego, czego jeszcze nie ma;
          kolejna runda dostaje poprzedni feedback; bez rubryki wytycznych)
@@ -518,6 +521,9 @@ Recenzje są dwie: próbna (`trial_review`) mówi, co poprawić przed złożenie
 najnowszą wersję, a finalna (`generate_review`) ocenia skończoną pracę, czyta wersję
 zaakceptowaną i nie pokazuje rekomendacji. Jednorazówki znają tylko finalną —
 [ADR 0018](docs/adr/0018-a-trial-review-and-a-final-review.md).
+Mail do studenta powstaje z najnowszej recenzji próbnej, osobną akcją, bez czytania
+pracy. Student dostaje listę poprawek, nie punkty ani ocenę, a Corvus nic nie wysyła —
+[ADR 0019](docs/adr/0019-a-mail-is-written-from-a-trial-review.md).
 
 ---
 

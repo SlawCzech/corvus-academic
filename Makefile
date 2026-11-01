@@ -105,6 +105,10 @@ eval-progress:  ## Score check_progress: meeting notes as context (MODEL=… JUD
 	cd agent && uv run python -m evals.progress --model $(or $(MODEL),qwen3:30b-a3b) \
 		$(if $(JUDGE),--judge $(JUDGE)) $(if $(CASES),--cases $(CASES))
 
+eval-trial:  ## Score a trial review's advice and the mail from it (MODEL=… JUDGE=… CASES="a b")
+	cd agent && uv run python -m evals.trial --model $(or $(MODEL),qwen3:30b-a3b) \
+		$(if $(JUDGE),--judge $(JUDGE)) $(if $(CASES),--cases $(CASES))
+
 eval-maps:  ## Recompute each eval case's document map with app's outline (after editing a thesis)
 	for case in agent/evals/cases/*/; do \
 		(cd app && uv run python scripts/document_map.py ../$$case/thesis.md) > $$case/document_map.json; \

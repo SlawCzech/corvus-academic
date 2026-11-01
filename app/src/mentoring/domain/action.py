@@ -19,6 +19,7 @@ class ActionType(StrEnum):
     EVALUATE_METHODOLOGY = "evaluate_methodology"
     CHECK_PROGRESS = "check_progress"
     DRAFT_MEETING_NOTE = "draft_meeting_note"
+    DRAFT_STUDENT_EMAIL = "draft_student_email"
     DEFENCE_QUESTIONS = "defence_questions"
     GENERATE_REVIEW = "generate_review"
     TRIAL_REVIEW = "trial_review"
@@ -140,6 +141,13 @@ class AgentAction:
         payload = self.output or {}
         structured = payload.get("output")
         return cast(dict[str, Any], structured) if isinstance(structured, dict) else {}
+
+    def findings(self) -> list[dict[str, Any]]:
+        """The findings a review ended with, after the promoter's pick."""
+        stored = (self.output or {}).get("findings")
+        if not isinstance(stored, list):
+            return []
+        return [f for f in cast(list[Any], stored) if isinstance(f, dict)]
 
     def drafted_note(self) -> str:
         """Return the note text a `draft_meeting_note` action produced.

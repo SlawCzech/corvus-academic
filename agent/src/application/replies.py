@@ -246,6 +246,14 @@ class MeetingNoteReply(_Reply):
 MEETING_NOTE = TypeAdapter(MeetingNoteReply)
 
 
+class StudentEmailReply(_Reply):
+    subject: Text
+    body: Text
+
+
+STUDENT_EMAIL = TypeAdapter(StudentEmailReply)
+
+
 # ---------- the bibliography check ----------
 
 

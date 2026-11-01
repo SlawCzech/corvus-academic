@@ -27,7 +27,9 @@ const ACTION_LABELS: Record<string, string> = {
   check_progress: "sprawdzenie postępu",
   evaluate_methodology: "ocena metodologii",
   draft_meeting_note: "szkic notatki",
-  generate_review: "recenzja",
+  draft_student_email: "mail do studenta",
+  generate_review: "recenzja finalna",
+  trial_review: "recenzja próbna",
   verify_bibliography: "sprawdzenie bibliografii",
 }
 
