@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { NextRequest } from "next/server"
-import { middleware } from "./middleware"
+import { config, middleware } from "./middleware"
 
 function fakeJwt(payload: Record<string, unknown>): string {
   const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }))
@@ -64,6 +64,29 @@ describe("middleware", () => {
       "http://localhost/admin/guidelines",
     )
     expect(middleware(makeRequest("/guidelines/v1", token)).headers.get("location")).toBeNull()
+  })
+
+  it("renews an expired token on a file link and comes back to the file", () => {
+    const expired = fakeJwt({ sub: "u1", role: "promotor", exp: 1 })
+    const path = "/api/students/s1/drafts/d1/file"
+    const res = middleware(
+      new NextRequest(`http://localhost${path}`, {
+        headers: { cookie: `access_token=${expired}; refresh_token=ref-1` },
+      }),
+    )
+    const location = new URL(res.headers.get("location")!)
+    expect(location.pathname).toBe("/api/auth/refresh")
+    expect(location.searchParams.get("redirect")).toBe(path)
+  })
+
+  it("covers every file link", () => {
+    expect(config.matcher).toEqual(
+      expect.arrayContaining([
+        "/api/students/:student/drafts/:draft/file",
+        "/api/students/:student/fragments/:fragment/file",
+        "/api/guidelines/versions/:version/source",
+      ]),
+    )
   })
 
   it("lets a promoter into the roster", () => {

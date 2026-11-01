@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import useSWR from "swr"
+import { request } from "@/lib/api.client"
 
 interface LoginEvent {
   id: string
@@ -13,7 +14,7 @@ interface LoginEvent {
 }
 
 const fetcher = (url: string) =>
-  fetch(url).then((r) => {
+  request(url).then((r) => {
     if (!r.ok) throw new Error("Fetch failed")
     return r.json() as Promise<LoginEvent[]>
   })

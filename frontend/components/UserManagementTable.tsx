@@ -4,6 +4,7 @@ import { useState } from "react"
 import useSWR from "swr"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { request } from "@/lib/api.client"
 import { z } from "zod"
 
 interface User {
@@ -25,7 +26,7 @@ const createSchema = z.object({
 type CreateForm = z.infer<typeof createSchema>
 
 const fetcher = (url: string) =>
-  fetch(url).then((r) => {
+  request(url).then((r) => {
     if (!r.ok) throw new Error("Fetch failed")
     return r.json() as Promise<User[]>
   })
@@ -52,7 +53,7 @@ export default function UserManagementTable({
   }
 
   async function onDelete(id: string) {
-    await fetch(`/api/users/${id}`, { method: "DELETE" })
+    await request(`/api/users/${id}`, { method: "DELETE" })
     await mutate()
     setDeleteConfirm(null)
   }
@@ -170,7 +171,7 @@ function CreateUserModal({
 
   async function onCreate(data: CreateForm) {
     setServerError(null)
-    const res = await fetch("/api/users", {
+    const res = await request("/api/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),

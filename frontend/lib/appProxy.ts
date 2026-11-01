@@ -23,6 +23,21 @@ export function forwardedFor(request: Request): Record<string, string> {
 }
 
 /**
+ * The refresh token out of `app`'s `Set-Cookie`.
+ *
+ * It never travels in the JSON body, and a cookie that `app` scopes to its own
+ * `/auth/refresh` means nothing to the browser here: the route has to lift it
+ * out and set a cookie of this site.
+ */
+export function refreshTokenIn(upstream: Response): string | null {
+  for (const header of upstream.headers.getSetCookie()) {
+    const match = /^refresh_token=([^;]+)/.exec(header)
+    if (match) return match[1]
+  }
+  return null
+}
+
+/**
  * Where to send the browser after a refresh: a path on this site, or home.
  * `new URL("//evil.example", base)` and absolute URLs leave the site, so
  * anything but a single-slash path is refused.

@@ -42,7 +42,7 @@ async function renewSession(): Promise<boolean> {
  * model calls. A token that expires while the page waits used to surface as
  * "Nie znaleziono studenta" — a 401 that the UI could only read as "gone".
  */
-async function request(url: string, init?: RequestInit): Promise<Response> {
+export async function request(url: string, init?: RequestInit): Promise<Response> {
   const res = await fetch(url, init)
   if (res.status !== 401) return res
   if (!(await renewSession())) {

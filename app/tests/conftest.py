@@ -30,10 +30,20 @@ class InMemoryTokenStore:
 
     def __init__(self) -> None:
         self.revoked: dict[str, int] = {}
+        # Retired tokens still in their grace period. Tests end it by hand.
+        self.retiring: set[str] = set()
 
     async def revoke(self, jti: str, ttl_seconds: int) -> None:
         if ttl_seconds > 0:
             self.revoked[jti] = ttl_seconds
+
+    async def retire(self, jti: str, ttl_seconds: int, grace_seconds: int) -> None:
+        if ttl_seconds > 0 and jti not in self.revoked:
+            self.retiring.add(jti)
+
+    def end_grace(self) -> None:
+        self.revoked |= dict.fromkeys(self.retiring, 1)
+        self.retiring.clear()
 
     async def is_revoked(self, jti: str) -> bool:
         return jti in self.revoked

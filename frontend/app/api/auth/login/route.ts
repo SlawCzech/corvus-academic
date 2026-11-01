@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 
-import { APP_URL, forwardedFor } from "@/lib/appProxy"
+import { APP_URL, forwardedFor, refreshTokenIn } from "@/lib/appProxy"
 import { ACCESS_COOKIE_MAX_AGE, REFRESH_COOKIE_MAX_AGE, getRole, homeFor } from "@/lib/auth"
 
 export async function POST(request: Request): Promise<Response> {
@@ -13,10 +13,8 @@ export async function POST(request: Request): Promise<Response> {
   if (!gatewayRes.ok) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
   }
-  const data = (await gatewayRes.json()) as {
-    access_token: string
-    refresh_token?: string
-  }
+  const data = (await gatewayRes.json()) as { access_token: string }
+  const refreshToken = refreshTokenIn(gatewayRes)
   const response = NextResponse.json({ ok: true, home: homeFor(getRole(data.access_token)) })
   response.cookies.set("access_token", data.access_token, {
     httpOnly: true,
@@ -25,8 +23,8 @@ export async function POST(request: Request): Promise<Response> {
     path: "/",
     maxAge: ACCESS_COOKIE_MAX_AGE,
   })
-  if (data.refresh_token) {
-    response.cookies.set("refresh_token", data.refresh_token, {
+  if (refreshToken) {
+    response.cookies.set("refresh_token", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
