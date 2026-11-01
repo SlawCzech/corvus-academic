@@ -44,7 +44,7 @@ function section(title: string, items: string[]): string | null {
 export function fragmentFeedbackDraft(review: FragmentReview): string {
   const parts = [
     review.answer || null,
-    section("Co działa", review.strengths),
+    section("Mocne strony", review.strengths),
     section("Co już poprawione", review.addressed),
     section(
       "Do zmiany",

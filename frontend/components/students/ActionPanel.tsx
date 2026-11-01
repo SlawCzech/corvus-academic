@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { Fragment, useState } from "react"
 import useSWR, { useSWRConfig } from "swr"
 import {
   IconBooks,
@@ -35,8 +35,6 @@ interface ActionSpec {
   acceptLabel?: string
 }
 
-// In the order a thesis goes through them: a topic, the meetings, the
-// versions as they come, and at the end the review and the defence.
 const ACTIONS: ActionSpec[] = [
   {
     type: "propose_topic",
@@ -87,6 +85,30 @@ const ACTIONS: ActionSpec[] = [
     icon: IconMessageQuestion,
   },
 ]
+
+// In the order a thesis goes through them. Grouped because seven tiles in a
+// row say nothing about which one is for now.
+const STAGES: { title: string; note: string; types: ActionType[] }[] = [
+  {
+    title: "Praca nad tekstem",
+    note: "Od tematu po kolejne wersje",
+    types: ["propose_topic", "draft_meeting_note", "check_progress"],
+  },
+  {
+    title: "Gotowa całość",
+    note: "Gdy jest już cała praca",
+    types: ["evaluate_methodology", "verify_bibliography", "generate_review"],
+  },
+  {
+    title: "Obrona",
+    note: "Przygotowanie do egzaminu",
+    types: ["defence_questions"],
+  },
+]
+
+function actionsOf(types: ActionType[]): ActionSpec[] {
+  return ACTIONS.filter((a) => types.includes(a.type))
+}
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "W kolejce",
@@ -220,28 +242,38 @@ function ActionPanelInner({
     <section>
       {selectedType === null ? (
         // Nothing chosen: the whole catalogue, with room to say what each does.
-        <div data-testid="action-tiles" className="grid grid-cols-3 gap-3">
-          {ACTIONS.map((a) => (
-            <button
-              key={a.type}
-              type="button"
-              aria-label={a.label}
-              onClick={() => choose(a.type)}
-              className="group rounded-xl border border-line bg-surface p-4 text-left transition-colors hover:border-accent"
-            >
-              <span className="mb-2.5 flex items-center justify-between">
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-soft text-accent-hover">
-                  <a.icon size={18} stroke={1.75} />
-                </span>
-                {goingDot(a.type)}
-              </span>
-              <span className="block text-[14px] font-semibold text-foreground group-hover:text-accent-hover">
-                {a.label}
-              </span>
-              <span className="mt-0.5 block text-[12.5px] leading-snug text-muted-strong">
-                {a.hint}
-              </span>
-            </button>
+        <div data-testid="action-tiles" className="space-y-6">
+          {STAGES.map((stage) => (
+            <section key={stage.title} aria-label={stage.title}>
+              <div className="mb-2.5 flex items-baseline gap-2.5">
+                <h3 className="text-[13.5px] font-semibold text-foreground">{stage.title}</h3>
+                <p className="text-[12.5px] text-muted">{stage.note}</p>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {actionsOf(stage.types).map((a) => (
+                  <button
+                    key={a.type}
+                    type="button"
+                    aria-label={a.label}
+                    onClick={() => choose(a.type)}
+                    className="group flex flex-col rounded-xl border border-line bg-surface p-4 text-left transition-colors hover:border-accent"
+                  >
+                    <span className="mb-2.5 flex items-center justify-between">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-soft text-accent-hover">
+                        <a.icon size={18} stroke={1.75} />
+                      </span>
+                      {goingDot(a.type)}
+                    </span>
+                    <span className="block text-[14px] font-semibold text-foreground group-hover:text-accent-hover">
+                      {a.label}
+                    </span>
+                    <span className="mt-0.5 block text-[12.5px] leading-snug text-muted-strong">
+                      {a.hint}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
           ))}
         </div>
       ) : (
@@ -259,22 +291,27 @@ function ActionPanelInner({
           >
             <IconLayoutGrid size={16} stroke={1.75} />
           </button>
-          {ACTIONS.map((a) => (
-            <button
-              key={a.type}
-              type="button"
-              title={a.hint}
-              onClick={() => choose(a.type)}
-              className={`flex h-9 items-center gap-2 rounded-lg border px-3 text-[13px] font-medium transition-colors ${
-                selectedType === a.type
-                  ? "border-accent bg-accent-soft text-accent-hover"
-                  : "border-line text-muted-strong hover:text-foreground"
-              }`}
-            >
-              <a.icon size={15} stroke={1.75} />
-              {a.label}
-              {goingDot(a.type)}
-            </button>
+          {STAGES.map((stage, index) => (
+            <Fragment key={stage.title}>
+              {index > 0 && <span aria-hidden className="mx-1 h-5 w-px bg-line" />}
+              {actionsOf(stage.types).map((a) => (
+                <button
+                  key={a.type}
+                  type="button"
+                  title={a.hint}
+                  onClick={() => choose(a.type)}
+                  className={`flex h-9 items-center gap-2 rounded-lg border px-3 text-[13px] font-medium transition-colors ${
+                    selectedType === a.type
+                      ? "border-accent bg-accent-soft text-accent-hover"
+                      : "border-line text-muted-strong hover:text-foreground"
+                  }`}
+                >
+                  <a.icon size={15} stroke={1.75} />
+                  {a.label}
+                  {goingDot(a.type)}
+                </button>
+              ))}
+            </Fragment>
           ))}
         </div>
       )}

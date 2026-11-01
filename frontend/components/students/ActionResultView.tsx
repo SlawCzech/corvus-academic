@@ -296,7 +296,7 @@ function ActionResultBody({ action, selected, onSelect }: Props) {
           {review?.answer && (
             <p className="mt-3 text-[13px] text-muted-strong">{review.answer}</p>
           )}
-          <Bullets title="Co działa" items={review?.strengths} />
+          <Bullets title="Mocne strony" items={review?.strengths} />
           <Bullets title="Co już poprawione" items={review?.addressed} />
           <Bullets title="Do zmiany" items={review?.changes.map((c) => c.point)} />
           <Bullets title="Do dodania" items={review?.additions} />
