@@ -50,7 +50,7 @@ jobs:
           ADMIN_PASSWORD: ci-admin-password-123
           AGENT_URL: http://agent:8002
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-app
@@ -85,7 +85,7 @@ jobs:
           DATABASE_URL: postgresql+asyncpg://user:pass@localhost:5432/thesis_reviewer
           JWT_SECRET: ci-secret-key-that-is-long-enough-32ch
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-agent
