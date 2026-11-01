@@ -66,6 +66,27 @@ rzeczy: limity są sufitem, nie celem, a `needs_additions` tylko wtedy, gdy bez
 braku nie da się iść dalej. Claude to teraz punkt odniesienia; po tej zmianie
 promptu qwen3 nie był mierzony.
 
+## Pytania na obronę (`defence_questions`)
+
+Bez własnych przypadków: te same trzy prace, bo klucza odpowiedzi tu nie ma.
+Liczy się rodzaj pytania, nie to, które padło.
+
+```bash
+make eval-defence MODEL=claude              # ANTHROPIC_API_KEY
+```
+
+Bez modelu sprawdzane są: trzy pytania, limit słów, jedno pytanie w zdaniu (w tym
+dwa sklejone przez „i jakie…”) i brak liczb, tabel, stron. Sędzia czyta, czy
+student odpowie z głowy, czy pytanie należy do tej pracy i o co pyta: cel, metoda
+czy wnioski. Sklejonych pytań sędzia sam nie łapie, stąd osobny regex.
+
+Punkt wyjścia, 2026-11-01, `claude-sonnet-5-5`: 0 z 3, pytania po 47–85 słów, z
+cytowanymi wynikami i numerami podrozdziałów, kilka pytań w jednej karcie. Po
+zmianie promptu: 1 z 3, pytania po 11–19 słów i bez szczegółów, ale 2 z 9 nadal
+sklejone przez „i”. Jeden przebieg, więc to wrażenie, nie średnia. Trzecia wpadka
+to sędzia: „pasuje do każdej pracy” o pytaniu, które nazywa temat pracy. Na qwen3
+nie mierzone.
+
 ## Co znaczą liczby
 
 - **recall** — ile wpisanych wad recenzja nazwała. Główna liczba.

@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 from langchain_core.messages import AIMessage
 
 from src.application.nodes.defence_questions import defence_questions
+from src.application.prompts.defence_questions import MAX_WORDS, get_system_prompt
 from src.application.state import ActionState
 from src.domain.action import ActionType
 from tests.factories import make_state
@@ -14,24 +15,9 @@ from tests.factories import make_state
 _VALID_RESPONSE = json.dumps(
     {
         "questions": [
-            {
-                "question": "Dlaczego wybrano regresję panelową zamiast przekrojowej?",
-                "rationale": "Sprawdza świadomość założeń metody.",
-                "section": "Rozdział 2",
-                "focus": "method",
-            },
-            {
-                "question": "Jak sformułowano problem badawczy?",
-                "rationale": "Sprawdza rozumienie własnej pracy.",
-                "section": "Wstęp",
-                "focus": "problem",
-            },
-            {
-                "question": "Jakie są ograniczenia wniosków?",
-                "rationale": "Sprawdza krytycyzm wobec wyników.",
-                "section": "Zakończenie",
-                "focus": "conclusions",
-            },
+            {"question": "Co było celem pracy o instytucjach i wzroście?"},
+            {"question": "Dlaczego wybrano akurat tę metodę badania wzrostu?"},
+            {"question": "Na ile wnioski o instytucjach można uogólnić?"},
         ]
     }
 )
@@ -64,8 +50,38 @@ def test_defence_questions_happy_path() -> None:
     output = result["output"]
     assert output is not None
     assert len(output["questions"]) == 3
-    assert output["questions"][0]["focus"] == "method"
     assert result["error"] is None
+
+
+def test_a_question_is_only_its_text() -> None:
+    """A model that still adds the old detail does not get it through."""
+    reply = {
+        "questions": [
+            {
+                "question": "Co było celem pracy?",
+                "rationale": "Sprawdza rozumienie.",
+                "section": "Wstęp",
+                "focus": "problem",
+            }
+        ]
+    }
+    mock_llm = MagicMock()
+    mock_llm.invoke.return_value = AIMessage(content=json.dumps(reply))
+
+    with patch(
+        "src.application.nodes.defence_questions.get_llm", return_value=mock_llm
+    ):
+        result = defence_questions(_make_state())
+
+    assert result["output"] == {"questions": [{"question": "Co było celem pracy?"}]}
+
+
+def test_prompt_asks_for_short_general_questions() -> None:
+    prompt = get_system_prompt()
+
+    assert f"at most {MAX_WORDS} words" in prompt
+    assert "rationale" not in prompt
+    assert '"focus"' not in prompt
 
 
 def test_defence_questions_api_error() -> None:

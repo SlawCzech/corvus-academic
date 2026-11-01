@@ -105,7 +105,10 @@ export interface ProposedTopic {
   risks?: string
 }
 
-/** One question for the defence. */
+/**
+ * One question for the defence. Results saved before the questions became
+ * general also carry `rationale`, `section` and `focus`.
+ */
 export interface DefenceQuestion {
   question: string
   rationale?: string

@@ -169,11 +169,6 @@ TOPIC_PROPOSAL = TypeAdapter(TopicProposalReply)
 
 class QuestionReply(_Reply):
     question: Text
-    rationale: str = ""
-    section: str = ""
-    focus: Annotated[
-        Literal["problem", "method", "conclusions"], BeforeValidator(_lower)
-    ]
 
 
 class DefenceQuestionsReply(_Reply):

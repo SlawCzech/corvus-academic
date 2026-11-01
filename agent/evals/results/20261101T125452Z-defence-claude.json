@@ -1,0 +1,76 @@
+{
+  "model": "claude",
+  "judge": "claude",
+  "passed": 1,
+  "cases": [
+    {
+      "case_id": "kryptowaluty",
+      "model": "claude",
+      "seconds": 2.7,
+      "error": null,
+      "problems": [],
+      "output": {
+        "questions": [
+          {
+            "question": "Jak w pracy rozumie Pan wpływ kryptowalut na system finansowy w Polsce i po czym można go rozpoznać?"
+          },
+          {
+            "question": "Dlaczego uznał Pan ankietę wśród znajomych za wystarczającą podstawę do oceny wpływu kryptowalut na polski system finansowy?"
+          },
+          {
+            "question": "Na jakiej podstawie wnioskuje Pan, że kryptowaluty mają coraz większy wpływ na polski system finansowy, skoro badano opinie?"
+          }
+        ]
+      },
+      "passed": true
+    },
+    {
+      "case_id": "oszczednosci",
+      "model": "claude",
+      "seconds": 2.9,
+      "error": null,
+      "problems": [
+        "question 1: not one question"
+      ],
+      "output": {
+        "questions": [
+          {
+            "question": "Dlaczego uznała Pani za ważne zbadanie, od czego zależy oszczędzanie polskich gospodarstw domowych, i jaki praktyczny cel ma to badanie?"
+          },
+          {
+            "question": "Jakie ograniczenia ma zastosowana w pracy metoda badania oszczędzania gospodarstw domowych, jeśli chodzi o wiarygodność wniosków o zależnościach przyczynowych?"
+          },
+          {
+            "question": "Na ile wnioski o determinantach oszczędzania wystarczają do rekomendacji dla polityki wspierania oszczędności gospodarstw domowych w Polsce?"
+          }
+        ]
+      },
+      "passed": false
+    },
+    {
+      "case_id": "pokolenie-z",
+      "model": "claude",
+      "seconds": 2.9,
+      "error": null,
+      "problems": [
+        "question 1: 21 words",
+        "question 1: not one question",
+        "question 2: not one question"
+      ],
+      "output": {
+        "questions": [
+          {
+            "question": "Jaki cel badawczy przyświecał pracy o motywowaniu pracowników z pokolenia Z w małych przedsiębiorstwach i dlaczego jest on ważny dla praktyki?"
+          },
+          {
+            "question": "Dlaczego do zbadania motywacji młodych pracowników wybrała Pani ankietę w jednej firmie i jakie ogranicza to możliwości wnioskowania?"
+          },
+          {
+            "question": "Na ile wnioski o motywowaniu pokolenia Z wynikają z uzyskanych odpowiedzi ankietowanych, a na ile z Pani oczekiwań?"
+          }
+        ]
+      },
+      "passed": false
+    }
+  ]
+}

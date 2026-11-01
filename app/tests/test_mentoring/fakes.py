@@ -166,17 +166,7 @@ def question_payload(*questions: str) -> dict[str, Any]:
         "action_type": "defence_questions",
         "findings": [],
         "scores": [],
-        "output": {
-            "questions": [
-                {
-                    "question": q,
-                    "rationale": "sprawdza rozumienie pracy",
-                    "section": "Rozdział 2",
-                    "focus": "method",
-                }
-                for q in questions
-            ]
-        },
+        "output": {"questions": [{"question": q} for q in questions]},
         "status": "questions_ready",
         "error": None,
     }

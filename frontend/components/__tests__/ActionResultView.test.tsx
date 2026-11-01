@@ -56,9 +56,7 @@ describe("ActionResultView", () => {
       action_type: "defence_questions",
       output: {
         output: {
-          questions: [
-            { question: "Dlaczego ta metoda?", rationale: "sprawdza metodę" },
-          ],
+          questions: [{ question: "Dlaczego ta metoda?" }],
         },
       },
     }
@@ -66,6 +64,30 @@ describe("ActionResultView", () => {
 
     expect(screen.getByTestId("questions")).toBeInTheDocument()
     expect(screen.getByText("1. Dlaczego ta metoda?")).toBeInTheDocument()
+  })
+
+  it("still shows a result saved with the older, detailed questions", () => {
+    const action: AgentAction = {
+      ...base,
+      action_type: "defence_questions",
+      output: {
+        output: {
+          questions: [
+            {
+              question: "Dlaczego ta metoda?",
+              rationale: "sprawdza metodę",
+              section: "Rozdział 2",
+              focus: "method",
+            },
+          ],
+        },
+      },
+    }
+    render(<ActionResultView action={action} selected={0} onSelect={vi.fn()} />)
+
+    expect(screen.getByText("1. Dlaczego ta metoda?")).toBeInTheDocument()
+    expect(screen.getByText("sprawdza metodę")).toBeInTheDocument()
+    expect(screen.getByText("Rozdział 2")).toBeInTheDocument()
   })
 
   it("shows the drafted note ready to be saved", () => {
