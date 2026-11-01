@@ -102,7 +102,10 @@ def report_text(output: dict[str, Any]) -> str:
     changes = cast(list[dict[str, str]], output.get("changes") or [])
     parts = [
         str(output.get("summary") or ""),
-        *[f"{c.get('area', '')}: {c.get('change', '')}" for c in changes],
+        *[
+            f"{c.get('area', '')}: {c.get('change', '')} ({c.get('assessment', '')})"
+            for c in changes
+        ],
         *cast(list[str], output.get("concerns") or []),
         *cast(list[str], output.get("next_steps") or []),
     ]

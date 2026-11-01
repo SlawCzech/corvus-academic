@@ -106,8 +106,12 @@ Sędzia czyta cały raport i odpowiada, czy padło to, co paść miało, i nie p
 co nie miało. Przebieg bez notatek nie ma tu przypadku: prompt jest wtedy co do
 znaku taki jak wcześniej, a pilnuje tego test jednostkowy.
 
-Zestaw nie był jeszcze puszczony na Claude: przy jego pisaniu w środowisku nie było
-`ANTHROPIC_API_KEY`, więc nowej reguły nikt jeszcze nie zmierzył.
+Ostatni przebieg (2026-11-01, `claude-sonnet-5-5`, po trzy powtórzenia): 9 z 9.
+Kontrola: `notatka-tylko-wspomina` z notatką, ale bez `NOTES_RULE`, 0 z 3; za każdym
+razem Williamson, wywiady i Volksbanki wracały jako braki albo propozycje. Pierwsza
+wersja tego przypadku przechodziła także bez reguły, bo notatka sama mówiła „na inną
+okazję”. Stąd zasada: przypadek na regułę trzeba sprawdzić bez reguły. Na qwen3 nie
+mierzone.
 
 ## Co znaczą liczby
 

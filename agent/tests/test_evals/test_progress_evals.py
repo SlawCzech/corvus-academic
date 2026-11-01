@@ -65,7 +65,7 @@ def test_the_judge_reads_everything_the_supervisor_would() -> None:
     text = report_text(_output())
 
     assert "Praca poszła do przodu." in text
-    assert "Metodologia: Dodano dobór." in text
+    assert "Metodologia: Dodano dobór. (progress)" in text
     assert "Brak opisu ankiety." in text
     assert "Opisać ankietę." in text
 
