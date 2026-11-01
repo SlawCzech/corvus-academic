@@ -344,6 +344,8 @@ Zasady, które warto znać przed zmianą któregokolwiek z nich:
   buildzie forka uczy ludzi ignorować czerwone krzyżyki.
 - **Hooki nie odpalają `pytest` ani `pyright`** — 55 s na commit to hook wyłączany
   przez `--no-verify`. Od tego jest CI.
+- **Granic kontekstów w `app` pilnuje `lint-imports` w CI**, z tego samego powodu
+  nie w hookach. Kontrakty są w `app/pyproject.toml`.
 
 Instalacja hooków: `uvx pre-commit install`.
 
