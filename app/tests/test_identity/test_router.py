@@ -298,6 +298,19 @@ def test_change_password(client: TestClient) -> None:
     assert len(new_token) > 0
 
 
+def test_change_password_over_bcrypt_limit_is_422(client: TestClient) -> None:
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    resp = client.patch(
+        "/users/me/password",
+        # 37 characters, 74 bytes: the limit counts bytes.
+        json={"new_password": "ż" * 37},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 422
+    assert isinstance(resp.json()["detail"], str)
+    assert len(_login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)) > 0
+
+
 # ---------- admin login-events ----------
 
 

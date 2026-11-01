@@ -22,8 +22,14 @@ Zostaje:
 - [x] ~~**Niepoprawny e-mail przy `POST /users` → 500, nie 422.**~~ — naprawione
   2026-11-01: `ValueError` z budowania `UserRegistration` to 422 z `detail` jako
   tekstem (formularz admina pokazuje go wprost), 409 zostaje dla zajętego adresu.
-  Tą samą drogą szło hasło ponad 72 bajty (limit bcrypt) — też 422. Zostaje:
-  `PATCH /users/me/password` nadal daje na takim haśle 500.
+  Tą samą drogą szło hasło ponad 72 bajty (limit bcrypt) — też 422.
+- [x] ~~**`PATCH /users/me/password` → 500 dla hasła ponad 72 bajty.**~~ — naprawione
+  2026-11-01: 422 z `detail` jako tekstem, jak w `POST /users`. Zostaje: trasa
+  `/api/users/me/password` we froncie gubi `detail`, więc formularz pokazuje ogólny
+  komunikat.
+- [ ] **Zmiana hasła nie sprawdza obecnego hasła.** Formularz wysyła
+  `current_password`, ale `ChangePasswordRequest` go nie ma i backend go nie czyta —
+  przejęta sesja wystarczy, żeby zmienić hasło.
 - [ ] **Brak Content-Security-Policy.** Caddy wysyła HSTS, `nosniff`,
   `X-Frame-Options`, `Referrer-Policy`; CSP wymaga noncy dla skryptów inline
   Next.js — osobna praca.
@@ -31,8 +37,9 @@ Zostaje:
   jako przestarzałą.
 - [x] ~~**Hydration mismatch ikony motywu** w `Sidebar`~~ — naprawione w PR #12:
   przełącznik czeka na hydratację (`hooks/useHydrated.ts`).
-- [ ] **`@testing-library/*` w `dependencies`** zamiast `devDependencies` —
-  `npm audit --omit=dev` pokazuje przez to vitest jako zależność produkcyjną.
+- [x] ~~**`@testing-library/*` i `vitest` w `dependencies`**~~ — przeniesione do
+  `devDependencies` 2026-11-01, wersje w lockfile'u bez zmian. `npm audit --omit=dev`
+  czysty; pełny `npm audit` pokazuje 18 ostrzeżeń `moderate` w narzędziach dev.
 - [ ] **Parsowanie niezaufanych PDF/DOCX** w procesie `app` (limit rozmiaru jest,
   limitu czasu i pamięci ekstrakcji nie ma). Przy kilku zaufanych testerach do
   przyjęcia; przy otwartej rejestracji — do osobnego procesu z limitami.
@@ -65,7 +72,7 @@ Zostaje:
   `nodes/review.py`) mają świadomy per-file wyjątek na `E501` — łamanie linii w
   literale zmienia prompt, nie formatowanie.
 
-- [ ] **Piny `fastapi==0.136.3` + `starlette==1.2.1` w `app/pyproject.toml`** — świeży
+- [ ] **Piny `fastapi==0.136.3` + `starlette==1.3.1` w `app/pyproject.toml`** — świeży
   lockfile podbijał je do 0.141 / 1.6, co wciągnęłoby nietestowany upgrade zależności
   w środek refaktoru strukturalnego. Odpiąć i zaktualizować osobno (starlette 1.6
   deprecjonuje też `httpx` w `TestClient`).
@@ -349,4 +356,4 @@ odłożone:
 
 ---
 
-*Ostatnia aktualizacja: 2026-11-01 (`POST /users`, Dependabot, import-linter, CI/CD po wdrożeniu)*
+*Ostatnia aktualizacja: 2026-11-01 (`POST /users`, zmiana hasła, zależności testowe, Dependabot, import-linter, CI/CD po wdrożeniu)*
