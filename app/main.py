@@ -27,7 +27,7 @@ from src.mentoring.infrastructure.retention import run_retention_sweeps
 from src.mentoring.infrastructure.router import router as mentoring_router
 from src.shared.health import health_router
 from src.shared.logging import configure_logging
-from src.shared.middleware import request_id_middleware
+from src.shared.middleware import access_log_middleware, request_id_middleware
 from src.shared.settings import settings
 
 configure_logging()
@@ -61,6 +61,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.middleware("http")(access_log_middleware)
 app.middleware("http")(request_id_middleware)
 
 app.include_router(identity_router)
