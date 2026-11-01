@@ -43,8 +43,7 @@ interface Failure {
 const PROVIDER_FAILURES: Record<ActionErrorCode, Failure> = {
   provider_no_credits: {
     title: "Skończyły się środki na koncie u dostawcy modelu.",
-    advice:
-      "Doładuj konto u dostawcy albo usuń swój klucz API — akcje pójdą wtedy na modelu lokalnym.",
+    advice: "Doładuj konto u dostawcy albo uruchom akcję na kluczu innego dostawcy.",
     fixInProfile: true,
   },
   provider_key_rejected: {
