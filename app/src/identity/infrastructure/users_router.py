@@ -29,11 +29,16 @@ async def create_user(
 ) -> UserResponse:
     """Register a new user — ADMIN only."""
     role = Role(body.role)
-    registration = UserRegistration(
-        email=body.email,
-        hashed_password=UserService.hash_password(body.password),
-        role=role,
-    )
+    try:
+        registration = UserRegistration(
+            email=body.email,
+            hashed_password=UserService.hash_password(body.password),
+            role=role,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
+        ) from exc
     try:
         user = await svc.register(registration)
     except ValueError as exc:

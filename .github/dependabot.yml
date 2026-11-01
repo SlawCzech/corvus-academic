@@ -1,0 +1,71 @@
+# Weekly, with minor and patch updates grouped into one PR per ecosystem and
+# directory. A major update still gets its own PR: that one deserves a look.
+version: 2
+
+updates:
+  - package-ecosystem: uv
+    directory: /app
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    # Pinned on purpose: the upgrade is its own change, see docs/technical-debt.md.
+    ignore:
+      - dependency-name: fastapi
+      - dependency-name: starlette
+
+  - package-ecosystem: uv
+    directory: /agent
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directories:
+      - /app
+      - /agent
+      - /frontend
+      - /infra/postgres
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    # A new major cannot read the old data directory, and CD deploys on merge.
+    ignore:
+      - dependency-name: postgres
+        update-types: ["version-update:semver-major"]

@@ -4,6 +4,7 @@ import os
 import uuid
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 from httpx import Response
 
@@ -227,6 +228,34 @@ def test_create_user_duplicate_email(client: TestClient) -> None:
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 409
+
+
+@pytest.mark.parametrize("email", ["ktos@uczelnia.local", "bez-malpy"])
+def test_create_user_invalid_email_is_422(client: TestClient, email: str) -> None:
+    token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    auth = {"Authorization": f"Bearer {token}"}
+
+    resp = client.post(
+        "/users",
+        json={"email": email, "password": "pass123", "role": "promotor"},
+        headers=auth,
+    )
+
+    assert resp.status_code == 422
+    # The admin form shows `detail` as-is, so it stays a string.
+    assert resp.json()["detail"].startswith("Invalid email")
+    emails = [u["email"] for u in client.get("/users", headers=auth).json()]
+    assert email not in emails
+
+
+def test_create_user_password_over_bcrypt_limit_is_422(client: TestClient) -> None:
+    token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    resp = client.post(
+        "/users",
+        json={"email": "dlugie@example.com", "password": "x" * 73, "role": "promotor"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 422
 
 
 def test_create_user_forbidden_for_promotor(client: TestClient) -> None:

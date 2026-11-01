@@ -19,16 +19,18 @@ Zostaje:
 - [x] ~~**Odświeżanie sesji**~~ — naprawione 2026-11-01, patrz „Refresh z UI nie
   działa” niżej. Usunięty użytkownik zachowuje dostęp do wygaśnięcia access tokenu
   (`get_current_user` nie pyta bazy), ale to już 30 minut, nie 12 godzin.
-- [ ] **Niepoprawny e-mail przy `POST /users` → 500, nie 422.** `ValueError`
-  z `UserRegistration` nie jest mapowany w `users_router.py` (np. adres w domenie
-  zarezerwowanej, jak `.local`).
+- [x] ~~**Niepoprawny e-mail przy `POST /users` → 500, nie 422.**~~ — naprawione
+  2026-11-01: `ValueError` z budowania `UserRegistration` to 422 z `detail` jako
+  tekstem (formularz admina pokazuje go wprost), 409 zostaje dla zajętego adresu.
+  Tą samą drogą szło hasło ponad 72 bajty (limit bcrypt) — też 422. Zostaje:
+  `PATCH /users/me/password` nadal daje na takim haśle 500.
 - [ ] **Brak Content-Security-Policy.** Caddy wysyła HSTS, `nosniff`,
   `X-Frame-Options`, `Referrer-Policy`; CSP wymaga noncy dla skryptów inline
   Next.js — osobna praca.
 - [ ] **`middleware.ts` → `proxy.ts`.** Next 16 zgłasza konwencję `middleware`
   jako przestarzałą.
-- [ ] **Hydration mismatch ikony motywu** w `Sidebar` (słońce/księżyc zależne od
-  motywu po stronie klienta).
+- [x] ~~**Hydration mismatch ikony motywu** w `Sidebar`~~ — naprawione w PR #12:
+  przełącznik czeka na hydratację (`hooks/useHydrated.ts`).
 - [ ] **`@testing-library/*` w `dependencies`** zamiast `devDependencies` —
   `npm audit --omit=dev` pokazuje przez to vitest jako zależność produkcyjną.
 - [ ] **Parsowanie niezaufanych PDF/DOCX** w procesie `app` (limit rozmiaru jest,
@@ -247,13 +249,19 @@ Zostaje:
 
 ## CI/CD (Faza 6)
 
-- [ ] **Brak rejestru obrazów** — Jenkins buduje obrazy na hoście docelowym zamiast
-  ciągnąć je z GHCR. Świadomie odłożone (plan zostawiał wybór otwarty), ale to znaczy,
-  że deploy = build, a rollback nie ma do czego wrócić poza `git checkout`.
+- [x] ~~**Brak rejestru obrazów**~~ — od 2026-10-09 `.github/workflows/cd.yml` buduje
+  obrazy raz, taguje je commitem i wypycha do GHCR, a serwer je ciągnie. Rollback to
+  poprzedni obraz: `deploy.sh` wraca do niego sam, gdy nowy nie wstanie, a ręcznie
+  służy do tego ponowne uruchomienie starszego przebiegu Deploy
+  ([deploy.md](deploy.md)). Migracji nie cofa. Jenkins nadal buduje na hoście, ale
+  to już tylko ścieżka lokalna.
 
-- [ ] **Brak deploymentu innego niż lokalny compose** — nie ma środowiska staging,
-  nie ma HTTPS/reverse proxy, `ENVIRONMENT=production` wpływa tylko na flagę
-  `Secure` w ciasteczkach.
+- [x] ~~**Brak deploymentu innego niż lokalny compose**~~ — od 2026-10-09 produkcja
+  (`corvus.saek.dev`) wdraża się po merge'u do `main` na VPS za Caddy z HTTPS
+  ([deploy.md](deploy.md)). Zostaje brak stagingu, wpis niżej.
+
+- [ ] **Brak środowiska staging** — jest tylko lokalny compose i produkcja, więc
+  merge do `main` po zielonym CI idzie od razu na serwer.
 
 - [ ] **SonarQube nieskonfigurowany w CI** — kontener `sonarqube` chodzi lokalnie, ale
   nikt nie ustawił `SONAR_TOKEN`; job w CI się pomija.
@@ -268,7 +276,10 @@ Zostaje:
 - [x] ~~**Brak healthchecku Celery workera w `docker-compose`**~~ — jest od 2026-09-12.
   Pierwotny opis: kontener `agent` startuje, ale `docker-compose` nie wie czy worker faktycznie obsługuje zadania.
 
-- [ ] **Dependabot / Renovate Bot nie skonfigurowany** — zależności nie są automatycznie aktualizowane (faza 5 z CLAUDE.md).
+- [x] ~~**Dependabot / Renovate Bot nie skonfigurowany**~~ — od 2026-11-01
+  `.github/dependabot.yml`: `uv`, `npm`, `github-actions` i `docker`, raz w tygodniu,
+  minor i patch w grupach. `fastapi` i `starlette` w `app` są pominięte, bo ten pin
+  zdejmuje się osobno (wpis w sekcji „Jakość kodu”).
 
 ---
 
@@ -338,4 +349,4 @@ odłożone:
 
 ---
 
-*Ostatnia aktualizacja: 2026-11-01 (odświeżanie sesji)*
+*Ostatnia aktualizacja: 2026-11-01 (`POST /users`, Dependabot, import-linter, CI/CD po wdrożeniu)*

@@ -39,6 +39,7 @@ packages = ["src"]
 dev = [
     "aiosqlite>=0.22.1",
     "fpdf2>=2.8.7",
+    "import-linter>=2.15",
     "pyright>=1.1.409",
     "pytest>=9.0.3",
     "pytest-asyncio>=1.4.0",
@@ -68,3 +69,35 @@ pythonpath = ["."]
 
 [tool.coverage.report]
 fail_under = 80
+
+[tool.importlinter]
+root_package = "src"
+
+[[tool.importlinter.contracts]]
+name = "identity nie zna mentoringu ani wytycznych"
+type = "forbidden"
+source_modules = ["src.identity"]
+forbidden_modules = ["src.mentoring", "src.guidelines"]
+
+[[tool.importlinter.contracts]]
+name = "shared jest naprawdę wspólne — nie zna żadnego bounded contextu"
+type = "forbidden"
+source_modules = ["src.shared"]
+forbidden_modules = [
+    "src.identity",
+    "src.mentoring",
+    "src.document",
+    "src.guidelines",
+]
+
+[[tool.importlinter.contracts]]
+name = "mentoring sięga po wytyczne tylko z infrastruktury (guidelines_port + adapter)"
+type = "forbidden"
+source_modules = ["src.mentoring.domain", "src.mentoring.application"]
+forbidden_modules = ["src.guidelines"]
+
+[[tool.importlinter.contracts]]
+name = "wytyczne nie znają mentoringu"
+type = "forbidden"
+source_modules = ["src.guidelines"]
+forbidden_modules = ["src.mentoring"]
