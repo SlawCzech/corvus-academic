@@ -63,8 +63,10 @@ _GRADE = re.compile(
     r"\b\d+(?:[.,]\d+)?\s*/\s*\d+\b|\bocen[aeęy]\s*:?\s*\d|\b\d+\s*pkt\b|\bpunkt[óo]w\b",
     re.IGNORECASE,
 )
+# Not "krytyczn" alone: "krytyczne podejście do źródeł" is praise.
 _HARSH = re.compile(
-    r"niedopuszczaln|niedostateczn|kompletnie|całkowicie błędn|rażąc|krytyczn",
+    r"niedopuszczaln|niedostateczn|kompletnie|całkowicie błędn|rażąc"
+    r"|krytyczn\w*\s+(?:błąd|błęd|brak|wad|uchybien)",
     re.IGNORECASE,
 )
 
@@ -292,7 +294,7 @@ def render_markdown(results: list[FragmentResult]) -> str:
         ],
     ]
     for result in results:
-        for problem in ([result.error] if result.error else result.problems):
+        for problem in [result.error] if result.error else result.problems:
             lines.append(f"- {result.case_id}: {problem}")
     return "\n".join(lines)
 

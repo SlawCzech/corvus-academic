@@ -59,10 +59,12 @@ Bez modelu sprawdzane są limity list, brak ocen liczbowych i ostrych sformułow
 Sędzia czyta sam feedback (bez podsumowania) i odpowiada, czy zachęca do dalszej
 pracy, oraz czy padło to, co paść miało, i nie padło to, co nie miało.
 
-Ostatni przebieg (2026-10-31, `qwen3:30b-a3b`): 4 z 4. Przypadki graniczne
-(`poza-tematem`, `solidny-rozdzial`) przeszły też po trzy razy osobno, bo jedna
-reguła w prompcie potrafi przesunąć model w drugą stronę. Na Claude jeszcze
-niepuszczone. Podsumowania mają 90–115 słów, w jednym akapicie.
+Ostatni przebieg (2026-11-01, `claude-sonnet-5-5`, po trzy powtórzenia): 20 z 21
+przypadków. Prompt strojony na qwen3 dawał na Claude 3 z 7: model wypełniał limit
+uzupełnień i oddawał `needs_additions` także dobrym rozdziałom. Pomogły dwie
+rzeczy: limity są sufitem, nie celem, a `needs_additions` tylko wtedy, gdy bez
+braku nie da się iść dalej. Claude to teraz punkt odniesienia; po tej zmianie
+promptu qwen3 nie był mierzony.
 
 ## Co znaczą liczby
 
@@ -103,4 +105,10 @@ tam, gdzie wynik bywał różny:
 | `cel-nie-caly` | cel nie psuje dobrego rozdziału | 2/3 po zaostrzeniu reguły |
 
 `runda-druga` wyszła 2/3: kierunek za każdym razem dobry, raz sędzia uznał ton za
-mało zachęcający. Na Claude nie mierzone.
+mało zachęcający.
+
+Na Claude, 2026-11-01, po trzy powtórzenia: `dryf-od-celu`, `cel-nie-caly` i
+`runda-druga` 3/3, `obszar-bez-wymagan` 2/3 (raz podsunął koszty transakcyjne jako
+brak). Pełna
+recenzja po zmianach z ADR 0015: recall 0,83–1,00, 0 fałszywych alarmów,
+rekomendacje 3/3, 8–13 duplikatów, ok. 85 s; poziom sprzed zmian.
