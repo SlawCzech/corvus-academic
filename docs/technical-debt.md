@@ -22,8 +22,14 @@ Zostaje:
 - [x] ~~**Niepoprawny e-mail przy `POST /users` → 500, nie 422.**~~ — naprawione
   2026-11-01: `ValueError` z budowania `UserRegistration` to 422 z `detail` jako
   tekstem (formularz admina pokazuje go wprost), 409 zostaje dla zajętego adresu.
-  Tą samą drogą szło hasło ponad 72 bajty (limit bcrypt) — też 422. Zostaje:
-  `PATCH /users/me/password` nadal daje na takim haśle 500.
+  Tą samą drogą szło hasło ponad 72 bajty (limit bcrypt) — też 422.
+- [x] ~~**`PATCH /users/me/password` → 500 dla hasła ponad 72 bajty.**~~ — naprawione
+  2026-11-01: 422 z `detail` jako tekstem, jak w `POST /users`; trasa
+  `/api/users/me/password` przekazuje go do formularza.
+- [x] ~~**Zmiana hasła nie sprawdza obecnego hasła.**~~ — naprawione 2026-11-01:
+  `current_password` jest wymagane, złe to 403 (nie 401, bo klient odnawiałby sesję
+  i powtarzał żądanie), a endpoint ma limit prób logowania. Hasło ponad 72 bajty przy
+  logowaniu to 401, nie 500. Zostaje: zmiana hasła nie odwołuje pozostałych sesji.
 - [ ] **Brak Content-Security-Policy.** Caddy wysyła HSTS, `nosniff`,
   `X-Frame-Options`, `Referrer-Policy`; CSP wymaga noncy dla skryptów inline
   Next.js — osobna praca.
@@ -31,8 +37,9 @@ Zostaje:
   jako przestarzałą.
 - [x] ~~**Hydration mismatch ikony motywu** w `Sidebar`~~ — naprawione w PR #12:
   przełącznik czeka na hydratację (`hooks/useHydrated.ts`).
-- [ ] **`@testing-library/*` w `dependencies`** zamiast `devDependencies` —
-  `npm audit --omit=dev` pokazuje przez to vitest jako zależność produkcyjną.
+- [x] ~~**`@testing-library/*` i `vitest` w `dependencies`**~~ — przeniesione do
+  `devDependencies` 2026-11-01, wersje w lockfile'u bez zmian. `npm audit --omit=dev`
+  czysty; pełny `npm audit` pokazuje 18 ostrzeżeń `moderate` w narzędziach dev.
 - [ ] **Parsowanie niezaufanych PDF/DOCX** w procesie `app` (limit rozmiaru jest,
   limitu czasu i pamięci ekstrakcji nie ma). Przy kilku zaufanych testerach do
   przyjęcia; przy otwartej rejestracji — do osobnego procesu z limitami.
@@ -65,7 +72,7 @@ Zostaje:
   `nodes/review.py`) mają świadomy per-file wyjątek na `E501` — łamanie linii w
   literale zmienia prompt, nie formatowanie.
 
-- [ ] **Piny `fastapi==0.136.3` + `starlette==1.2.1` w `app/pyproject.toml`** — świeży
+- [ ] **Piny `fastapi==0.136.3` + `starlette==1.3.1` w `app/pyproject.toml`** — świeży
   lockfile podbijał je do 0.141 / 1.6, co wciągnęłoby nietestowany upgrade zależności
   w środek refaktoru strukturalnego. Odpiąć i zaktualizować osobno (starlette 1.6
   deprecjonuje też `httpx` w `TestClient`).
@@ -143,11 +150,13 @@ Zostaje:
 
 - [ ] **Brak password reset flow** — użytkownik nie może odzyskać zapomnianego hasła. Wymaga integracji SMTP i tokenu jednorazowego (np. krótkotrwały JWT wysyłany na e-mail).
 
-- [ ] **Brak weryfikacji czy worker Celery działa** — zadanie trafia do kolejki cicho; jeśli
-  worker nie chodzi, akcja zostaje w statusie `pending` w nieskończoność. Faza 2 załatwiła
-  część problemu (padnięcie brokera przy wysyłce daje teraz `failed` + 503), ale martwy
-  worker nadal jest niewidoczny. Naprawka: endpoint `GET /health/worker` sprawdzający
-  `celery_app.control.inspect().ping()`.
+- [x] ~~**Brak weryfikacji czy worker Celery działa**~~ — od 2026-11-01 agent ma
+  `GET /health/worker` (503 bez workera), a `/health` w `app` pokazuje to w
+  `services.worker`. HTTP zostaje 200, bo `deploy.sh` czyta tylko status — sama akcja
+  nadal czeka w `pending`, widać to w body i monitoringu. Pierwotny opis: zadanie trafia
+  do kolejki cicho; jeśli worker nie chodzi, akcja zostaje w statusie `pending` w
+  nieskończoność. Faza 2 załatwiła część problemu (padnięcie brokera przy wysyłce daje
+  teraz `failed` + 503), ale martwy worker nadal był niewidoczny.
 
 - [ ] **Brak soft delete użytkowników** — `DELETE /users/{id}` usuwa rekord na twardo. Rozważyć pole `deleted_at` i filtrowanie w zapytaniach.
 
@@ -155,7 +164,10 @@ Zostaje:
 
 - [ ] **Brak metryk Prometheus / OpenTelemetry** — nie ma wglądu w liczbę requestów, błędów, czas odpowiedzi. Rozważyć `prometheus-fastapi-instrumentator` lub OTEL SDK.
 
-- [ ] **Brak access logu HTTP** — logi są w logice biznesowej, ale żaden middleware nie zapisuje każdego żądania (metoda, ścieżka, status, czas). Naprawka: middleware `structlog` na poziomie ASGI.
+- [x] ~~**Brak access logu HTTP**~~ — od 2026-11-01 `access_log_middleware` w `app`
+  (metoda, ścieżka bez query stringa, status, czas; bez `/health`); access log uvicorna
+  wyłączony w `entrypoint.sh`. Pierwotny opis: logi są w logice biznesowej, ale żaden
+  middleware nie zapisuje każdego żądania.
 
 ### Drobne
 
@@ -347,8 +359,9 @@ odłożone:
 - [ ] **Uwagi w recenzji nie mają pozycji w dokumencie** — `section` to wolny tekst
   modelu, więc listy uwag nie da się posortować kolejnością rozdziałów (jest po wadze).
 
-- [ ] **`check_progress` nie zna notatek ze spotkań** — porównuje dwie wersje, ale nie
-  wie, o co promotor prosił między nimi.
+- [x] ~~**`check_progress` nie zna notatek ze spotkań**~~ — naprawione 2026-11-01:
+  akcja dostaje notatki z okresu między dwiema wersjami, reguła czytania jedzie
+  tylko z nimi (`evals/progress.py`: 9 z 9 na Claude, bez reguły 0 z 3).
 
 - [ ] **Trzy ostatnie notatki, niezależnie od modelu** — `propose_topic` i
   `draft_meeting_note` dostają `_MAX_NOTES = 3`; na dostawcy mogłyby dostać wszystkie.
@@ -362,4 +375,4 @@ odłożone:
 
 ---
 
-*Ostatnia aktualizacja: 2026-11-01 (`POST /users`, Dependabot, import-linter, CI/CD po wdrożeniu)*
+*Ostatnia aktualizacja: 2026-11-01 (`POST /users`, zmiana hasła, zależności testowe, Dependabot, import-linter, CI/CD po wdrożeniu)*

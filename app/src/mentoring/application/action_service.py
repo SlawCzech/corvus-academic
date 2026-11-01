@@ -29,6 +29,7 @@ from src.mentoring.application.context import (
     assemble_propose_topic_context,
     assemble_review_fragment_context,
     assemble_verify_bibliography_context,
+    notes_between_versions,
 )
 from src.mentoring.application.draft_service import to_domain as draft_to_domain
 from src.mentoring.application.exceptions import (
@@ -567,9 +568,14 @@ class ActionService:
                 )
             case ActionType.CHECK_PROGRESS:
                 latest = await self._latest_drafts(student.id, 2)
+                notes = notes_between_versions(
+                    await self._students.list_meeting_notes(caller, student.id), latest
+                )
                 return (
-                    assemble_check_progress_context(student, latest, detail),
-                    base_ref | self._draft_ref(latest),
+                    assemble_check_progress_context(student, latest, notes, detail),
+                    base_ref
+                    | self._draft_ref(latest)
+                    | {"note_ids": [str(n.id) for n in notes]},
                 )
             case ActionType.REVIEW_FRAGMENT:
                 return await self._assemble_fragment(

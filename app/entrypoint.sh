@@ -24,5 +24,7 @@ if [ "$DEBUG" = "true" ]; then
     echo "[app] DEBUG=true — auto-reload enabled"
 fi
 
+# uvicorn's own access log would repeat access_log_middleware, query strings
+# and /health included.
 echo "[app] Starting server..."
-exec uvicorn main:app --host 0.0.0.0 --port 8000 $RELOAD
+exec uvicorn main:app --host 0.0.0.0 --port 8000 --no-access-log $RELOAD

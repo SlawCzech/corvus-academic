@@ -1,12 +1,15 @@
 """Tests for what the agent is told about a student."""
 
 import uuid
-from datetime import UTC, datetime
+from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 
 from src.mentoring.application.context import (
+    assemble_check_progress_context,
     assemble_evaluate_methodology_context,
     assemble_generate_review_context,
     assemble_propose_topic_context,
+    notes_between_versions,
 )
 from src.mentoring.domain.draft import ThesisDraft
 from src.mentoring.domain.student import MeetingNote, Student, ThesisType
@@ -71,6 +74,71 @@ def _draft(text: str) -> ThesisDraft:
         pages=40,
         format="pdf",
         uploaded_by=uuid.uuid4(),
+    )
+
+
+_V1_AT = datetime(2026, 3, 1, 12, tzinfo=UTC)
+_V2_AT = datetime(2026, 4, 1, 12, tzinfo=UTC)
+
+
+def _versions() -> list[ThesisDraft]:
+    """The two newest versions, newest first, as the repository returns them."""
+    previous = replace(_draft("Wersja pierwsza"), created_at=_V1_AT)
+    current = replace(_draft("Wersja druga"), version_number=2, created_at=_V2_AT)
+    return [current, previous]
+
+
+def _note_at(content: str, occurred_at: datetime) -> MeetingNote:
+    return replace(_note(content), occurred_at=occurred_at)
+
+
+def test_only_notes_between_the_two_versions_count() -> None:
+    notes = [
+        _note_at("po", _V2_AT + timedelta(minutes=1)),
+        _note_at("między", _V1_AT + timedelta(days=7)),
+        _note_at("przed", _V1_AT - timedelta(minutes=1)),
+    ]
+
+    picked = notes_between_versions(notes, _versions())
+
+    assert [n.content for n in picked] == ["między"]
+
+
+def test_notes_between_versions_run_from_the_oldest() -> None:
+    """Later notes stand over earlier ones, so the model reads them in order."""
+    notes = [
+        _note_at("druga", _V1_AT + timedelta(days=14)),
+        _note_at("pierwsza", _V1_AT + timedelta(days=7)),
+    ]
+
+    picked = notes_between_versions(notes, _versions())
+
+    assert [n.content for n in picked] == ["pierwsza", "druga"]
+
+
+def test_every_note_between_the_versions_is_kept() -> None:
+    """The window bounds them: a cap would drop the oldest request."""
+    notes = [_note_at(str(i), _V1_AT + timedelta(days=i)) for i in range(1, 8)]
+
+    assert len(notes_between_versions(notes, _versions())) == 7
+
+
+def test_one_version_has_no_window_for_notes() -> None:
+    assert notes_between_versions([_note("coś")], [_draft("Jedyna")]) == []
+
+
+def test_progress_context_carries_the_notes_it_is_given() -> None:
+    context = assemble_check_progress_context(
+        _student(), _versions(), [_note("Uzasadnić dobór próby")], "skup się na próbie"
+    )
+
+    assert context["meeting_notes"] == ["Uzasadnić dobór próby"]
+    assert context["detail"] == "skup się na próbie"
+
+
+def test_progress_context_without_notes_has_none_to_show() -> None:
+    assert (
+        assemble_check_progress_context(_student(), _versions())["meeting_notes"] == []
     )
 
 

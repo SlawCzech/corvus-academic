@@ -1,0 +1,20 @@
+{
+  "id": "prosba-wykonana",
+  "description": "The note asks for the sample to be justified and the new version does it. The check should credit that as what was asked for.",
+  "context": {
+    "current_topic": "Korzystanie z bankowości mobilnej przez klientów banków spółdzielczych",
+    "field_of_study": "Finanse i rachunkowość",
+    "thesis_type": "bachelor",
+    "previous_version": 1,
+    "current_version": 2,
+    "meeting_notes": [
+      "Omówiliśmy rozdział metodologiczny. Proszę do następnej wersji uzasadnić dobór próby: dlaczego banki spółdzielcze i dlaczego ci klienci."
+    ]
+  },
+  "must_say": [
+    "The student has now justified the choice of sample, which is what the supervisor asked for."
+  ],
+  "must_not_say": [
+    "The sample selection is still not justified."
+  ]
+}

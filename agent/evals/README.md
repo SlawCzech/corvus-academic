@@ -92,6 +92,32 @@ sklejone przez „i”. Jeden przebieg, więc to wrażenie, nie średnia. Trzeci
 to sędzia: „pasuje do każdej pracy” o pytaniu, które nazywa temat pracy. Na qwen3
 nie mierzone.
 
+## Postęp między wersjami (`check_progress`)
+
+Osobny zestaw w `progress_cases/`. Pilnuje jednego: notatka ze spotkania to
+kontekst, nie lista wymagań.
+
+```bash
+make eval-progress MODEL=claude             # ANTHROPIC_API_KEY
+```
+
+| id | co w nim siedzi |
+|---|---|
+| `prosba-wykonana` | notatka prosi o uzasadnienie próby, nowa wersja to robi; raport ma to zaliczyć |
+| `prosba-niewykonana` | dwie prośby, jedna wykonana; raport ma powiedzieć jedno i drugie |
+| `notatka-tylko-wspomina` | notatka wspomina Williamsona, wywiady i Volksbanki, o nic nie prosi; nic z tego nie wraca jako brak ani następny krok |
+
+Sędzia czyta cały raport i odpowiada, czy padło to, co paść miało, i nie padło to,
+co nie miało. Przebieg bez notatek nie ma tu przypadku: prompt jest wtedy co do
+znaku taki jak wcześniej, a pilnuje tego test jednostkowy.
+
+Ostatni przebieg (2026-11-01, `claude-sonnet-5-5`, po trzy powtórzenia): 9 z 9.
+Kontrola: `notatka-tylko-wspomina` z notatką, ale bez `NOTES_RULE`, 0 z 3; za każdym
+razem Williamson, wywiady i Volksbanki wracały jako braki albo propozycje. Pierwsza
+wersja tego przypadku przechodziła także bez reguły, bo notatka sama mówiła „na inną
+okazję”. Stąd zasada: przypadek na regułę trzeba sprawdzić bez reguły. Na qwen3 nie
+mierzone.
+
 ## Co znaczą liczby
 
 - **recall** — ile wpisanych wad recenzja nazwała. Główna liczba.

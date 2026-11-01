@@ -107,6 +107,8 @@ Użytkownik
       → propose_topic:        [Propozycja tematu]
       → defence_questions:    [Pytania na obronę]
       → check_progress:       [Porównanie dwóch wersji]
+        (notatki ze spotkań z okresu między wersjami jako kontekst, nie wymagania;
+         reguła czytania jedzie tylko razem z nimi)
       → evaluate_methodology: [Metodologia] → [Weryfikacja]
         (Weryfikacja: bez modelu — cytat każdej uwagi musi być w tekście,
          duplikaty z różnych analiz scalane; `agent/src/application/grounding.py`)

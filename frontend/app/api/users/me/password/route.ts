@@ -21,7 +21,12 @@ export async function PATCH(request: Request): Promise<Response> {
     body: JSON.stringify(body),
   })
   if (!res.ok) {
-    return NextResponse.json({ error: "Failed to change password" }, { status: res.status })
+    // Only a sentence for the form: a validation error's `detail` is a list.
+    const { detail } = (await res.json().catch(() => ({}))) as { detail?: unknown }
+    return NextResponse.json(
+      { detail: typeof detail === "string" ? detail : undefined },
+      { status: res.status },
+    )
   }
   return NextResponse.json({ ok: true })
 }

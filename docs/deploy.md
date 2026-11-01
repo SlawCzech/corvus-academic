@@ -216,7 +216,9 @@ zanonimizowane albo za zgodą autora.
 - **Logi:** `ssh deploy@<IP>`, potem
   `cd /srv/corvus && IMAGE_TAG=$(cat .deployed-tag) docker compose -f docker-compose.prod.yml logs -f app agent-worker`.
 - **Monitoring:** UptimeRobot (darmowy), monitor HTTP(s) na
-  `https://corvus.saek.dev/api/health` co 5 minut.
+  `https://corvus.saek.dev/api/health` co 5 minut. Ten adres odpowiada 200 także
+  przy `degraded`, żeby brak workera nie cofał deployu, więc martwy worker wychodzi
+  dopiero w body: monitor typu Keyword na `"status":"ok"`.
 
 ## Odtworzenie z kopii
 
