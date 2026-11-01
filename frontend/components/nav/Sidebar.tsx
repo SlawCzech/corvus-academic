@@ -16,6 +16,7 @@ import {
   IconCpu,
 } from "@tabler/icons-react"
 import LogoutButton from "@/components/LogoutButton"
+import { useHydrated } from "@/hooks/useHydrated"
 
 interface SidebarProps {
   email: string | null
@@ -70,6 +71,7 @@ function useCompact(): boolean {
 
 export default function Sidebar({ email, role }: SidebarProps) {
   const { resolvedTheme, setTheme } = useTheme()
+  const isDark = useHydrated() && resolvedTheme === "dark"
   const compact = useCompact()
 
   // Two roles, two menus: an admin runs the platform, a promoter supervises
@@ -162,20 +164,20 @@ export default function Sidebar({ email, role }: SidebarProps) {
             ))}
             <button
               type="button"
-              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+              onClick={() => setTheme(isDark ? "light" : "dark")}
               title={compact ? "Zmień motyw" : undefined}
               className={`flex h-10 items-center gap-3 whitespace-nowrap rounded-lg text-[13.5px] font-medium text-[#a8b6c7] transition-colors hover:bg-white/5 hover:text-white ${
                 compact ? "px-3" : "px-4"
               }`}
             >
               <span className="shrink-0">
-                {resolvedTheme === "dark" ? (
+                {isDark ? (
                   <IconSun size={17} stroke={1.75} />
                 ) : (
                   <IconMoon size={17} stroke={1.75} />
                 )}
               </span>
-              {resolvedTheme === "dark" ? "Jasny motyw" : "Ciemny motyw"}
+              {isDark ? "Jasny motyw" : "Ciemny motyw"}
             </button>
           </nav>
         </div>
