@@ -1,0 +1,134 @@
+{
+  "model": "claude",
+  "judge": "claude",
+  "passed": 3,
+  "cases": [
+    {
+      "case_id": "notatka-tylko-wspomina",
+      "model": "claude",
+      "seconds": 8.1,
+      "error": null,
+      "problems": [],
+      "output": {
+        "summary": "Między wersjami rozdział 1 został rozbudowany o niewielki, ale merytoryczny materiał: doprecyzowano pozycję sektora w podpunkcie 1.2 i dodano nowy podpunkt 1.3 o systemach ochrony instytucjonalnej. Nadal jest to krótki opis historyczno-instytucjonalny, bez źródeł i bez związku z tematem pracy, czyli bankowością mobilną.",
+        "changes": [
+          {
+            "area": "1.1. Geneza",
+            "change": "Tekst bez zmian w stosunku do v1.",
+            "assessment": "cosmetic"
+          },
+          {
+            "area": "1.2. Obecna pozycja",
+            "change": "Dodano zdanie o niewielkim udziale banków spółdzielczych w aktywach sektora bankowego i o większym znaczeniu w obsłudze rolnictwa. Uściśla to charakterystykę sektora, ale bez liczb i bez przypisu.",
+            "assessment": "progress"
+          },
+          {
+            "area": "1.3. System ochrony",
+            "change": "Nowy podpunkt o dwóch systemach ochrony instytucjonalnej po 2008 roku, wzajemnej gwarancji płynności i wspólnych standardach nadzoru oraz kosztach w postaci ograniczonej samodzielności banków. Dodaje to treść istotną dla opisu sektora, ale jest to opis ogólny, bez danych i źródeł.",
+            "assessment": "progress"
+          }
+        ],
+        "concerns": [
+          "Rozdział nie zawiera żadnych odwołań do literatury, danych statystycznych ani źródeł (np. KNF, NBP, raporty zrzeszeń). Twierdzenia o udziale w aktywach, liczbie banków i systemach ochrony są niepoparte.",
+          "Rozdział wciąż nie łączy się z tematem pracy: nie ma nic o bankowości mobilnej, cyfryzacji ani o klientach banków spółdzielczych.",
+          "Brakuje precyzji: nie podano nazw dwóch systemów ochrony, dokładnej liczby banków ani roku, do którego odnoszą się dane.",
+          "Rozdział jest bardzo krótki i ma charakter wyłącznie opisowy, bez wniosków wynikających z analizy."
+        ],
+        "next_steps": [
+          "Uzupełnić rozdział 1 danymi liczbowymi z wiarygodnych źródeł (liczba banków, udział w aktywach i depozytach, udział w kredytach dla rolnictwa) wraz z przypisami i datami.",
+          "Nazwać systemy ochrony instytucjonalnej i opisać ich mechanizmy na podstawie źródeł.",
+          "Dopisać podpunkt wiążący specyfikę banków spółdzielczych (małe miejscowości, rolnicy, członkostwo, ograniczona samodzielność) z uwarunkowaniami wdrażania usług mobilnych.",
+          "Przygotować kolejny rozdział (bankowość mobilna) lub jego szczegółowy plan oraz sformułować cel pracy i pytania badawcze."
+        ]
+      },
+      "passed": true
+    },
+    {
+      "case_id": "prosba-niewykonana",
+      "model": "claude",
+      "seconds": 9.0,
+      "error": null,
+      "problems": [],
+      "output": {
+        "summary": "Między wersjami zmieniło się niewiele, ale jedna z dwóch próśb promotora została częściowo spełniona. Dodano podrozdział 2.2 o doborze próby z uzasadnieniem (dobór celowy, klienci, którzy w ostatnim roku zaczęli korzystać z aplikacji) i podaniem liczby odpowiedzi (214). Opis ankiety nie został uzupełniony: zmiana „zawierała” na „składała się” jest tylko stylistyczna. Brakuje bloków pytań i źródła ich pochodzenia.",
+        "changes": [
+          {
+            "area": "2.2. Dobór próby",
+            "change": "Dodano nowy podrozdział: wskazano dobór celowy, podano kryterium (osoby, które w ciągu ostatniego roku zaczęły korzystać z aplikacji mobilnej) oraz liczbę odpowiedzi (214).",
+            "assessment": "progress"
+          },
+          {
+            "area": "2.1. Metoda – opis ankiety",
+            "change": "Zmieniono tylko sformułowanie („zawierała” na „składała się”). Nadal brak informacji o blokach pytań i o tym, skąd pochodzą pytania.",
+            "assessment": "cosmetic"
+          },
+          {
+            "area": "2.3. Przebieg badania",
+            "change": "Treść bez zmian, zmieniła się jedynie numeracja podrozdziału po dodaniu nowego.",
+            "assessment": "cosmetic"
+          }
+        ],
+        "concerns": [
+          "Opis ankiety nie odpowiada na prośbę promotora: nie wiadomo, jakie bloki pytań zawiera ani skąd się wzięły (literatura, własna konstrukcja, istniejące narzędzie).",
+          "Uzasadnienie doboru celowego jest krótkie. Nie wyjaśniono, dlaczego akurat nowi użytkownicy są interesujący z punktu widzenia tematu pracy.",
+          "Nie wiadomo, jak sprawdzano kryterium włączenia do próby (czy była pytanie filtrujące), ani jak liczba 214 odpowiedzi ma się do liczby klientów trzech banków.",
+          "Wniosków z próby celowej nie można uogólniać na wszystkich klientów banków spółdzielczych. Praca nie wspomina o tym ograniczeniu."
+        ],
+        "next_steps": [
+          "Opisać strukturę ankiety: wymienić bloki pytań (np. częstość korzystania, funkcje, bezpieczeństwo, dane demograficzne), liczbę pytań w każdym bloku i źródło lub sposób konstrukcji pytań.",
+          "Rozbudować uzasadnienie doboru próby: powiązać kryterium „nowi użytkownicy” z celem i pytaniami badawczymi oraz wyjaśnić, jak weryfikowano spełnienie kryterium.",
+          "Dodać informacje o populacji i odpowiedziach: ile osób miało dostęp do ankiety, jaki był odsetek odpowiedzi, ile odpowiedzi uznano za poprawne.",
+          "Dopisać krótko ograniczenia wynikające z doboru celowego i ich wpływ na możliwość uogólniania wyników."
+        ]
+      },
+      "passed": true
+    },
+    {
+      "case_id": "prosba-wykonana",
+      "model": "claude",
+      "seconds": 8.5,
+      "error": null,
+      "problems": [],
+      "output": {
+        "summary": "Między wersjami student dodał podrozdział 2.2 „Dobór próby”, który odpowiada na prośbę promotora z ostatniego spotkania: uzasadnia wybór banków spółdzielczych i określonej grupy klientów oraz podaje liczebność próby wraz z zastrzeżeniem o granicach wnioskowania. Pozostałe fragmenty zmieniły się minimalnie. Rozdział ruszył do przodu, ale uzasadnienie jest na razie krótkie i oparte na tezach bez podparcia w danych lub literaturze.",
+        "changes": [
+          {
+            "area": "Dobór próby – uzasadnienie",
+            "change": "Dodano nowy podrozdział 2.2 z uzasadnieniem doboru celowego: badani to klienci, którzy w ostatnim roku zaczęli korzystać z aplikacji mobilnej. Wyjaśniono też, dlaczego wybrano banki spółdzielcze (starsi klienci, w tej grupie zmiana zachowań jest najciekawsza).",
+            "assessment": "progress"
+          },
+          {
+            "area": "Liczebność próby i granice wnioskowania",
+            "change": "Podano liczbę odpowiedzi (214) oraz zaznaczono, że wyniki pozwalają wnioskować o badanej grupie, ale nie uogólniać na wszystkich klientów banków.",
+            "assessment": "progress"
+          },
+          {
+            "area": "Przebieg badania",
+            "change": "Podrozdział przeniesiono na pozycję 2.3 i dodano informację, że odpowiedzi zbierano cztery tygodnie.",
+            "assessment": "progress"
+          },
+          {
+            "area": "Opis metody (2.1)",
+            "change": "Treść bez zmian.",
+            "assessment": "cosmetic"
+          }
+        ],
+        "concerns": [
+          "Teza, że klienci banków spółdzielczych są starsi niż klienci banków komercyjnych, nie jest poparta żadnym źródłem ani danymi.",
+          "Brak wyjaśnienia, w jaki sposób zidentyfikowano klientów, którzy zaczęli korzystać z aplikacji w ostatnim roku. Nie wiadomo, czy ankieta zawierała pytanie filtrujące, ani ilu respondentów odrzucono.",
+          "Uzasadnienie wyboru trzech konkretnych wrocławskich banków jest nadal nieobecne, a ograniczenie do Wrocławia nie jest omówione.",
+          "Dobór celowy przez aplikację bankową może powodować błąd selekcji, bo ankietę widzą tylko osoby już korzystające z aplikacji. Ograniczenie to nie jest omówione.",
+          "Brak informacji o strukturze próby (wiek, płeć), co osłabia argument o starszych klientach."
+        ],
+        "next_steps": [
+          "Poprzeć tezę o wieku klientów banków spółdzielczych danymi lub literaturą, np. statystykami sektora.",
+          "Opisać mechanizm filtrowania respondentów i podać liczbę odrzuconych ankiet.",
+          "Uzasadnić wybór trzech konkretnych banków i ograniczenie do Wrocławia.",
+          "Dodać charakterystykę próby (wiek, płeć, staż w banku) i sprawdzić, czy potwierdza założenie o starszej grupie.",
+          "Omówić ograniczenia związane z doborem celowym i dystrybucją ankiety przez aplikacje."
+        ]
+      },
+      "passed": true
+    }
+  ]
+}

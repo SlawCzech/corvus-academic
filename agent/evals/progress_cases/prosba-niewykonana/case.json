@@ -1,0 +1,21 @@
+{
+  "id": "prosba-niewykonana",
+  "description": "Two requests in the note: the sample was justified, the questionnaire's structure was not described. The check has to say both, and only the note makes the second one a gap between these versions.",
+  "context": {
+    "current_topic": "Korzystanie z bankowości mobilnej przez klientów banków spółdzielczych",
+    "field_of_study": "Finanse i rachunkowość",
+    "thesis_type": "bachelor",
+    "previous_version": 1,
+    "current_version": 2,
+    "meeting_notes": [
+      "Dwie rzeczy do następnej wersji. Proszę uzasadnić dobór próby i opisać, z czego składa się ankieta, czyli jakie bloki pytań zawiera i skąd się wzięły."
+    ]
+  },
+  "must_say": [
+    "The student has addressed the choice of sample.",
+    "The questionnaire's structure or the origin of its questions, which the supervisor asked for, is still not described."
+  ],
+  "must_not_say": [
+    "Everything the supervisor asked for has been done."
+  ]
+}

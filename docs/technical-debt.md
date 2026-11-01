@@ -346,8 +346,9 @@ odłożone:
 - [ ] **Uwagi w recenzji nie mają pozycji w dokumencie** — `section` to wolny tekst
   modelu, więc listy uwag nie da się posortować kolejnością rozdziałów (jest po wadze).
 
-- [ ] **`check_progress` nie zna notatek ze spotkań** — porównuje dwie wersje, ale nie
-  wie, o co promotor prosił między nimi.
+- [x] ~~**`check_progress` nie zna notatek ze spotkań**~~ — naprawione 2026-11-01:
+  akcja dostaje notatki z okresu między dwiema wersjami, reguła czytania jedzie
+  tylko z nimi (`evals/progress.py`: 9 z 9 na Claude, bez reguły 0 z 3).
 
 - [ ] **Trzy ostatnie notatki, niezależnie od modelu** — `propose_topic` i
   `draft_meeting_note` dostają `_MAX_NOTES = 3`; na dostawcy mogłyby dostać wszystkie.

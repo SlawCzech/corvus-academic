@@ -115,15 +115,37 @@ def assemble_evaluate_methodology_context(
     )
 
 
+def notes_between_versions(
+    notes: Sequence[MeetingNote],
+    latest_drafts: Sequence[ThesisDraft],
+) -> list[MeetingNote]:
+    """The meetings the newer version could answer to, oldest first.
+
+    A note from before the older version is already in it, and one from after
+    the newer version could not have been acted on. No `_MAX_NOTES` here: the
+    two uploads bound the window, and the note dropped by a cap would be the
+    oldest request, the one the student had the most time for.
+    """
+    if len(latest_drafts) < 2:
+        return []
+    current, previous = latest_drafts[0], latest_drafts[1]
+    between = [
+        n for n in notes if previous.created_at <= n.occurred_at <= current.created_at
+    ]
+    return sorted(between, key=lambda n: n.occurred_at)
+
+
 def assemble_check_progress_context(
     student: Student,
     latest_drafts: Sequence[ThesisDraft],
+    notes: Sequence[MeetingNote] = (),
     detail: str | None = None,
 ) -> dict[str, Any]:
     """Build the context for comparing the two newest versions.
 
     Takes exactly the two rows the action needs — newest first — rather than
-    the student's whole upload history.
+    the student's whole upload history, and the notes `notes_between_versions`
+    picked for them.
     """
     if len(latest_drafts) < 2:
         raise MissingContextError("Progress needs two uploaded versions to compare")
@@ -137,6 +159,7 @@ def assemble_check_progress_context(
         "field_of_study": student.field_of_study,
         "thesis_type": str(student.thesis_type),
         **_research(student),
+        "meeting_notes": [n.content for n in notes],
         "detail": detail,
     }
 
