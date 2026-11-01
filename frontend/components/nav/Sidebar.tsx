@@ -15,6 +15,7 @@ import {
   IconSchool,
   IconCpu,
 } from "@tabler/icons-react"
+import Logo from "@/components/Logo"
 import LogoutButton from "@/components/LogoutButton"
 
 interface SidebarProps {
@@ -147,13 +148,11 @@ export default function Sidebar({ email, role }: SidebarProps) {
         }`}
       >
         <div>
-          <Link href="/" className="mb-9 flex items-center gap-2.5 whitespace-nowrap px-2">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 font-serif text-[15px] font-semibold text-[#e8b876]">
-              C
-            </div>
-            <span className="font-serif text-[17px] font-semibold text-[#fbfaf8]">
-              Corvus
-            </span>
+          <Link
+            href="/"
+            className="mb-9 flex items-center gap-2.5 whitespace-nowrap px-2 text-[#fbfaf8]"
+          >
+            <Logo size="sm" />
           </Link>
 
           <nav className="flex flex-col gap-0.5">

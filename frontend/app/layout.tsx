@@ -14,6 +14,7 @@ const publicSans = Public_Sans({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://corvus.saek.dev"),
   title: "Corvus — Thesis Reviewer",
   description: "AI-powered diploma thesis analysis and review",
 };

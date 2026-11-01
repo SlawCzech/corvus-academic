@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:ui": "vitest --ui",
     "typecheck": "tsc --noEmit",
-    "gen-types": "openapi-typescript http://localhost:8000/openapi.json -o lib/api.types.ts"
+    "gen-types": "openapi-typescript http://localhost:8000/openapi.json -o lib/api.types.ts",
+    "brand": "node scripts/build-brand.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
@@ -39,6 +40,7 @@
     "eslint-config-next": "16.4.0",
     "jsdom": "^29.1.1",
     "openapi-typescript": "^7.13.0",
+    "sharp": "^0.35.5",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
