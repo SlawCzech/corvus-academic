@@ -31,6 +31,10 @@ jobs:
       - name: Lint
         run: uv run ruff check .
 
+      # Contracts in pyproject.toml: which bounded context may know which.
+      - name: Import boundaries
+        run: uv run lint-imports
+
       # `src` only: the test suite still carries ~250 reportUnknownMemberType
       # errors from TestClient/httpx, tracked in docs/technical-debt.md. The
       # production code is clean and stays that way.
