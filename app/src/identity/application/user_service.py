@@ -11,12 +11,20 @@ from src.identity.infrastructure.models import UserModel
 from src.identity.infrastructure.repositories import UserRepository
 
 
+class WrongPasswordError(Exception):
+    """The current password given to confirm a change does not match."""
+
+
 def _hash_password(plain: str) -> str:
     return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
 
 
 def _verify_password(plain: str, hashed: str) -> bool:
-    return bcrypt.checkpw(plain.encode(), hashed.encode())
+    try:
+        return bcrypt.checkpw(plain.encode(), hashed.encode())
+    except ValueError:
+        # Over bcrypt's 72 bytes, so no stored hash can match it.
+        return False
 
 
 def _to_domain(model: UserModel) -> User:
@@ -71,8 +79,19 @@ class UserService:
         """Delete user — intended for ADMIN use only."""
         await self._repo.delete(user_id)
 
-    async def change_password(self, user_id: UUID, new_password: str) -> None:
-        """Hash and store a new password for the given user."""
+    async def change_password(
+        self, user_id: UUID, current_password: str, new_password: str
+    ) -> None:
+        """Store a new password once the current one is confirmed.
+
+        A stolen session must not be enough to take the account for good.
+        Raises WrongPasswordError, or ValueError for an unusable new password.
+        """
+        model = await self._repo.find_by_id(user_id)
+        if model is None or not _verify_password(
+            current_password, model.hashed_password
+        ):
+            raise WrongPasswordError
         hashed = _hash_password(new_password)
         await self._repo.update_password(user_id, hashed)
 

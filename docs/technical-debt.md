@@ -24,12 +24,12 @@ Zostaje:
   tekstem (formularz admina pokazuje go wprost), 409 zostaje dla zajętego adresu.
   Tą samą drogą szło hasło ponad 72 bajty (limit bcrypt) — też 422.
 - [x] ~~**`PATCH /users/me/password` → 500 dla hasła ponad 72 bajty.**~~ — naprawione
-  2026-11-01: 422 z `detail` jako tekstem, jak w `POST /users`. Zostaje: trasa
-  `/api/users/me/password` we froncie gubi `detail`, więc formularz pokazuje ogólny
-  komunikat.
-- [ ] **Zmiana hasła nie sprawdza obecnego hasła.** Formularz wysyła
-  `current_password`, ale `ChangePasswordRequest` go nie ma i backend go nie czyta —
-  przejęta sesja wystarczy, żeby zmienić hasło.
+  2026-11-01: 422 z `detail` jako tekstem, jak w `POST /users`; trasa
+  `/api/users/me/password` przekazuje go do formularza.
+- [x] ~~**Zmiana hasła nie sprawdza obecnego hasła.**~~ — naprawione 2026-11-01:
+  `current_password` jest wymagane, złe to 403 (nie 401, bo klient odnawiałby sesję
+  i powtarzał żądanie), a endpoint ma limit prób logowania. Hasło ponad 72 bajty przy
+  logowaniu to 401, nie 500. Zostaje: zmiana hasła nie odwołuje pozostałych sesji.
 - [ ] **Brak Content-Security-Policy.** Caddy wysyła HSTS, `nosniff`,
   `X-Frame-Options`, `Referrer-Policy`; CSP wymaga noncy dla skryptów inline
   Next.js — osobna praca.
