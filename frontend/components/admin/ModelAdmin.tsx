@@ -54,6 +54,13 @@ export default function ModelAdmin() {
 
   return (
     <div>
+      <p className="mb-8 text-[13.5px] text-muted">
+        Promotorzy wybierają tylko spośród udostępnionych modeli. Domyślny działa,
+        gdy promotor niczego nie wybierze, i nie da się go wyłączyć, dopóki nie
+        wskażesz innego. Nowy model instaluje się na serwerze (
+        <code className="font-mono text-[12.5px]">ollama pull</code>) — pojawi się
+        tu wtedy sam, jako nieudostępniony.
+      </p>
       {!data.local_available && (
         <p className="mb-4 flex items-center gap-2 rounded-lg border border-major-border bg-major-bg px-4 py-3 text-[13px] text-major-text">
           <IconAlertTriangle size={16} stroke={1.75} />
