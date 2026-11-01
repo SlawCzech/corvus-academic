@@ -34,6 +34,9 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 _REFRESH_COOKIE = "refresh_token"
 _REFRESH_TTL = settings.refresh_token_expire_days * 24 * 3600
+# How long a replaced refresh token still works. Long enough for the requests
+# already on their way with it, short enough to be no use to anyone who stole it.
+_REFRESH_GRACE_SECONDS = 30
 
 # Logout must work for a caller whose token is already gone or expired, so a
 # missing header is not a 403 here the way it is everywhere else.
@@ -96,7 +99,11 @@ async def refresh_token(
     token_store: TokenStoreDep,
     refresh_token_cookie: str | None = Cookie(default=None, alias=_REFRESH_COOKIE),
 ) -> RefreshResponse:
-    """Issue a new access token using the httpOnly refresh cookie."""
+    """Replace the refresh cookie and issue a new access token.
+
+    The old refresh token is retired, not left to run out its month: logout
+    revokes only the latest one, so any earlier one would outlive the session.
+    """
     if refresh_token_cookie is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -121,6 +128,7 @@ async def refresh_token(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
         )
 
+    await token_store.retire(jti, _REFRESH_TTL, _REFRESH_GRACE_SECONDS)
     new_access = create_access_token(user)
     new_refresh, _new_jti = create_refresh_token(user)
 

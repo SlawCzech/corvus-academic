@@ -5,6 +5,7 @@ import uuid
 from typing import Any
 
 from fastapi.testclient import TestClient
+from httpx import Response
 
 os.environ.setdefault("JWT_SECRET", "test-secret-key-that-is-long-enough-32ch")
 os.environ.setdefault("FERNET_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
@@ -75,6 +76,74 @@ def test_get_me(client: TestClient) -> None:
     body: dict[str, Any] = resp.json()
     assert body["email"] == ADMIN_EMAIL
     assert body["role"] == "admin"
+
+
+# ---------- refresh ----------
+
+
+def _refresh_with(client: TestClient, token: str) -> Response:
+    client.cookies.clear()
+    return client.post("/auth/refresh", headers={"Cookie": f"refresh_token={token}"})
+
+
+def _login_refresh_token(client: TestClient) -> str:
+    resp = client.post(
+        "/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}
+    )
+    return resp.cookies["refresh_token"]
+
+
+def test_refresh_replaces_both_tokens(client: TestClient) -> None:
+    old = _login_refresh_token(client)
+
+    resp = _refresh_with(client, old)
+
+    assert resp.status_code == 200
+    assert resp.cookies["refresh_token"] != old
+    me = client.get(
+        "/users/me",
+        headers={"Authorization": f"Bearer {resp.json()['access_token']}"},
+    )
+    assert me.status_code == 200
+
+
+def test_refresh_retires_the_token_it_replaced(
+    client: TestClient, token_store: InMemoryTokenStore
+) -> None:
+    old = _login_refresh_token(client)
+    assert _refresh_with(client, old).status_code == 200
+
+    token_store.end_grace()
+
+    resp = _refresh_with(client, old)
+    assert resp.status_code == 401
+    assert resp.json()["detail"] == "Refresh token revoked"
+
+
+def test_refresh_accepts_a_second_use_within_the_grace_period(
+    client: TestClient,
+) -> None:
+    # Two tabs renewing at once: the loser must not be logged out for it.
+    old = _login_refresh_token(client)
+
+    assert _refresh_with(client, old).status_code == 200
+    assert _refresh_with(client, old).status_code == 200
+
+
+def test_refresh_chain_keeps_working(
+    client: TestClient, token_store: InMemoryTokenStore
+) -> None:
+    token = _login_refresh_token(client)
+    for _ in range(3):
+        resp = _refresh_with(client, token)
+        assert resp.status_code == 200
+        token = resp.cookies["refresh_token"]
+        token_store.end_grace()
+
+
+def test_refresh_without_a_cookie_is_refused(client: TestClient) -> None:
+    client.cookies.clear()
+    assert client.post("/auth/refresh").status_code == 401
 
 
 # ---------- logout ----------

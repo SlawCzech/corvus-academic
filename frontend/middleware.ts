@@ -40,5 +40,16 @@ export function middleware(request: NextRequest): NextResponse {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/dashboard/:path*", "/students/:path*", "/profile/:path*", "/guidelines/:path*"],
+  matcher: [
+    "/admin/:path*",
+    "/dashboard/:path*",
+    "/students/:path*",
+    "/profile/:path*",
+    "/guidelines/:path*",
+    // File links are plain navigations: no API client stands behind them to
+    // renew an expired token, so without this the browser shows a raw 401.
+    "/api/students/:student/drafts/:draft/file",
+    "/api/students/:student/fragments/:fragment/file",
+    "/api/guidelines/versions/:version/source",
+  ],
 }

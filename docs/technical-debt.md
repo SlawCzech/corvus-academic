@@ -16,10 +16,9 @@ który obraz frontendu w ogóle się nie budował. Sekretów w repo ani w histor
 
 Zostaje:
 
-- [ ] **Odświeżanie sesji** — patrz „Refresh z UI nie działa” niżej (zapisane
-  2026-10-03). Na produkcji to znaczy: logowanie od nowa co 12 h. Wylogowanie
-  odcina już access token (PR #4); usunięcie użytkownika nadal nie — token
-  działa do wygaśnięcia, bo `get_current_user` nie pyta bazy.
+- [x] ~~**Odświeżanie sesji**~~ — naprawione 2026-11-01, patrz „Refresh z UI nie
+  działa” niżej. Usunięty użytkownik zachowuje dostęp do wygaśnięcia access tokenu
+  (`get_current_user` nie pyta bazy), ale to już 30 minut, nie 12 godzin.
 - [ ] **Niepoprawny e-mail przy `POST /users` → 500, nie 422.** `ValueError`
   z `UserRegistration` nie jest mapowany w `users_router.py` (np. adres w domenie
   zarezerwowanej, jak `.local`).
@@ -123,13 +122,18 @@ Zostaje:
   którego backend nie czyta. Tokeny wydane przed tą zmianą (bez `jti`) są odrzucane:
   jednorazowe ponowne logowanie.
 
-- [ ] **Refresh z UI nie działa** (znalezione 2026-10-03) — `app` oddaje refresh token
-  w `Set-Cookie` na ścieżce `/auth/refresh`, a route `/api/auth/login` we froncie
-  szuka go w JSON-ie (`data.refresh_token`), więc Next nigdy nie zapisuje ciasteczka
-  `refresh_token`, a `/api/auth/refresh` wysyła go w treści, której backend nie czyta.
-  Sesję w praktyce trzyma sam access token (12 h). Naprawka: przepisać `Set-Cookie` z
-  odpowiedzi logowania na ciasteczko Next i wysyłać je do `app` w nagłówku `Cookie`
-  (tak jak robi to już `/api/auth/logout`); dopiero wtedy da się skrócić access token.
+- [x] ~~**Refresh z UI nie działa**~~ — naprawione 2026-11-01. Trasy Next przepisują
+  `Set-Cookie` z `app` na własne ciasteczko i oddają token w nagłówku `Cookie`.
+  `/auth/refresh` naprawdę rotuje: stary token działa jeszcze 30 s (równoległe
+  karty), potem jest odwołany. Pliki (zwykłe linki) i formularze admina też odnawiają
+  sesję, a access token ma 30 minut. Awaria `app` nie wylogowuje.
+
+- [ ] **Zgubiona odpowiedź przy rotacji wylogowuje** — jeśli przeglądarka nie dostanie
+  odpowiedzi z nowym ciasteczkiem, a kolejna próba przyjdzie po 30 s, stary token jest
+  już odwołany. Skutek: jedno ponowne logowanie, więc zostaje tak.
+
+- [ ] **Rotacja nie wykrywa kradzieży** — użycie odwołanego tokenu to zwykłe 401, nie
+  unieważnia całej rodziny tokenów. Wymagałoby śledzenia rodzin w Redis.
 
 - [ ] **Fail-open w `RevokedTokenStore`** — jeśli Redis jest niedostępny, `is_revoked()` zwraca `False` (odwołane tokeny, od 2026-10-03 także access tokeny, są akceptowane). Celowy kompromis dostępność vs. bezpieczeństwo — wymaga alertu/monitoringu na log event `token_store_check_failed_fail_open`.
 
@@ -334,4 +338,4 @@ odłożone:
 
 ---
 
-*Ostatnia aktualizacja: 2026-10-31 (fragmenty i przebieg pracy)*
+*Ostatnia aktualizacja: 2026-11-01 (odświeżanie sesji)*

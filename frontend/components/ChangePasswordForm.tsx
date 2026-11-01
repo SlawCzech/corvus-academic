@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { request } from "@/lib/api.client"
 import { z } from "zod"
 
 const schema = z
@@ -31,7 +32,7 @@ export default function ChangePasswordForm() {
 
   async function onSubmit(data: FormData) {
     setServerError(null)
-    const res = await fetch("/api/users/me/password", {
+    const res = await request("/api/users/me/password", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

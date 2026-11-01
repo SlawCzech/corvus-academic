@@ -1,12 +1,10 @@
 /**
  * How long the access-token cookie is kept.
  *
- * Matched to ACCESS_TOKEN_EXPIRE_MINUTES in `app` (12 h). These two drifted
- * apart once — an 8 h cookie carrying a 15 min token — and the symptom was
- * not "please log in" but every API call failing while the page looked
- * logged in.
+ * Matched to ACCESS_TOKEN_EXPIRE_MINUTES in `app` (30 min). Drifting apart no
+ * longer breaks anything: a stale token is renewed like an absent one.
  */
-export const ACCESS_COOKIE_MAX_AGE = 60 * 60 * 12
+export const ACCESS_COOKIE_MAX_AGE = 60 * 30
 
 /** The refresh token outlives it by a month, and renews it silently. */
 export const REFRESH_COOKIE_MAX_AGE = 60 * 60 * 24 * 30

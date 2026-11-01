@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import useSWR from "swr"
-import { fetcher } from "@/lib/api.client"
+import { fetcher, request } from "@/lib/api.client"
 import type { ApiKeySaved, ApiKeyStatus, ModelCatalog } from "@/lib/api.types"
 import { PROVIDER_LABELS, PROVIDERS, type Provider } from "@/lib/modelChoice"
 
@@ -35,7 +35,7 @@ export default function ApiKeySection() {
     if (!apiKey.trim()) return
     setSaveStatus("saving")
     setProviderMessage(null)
-    const res = await fetch("/api/settings/api-key", {
+    const res = await request("/api/settings/api-key", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ api_key: apiKey, provider }),
@@ -58,7 +58,7 @@ export default function ApiKeySection() {
 
   async function remove(which: Provider): Promise<void> {
     setSaveStatus("saving")
-    const res = await fetch(`/api/settings/api-key/${which}`, { method: "DELETE" })
+    const res = await request(`/api/settings/api-key/${which}`, { method: "DELETE" })
     setSaveStatus(res.ok ? "idle" : "error")
     if (res.ok) void mutate()
   }
