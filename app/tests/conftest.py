@@ -14,6 +14,8 @@ os.environ.setdefault(
 os.environ.setdefault("ADMIN_PASSWORD", "test-admin-password-123")
 os.environ.setdefault("AGENT_URL", "http://agent:8002")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
+# Off by default, on here: the hidden path stays covered (ADR 0016).
+os.environ.setdefault("LOCAL_MODELS_ENABLED", "true")
 
 
 from collections.abc import Generator  # noqa: E402
