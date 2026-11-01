@@ -1,5 +1,6 @@
 import Link from "next/link"
 import AuthTabs from "@/components/AuthTabs"
+import Logo from "@/components/Logo"
 
 interface LoginPageProps {
   searchParams: Promise<{ tab?: string }>
@@ -12,13 +13,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   return (
     <div className="flex min-h-screen">
       <div className="hidden w-[45%] flex-col justify-between bg-navy p-14 lg:flex">
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 font-serif text-[17px] font-semibold text-[#e8b876]">
-            C
-          </div>
-          <span className="font-serif text-[19px] font-semibold text-[#fbfaf8]">
-            Corvus
-          </span>
+        <Link href="/" className="flex items-center gap-2.5 text-[#fbfaf8]">
+          <Logo />
         </Link>
 
         <div>
