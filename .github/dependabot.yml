@@ -81,3 +81,6 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+      # A new Python is a minor tag here, and the builder image pins its own.
+      - dependency-name: python
+        update-types: ["version-update:semver-minor"]
