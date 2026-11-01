@@ -1,13 +1,16 @@
 import {
-  MARK_PATH,
+  BOOK_PATH,
+  LEGS_PATH,
+  LEGS_STROKE_WIDTH,
   MARK_VIEW_BOX,
+  RAVEN_PATH,
   WORDMARK_PATH,
   WORDMARK_VIEW_BOX,
 } from "@/lib/brand"
 
 const SIZES = {
-  sm: { mark: "h-8 w-8", wordmark: "h-[17px]" },
-  md: { mark: "h-9 w-9", wordmark: "h-[19px]" },
+  sm: { mark: "h-9 w-9", wordmark: "h-[17px]" },
+  md: { mark: "h-11 w-11", wordmark: "h-[19px]" },
 }
 
 interface LogoProps {
@@ -24,10 +27,18 @@ export default function Logo({ size = "md" }: LogoProps) {
         viewBox={MARK_VIEW_BOX}
         aria-hidden="true"
         fill="currentColor"
-        fillRule="evenodd"
         className={`${mark} shrink-0`}
       >
-        <path d={MARK_PATH} />
+        <path d={RAVEN_PATH} />
+        <path
+          d={LEGS_PATH}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={LEGS_STROKE_WIDTH}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+        <path d={BOOK_PATH} fillRule="evenodd" />
       </svg>
       <svg
         viewBox={WORDMARK_VIEW_BOX}

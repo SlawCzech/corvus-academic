@@ -3,17 +3,25 @@ import { mkdir, writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
 import sharp from "sharp"
 import {
+  BOOK_PATH,
   INK,
-  MARK_PATH,
+  LEGS_PATH,
+  LEGS_STROKE_WIDTH,
   MARK_VIEW_BOX,
   PAPER,
+  RAVEN_PATH,
   WORDMARK_PATH,
 } from "../lib/brand.ts"
 
 const root = resolve(import.meta.dirname, "..")
 const out = (path) => resolve(root, path)
 
-const mark = (fill) => `<path fill="${fill}" fill-rule="evenodd" d="${MARK_PATH}"/>`
+const raven = (color) =>
+  `<path fill="${color}" d="${RAVEN_PATH}"/>` +
+  `<path fill="none" stroke="${color}" stroke-width="${LEGS_STROKE_WIDTH}" ` +
+  `stroke-linejoin="round" stroke-linecap="round" d="${LEGS_PATH}"/>`
+const mark = (color) =>
+  `${raven(color)}<path fill="${color}" fill-rule="evenodd" d="${BOOK_PATH}"/>`
 const svg = (viewBox, body) =>
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}">${body}</svg>\n`
 
@@ -21,24 +29,26 @@ const markSvg = (fill) => svg(MARK_VIEW_BOX, mark(fill))
 const logoSvg = (fill) =>
   svg(
     "0 0 680 200",
-    `${mark(fill)}<path fill="${fill}" transform="translate(236 148) scale(1.4)" d="${WORDMARK_PATH}"/>`,
+    `${mark(fill)}<path fill="${fill}" transform="translate(236 150) scale(1.4)" d="${WORDMARK_PATH}"/>`,
   )
 
 // The browser tab can be dark, so the vector favicon follows the system theme.
+// At tab size the book's pages turn to noise, so the favicons show the raven alone.
+const RAVEN_UP = 30
 const tabIconSvg = svg(
   MARK_VIEW_BOX,
-  `<style>path{fill:${INK}}@media (prefers-color-scheme:dark){path{fill:${PAPER}}}</style>` +
-    `<path fill-rule="evenodd" d="${MARK_PATH}"/>`,
+  `<style>svg{color:${INK}}@media (prefers-color-scheme:dark){svg{color:${PAPER}}}</style>` +
+    `<g transform="translate(0 ${RAVEN_UP})">${raven("currentColor")}</g>`,
 )
 
 // Mark on a paper square. `share` is the part of the square the mark takes up;
 // 0.62 stays inside the safe zone of maskable icons.
-const tileSvg = (share, radius = 0) => {
+const tileSvg = (share, { radius = 0, art = mark(INK) } = {}) => {
   const offset = (200 * (1 - share)) / 2
   return svg(
     MARK_VIEW_BOX,
     `<rect width="200" height="200" rx="${radius}" fill="${PAPER}"/>` +
-      `<g transform="translate(${offset} ${offset}) scale(${share})">${mark(INK)}</g>`,
+      `<g transform="translate(${offset} ${offset}) scale(${share})">${art}</g>`,
   )
 }
 
@@ -80,7 +90,13 @@ await mkdir(out("public/brand"), { recursive: true })
 const favicon = await Promise.all(
   [16, 32, 48].map(async (size) => ({
     size,
-    data: await png(tileSvg(0.86, 36), size),
+    data: await png(
+      tileSvg(0.92, {
+        radius: 36,
+        art: `<g transform="translate(0 ${RAVEN_UP})">${raven(INK)}</g>`,
+      }),
+      size,
+    ),
   })),
 )
 
