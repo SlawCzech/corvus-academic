@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import useSWR from "swr"
 import FileUpload from "@/components/FileUpload"
 import ActionPanel from "@/components/students/ActionPanel"
@@ -43,6 +44,19 @@ function formatDate(iso: string): string {
   })
 }
 
+/** Which version a final review will read, when that may surprise the promoter. */
+function finalReviewNote(drafts: ThesisDraft[]): string | undefined {
+  const newest = drafts.find((d) => !d.purged_at)
+  const accepted = drafts.find((d) => d.is_accepted && !d.purged_at)
+  if (!newest) return undefined
+  if (!accepted) {
+    return `Żadna wersja nie jest zaakceptowana jako finalna. Recenzja oceni najnowszą, wersję ${newest.version_number}.`
+  }
+  return accepted.id === newest.id
+    ? undefined
+    : `Recenzja oceni zaakceptowaną wersję ${accepted.version_number}, nie najnowszą.`
+}
+
 export default function StudentDetail({
   studentId,
   initialSection = "overview",
@@ -70,6 +84,14 @@ export default function StudentDetail({
   )
   const { data: actions, mutate: mutateActions } = useSWR<AgentAction[]>(actionsKey, fetcher)
 
+  // The dashboard knows actions, not what they belong to: a one-off review
+  // has its own page, and its links arrive here.
+  const router = useRouter()
+  const oneOff = student?.is_one_off === true
+  useEffect(() => {
+    if (oneOff) router.replace(`/reviews/${studentId}`)
+  }, [oneOff, router, studentId])
+
   const [section, setSection] = useState<Section>(initialSection)
   // Which action the AI section opens on, when a suggestion led there.
   const [actionToOpen, setActionToOpen] = useState<ActionType | undefined>(undefined)
@@ -88,7 +110,7 @@ export default function StudentDetail({
       </main>
     )
   }
-  if (!student) {
+  if (!student || oneOff) {
     return (
       <main className="px-12 py-10">
         <p className="text-[13px] text-muted">Wczytywanie…</p>
@@ -132,12 +154,18 @@ export default function StudentDetail({
   }
 
   const hasReview = (actions ?? []).some(
-    (a) => a.action_type === "generate_review" && a.status === "completed",
+    (a) =>
+      (a.action_type === "generate_review" || a.action_type === "trial_review") &&
+      a.status === "completed",
   )
   const latestDraft = drafts?.[0]
+  const acceptedDraft = drafts?.find((d) => d.is_accepted && !d.purged_at)
   // Newest first. The way back to an action started before leaving the page.
   const unfinished = (actions ?? []).filter(isUnfinished)
-  const reviewGoing = unfinished.some((a) => a.action_type === "generate_review")
+  const reviewGoing = unfinished.some(
+    (a) => a.action_type === "generate_review" || a.action_type === "trial_review",
+  )
+  const nextReview = acceptedDraft ? "generate_review" : "trial_review"
   const bibliographyTouched = (actions ?? []).some(
     (a) =>
       a.action_type === "verify_bibliography" &&
@@ -200,10 +228,10 @@ export default function StudentDetail({
                   </span>
                 </div>
                 <button
-                  onClick={() => openAction("generate_review")}
+                  onClick={() => openAction(nextReview)}
                   className="h-9 shrink-0 rounded-lg bg-accent px-4 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"
                 >
-                  Napisz recenzję
+                  {acceptedDraft ? "Recenzja finalna" : "Recenzja próbna"}
                 </button>
               </div>
             )}
@@ -294,7 +322,11 @@ export default function StudentDetail({
         {section === "actions" && (
           <div>
             <h1 className="mb-5 text-[24px] font-semibold text-foreground">Akcje AI</h1>
-            <ActionPanel student={student} initialType={actionToOpen} />
+            <ActionPanel
+              student={student}
+              initialType={actionToOpen}
+              notes={{ generate_review: finalReviewNote(drafts ?? []) }}
+            />
           </div>
         )}
 

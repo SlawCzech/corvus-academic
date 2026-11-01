@@ -11,6 +11,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from src.document.title_page import TitlePage
 from src.mentoring.application.action_service import ActionInProgress
 from src.mentoring.application.dashboard_service import (
     DashboardSummary,
@@ -19,6 +20,7 @@ from src.mentoring.application.dashboard_service import (
 )
 from src.mentoring.application.draft_service import DraftView
 from src.mentoring.application.model_service import AdminCatalog, PromoterCatalog
+from src.mentoring.application.review_service import ReviewView
 from src.mentoring.application.timeline_service import (
     FragmentEntry,
     PartEntry,
@@ -75,6 +77,7 @@ class StudentResponse(BaseModel):
     updated_at: datetime
     closed_at: datetime | None
     guideline_set_id: uuid.UUID | None
+    is_one_off: bool
 
 
 def student_response(student: Student) -> StudentResponse:
@@ -94,6 +97,53 @@ def student_response(student: Student) -> StudentResponse:
         updated_at=student.updated_at,
         closed_at=student.closed_at,
         guideline_set_id=student.guideline_set_id,
+        is_one_off=student.is_one_off,
+    )
+
+
+class ReviewResponse(BaseModel):
+    """A one-off review as the history lists it."""
+
+    id: uuid.UUID
+    full_name: str
+    field_of_study: str
+    thesis_type: str
+    current_topic: str | None
+    created_at: datetime
+    filename: str
+    purged_at: datetime | None
+    purge_due_at: datetime | None
+
+
+class TitlePageResponse(BaseModel):
+    """What a title page suggests for the form; null for what was not found."""
+
+    full_name: str | None
+    field_of_study: str | None
+    thesis_type: str | None
+    current_topic: str | None
+
+
+def title_page_response(page: TitlePage) -> TitlePageResponse:
+    return TitlePageResponse(
+        full_name=page.author,
+        field_of_study=page.field_of_study,
+        thesis_type=page.thesis_type,
+        current_topic=page.title,
+    )
+
+
+def review_response(view: ReviewView) -> ReviewResponse:
+    return ReviewResponse(
+        id=view.student.id,
+        full_name=view.student.full_name,
+        field_of_study=view.student.field_of_study,
+        thesis_type=str(view.student.thesis_type),
+        current_topic=view.student.current_topic,
+        created_at=view.student.created_at,
+        filename=view.draft.draft.filename,
+        purged_at=view.draft.draft.purged_at,
+        purge_due_at=view.draft.purge_due_at,
     )
 
 

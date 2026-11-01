@@ -31,6 +31,15 @@ class StudentRepository:
         await self._session.commit()
         await self._session.refresh(model)
 
+    async def add(self, model: StudentModel) -> None:
+        """Write a new student without committing, for a larger unit of work."""
+        self._session.add(model)
+        await self._session.flush()
+
+    async def rollback(self) -> None:
+        """Drop whatever the unit of work holds."""
+        await self._session.rollback()
+
     async def update(self, model: StudentModel) -> None:
         """Commit in-place changes to an already-persisted student."""
         await self._session.commit()
@@ -44,17 +53,21 @@ class StudentRepository:
         self,
         promotor_id: uuid.UUID | None = None,
         status: str | None = None,
+        one_off: bool | None = None,
     ) -> list[StudentModel]:
         """Return students with optional filters, newest first.
 
         ``promotor_id=None`` means "every promoter's students" — only callers
-        holding VIEW_ALL_STUDENTS ever pass that.
+        holding VIEW_ALL_STUDENTS ever pass that. ``one_off=None`` means both
+        students and one-off reviews.
         """
         stmt = select(StudentModel).order_by(StudentModel.created_at.desc())
         if promotor_id is not None:
             stmt = stmt.where(StudentModel.promotor_id == promotor_id)
         if status is not None:
             stmt = stmt.where(StudentModel.status == status)
+        if one_off is not None:
+            stmt = stmt.where(StudentModel.is_one_off == one_off)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 

@@ -107,9 +107,14 @@ function ScoreBar({ score }: { score: Score }) {
 
 interface AnalysisResultProps {
   result: ActionResult
+  /** A final review goes to the university: the verdict on it is the text. */
+  showRecommendation?: boolean
 }
 
-export default function AnalysisResultView({ result }: AnalysisResultProps) {
+export default function AnalysisResultView({
+  result,
+  showRecommendation = true,
+}: AnalysisResultProps) {
   const findings: Finding[] = result.findings ?? []
   const scores: Score[] = result.scores ?? []
   const summary = result.summary ?? result.output?.summary ?? null
@@ -163,7 +168,7 @@ export default function AnalysisResultView({ result }: AnalysisResultProps) {
         </section>
       )}
 
-      {recommendation && (
+      {showRecommendation && recommendation && (
         <section className="mb-6">
           <h2 className="mb-1 text-[11.5px] font-semibold uppercase tracking-wide text-muted">
             Rekomendacja

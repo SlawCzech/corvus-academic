@@ -308,6 +308,19 @@ Zostaje:
 
 ---
 
+## Jednorazowe recenzje (2026-11-01)
+
+- [ ] **Recenzja próbna bez evala treści** — klucz odpowiedzi mierzy uwagi, nie to, czy
+  zalecenia są konkretne i trafne.
+- [ ] **Teksty akcji mówią o „ostatniej wersji”** — na stronie recenzji jest tylko
+  jedna wersja, a etykiety panelu akcji są wspólne ze stroną studenta.
+- [ ] **`/reviews` pyta o pracę każdej recenzji osobno** — jedno zapytanie na wiersz.
+  Przy kilkudziesięciu recenzjach trzeba zebrać to jednym zapytaniem.
+- [ ] **Potwierdzenie usunięcia wspomina notatki** — wspólne ze studentem, a jednorazówka
+  ich nie ma.
+
+---
+
 ## Moduł AI na dostawcy (2026-10-01)
 
 Pierwszy dzień akcji na żywo na Claude (`claude-sonnet-5-5`). Co zostało świadomie

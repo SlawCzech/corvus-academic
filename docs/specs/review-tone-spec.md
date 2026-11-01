@@ -262,7 +262,7 @@ without being personal or dismissive.
 
 Opening: DO NOT use the standard positive opening.
 Start directly with the core problem, for example:
-  "Praca wymaga istotnych poprawek przed dopuszczeniem do obrony."
+  "Praca nie spełnia wymagań stawianych pracom dyplomowym."
   OR name the specific critical deficiency in the opening sentence.
 
 Body: address each CRITICAL finding by name. Be specific.
@@ -271,7 +271,8 @@ Do not soften the language beyond academic courtesy.
 Notable strength section: include ONLY if a genuine strength
 exists that should be acknowledged despite the overall failure.
 
-Closing: describe what must be corrected before resubmission.
+Closing: say what the deficiencies mean for the assessment of the work. Nothing
+about what should be corrected: the thesis is finished.
 
 Scores: 0–5 range depending on findings.
 Recommendation: MUST be "Zwrócić do poprawy".

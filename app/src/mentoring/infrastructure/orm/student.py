@@ -7,7 +7,16 @@ the same reason they live together there.
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text, Uuid
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    Uuid,
+    false,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.mentoring.infrastructure.orm.base import SCHEMA, Base
@@ -52,6 +61,9 @@ class StudentModel(Base):
     )
     research_area: Mapped[str | None] = mapped_column(String(255), nullable=True)
     research_aim: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_one_off: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )

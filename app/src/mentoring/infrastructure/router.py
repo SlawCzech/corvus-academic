@@ -13,6 +13,7 @@ from src.mentoring.infrastructure.dashboard_router import router as dashboard_ro
 from src.mentoring.infrastructure.drafts_router import router as drafts_router
 from src.mentoring.infrastructure.fragments_router import router as fragments_router
 from src.mentoring.infrastructure.models_router import router as models_router
+from src.mentoring.infrastructure.reviews_router import router as reviews_router
 from src.mentoring.infrastructure.students_router import router as students_router
 
 router = APIRouter()
@@ -20,5 +21,6 @@ router.include_router(students_router)
 router.include_router(actions_router)
 router.include_router(drafts_router)
 router.include_router(fragments_router)
+router.include_router(reviews_router)
 router.include_router(dashboard_router)
 router.include_router(models_router)

@@ -34,6 +34,7 @@ from src.mentoring.application.draft_service import to_domain as draft_to_domain
 from src.mentoring.application.exceptions import (
     ActionNotFoundError,
     FragmentNotFoundError,
+    OneOffReviewError,
     ProviderKeyMissingError,
     UnsupportedActionError,
 )
@@ -50,7 +51,13 @@ from src.mentoring.application.student_service import (
     Caller,
     StudentService,
 )
-from src.mentoring.domain.action import ActionStatus, ActionType, AgentAction
+from src.mentoring.domain.action import (
+    ONE_OFF_ACTIONS,
+    REVIEW_ACTIONS,
+    ActionStatus,
+    ActionType,
+    AgentAction,
+)
 from src.mentoring.domain.draft import ThesisDraft
 from src.mentoring.domain.fragment import latest_rounds, part_state
 from src.mentoring.domain.student import Student
@@ -166,9 +173,12 @@ class ActionService:
         points at this run, the latest of any before it.
 
         Raises ProviderKeyMissingError when `provider` names a provider the
-        promoter has no key for.
+        promoter has no key for, and OneOffReviewError for an action a one-off
+        review does not take.
         """
         student = await self._students.get(caller, student_id)
+        if student.is_one_off and action_type not in ONE_OFF_ACTIONS:
+            raise OneOffReviewError(f"A one-off review does not take {action_type}")
         byok = await _key_for(provider, keys)
         if byok is not None:
             # The provider's own model runs; a local tag would be ignored.
@@ -180,7 +190,7 @@ class ActionService:
         context, input_ref = await self._assemble(
             caller, student, action_type, detail, review_tone, fragment_id
         )
-        if review_findings_first and action_type is ActionType.GENERATE_REVIEW:
+        if review_findings_first and action_type in REVIEW_ACTIONS:
             context["promoter_reviews_findings"] = True
 
         now = datetime.now(UTC)
@@ -530,8 +540,12 @@ class ActionService:
                     ),
                     base_ref | self._draft_ref(latest[:1]),
                 )
-            case ActionType.GENERATE_REVIEW:
-                latest = await self._latest_drafts(student.id, 1)
+            case ActionType.GENERATE_REVIEW | ActionType.TRIAL_REVIEW:
+                latest = (
+                    await self._final_draft(student)
+                    if action_type is ActionType.GENERATE_REVIEW
+                    else await self._latest_drafts(student.id, 1)
+                )
                 rubric = await self._rubric(student)
                 return (
                     assemble_generate_review_context(
@@ -629,6 +643,14 @@ class ActionService:
     async def _latest_drafts(self, student_id: UUID, limit: int) -> list[ThesisDraft]:
         models = await self._drafts.find_latest(student_id, limit=limit)
         return [draft_to_domain(m) for m in models]
+
+    async def _final_draft(self, student: Student) -> list[ThesisDraft]:
+        """What a final review reads: the accepted version, else the newest."""
+        if student.accepted_draft_id is not None:
+            accepted = await self._drafts.find_by_id(student.accepted_draft_id)
+            if accepted is not None and accepted.purged_at is None:
+                return [draft_to_domain(accepted)]
+        return await self._latest_drafts(student.id, 1)
 
     @staticmethod
     def _draft_ref(drafts: list[ThesisDraft]) -> dict[str, Any]:

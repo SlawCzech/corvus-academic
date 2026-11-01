@@ -14,6 +14,7 @@ import structlog
 from src.document.extractor import CANONICAL_CONTENT_TYPE, extract
 from src.mentoring.application.exceptions import (
     FragmentNotFoundError,
+    OneOffReviewError,
     PartConflictError,
     PartNotFoundError,
 )
@@ -164,7 +165,7 @@ class FragmentService:
 
         Raises PartConflictError when the student already has one by that name.
         """
-        student = await self._students.get(caller, student_id)
+        student = await self._supervised(caller, student_id)
         part = ThesisPart(
             id=uuid.uuid4(), student_id=student.id, name=name, position=1, due_on=due_on
         )
@@ -248,7 +249,7 @@ class FragmentService:
         Raises ValueError for unusable input, and StudentNotFoundError when the
         caller may not see the student.
         """
-        student = await self._students.get(caller, student_id)
+        student = await self._supervised(caller, student_id)
         now = uploaded_at or datetime.now(UTC)
         received = received_on or now.date()
         if received > now.date() + _FUTURE_TOLERANCE:
@@ -397,6 +398,13 @@ class FragmentService:
         if not text.strip():
             raise ValueError("fragment text must not be empty")
         return _Content(text=text, format="text")
+
+    async def _supervised(self, caller: Caller, student_id: UUID) -> Student:
+        """The student, unless it is a one-off review: those have no parts."""
+        student = await self._students.get(caller, student_id)
+        if student.is_one_off:
+            raise OneOffReviewError("A one-off review has no parts or fragments")
+        return student
 
     async def _insert_part(self, part: ThesisPart) -> ThesisPartModel:
         model = ThesisPartModel(

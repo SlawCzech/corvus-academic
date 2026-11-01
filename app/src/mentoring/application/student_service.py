@@ -5,7 +5,10 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
-from src.mentoring.application.exceptions import StudentNotFoundError
+from src.mentoring.application.exceptions import (
+    OneOffReviewError,
+    StudentNotFoundError,
+)
 from src.mentoring.application.guidelines_port import GuidelineSource
 from src.mentoring.domain.student import (
     MeetingNote,
@@ -53,6 +56,7 @@ def to_domain(model: StudentModel) -> Student:
         guideline_set_id=model.guideline_set_id,
         research_area=model.research_area,
         research_aim=model.research_aim,
+        is_one_off=model.is_one_off,
     )
 
 
@@ -81,6 +85,7 @@ def _to_orm(student: Student) -> StudentModel:
         guideline_set_id=student.guideline_set_id,
         research_area=student.research_area,
         research_aim=student.research_aim,
+        is_one_off=student.is_one_off,
     )
 
 
@@ -158,16 +163,66 @@ class StudentService:
         await self._students.save(model)
         return to_domain(model)
 
+    async def add_one_off(
+        self,
+        caller: Caller,
+        full_name: str,
+        field_of_study: str,
+        thesis_type: ThesisType,
+        topic: str | None = None,
+        research_area: str | None = None,
+        research_aim: str | None = None,
+    ) -> Student:
+        """Write a one-off review's row, uncommitted: its thesis commits both."""
+        student = Student.one_off(
+            id=uuid.uuid4(),
+            promotor_id=caller.user_id,
+            full_name=full_name,
+            field_of_study=field_of_study,
+            thesis_type=thesis_type,
+            research_area=research_area,
+            research_aim=research_aim,
+        )
+        if topic and topic.strip():
+            student.set_topic(topic, student.created_at)
+        model = _to_orm(student)
+        await self._students.add(model)
+        return to_domain(model)
+
+    async def discard_unsaved(self) -> None:
+        """Drop a row `add_one_off` wrote, when its thesis cannot follow it."""
+        await self._students.rollback()
+
+    async def promote(self, caller: Caller, student_id: UUID) -> Student:
+        """Turn a one-off review into a student on the caller's roster.
+
+        Raises ValueError for someone who already is one.
+        """
+        model = await self._require_model(caller, student_id)
+        student = to_domain(model)
+        student.promote()
+        model.is_one_off = student.is_one_off
+        model.status = str(student.status)
+        model.closed_at = student.closed_at
+        await self._students.update(model)
+        return to_domain(model)
+
     async def list_students(
         self,
         caller: Caller,
         status: StudentStatus | None = None,
+        one_off: bool | None = None,
     ) -> list[Student]:
-        """Return the caller's students — or everyone's, for an admin."""
+        """Return the caller's students — or everyone's, for an admin.
+
+        Left unset, `one_off` includes one-off reviews: whatever names an
+        action needs them. The roster and the history each ask for their own.
+        """
         promotor_filter = None if caller.can_view_all else caller.user_id
         models = await self._students.find_all(
             promotor_id=promotor_filter,
             status=str(status) if status is not None else None,
+            one_off=one_off,
         )
         return [to_domain(m) for m in models]
 
@@ -229,6 +284,8 @@ class StudentService:
             if guideline_set_id is not None:
                 await self._check_guideline_set(student, guideline_set_id)
             student.guideline_set_id = guideline_set_id
+        if status is not None:
+            student.change_status(status)
 
         model.full_name = student.full_name
         model.field_of_study = student.field_of_study
@@ -239,10 +296,8 @@ class StudentService:
         model.current_topic = student.current_topic
         model.current_topic_set_at = student.current_topic_set_at
         model.guideline_set_id = student.guideline_set_id
-        if status is not None:
-            student.change_status(status)
-            model.status = str(student.status)
-            model.closed_at = student.closed_at
+        model.status = str(student.status)
+        model.closed_at = student.closed_at
 
         await self._students.update(model)
         return to_domain(model)
@@ -300,6 +355,8 @@ class StudentService:
         which for an admin acting on another roster is not the supervisor.
         """
         student_model = await self._require_model(caller, student_id)
+        if student_model.is_one_off:
+            raise OneOffReviewError("A one-off review has no meetings")
         note = MeetingNote(
             id=uuid.uuid4(),
             student_id=student_model.id,

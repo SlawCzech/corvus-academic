@@ -43,6 +43,31 @@ export interface Student {
   closed_at: string | null
   /** The guideline set the thesis is judged against; null = the agent's defaults. */
   guideline_set_id: string | null
+  /** A thesis reviewed once, with nobody supervised: it lives under /reviews. */
+  is_one_off: boolean
+}
+
+/** A one-off review as the history lists it. */
+export interface Review {
+  id: string
+  full_name: string
+  field_of_study: string
+  thesis_type: ThesisType
+  current_topic: string | null
+  created_at: string
+  filename: string
+  /** Set once the thesis text and file are gone; the results stay. */
+  purged_at: string | null
+  /** When retention will remove the thesis text and file. */
+  purge_due_at: string | null
+}
+
+/** Read off a title page for the promoter to check; null for what was not found. */
+export interface TitlePageSuggestion {
+  full_name: string | null
+  field_of_study: string | null
+  thesis_type: ThesisType | null
+  current_topic: string | null
 }
 
 export interface MeetingNote {
@@ -85,6 +110,7 @@ export type ActionType =
   | "draft_meeting_note"
   | "defence_questions"
   | "generate_review"
+  | "trial_review"
   | "verify_bibliography"
   | "review_fragment"
 

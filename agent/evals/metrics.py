@@ -57,6 +57,8 @@ class CaseResult:
     recommendation: str | None
     recommendation_ok: bool | None
     findings: list[dict[str, str]] = field(default_factory=list[dict[str, str]])
+    # Wording in the final review that tells someone what to do.
+    advice: list[str] = field(default_factory=list[str])
 
     @property
     def recall(self) -> float:
@@ -75,6 +77,7 @@ def score_case(
     node_errors: list[str],
     error: str | None,
     recommendation: str | None,
+    advice: Sequence[str] = (),
 ) -> CaseResult:
     """Turn a run and its judgement into the case's numbers."""
     matched: list[str] = []
@@ -122,6 +125,7 @@ def score_case(
             if recommendation is not None and case.acceptable_recommendations
             else None
         ),
+        advice=list(advice),
         findings=[
             {
                 "severity": str(f.severity),
@@ -148,6 +152,7 @@ class Summary:
     failed_nodes: int
     recommendations_ok: str
     seconds: float
+    advice: int = 0
 
 
 def summarise(results: Sequence[CaseResult]) -> Summary:
@@ -164,6 +169,7 @@ def summarise(results: Sequence[CaseResult]) -> Summary:
         failed_nodes=sum(len(r.node_errors) + (1 if r.error else 0) for r in results),
         recommendations_ok=f"{sum(judged)}/{len(judged)}",
         seconds=round(sum(r.seconds for r in results), 1),
+        advice=sum(len(r.advice) for r in results),
     )
 
 
@@ -190,6 +196,7 @@ def render_markdown(results: Sequence[CaseResult]) -> str:
         f"**{s.model}** — recall {s.recall:.2f} · underrated {s.underrated} · "
         f"duplicates {s.duplicates} · false flags {s.false_flags} · "
         f"unmatched {s.unmatched} · recommendations {s.recommendations_ok} · "
-        f"failed nodes {s.failed_nodes} · {s.seconds} s",
+        f"advice in reviews {s.advice} · failed nodes {s.failed_nodes} · "
+        f"{s.seconds} s",
     ]
     return "\n".join(lines)

@@ -139,6 +139,7 @@ app :8000
   │
   ├──► /students/{id}/drafts  — wersje pracy
   ├──► /students/{id}/fragments, /parts, /timeline  — fragmenty w rundach, oś czasu
+  ├──► /reviews  — jednorazowa recenzja i promocja do studenta (ADR 0017)
   │      POST   → limit 25 MB, format sprawdzony po zawartości, ekstrakcja
   │               in-process (PyMuPDF / python-docx); plik i tekst zapisane
   │               jako wersja N+1; nowa wersja zdejmuje akceptację

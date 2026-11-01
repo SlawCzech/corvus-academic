@@ -4,7 +4,7 @@ Local web application supporting thesis reviewers and supervisors in analysing s
 
 ## What it does
 
-Upload a PDF or DOCX thesis. Corvus analyses its structure, methodology, and compliance with university requirements, then generates a draft review with a point score.
+Upload a PDF or DOCX thesis. Corvus analyses its structure, methodology, and compliance with university requirements, then generates a draft review with a point score. A thesis can be reviewed once, without a student profile, and promoted to a student later.
 
 > **In transition.** Corvus is being reshaped from a one-document analyser into a
 > platform for supervising students across the whole thesis lifecycle — meeting

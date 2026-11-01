@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from uuid import UUID
 
 import structlog
@@ -9,9 +10,14 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.application.brief import render_research
 from src.application.excerpt import render_document_block
-from src.application.replies import RECOMMENDATIONS, review_reply_for
+from src.application.replies import (
+    RECOMMENDATIONS,
+    TRIAL_RECOMMENDATIONS,
+    review_reply_for,
+)
 from src.application.scoring import score_bands, within_band
 from src.application.structured import invoke_structured
+from src.domain.action import ActionType
 from src.domain.analysis import Finding, FindingSeverity, ReviewTone, ThesisAnalysis
 from src.domain.evaluation import EvaluationStatus
 from src.domain.review import Review, Score
@@ -30,11 +36,13 @@ _HEAD_CHARS = 8000
 # Base system prompt
 # ---------------------------------------------------------------------------
 
-_BASE_SYSTEM_PROMPT = """You are an academic thesis reviewer at a Polish \
+_REVIEWER = """You are an academic thesis reviewer at a Polish \
 university of economics. Generate a formal thesis review in Polish based \
 on the thesis text, findings, and guidelines provided.
 
-## What you were given
+"""
+
+_WHAT_YOU_WERE_GIVEN = """## What you were given
 
 The thesis text may be an excerpt, accompanied by a document map computed
 from the complete thesis. A section the map lists EXISTS — never write that
@@ -46,7 +54,9 @@ methodology or requirements. Their scopes are separate, but should two
 findings still describe the same problem, weigh it once, at the higher
 severity.
 
-## Style rules
+"""
+
+_FINAL_STYLE = """## Style rules
 
 Write in formal Polish academic prose. Follow this structure exactly:
 
@@ -80,7 +90,30 @@ based on author name in metadata — default to "Autorka" if unclear
 - Never mention AI, analysis tools, or the review generation process
 - Write as if you personally read and evaluated the thesis
 
-## Scoring guidelines
+## This text is a final assessment
+
+The thesis is finished and will not be changed. review_text is pasted as it \
+stands into the university's system, as the reviewer's assessment of the work. \
+It says what the work is, never what should happen to it. This section \
+overrides every tone instruction below.
+
+- State each weakness as a fact about the thesis as submitted. Findings are \
+often worded as fixes: turn them into what the thesis lacks or does poorly.
+- No advice and no remaining work: nothing the author should add, correct, \
+unify or extend, whether worded as a recommendation, a need or a plan.
+- Nothing about the defence: what should be asked, answered or discussed there, \
+or whether the thesis should go to it. The recommendation has its own field \
+and stays out of review_text.
+
+Not: "Baza źródłowa jest wąska, wykaz literatury wymaga ujednolicenia, a wstęp \
+– uzupełnienia o charakterystykę literatury. Zalecam odniesienie się do tych \
+kwestii podczas obrony."
+But: "Baza źródłowa jest wąska, wykaz literatury jest niejednolity, a wstęp nie \
+charakteryzuje wykorzystanej literatury."
+
+"""
+
+_SCORING = """## Scoring guidelines
 
 Score against what a diploma thesis at a regional university is expected to
 be, not against a journal article. Weigh the findings, do not count them.
@@ -93,7 +126,9 @@ Choose within the range.
 6–7:  Satisfactory with reservations — several MAJOR findings in it
 0–5:  Does not meet requirements — a CRITICAL finding in this criterion
 
-## Output format
+"""
+
+_FINAL_OUTPUT = """## Output format
 
 Return ONLY a raw JSON object — no markdown fences, no explanation:
 
@@ -115,11 +150,72 @@ Return ONLY a raw JSON object — no markdown fences, no explanation:
 
 "Dopuścić do obrony z zastrzeżeniami":
   No CRITICAL findings. At least one score of 6, or MAJOR findings \
-the author should answer before the defense.
+that weigh on the assessment.
 
 "Zwrócić do poprawy":
   Any CRITICAL finding present. Use regardless of tone selection.
 """
+
+_BASE_SYSTEM_PROMPT = (
+    _REVIEWER + _WHAT_YOU_WERE_GIVEN + _FINAL_STYLE + _SCORING + _FINAL_OUTPUT
+)
+
+# ---------------------------------------------------------------------------
+# Trial review — the same findings, for a thesis that can still change
+# ---------------------------------------------------------------------------
+
+_TRIAL_REVIEWER = """You are a thesis supervisor at a Polish university of \
+economics. The thesis below is not submitted yet. Write a trial review in \
+Polish: you read it to decide what the author still has to do before you \
+accept it.
+
+"""
+
+_TRIAL_STYLE = """## What to write
+
+Formal Polish, plain and direct. Say, in this order:
+
+1. Where the thesis stands as a whole, in one or two sentences.
+2. What already works, naming it. Do not invent strengths.
+3. What to correct before submission, most important first: where in the \
+thesis, what is wrong and what to do about it. Draw on the findings; a finding \
+that does not matter to the outcome can stay out.
+
+The thesis is still changing, so this text is the place for advice: name the \
+work that remains, concretely enough to act on. Nothing about the defence.
+
+## Language rules
+
+- No bullet points and no headers in the review
+- Refer to the author as "Autorka" (female) or "Autor" (male) based on author \
+name in metadata — default to "Autorka" if unclear
+- One paragraph, no line breaks within the review text
+- 200–350 words
+- Never mention AI, analysis tools, or the review generation process
+
+"""
+
+_TRIAL_OUTPUT = """## Output format
+
+Return ONLY a raw JSON object — no markdown fences, no explanation:
+
+{
+  "scores": [
+    {"criteria": "Struktura i spójność",      "points": <int>, "max_points": 10},
+    {"criteria": "Metodologia i bibliografia", "points": <int>, "max_points": 10},
+    {"criteria": "Zgodność z wymogami",        "points": <int>, "max_points": 10},
+    {"criteria": "Jakość merytoryczna",        "points": <int>, "max_points": 10}
+  ],
+  "review_text": "<full review in Polish, one paragraph>",
+  "recommendation": "<one of the recommendations allowed below>"
+}
+
+The points say how the thesis would score if it were submitted as it stands.
+"""
+
+_TRIAL_SYSTEM_PROMPT = (
+    _TRIAL_REVIEWER + _WHAT_YOU_WERE_GIVEN + _TRIAL_STYLE + _SCORING + _TRIAL_OUTPUT
+)
 
 # ---------------------------------------------------------------------------
 # Tone instructions — appended to base prompt depending on ReviewTone
@@ -254,7 +350,7 @@ notable substantive or methodological weaknesses. The reviewer
 acknowledges the minimum standard is met while making the
 weaknesses clearly visible — without being harsh.
 This is the appropriate tone when you would not recommend
-distinction and want the student to be aware of the shortcomings.
+distinction and want the shortcomings on the record.
 
 Opening (mandatory):
   "Praca spełnia minimalne wymagania stawiane pracom dyplomowym,
@@ -284,7 +380,7 @@ without being personal or dismissive.
 
 Opening: DO NOT use the standard positive opening.
 Start directly with the core problem, for example:
-  "Praca wymaga istotnych poprawek przed dopuszczeniem do obrony."
+  "Praca nie spełnia wymagań stawianych pracom dyplomowym."
   OR name the specific critical deficiency in the opening sentence.
 
 Body: address each CRITICAL finding by name. Be specific. \
@@ -293,7 +389,9 @@ Do not soften the language beyond academic courtesy.
 Notable strength section: include ONLY if a genuine strength \
 exists that should be acknowledged despite the overall failure.
 
-Closing: describe what must be corrected before resubmission.
+Closing: say what the deficiencies mean for the assessment of the work, \
+for example:
+  "Wskazane braki przesądzają o negatywnej ocenie pracy."
 
 Scores: 0–5 range depending on findings.
 Recommendation: MUST be "Zwrócić do poprawy".
@@ -313,6 +411,9 @@ Translate the recommendation field to English:
 - "Dopuścić do obrony" → "Approved for defense"
 - "Dopuścić do obrony z zastrzeżeniami" → "Approved for defense with reservations"
 - "Zwrócić do poprawy" → "Returned for revision"
+- "Gotowa do złożenia" → "Ready to submit"
+- "Gotowa do złożenia po poprawkach" → "Ready to submit after corrections"
+- "Wymaga istotnych poprawek" → "Needs substantial corrections"
 
 Translate the scores criteria labels to English:
 - "Struktura i spójność" → "Structure and coherence"
@@ -326,19 +427,64 @@ must be adapted to their English equivalents in meaning and register.
 }
 
 
+# Wording that tells someone what to do, or plans the defence, instead of
+# judging a finished work. Wider than it needs to be on purpose: a false alarm
+# costs one rewrite and nothing is thrown away.
+_ADVICE = re.compile(
+    r"zalecam|zaleca się|zalecane|rekomenduję|rekomenduje się|sugeruję|proponuję"
+    r"|powinn\w+(?!\s+by[łl])|powinien(?!\s+by[łl])"
+    r"|należy\s+(?:uzupełnić|poprawić|ujednolicić|rozszerzyć|dodać|zmienić"
+    r"|usunąć|przeredagować|odnieść)"
+    r"|wymag\w+\s+(?:\w+\s+)?(?:uzupełni|popraw|ujednolic|rozszerz|przeredag"
+    r"|dopracow|zmian|korekt)"
+    r"|do\s+(?:poprawy|uzupełnienia|ujednolicenia)"
+    r"|(?:podczas|w trakcie|w czasie|przed|na)\s+obron(?:y|ą|ie)\b"
+    r"|(?:dopuszcz\w+|przygotow\w+)\s+(?:\w+\s+)?do\s+obrony"
+    r"|\bi recommend\b|\bshould\b|\bmust be\b"
+    r"|\b(?:during|before|at) the defen[cs]e\b",
+    re.IGNORECASE,
+)
+
+_REWRITE_PROMPT = """This review_text still tells someone what to do, or talks \
+about the defence, in these words: {phrases}
+
+{text}
+
+The thesis is finished and will not be changed, so state each weakness as a \
+fact about it. Reply again with the same JSON: the same scores and \
+recommendation, with only review_text rewritten and everything it says about \
+the work kept."""
+
+
+def advice_in(text: str) -> list[str]:
+    """The phrases that tell someone what to do instead of judging the work."""
+    return [match.group(0) for match in _ADVICE.finditer(text)]
+
+
 def allowed_recommendations(
-    findings: list[Finding], language: str = "pl"
+    findings: list[Finding], language: str = "pl", trial: bool = False
 ) -> tuple[str, ...]:
     """What the recommendation rules leave open, given the findings.
 
     Any CRITICAL finding returns the thesis; without one, the choice between
     admitting it with or without reservations is the reviewer's, from the
-    scores.
+    scores. A trial review has its own three, and a MAJOR finding means the
+    thesis is not ready as it stands.
     """
+    severities = {f.severity for f in findings}
+    if trial:
+        ready, after_corrections, needs_work = TRIAL_RECOMMENDATIONS.get(
+            language, TRIAL_RECOMMENDATIONS["pl"]
+        )
+        if FindingSeverity.CRITICAL in severities:
+            return (needs_work,)
+        if FindingSeverity.MAJOR in severities:
+            return (after_corrections,)
+        return (ready, after_corrections)
     admit, admit_with_reservations, return_it = RECOMMENDATIONS.get(
         language, RECOMMENDATIONS["pl"]
     )
-    if any(f.severity == FindingSeverity.CRITICAL for f in findings):
+    if FindingSeverity.CRITICAL in severities:
         return (return_it,)
     return (admit, admit_with_reservations)
 
@@ -354,14 +500,15 @@ def generate_review(state: ActionState) -> ReviewUpdate:
             tone = ReviewTone.AUTO
 
         language: str = state.get("language", "pl")  # type: ignore[attr-defined]
+        trial = state["action_type"] == ActionType.TRIAL_REVIEW
         system_prompt = (
-            _BASE_SYSTEM_PROMPT
-            + _TONE_INSTRUCTIONS[tone]
-            + _LANGUAGE_OVERRIDES.get(language, "")
-        )
+            _TRIAL_SYSTEM_PROMPT
+            if trial
+            else _BASE_SYSTEM_PROMPT + _TONE_INSTRUCTIONS[tone]
+        ) + _LANGUAGE_OVERRIDES.get(language, "")
 
         findings = state["findings"]
-        allowed = allowed_recommendations(findings, language)
+        allowed = allowed_recommendations(findings, language, trial=trial)
         findings_summary = "\n".join(
             f"- [{f.severity.upper()}] ({f.source or 'unknown'}) "
             f"{f.section}: {f.description}"
@@ -395,15 +542,36 @@ def generate_review(state: ActionState) -> ReviewUpdate:
         )
 
         llm = get_llm(state["model"])
-        reply = invoke_structured(
-            llm,
-            [
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=user_message),
-            ],
-            review_reply_for(allowed),
-            node="review",
-        )
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_message),
+        ]
+        shape = review_reply_for(allowed)
+        reply = invoke_structured(llm, messages, shape, node="review")
+        # Advice is a trial review's job. In a final one the prompt forbids it,
+        # but a hosted model still slips now and then,
+        # and that text goes to the university as it stands. One rewrite, then
+        # what there is: the phrase list can be wrong about a thesis on
+        # national defence, and that must not cost a finished review.
+        advice = [] if trial else advice_in(reply.review_text)
+        if advice:
+            logger.info("review_advice_rewritten", phrases=advice)
+            reply = invoke_structured(
+                llm,
+                [
+                    *messages,
+                    HumanMessage(
+                        content=_REWRITE_PROMPT.format(
+                            phrases=", ".join(advice), text=reply.review_text
+                        )
+                    ),
+                ],
+                shape,
+                node="review",
+            )
+            left = advice_in(reply.review_text)
+            if left:
+                logger.warning("review_advice_kept", phrases=left)
         # The prompt gives the model these ranges; this is what holds if it
         # scores outside them anyway.
         bands = score_bands(findings, len(reply.scores))

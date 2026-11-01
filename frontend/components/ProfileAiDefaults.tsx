@@ -68,7 +68,7 @@ function ProfileAiDefaultsForm({ saved }: { saved: AiDefaults }) {
             onChange={(reviewTone) => setDraft({ ...draft, reviewTone })}
           />
           <p className="mt-1.5 text-[11.5px] text-muted">
-            Dotyczy tylko akcji &bdquo;Napisz recenzję&rdquo;.
+            Dotyczy tylko akcji &bdquo;Recenzja finalna&rdquo;.
           </p>
         </div>
       </div>

@@ -13,7 +13,10 @@ from uuid import UUID
 import structlog
 
 from src.document.extractor import CANONICAL_CONTENT_TYPE, extract
-from src.mentoring.application.exceptions import DraftNotFoundError
+from src.mentoring.application.exceptions import (
+    DraftNotFoundError,
+    OneOffReviewError,
+)
 from src.mentoring.application.student_service import Caller, StudentService
 from src.mentoring.domain.draft import ThesisDraft
 from src.mentoring.domain.retention import RetentionPolicy
@@ -124,10 +127,14 @@ class DraftService:
         version is final any more. ``uploaded_at`` is for seeding a history;
         the HTTP upload never passes it, so a real version is dated now.
 
-        Raises ValueError for an unsupported or unreadable file, and
-        StudentNotFoundError when the caller may not see the student.
+        Raises ValueError for an unsupported or unreadable file,
+        StudentNotFoundError when the caller may not see the student, and
+        OneOffReviewError for a second version of a one-off review.
         """
         student = await self._students.get(caller, student_id)
+        version = await self._drafts.next_version_number(student.id)
+        if student.is_one_off and version > 1:
+            raise OneOffReviewError("A one-off review holds one thesis")
         document = extract(data, filename, content_type)
 
         # Written in the same commit as the draft row below: the store flushes,
@@ -135,7 +142,6 @@ class DraftService:
         stored = await self._files.put(
             filename, CANONICAL_CONTENT_TYPE[document.format], data
         )
-        version = await self._drafts.next_version_number(student.id)
         draft = ThesisDraft(
             id=uuid.uuid4(),
             student_id=student.id,

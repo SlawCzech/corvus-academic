@@ -33,6 +33,7 @@ export default function DeleteStudentConfirm({ student, onDeleted, onCancel }: P
     try {
       await deleteStudent(student.id)
       void mutate("/api/students")
+      void mutate("/api/reviews")
       void mutate("/api/dashboard/summary")
       onDeleted()
     } catch (err) {
