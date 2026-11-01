@@ -1,0 +1,22 @@
+{
+  "id": "notatka-tylko-wspomina",
+  "description": "The note records a conversation, not a task: an author, a theory and a possible method come up, nothing is asked. A good new section appears. None of what was mentioned may come back as missing or as a next step.",
+  "context": {
+    "current_topic": "Korzystanie z bankowości mobilnej przez klientów banków spółdzielczych",
+    "field_of_study": "Finanse i rachunkowość",
+    "thesis_type": "bachelor",
+    "previous_version": 1,
+    "current_version": 2,
+    "meeting_notes": [
+      "Rozmawialiśmy o rozdziale pierwszym. Zeszło na koszty transakcyjne u Williamsona i na to, że ktoś kiedyś robił wywiady z prezesami banków spółdzielczych. Wspomniałem też o porównaniu z niemieckimi Volksbankami, ciekawy wątek na inną okazję."
+    ]
+  },
+  "must_say": [
+    "The new section on institutional protection schemes is a step forward."
+  ],
+  "must_not_say": [
+    "Williamson or transaction costs are missing from the thesis, or should be added.",
+    "Interviews with bank presidents are missing, or should be conducted.",
+    "A comparison with German Volksbanks is missing, or should be added."
+  ]
+}

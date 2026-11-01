@@ -1,6 +1,6 @@
 """LangGraph node: compare two draft versions and judge the progress."""
 
-from typing import Any
+from typing import Any, cast
 
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -30,11 +30,24 @@ def _slice(text: str) -> str:
     return text[:budget] + "\n\n[...text truncated...]"
 
 
+def _meeting_notes(ctx: dict[str, Any]) -> list[str]:
+    """The notes with how to read them, or nothing if there were no meetings."""
+    notes = cast(list[str], ctx.get("meeting_notes") or [])
+    if not notes:
+        return []
+    joined = "\n---\n".join(notes)
+    return [
+        f"Meeting notes from between the two versions, oldest first:\n{joined}\n"
+        f"{prompts.NOTES_RULE}"
+    ]
+
+
 def _user_message(ctx: dict[str, Any]) -> str:
     previous = str(ctx.get("previous_text", ""))
     current = str(ctx.get("current_text", ""))
     lines = [
         render_brief(ctx),
+        *_meeting_notes(ctx),
         f"Previous version (v{ctx.get('previous_version', '?')}):\n{_slice(previous)}",
         f"Current version (v{ctx.get('current_version', '?')}):\n{_slice(current)}",
     ]

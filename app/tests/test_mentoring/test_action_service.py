@@ -707,6 +707,34 @@ async def test_progress_check_sends_both_versions(env: _Fixture) -> None:
     assert stored.id == action.id
 
 
+async def test_progress_check_sends_only_the_notes_between_the_versions(
+    env: _Fixture,
+) -> None:
+    student = await _student(env)
+
+    async def note(content: str) -> uuid.UUID:
+        made = await env.students.add_meeting_note(PROMOTOR, student.id, content)
+        return made.id
+
+    await note("Przed pierwszą wersją")
+    await env.drafts.upload(
+        PROMOTOR, student.id, filename="v1.docx", data=docx_bytes("Wersja pierwsza")
+    )
+    between = await note("Uzasadnić dobór próby")
+    await env.drafts.upload(
+        PROMOTOR, student.id, filename="v2.docx", data=docx_bytes("Wersja druga")
+    )
+    await note("Po drugiej wersji")
+
+    await env.actions.trigger(
+        PROMOTOR, student.id, action_type=ActionType.CHECK_PROGRESS, token=TOKEN
+    )
+
+    context = env.agent.submitted[0]["context"]
+    assert context["meeting_notes"] == ["Uzasadnić dobór próby"]
+    assert (await _input_ref(env, student.id))["note_ids"] == [str(between)]
+
+
 async def test_review_context_carries_the_student_as_metadata(env: _Fixture) -> None:
     """The review nodes expect author/title/field, which live on the student."""
     student = await _student(env)

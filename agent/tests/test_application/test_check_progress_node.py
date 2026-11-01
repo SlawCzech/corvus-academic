@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 from langchain_core.messages import AIMessage
 
 from src.application.nodes.check_progress import check_progress
+from src.application.prompts import check_progress as prompts
 from src.application.state import ActionState
 from src.domain.action import ActionType
 from src.infrastructure.llm_factory import ModelCredentials, use_credentials
@@ -33,7 +34,11 @@ _VALID_RESPONSE = json.dumps(
 )
 
 
-def _make_state(previous: str = "Wersja 1", current: str = "Wersja 2") -> ActionState:
+def _make_state(
+    previous: str = "Wersja 1",
+    current: str = "Wersja 2",
+    **context: Any,  # noqa: ANN401
+) -> ActionState:
     return make_state(
         action_type=ActionType.CHECK_PROGRESS,
         context={
@@ -42,6 +47,7 @@ def _make_state(previous: str = "Wersja 1", current: str = "Wersja 2") -> Action
             "previous_version": 1,
             "current_version": 2,
             "current_topic": "Instytucje a wzrost",
+            **context,
         },
     )
 
@@ -142,3 +148,40 @@ def test_a_hosted_model_compares_the_two_versions_whole() -> None:
 
     assert "ANKIETA WŚRÓD NAUCZYCIELI" in _sent_to(mock_llm)
     assert "truncated" not in _sent_to(mock_llm)
+
+
+def _message_for(state: ActionState) -> str:
+    mock_llm = MagicMock()
+    mock_llm.invoke.return_value = AIMessage(content=_VALID_RESPONSE)
+    with patch("src.application.nodes.check_progress.get_llm", return_value=mock_llm):
+        check_progress(state)
+    return _sent_to(mock_llm)
+
+
+def test_notes_reach_the_prompt_in_order_with_how_to_read_them() -> None:
+    message = _message_for(
+        _make_state(meeting_notes=["Uzasadnić dobór próby.", "Dodać hipotezy."])
+    )
+
+    assert "oldest first" in message
+    assert message.index("Uzasadnić dobór próby.") < message.index("Dodać hipotezy.")
+    assert prompts.NOTES_RULE in message
+    assert message.index(prompts.NOTES_RULE) < message.index("Previous version")
+
+
+def test_without_notes_the_prompt_is_what_it_was() -> None:
+    """No meetings between the versions, no new instruction for the model."""
+    message = _message_for(_make_state(meeting_notes=[]))
+
+    assert message == _message_for(_make_state())
+    assert message == (
+        "Thesis topic: Instytucje a wzrost\n"
+        "Field of study: unspecified\n"
+        "Thesis type: bachelor\n\n"
+        "Previous version (v1):\nWersja 1\n\n"
+        "Current version (v2):\nWersja 2"
+    )
+
+
+def test_the_rule_never_reaches_the_system_prompt() -> None:
+    assert prompts.NOTES_RULE not in prompts.get_system_prompt("pl")
