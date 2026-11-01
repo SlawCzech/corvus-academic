@@ -63,6 +63,7 @@ def user_response(user: User) -> UserResponse:
 
 
 class ChangePasswordRequest(BaseModel):
+    current_password: str
     new_password: str
 
 

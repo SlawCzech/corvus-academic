@@ -60,6 +60,13 @@ def test_login_wrong_password(client: TestClient) -> None:
     assert resp.status_code == 401
 
 
+def test_login_password_over_bcrypt_limit_is_401(client: TestClient) -> None:
+    resp = client.post(
+        "/auth/login", json={"email": ADMIN_EMAIL, "password": "ż" * 37}
+    )
+    assert resp.status_code == 401
+
+
 def test_login_unknown_email(client: TestClient) -> None:
     resp = client.post(
         "/auth/login", json={"email": "nobody@example.com", "password": "any"}
@@ -290,7 +297,10 @@ def test_change_password(client: TestClient) -> None:
     token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
     resp = client.patch(
         "/users/me/password",
-        json={"new_password": "new-secure-password"},
+        json={
+            "current_password": PROMOTOR_PASSWORD,
+            "new_password": "new-secure-password",
+        },
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 204
@@ -298,12 +308,38 @@ def test_change_password(client: TestClient) -> None:
     assert len(new_token) > 0
 
 
+@pytest.mark.parametrize("current", ["wrong-password", "ż" * 37])
+def test_change_password_with_wrong_current_is_403(
+    client: TestClient, current: str
+) -> None:
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    resp = client.patch(
+        "/users/me/password",
+        json={"current_password": current, "new_password": "new-secure-password"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 403
+    assert isinstance(resp.json()["detail"], str)
+    assert len(_login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)) > 0
+
+
+def test_change_password_without_current_is_422(client: TestClient) -> None:
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    resp = client.patch(
+        "/users/me/password",
+        json={"new_password": "new-secure-password"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 422
+    assert len(_login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)) > 0
+
+
 def test_change_password_over_bcrypt_limit_is_422(client: TestClient) -> None:
     token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
     resp = client.patch(
         "/users/me/password",
         # 37 characters, 74 bytes: the limit counts bytes.
-        json={"new_password": "ż" * 37},
+        json={"current_password": PROMOTOR_PASSWORD, "new_password": "ż" * 37},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 422

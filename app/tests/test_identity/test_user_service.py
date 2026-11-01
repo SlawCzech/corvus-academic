@@ -6,7 +6,7 @@ from collections.abc import AsyncGenerator
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from src.identity.application.user_service import UserService
+from src.identity.application.user_service import UserService, WrongPasswordError
 from src.identity.domain.user import Role, UserRegistration
 from src.identity.infrastructure.models import Base
 from src.identity.infrastructure.repositories import UserRepository
@@ -108,6 +108,21 @@ async def test_delete_removes_user(svc: UserService) -> None:
 
 async def test_change_password(svc: UserService) -> None:
     user = await svc.register(_reg())
-    await svc.change_password(user.id, "new-password")
+    await svc.change_password(user.id, "secret123", "new-password")
     assert await svc.authenticate("user@example.com", "new-password") is not None
     assert await svc.authenticate("user@example.com", "secret123") is None
+
+
+async def test_change_password_wrong_current_keeps_the_old_one(
+    svc: UserService,
+) -> None:
+    user = await svc.register(_reg())
+    with pytest.raises(WrongPasswordError):
+        await svc.change_password(user.id, "wrong", "new-password")
+    assert await svc.authenticate("user@example.com", "secret123") is not None
+    assert await svc.authenticate("user@example.com", "new-password") is None
+
+
+async def test_change_password_unknown_user(svc: UserService) -> None:
+    with pytest.raises(WrongPasswordError):
+        await svc.change_password(uuid.uuid4(), "secret123", "new-password")
