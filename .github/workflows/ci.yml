@@ -175,4 +175,4 @@ jobs:
       # self-hosted here, and a fork or a fresh clone has no token.
       - name: Scan
         if: env.SONAR_TOKEN != ''
-        uses: SonarSource/sonarqube-scan-action@v4
+        uses: SonarSource/sonarqube-scan-action@v8
