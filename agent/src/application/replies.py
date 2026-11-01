@@ -138,13 +138,15 @@ def review_reply_for(allowed: tuple[str, ...]) -> TypeAdapter[ReviewReply]:
     Ollama cannot decode anything else, and any other backend gets the
     allowed values back in the repair turn.
     """
+    # Built at runtime, so no static type can describe it.
+    recommendation: Any = (
+        Literal[allowed],  # pyright: ignore[reportInvalidTypeForm]
+        Field(validation_alias=AliasChoices("recommendation", "decision")),
+    )
     narrowed = create_model(
         "ConstrainedReviewReply",
         __base__=ReviewReply,
-        recommendation=(
-            Literal[allowed],  # pyright: ignore[reportInvalidTypeForm]
-            Field(validation_alias=AliasChoices("recommendation", "decision")),
-        ),
+        recommendation=recommendation,
     )
     return TypeAdapter(narrowed)
 
