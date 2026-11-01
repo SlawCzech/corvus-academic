@@ -1,0 +1,75 @@
+{
+  "model": "claude",
+  "judge": "claude",
+  "passed": 1,
+  "cases": [
+    {
+      "case_id": "kryptowaluty",
+      "model": "claude",
+      "seconds": 2.6,
+      "error": null,
+      "problems": [
+        "question 1: not one question"
+      ],
+      "output": {
+        "questions": [
+          {
+            "question": "Jak w pracy rozumie Pan wpływ kryptowalut na system finansowy w Polsce i po czym go rozpoznać?"
+          },
+          {
+            "question": "Dlaczego ankieta wśród znajomych była właściwym sposobem zbadania wpływu kryptowalut na polski system finansowy?"
+          },
+          {
+            "question": "Na jakiej podstawie z opinii ankietowanych wnioskuje Pan o wpływie kryptowalut na system finansowy w Polsce?"
+          }
+        ]
+      },
+      "passed": false
+    },
+    {
+      "case_id": "oszczednosci",
+      "model": "claude",
+      "seconds": 2.2,
+      "error": null,
+      "problems": [
+        "question 3: not one question",
+        "question 2: fits any thesis"
+      ],
+      "output": {
+        "questions": [
+          {
+            "question": "Dlaczego warto było zbadać, od czego zależy oszczędzanie polskich gospodarstw domowych?"
+          },
+          {
+            "question": "Dlaczego regresja liniowa była właściwym sposobem zbadania czynników wpływających na oszczędzanie gospodarstw domowych?"
+          },
+          {
+            "question": "Jakie wnioski dla polityki wspierania oszczędności wynikają z pracy i na ile można je uogólniać?"
+          }
+        ]
+      },
+      "passed": false
+    },
+    {
+      "case_id": "pokolenie-z",
+      "model": "claude",
+      "seconds": 2.5,
+      "error": null,
+      "problems": [],
+      "output": {
+        "questions": [
+          {
+            "question": "Dlaczego postanowiła Pani zbadać, które czynniki najsilniej motywują młodych pracowników z pokolenia Z w małych firmach?"
+          },
+          {
+            "question": "Dlaczego ankieta w jednej firmie była właściwym sposobem zbadania motywowania pokolenia Z w małych przedsiębiorstwach?"
+          },
+          {
+            "question": "Na ile Pani wnioski o motywowaniu pokolenia Z wynikają z uzyskanych odpowiedzi i można je uogólniać na małe firmy?"
+          }
+        ]
+      },
+      "passed": true
+    }
+  ]
+}

@@ -235,6 +235,7 @@ function ActionResultBody({ action, selected, onSelect }: Props) {
               <p className="font-semibold text-foreground">
                 {i + 1}. {q.question}
               </p>
+              {/* Only results saved before the questions became general. */}
               {q.rationale && (
                 <p className="mt-1 text-muted-strong">{q.rationale}</p>
               )}

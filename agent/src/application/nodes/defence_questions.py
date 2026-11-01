@@ -1,7 +1,8 @@
 """LangGraph node: prepare defence questions from the thesis.
 
 The one action aimed at the defence itself rather than at improving the
-draft: what a committee member would ask, and what the answer would show.
+draft: what a committee member would say aloud, not what a reviewer would
+write down.
 """
 
 from typing import Any
@@ -27,7 +28,6 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 # travels with the slice names the chapters it does not reach, so a question
 # can still be aimed at the results or the conclusions.
 _MAX_TEXT_CHARS = 14000
-_EXPECTED_QUESTIONS = 3
 
 
 def _user_message(ctx: dict[str, Any]) -> str:
@@ -63,7 +63,7 @@ def defence_questions(state: ActionState) -> ActionState:
             "defence_questions_complete",
             action_id=state["action_id"],
             question_count=len(questions),
-            expected=_EXPECTED_QUESTIONS,
+            expected=prompts.QUESTION_COUNT,
         )
         result: ActionState = state.copy()
         result["output"] = {"questions": questions}

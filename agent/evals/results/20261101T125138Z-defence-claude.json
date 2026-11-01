@@ -1,0 +1,127 @@
+{
+  "model": "claude",
+  "judge": "claude",
+  "passed": 0,
+  "cases": [
+    {
+      "case_id": "kryptowaluty",
+      "model": "claude",
+      "seconds": 9.0,
+      "error": null,
+      "problems": [
+        "question 1: 47 words",
+        "question 1: not one question",
+        "question 2: 55 words",
+        "question 3: 58 words",
+        "question 3: not one question",
+        "question 2: not answerable aloud"
+      ],
+      "output": {
+        "questions": [
+          {
+            "question": "Celem pracy jest przedstawienie wpływu kryptowalut na system finansowy w Polsce. Jak rozumie Pan „wpływ” i według jakich kryteriów lub wskaźników (np. udział w obrotach, relacje z bankami, stabilność finansowa) można go ocenić? Dlaczego w pracy nie sformułowano pytań badawczych ani hipotez, które pozwoliłyby tę ocenę przeprowadzić?",
+            "rationale": "Odpowiedź pokaże, czy student rozumie różnicę między opisem zjawiska a analizą jego wpływu oraz czy potrafi operacjonalizować własny problem badawczy. Ujawni też, czy dostrzega, że cel jest sformułowany zbyt ogólnie i że rozdziały 1–2 mają charakter głównie opisowy.",
+            "section": "Wstęp; Rozdział 2. Kryptowaluty a system finansowy",
+            "focus": "problem"
+          },
+          {
+            "question": "Badanie własne to ankieta wśród znajomych autora, rozesłana w mediach społecznościowych. Proszę wyjaśnić, jak dobrano próbę, ilu było respondentów i jakie ma to konsekwencje dla wiarygodności i możliwości uogólniania wyników na „Polaków”. Jakie ma Pan podejście do dobrania próby i konstrukcji kwestionariusza, aby badanie rzeczywiście odnosiło się do systemu finansowego, a nie tylko do opinii?",
+            "rationale": "Pytanie sprawdza rozumienie metodologii badań ankietowych: doboru próby, jej reprezentatywności, obciążenia selekcją (znajomi, media społecznościowe) oraz dopasowania narzędzia do celu pracy. Pokaże, czy student widzi, że opinie nie mierzą wpływu na system finansowy, i czy umie zaproponować lepszy projekt badania lub dane (np. dane NBP, KNF, giełd).",
+            "section": "Rozdział 3, pkt 3.1. Opis badania",
+            "focus": "method"
+          },
+          {
+            "question": "W zakończeniu stwierdza Pan, że Polacy są dobrze zorientowani w temacie kryptowalut, że kryptowaluty mają coraz większy wpływ na system finansowy, że banki będą musiały się dostosować, a MiCA uczyni rynek bezpieczniejszym. Które z tych wniosków wynikają bezpośrednio z Pana ankiety, a które są opiniami lub przewidywaniami bez poparcia w danych? Jakie ograniczenia pracy powinny towarzyszyć tym wnioskom?",
+            "rationale": "Odpowiedź pokaże, czy student odróżnia wnioski oparte na wynikach od tez nieudowodnionych w pracy (np. „dobra orientacja” przy braku testu wiedzy, wpływ na system finansowy, skutki MiCA). Sprawdzi też zdolność krytycznej oceny własnej pracy i wskazania ograniczeń, takich jak próba, samoocena respondentów, brak danych ilościowych oraz oparcie głównie na źródłach internetowych.",
+            "section": "Zakończenie; Rozdział 3, pkt 3.2. Wyniki badania",
+            "focus": "conclusions"
+          }
+        ]
+      },
+      "passed": false
+    },
+    {
+      "case_id": "oszczednosci",
+      "model": "claude",
+      "seconds": 10.7,
+      "error": null,
+      "problems": [
+        "question 1: 73 words",
+        "question 1: not one question",
+        "question 1: points at a detail (2)",
+        "question 2: 77 words",
+        "question 2: not one question",
+        "question 3: 84 words",
+        "question 3: not one question",
+        "question 3: points at a detail (1)",
+        "question 1: not answerable aloud",
+        "question 2: not answerable aloud",
+        "question 3: not answerable aloud"
+      ],
+      "output": {
+        "questions": [
+          {
+            "question": "W pracy problem badawczy określono jako „niską i zmienną skłonność do oszczędzania” polskich gospodarstw domowych, a pytanie badawcze dotyczy cech wpływających na stopę oszczędności gospodarstwa. Jak ma się do tego analiza z rozdziału 2, w którym stopa oszczędności w Polsce skacze w 2020 roku do niemal 12%, a w 2022 roku spada poniżej 3%? Czy zaproponowany model przekrojowy z efektami stałymi dla lat wyjaśnia tę zmienność w czasie, czy raczej inny aspekt problemu?",
+            "rationale": "Odpowiedź pokaże, czy studentka rozumie różnicę między zmiennością w czasie (szoki makroekonomiczne, pandemia, inflacja) a zróżnicowaniem między gospodarstwami. Ujawni też, czy potrafi uzasadnić dopasowanie pytania badawczego do zastosowanego narzędzia. Efekty stałe dla lat pochłaniają wspólne szoki, więc model nie wyjaśnia dynamiki agregatu.",
+            "section": "Wstęp oraz podrozdział 2.1 (problem badawczy, pytanie badawcze, tabela 1)",
+            "focus": "problem"
+          },
+          {
+            "question": "Zmienną objaśnianą jest stopa oszczędności obliczona jako różnica dochodu rozporządzalnego i wydatków, podzielona przez dochód, a wśród regresorów jest logarytm dochodu na osobę. Jakie problemy z identyfikacją i interpretacją wyniku to rodzi, np. błąd pomiaru dochodu w badaniu budżetów, mechaniczna zależność stopy oszczędności od dochodu czy pominięte zmienne? Czy metoda najmniejszych kwadratów na łączonych przekrojach pozwala interpretować współczynniki jako wpływ przyczynowy? Jak zmierzono realną stopę procentową, skoro w danym roku ma ona jedną wartość dla wszystkich gospodarstw?",
+            "rationale": "Pytanie sprawdza krytyczne rozumienie metody: endogeniczność, błąd pomiaru, brak zmienności przekrojowej stopy procentowej (jej efekt jest identyfikowany tylko z 13 obserwacji rocznych i koliduje z efektami stałymi dla lat). Pokaże, czy studentka widzi granice modelu OLS na danych BBGD, czy tylko go zastosowała.",
+            "section": "Podrozdziały 3.1 i 3.2 (dane i metoda badania, wyniki estymacji)",
+            "focus": "method"
+          },
+          {
+            "question": "W zakończeniu stwierdzono, że hipotezy H1 i H2 zostały potwierdzone, a największy wpływ ma dochód, i na tej podstawie sformułowano rekomendacje dla polityki. Na ile te wnioski są uprawnione, biorąc pod uwagę R² = 0,21, brak danych o majątku i oczekiwaniach dochodowych oraz fakt, że hipotezę H1 sformułowano o stopie oszczędności, a Keynes i Friedman różnią się w ocenie roli dochodu bieżącego i permanentnego? Co konkretnie uzasadnia twierdzenie, że polityka powinna skupić się na edukacji finansowej, skoro w modelu nie ma zmiennej wiedzy finansowej?",
+            "rationale": "Odpowiedź pokaże, czy studentka odróżnia istotność statystyczną od znaczenia ekonomicznego i przyczynowości, oraz czy rozumie granice wnioskowania. Ujawni też, czy dostrzega rozbieżność między rekomendacją a zakresem faktycznie oszacowanego modelu, a także potrafi wskazać ograniczenia opisane w dyskusji.",
+            "section": "Podrozdział 3.3 i Zakończenie (dyskusja wyników, hipotezy, rekomendacje)",
+            "focus": "conclusions"
+          }
+        ]
+      },
+      "passed": false
+    },
+    {
+      "case_id": "pokolenie-z",
+      "model": "claude",
+      "seconds": 9.8,
+      "error": null,
+      "problems": [
+        "question 1: 63 words",
+        "question 1: not one question",
+        "question 1: points at a detail (1)",
+        "question 2: 54 words",
+        "question 2: not one question",
+        "question 2: points at a detail (2)",
+        "question 3: 85 words",
+        "question 3: points at a detail (7)",
+        "question 1: not answerable aloud",
+        "question 3: not answerable aloud"
+      ],
+      "output": {
+        "questions": [
+          {
+            "question": "Jako problem badawczy wskazała Pani niedopasowanie narzędzi motywacyjnych w małych firmach do oczekiwań pokolenia Z, a w pytaniu badawczym przeciwstawiła Pani czynniki finansowe pozafinansowym. Dlaczego uznała Pani to przeciwstawienie za właściwy sposób ujęcia problemu i jak odnosi się do niego dorobek teoretyczny z rozdziału 1, np. rozróżnienie Herzberga na czynniki higieny i motywatory? Jaką rolę w tak sformułowanym problemie odgrywa rozdział o Taylorze?",
+            "rationale": "Odpowiedź pokaże, czy studentka rozumie, jak pytanie badawcze i hipotezy wynikają z teorii, oraz czy potrafi uzasadnić związek rozdziału o Taylorze (płace akordowe jako motywator finansowy) z tematem pokolenia Z. Ujawni też, czy dostrzega, że wynagrodzenie bywa u Herzberga czynnikiem higieny, a nie motywatorem.",
+            "section": "Wstęp oraz rozdziały 1 i 2 (problem badawczy, pytanie badawcze, hipotezy, teorie motywacji)",
+            "focus": "problem"
+          },
+          {
+            "question": "Badanie objęło 23 pracowników z jednego sklepu internetowego, w którym odbywała Pani praktykę, a ankieta była internetowa. Jak ten dobór próby wpływa na rzetelność i trafność wyników w odniesieniu do deklarowanego zakresu badania, czyli małych przedsiębiorstw w Polsce? Co zmieniłaby Pani w doborze respondentów lub konstrukcji kwestionariusza, aby lepiej zweryfikować hipotezy H1 i H2?",
+            "rationale": "Pytanie sprawdza krytyczne rozumienie metody: wielkość i sposób doboru próby, brak reprezentatywności, ryzyko obciążenia przez dobór celowy i znajomość z autorką, możliwość uogólniania. Pokazuje też, czy studentka potrafi zaproponować usprawnienia metodyczne.",
+            "section": "Rozdział 3.1. Metodyka badania",
+            "focus": "method"
+          },
+          {
+            "question": "W Zakończeniu stwierdza Pani, że dla ok. 70% pokolenia Z ważniejsze są czynniki pozafinansowe, a małe firmy powinny inwestować w atmosferę i rozwój zamiast podnosić wynagrodzenia, i że dotyczy to wszystkich małych przedsiębiorstw. Proszę odnieść te wnioski do wyników z rozdziału 3.2, w których wynagrodzenie było najczęściej wskazywanym czynnikiem, zarówno jako pierwszy (39%), jak i w trójce najważniejszych (19 wskazań), a praca zdalna zajęła ósme miejsce. Co te wyniki mówią o hipotezach H1 i H2 i które ze sformułowanych wniosków są przez dane rzeczywiście poparte?",
+            "rationale": "Wnioski w Zakończeniu nie w pełni wynikają z danych: 70% powstaje przez zsumowanie różnych kategorii pozafinansowych, choć pojedynczo wynagrodzenie dominuje, a H2 wydaje się odrzucona. Dodatkowo uogólnienie na wszystkie małe firmy wykracza poza próbę 23 osób z jednej firmy. Odpowiedź pokaże uczciwość interpretacji, rozumienie granic wnioskowania oraz umiejętność przyznania się do ograniczeń.",
+            "section": "Zakończenie oraz rozdział 3.2. Wyniki badania",
+            "focus": "conclusions"
+          }
+        ]
+      },
+      "passed": false
+    }
+  ]
+}
