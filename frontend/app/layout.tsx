@@ -27,6 +27,7 @@ export default function RootLayout({
   return (
     <html
       lang="pl"
+      data-scroll-behavior="smooth"
       className={`${sourceSerif.variable} ${publicSans.variable} h-full antialiased`}
       suppressHydrationWarning
     >
