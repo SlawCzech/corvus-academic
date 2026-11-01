@@ -33,6 +33,7 @@ from src.mentoring.application.draft_service import DraftService
 from src.mentoring.application.fragment_feedback import FragmentFeedbackService
 from src.mentoring.application.fragment_service import FragmentService
 from src.mentoring.application.model_service import ModelService
+from src.mentoring.application.review_service import ReviewService
 from src.mentoring.application.student_deletion import StudentDeletionService
 from src.mentoring.application.student_service import Caller, StudentService
 from src.mentoring.application.timeline_service import TimelineService
@@ -174,6 +175,13 @@ def get_draft_service(
     )
 
 
+def get_review_service(
+    students: Annotated[StudentService, Depends(get_student_service)],
+    drafts: Annotated[DraftService, Depends(get_draft_service)],
+) -> ReviewService:
+    return ReviewService(students, drafts)
+
+
 def get_fragment_service(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     students: Annotated[StudentService, Depends(get_student_service)],
@@ -263,6 +271,7 @@ AgentClientDep = Annotated[AgentClient, Depends(get_agent_client)]
 StudentServiceDep = Annotated[StudentService, Depends(get_student_service)]
 ActionServiceDep = Annotated[ActionService, Depends(get_action_service)]
 DraftServiceDep = Annotated[DraftService, Depends(get_draft_service)]
+ReviewServiceDep = Annotated[ReviewService, Depends(get_review_service)]
 FragmentServiceDep = Annotated[FragmentService, Depends(get_fragment_service)]
 FragmentFeedbackServiceDep = Annotated[
     FragmentFeedbackService, Depends(get_fragment_feedback_service)

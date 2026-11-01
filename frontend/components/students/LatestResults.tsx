@@ -8,6 +8,7 @@ import type { ActionType, AgentAction } from "@/lib/api.types"
 /** Most-read first: the review is what the promoter comes back for. */
 const ORDER: ActionType[] = [
   "generate_review",
+  "trial_review",
   "defence_questions",
   "evaluate_methodology",
   "verify_bibliography",
@@ -50,7 +51,8 @@ export function latestResults(actions: AgentAction[]): Latest[] {
 
 interface Props {
   actions: AgentAction[]
-  onShowHistory: () => void
+  /** Left out where there is no fuller history to show. */
+  onShowHistory?: () => void
 }
 
 export default function LatestResults({ actions, onShowHistory }: Props) {
@@ -66,7 +68,7 @@ export default function LatestResults({ actions, onShowHistory }: Props) {
         <h3 className="text-[11.5px] font-semibold uppercase tracking-wide text-muted">
           Wyniki AI
         </h3>
-        {actions.length > 0 && (
+        {actions.length > 0 && onShowHistory && (
           <button
             type="button"
             onClick={onShowHistory}

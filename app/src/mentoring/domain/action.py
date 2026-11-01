@@ -21,8 +21,24 @@ class ActionType(StrEnum):
     DRAFT_MEETING_NOTE = "draft_meeting_note"
     DEFENCE_QUESTIONS = "defence_questions"
     GENERATE_REVIEW = "generate_review"
+    TRIAL_REVIEW = "trial_review"
     VERIFY_BIBLIOGRAPHY = "verify_bibliography"
     REVIEW_FRAGMENT = "review_fragment"
+
+
+# What a reviewer needs from a thesis. The rest assumes someone is being
+# supervised: a topic to agree, meetings, versions, fragments. See ADR 0017.
+ONE_OFF_ACTIONS = frozenset(
+    {
+        ActionType.GENERATE_REVIEW,
+        ActionType.VERIFY_BIBLIOGRAPHY,
+        ActionType.DEFENCE_QUESTIONS,
+    }
+)
+
+
+# The full review, final or trial: the same graph, findings and pause.
+REVIEW_ACTIONS = frozenset({ActionType.GENERATE_REVIEW, ActionType.TRIAL_REVIEW})
 
 
 class ActionStatus(StrEnum):

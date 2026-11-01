@@ -6,7 +6,8 @@ export const ACTION_LABELS: Record<string, string> = {
   check_progress: "Sprawdzenie postępu",
   evaluate_methodology: "Ocena metodologii",
   draft_meeting_note: "Szkic notatki",
-  generate_review: "Recenzja",
+  generate_review: "Recenzja finalna",
+  trial_review: "Recenzja próbna",
   verify_bibliography: "Sprawdzenie bibliografii",
   review_fragment: "Feedback do fragmentu",
 }

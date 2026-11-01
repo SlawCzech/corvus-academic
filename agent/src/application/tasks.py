@@ -52,7 +52,11 @@ _RESULT_KEYS = (
 # `agent`-owned static data (files today, pgvector in Phase 5), so it is loaded
 # here rather than shipped over the wire by `app`.
 _ACTIONS_NEEDING_GUIDELINES = frozenset(
-    {ActionType.GENERATE_REVIEW, ActionType.EVALUATE_METHODOLOGY}
+    {
+        ActionType.GENERATE_REVIEW,
+        ActionType.TRIAL_REVIEW,
+        ActionType.EVALUATE_METHODOLOGY,
+    }
 )
 
 

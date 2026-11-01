@@ -128,6 +128,21 @@ RECOMMENDATIONS: dict[str, tuple[str, str, str]] = {
 }
 
 
+# A trial review's three, in the same order: the thesis can still change.
+TRIAL_RECOMMENDATIONS: dict[str, tuple[str, str, str]] = {
+    "pl": (
+        "Gotowa do złożenia",
+        "Gotowa do złożenia po poprawkach",
+        "Wymaga istotnych poprawek",
+    ),
+    "en": (
+        "Ready to submit",
+        "Ready to submit after corrections",
+        "Needs substantial corrections",
+    ),
+}
+
+
 def review_reply_for(allowed: tuple[str, ...]) -> TypeAdapter[ReviewReply]:
     """The review's shape with the recommendation narrowed to ``allowed``.
 

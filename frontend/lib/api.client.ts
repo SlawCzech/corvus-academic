@@ -7,12 +7,14 @@ import type {
   GuidelineSetDetail,
   GuidelineVersion,
   MeetingNote,
+  Review,
   Student,
   StudentStatus,
   ThesisDraft,
   ThesisPart,
   Thresholds,
   ThesisType,
+  TitlePageSuggestion,
   University,
 } from "./api.types"
 
@@ -152,6 +154,43 @@ export async function deleteStudent(studentId: string): Promise<void> {
   const res = await request(`/api/students/${studentId}`, { method: "DELETE" })
   if (res.status === 503) throw new Error(AGENT_DOWN)
   if (!res.ok) await fail(res, "Nie udało się usunąć studenta")
+}
+
+// ---------- one-off reviews ----------
+
+export interface NewReview {
+  full_name: string
+  field_of_study: string
+  thesis_type: ThesisType
+  current_topic?: string
+  research_area?: string
+  research_aim?: string
+}
+
+export async function createReview(review: NewReview, file: File): Promise<Review> {
+  const form = new FormData()
+  form.append("file", file)
+  for (const [name, value] of Object.entries(review)) {
+    if (value) form.append(name, value)
+  }
+  const res = await request("/api/reviews", { method: "POST", body: form })
+  if (!res.ok) return fail(res, "Nie udało się zapisać recenzji")
+  return res.json() as Promise<Review>
+}
+
+/** What a title page suggests for the form; `app` reads it, with no model. */
+export async function readTitlePage(file: File): Promise<TitlePageSuggestion> {
+  const form = new FormData()
+  form.append("file", file)
+  const res = await request("/api/reviews/title-page", { method: "POST", body: form })
+  if (!res.ok) return fail(res, "Nie udało się odczytać strony tytułowej")
+  return res.json() as Promise<TitlePageSuggestion>
+}
+
+export async function promoteReview(reviewId: string): Promise<Student> {
+  const res = await request(`/api/reviews/${reviewId}/promote`, { method: "POST" })
+  if (!res.ok) return fail(res, "Nie udało się założyć profilu studenta")
+  return res.json() as Promise<Student>
 }
 
 // ---------- meeting notes ----------

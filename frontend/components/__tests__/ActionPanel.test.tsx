@@ -112,7 +112,7 @@ describe("ActionPanel", () => {
   it("shows the guidelines a review will use, and warns about the defaults", async () => {
     renderPanel()
 
-    await userEvent.click(screen.getByRole("button", { name: "Napisz recenzję" }))
+    await userEvent.click(screen.getByRole("button", { name: "Recenzja finalna" }))
 
     expect(screen.getByRole("combobox", { name: "Zestaw wytycznych" })).toBeInTheDocument()
     expect(screen.getByTestId("default-guidelines")).toBeInTheDocument()
@@ -158,7 +158,7 @@ describe("ActionPanel", () => {
 
   it("stops a running action", async () => {
     renderPanel()
-    await userEvent.click(screen.getByRole("button", { name: "Napisz recenzję" }))
+    await userEvent.click(screen.getByRole("button", { name: "Recenzja finalna" }))
     await userEvent.click(screen.getByTestId("run-action"))
 
     await userEvent.click(await screen.findByTestId("cancel-action"))
@@ -173,7 +173,7 @@ describe("ActionPanel", () => {
   it("asks for the findings first, then writes the review from the ones kept", async () => {
     paused = true
     renderPanel()
-    await userEvent.click(screen.getByRole("button", { name: "Napisz recenzję" }))
+    await userEvent.click(screen.getByRole("button", { name: "Recenzja finalna" }))
     await userEvent.click(screen.getByTestId("findings-first"))
     await userEvent.click(screen.getByTestId("run-action"))
 
@@ -239,7 +239,7 @@ describe("ActionPanel", () => {
     renderPanel()
 
     const stage = screen.getByRole("region", { name: "Gotowa całość" })
-    expect(within(stage).getByRole("button", { name: "Napisz recenzję" })).toBeInTheDocument()
+    expect(within(stage).getByRole("button", { name: "Recenzja finalna" })).toBeInTheDocument()
     expect(within(stage).queryByRole("button", { name: "Pytania na obronę" })).toBeNull()
     expect(screen.getAllByRole("region")).toHaveLength(3)
   })
@@ -300,5 +300,21 @@ describe("ActionPanel", () => {
       screen.getAllByRole("button", { name: "Sprawdź bibliografię" }).at(-1)!,
     )
     expect(screen.queryByTestId("suggest-bibliography")).not.toBeInTheDocument()
+  })
+
+  it("offers both reviews and says what the final one will read", async () => {
+    render(
+      <SWRConfig value={{ provider: () => new Map() }}>
+        <ActionPanel student={STUDENT} notes={{ generate_review: "Oceni wersję 2." }} />
+      </SWRConfig>,
+    )
+
+    await userEvent.click(screen.getByRole("button", { name: "Recenzja próbna" }))
+    expect(screen.queryByTestId("action-note")).not.toBeInTheDocument()
+    expect(screen.getByTestId("findings-first")).toBeInTheDocument()
+    expect(screen.queryByText("Ton recenzji")).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole("button", { name: "Recenzja finalna" }))
+    expect(screen.getByTestId("action-note")).toHaveTextContent("Oceni wersję 2.")
+    expect(screen.getByText("Ton recenzji")).toBeInTheDocument()
   })
 })

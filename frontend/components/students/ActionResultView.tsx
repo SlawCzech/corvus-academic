@@ -309,7 +309,10 @@ function ActionResultBody({ action, selected, onSelect }: Props) {
       return (
         <>
           <PartialAnalysisNotice errors={result.node_errors} />
-          <AnalysisResultView result={result} />
+          <AnalysisResultView
+            result={result}
+            showRecommendation={action.action_type !== "generate_review"}
+          />
         </>
       )
   }

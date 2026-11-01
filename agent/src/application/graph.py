@@ -189,7 +189,8 @@ def build_action_graph(
     """Return the compiled graph that runs the given action.
 
     `generate_review` delegates to the four-node pipeline unchanged — it
-    already *is* the final action. Every other action is one node: that is the
+    already *is* the final action — and `trial_review` runs the same one to a
+    different last prompt. Every other action is one node: that is the
     point of the shared state, and it is why adding an action means adding a
     node and a prompt rather than a pipeline.
 
@@ -197,7 +198,7 @@ def build_action_graph(
     resume a run under the same ``thread_id`` — see `infrastructure.checkpoints`.
     """
     match action_type:
-        case ActionType.GENERATE_REVIEW:
+        case ActionType.GENERATE_REVIEW | ActionType.TRIAL_REVIEW:
             return build_analysis_graph(mode=mode, checkpointer=checkpointer)
         case ActionType.PROPOSE_TOPIC:
             return _build_single_node_graph(

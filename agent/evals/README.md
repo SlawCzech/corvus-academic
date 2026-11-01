@@ -17,6 +17,11 @@ bo na Macu z postawionym compose `::1:11434` to kontener bez modeli czatu). Nie
 potrzebuje Postgresa, Celery ani `app`. Pełen przebieg na qwen3:30b-a3b to ok.
 25 minut.
 
+Recenzję próbną puszcza `--action trial_review`, ale klucz odpowiedzi mierzy tylko
+uwagi, więc nie mówi nic o jakości jej zaleceń. Raport liczy też `advice in reviews`: sformułowania w gotowej recenzji, które
+zlecają coś autorowi albo planują obronę. Ma być 0: praca jest skończona, a tekst
+idzie do systemu uczelni. Recenzji próbnej to nie dotyczy.
+
 ## Przypadki
 
 | id | co w nim siedzi |

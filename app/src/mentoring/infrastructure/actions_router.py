@@ -11,6 +11,7 @@ from src.mentoring.application.exceptions import (
     AgentUnavailableError,
     FragmentNotFoundError,
     MissingContextError,
+    OneOffReviewError,
     ProviderKeyMissingError,
     ProviderRequiredError,
     StudentNotFoundError,
@@ -24,7 +25,7 @@ from src.mentoring.infrastructure.dependencies import (
     KeyLoaderDep,
     TokenDep,
 )
-from src.mentoring.infrastructure.errors import not_found
+from src.mentoring.infrastructure.errors import conflict, not_found
 from src.mentoring.infrastructure.schemas import (
     ActionAcceptRequest,
     ActionResponse,
@@ -82,6 +83,8 @@ async def trigger_action(
         )
     except (StudentNotFoundError, FragmentNotFoundError) as exc:
         raise not_found(exc) from exc
+    except OneOffReviewError as exc:
+        raise conflict(exc) from exc
     except UnsupportedActionError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)

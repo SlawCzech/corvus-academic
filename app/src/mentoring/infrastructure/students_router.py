@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 
 from src.mentoring.application.exceptions import (
     AgentUnavailableError,
+    OneOffReviewError,
     StudentNotFoundError,
 )
 from src.mentoring.domain.student import StudentStatus
@@ -19,7 +20,7 @@ from src.mentoring.infrastructure.dependencies import (
     StudentServiceDep,
     TokenDep,
 )
-from src.mentoring.infrastructure.errors import not_found
+from src.mentoring.infrastructure.errors import conflict, not_found
 from src.mentoring.infrastructure.schemas import (
     DemoSeedResponse,
     MeetingNoteCreateRequest,
@@ -99,7 +100,7 @@ async def list_students(
     status_filter: Annotated[StudentStatus | None, Query(alias="status")] = None,
 ) -> list[StudentResponse]:
     """Return the caller's students — every promoter's, for an admin."""
-    students = await svc.list_students(caller, status=status_filter)
+    students = await svc.list_students(caller, status=status_filter, one_off=False)
     return [student_response(s) for s in students]
 
 
@@ -207,6 +208,8 @@ async def create_meeting_note(
         )
     except StudentNotFoundError as exc:
         raise not_found(exc) from exc
+    except OneOffReviewError as exc:
+        raise conflict(exc) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)

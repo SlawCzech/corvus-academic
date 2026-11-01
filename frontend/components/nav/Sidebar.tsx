@@ -15,6 +15,7 @@ import {
   IconBook,
   IconSchool,
   IconCpu,
+  IconFileText,
 } from "@tabler/icons-react"
 import Logo from "@/components/Logo"
 import LogoutButton from "@/components/LogoutButton"
@@ -131,6 +132,11 @@ export default function Sidebar({ email, role }: SidebarProps) {
             href: "/students",
             label: "Studenci",
             icon: <IconSchool size={17} stroke={1.75} />,
+          },
+          {
+            href: "/reviews",
+            label: "Recenzje",
+            icon: <IconFileText size={17} stroke={1.75} />,
           },
           {
             href: "/guidelines",

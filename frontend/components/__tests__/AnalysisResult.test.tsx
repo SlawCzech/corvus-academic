@@ -169,4 +169,10 @@ describe("AnalysisResultView", () => {
     render(<AnalysisResultView result={baseResult} />)
     expect(screen.queryByTestId("finding-item")).not.toBeInTheDocument()
   })
+
+  it("leaves the recommendation out when told to", () => {
+    const result = { ...baseResult, recommendation: "Zwrócić do poprawy" }
+    render(<AnalysisResultView result={result} showRecommendation={false} />)
+    expect(screen.queryByTestId("recommendation")).not.toBeInTheDocument()
+  })
 })

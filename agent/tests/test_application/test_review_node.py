@@ -4,9 +4,14 @@ import json
 from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
+import pytest
 from langchain_core.messages import AIMessage
 
-from src.application.nodes.review import generate_review
+from src.application.nodes.review import (
+    advice_in,
+    allowed_recommendations,
+    generate_review,
+)
 from src.application.state import ActionState, ThesisMetadataDict
 from src.domain.analysis import Finding, FindingSeverity, FindingSource
 from tests.factories import make_state
@@ -32,7 +37,7 @@ _CRITICAL_RESPONSE = json.dumps(
             {"criteria": "Zgodność z wymogami", "points": 2, "max_points": 10},
             {"criteria": "Jakość merytoryczna", "points": 2, "max_points": 10},
         ],
-        "review_text": "Praca wymaga istotnych poprawek przed dopuszczeniem do obrony.",
+        "review_text": "Praca nie spełnia wymagań stawianych pracom dyplomowym.",
         "recommendation": "Zwrócić do poprawy",
     }
 )
@@ -510,3 +515,196 @@ def test_scores_outside_what_the_findings_allow_are_moved_into_range() -> None:
     assert [s.points for s in result["scores"]] == [8, 7, 8, 8]
     user_message = mock_llm.invoke.call_args.args[0][1].content
     assert "8–10, 7–8, 8–10, 7–8" in user_message
+
+
+def _reply_saying(text: str) -> str:
+    return json.dumps({**json.loads(_VALID_RESPONSE), "review_text": text})
+
+
+_ADVISING_RESPONSE = _reply_saying(
+    "Wykaz literatury wymaga ujednolicenia. Zalecam odniesienie się do tego "
+    "podczas obrony."
+)
+_STATING_RESPONSE = _reply_saying("Wykaz literatury jest niejednolity.")
+
+
+def _replying(*replies: str) -> MagicMock:
+    llm = MagicMock()
+    llm.invoke.side_effect = [AIMessage(content=reply) for reply in replies]
+    return llm
+
+
+def _summary_of(llm: MagicMock) -> str:
+    with patch("src.application.nodes.review.get_llm", return_value=llm):
+        result = generate_review(_make_state())
+    output = cast(dict[str, Any], result["output"])
+    return str(output["summary"])
+
+
+def test_the_prompt_says_the_thesis_is_finished() -> None:
+    llm = _replying(_VALID_RESPONSE)
+
+    _summary_of(llm)
+
+    system = str(llm.invoke.call_args_list[0].args[0][0].content)
+    assert "will not be changed" in system
+    assert "Nothing about the defence" in system
+
+
+def test_no_tone_asks_for_corrections() -> None:
+    for tone in (
+        "auto",
+        "enthusiastic",
+        "commendable",
+        "positive",
+        "diplomatic",
+        "reserved",
+        "negative",
+    ):
+        llm = _replying(_CRITICAL_RESPONSE)
+        with patch("src.application.nodes.review.get_llm", return_value=llm):
+            generate_review(_make_state(review_tone=tone))
+
+        system = str(llm.invoke.call_args_list[0].args[0][0].content)
+        assert "must be corrected" not in system, tone
+        assert "wymaga istotnych poprawek" not in system, tone
+
+
+def test_a_review_that_gives_advice_is_rewritten_once() -> None:
+    llm = _replying(_ADVISING_RESPONSE, _STATING_RESPONSE)
+
+    summary = _summary_of(llm)
+
+    assert summary == "Wykaz literatury jest niejednolity."
+    assert llm.invoke.call_count == 2
+    rewrite = str(llm.invoke.call_args_list[1].args[0][-1].content)
+    assert "Zalecam" in rewrite
+    assert "podczas obrony" in rewrite
+
+
+def test_a_clean_review_costs_no_second_call() -> None:
+    llm = _replying(_VALID_RESPONSE)
+
+    _summary_of(llm)
+
+    assert llm.invoke.call_count == 1
+
+
+def test_a_stubborn_review_is_kept_rather_than_lost() -> None:
+    llm = _replying(_ADVISING_RESPONSE, _ADVISING_RESPONSE)
+
+    summary = _summary_of(llm)
+
+    assert "Zalecam" in summary
+    assert llm.invoke.call_count == 2
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Zalecam odniesienie się do tych kwestii.",
+        "Wstęp powinien zawierać charakterystykę literatury.",
+        "Wykaz literatury wymaga ujednolicenia.",
+        "Należy uzupełnić bibliografię.",
+        "Praca wymaga istotnych poprawek.",
+        "Kwestię tę warto poruszyć podczas obrony.",
+        "Praca nadaje się do poprawy.",
+        "Dopuszczam pracę do obrony.",
+        "This should be addressed during the defense.",
+    ],
+)
+def test_advice_is_recognised(text: str) -> None:
+    assert advice_in(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Baza źródłowa jest wąska.",
+        "Wykaz literatury jest niejednolity.",
+        "Autor powinien był szerzej uzasadnić dobór próby.",
+        "Należy podkreślić trafny dobór metod.",
+        "Praca dotyczy wydatków na obronę narodową.",
+        "Wymagania formalne zostały spełnione.",
+    ],
+)
+def test_a_judgement_is_not_taken_for_advice(text: str) -> None:
+    assert advice_in(text) == []
+
+
+def _trial_state(*findings: Finding) -> ActionState:
+    state = _make_state()
+    return cast(
+        ActionState,
+        {**state, "action_type": "trial_review", "findings": list(findings)},
+    )
+
+
+def _trial_reply(recommendation: str, text: str) -> str:
+    return json.dumps(
+        {
+            **json.loads(_VALID_RESPONSE),
+            "review_text": text,
+            "recommendation": recommendation,
+        }
+    )
+
+
+def _finding(severity: FindingSeverity) -> Finding:
+    return Finding(
+        section="Metodologia",
+        description="Opis",
+        severity=severity,
+        suggestion="Popraw.",
+    )
+
+
+def test_a_trial_review_keeps_its_advice_and_has_its_own_prompt() -> None:
+    llm = _replying(
+        _trial_reply(
+            "Gotowa do złożenia",
+            "Wykaz literatury wymaga ujednolicenia przed złożeniem.",
+        )
+    )
+
+    with patch("src.application.nodes.review.get_llm", return_value=llm):
+        result = generate_review(_trial_state())
+
+    system = str(llm.invoke.call_args_list[0].args[0][0].content)
+    assert "not submitted yet" in system
+    assert "will not be changed" not in system
+    assert "Tone instruction" not in system
+    assert llm.invoke.call_count == 1
+    output = cast(dict[str, Any], result["output"])
+    assert "wymaga ujednolicenia" in str(output["summary"])
+    assert output["recommendation"] == "Gotowa do złożenia"
+
+
+def test_a_final_label_is_no_recommendation_for_a_trial_review() -> None:
+    llm = _replying(
+        _VALID_RESPONSE, _trial_reply("Gotowa do złożenia", "Tekst próbnej recenzji.")
+    )
+
+    with patch("src.application.nodes.review.get_llm", return_value=llm):
+        result = generate_review(_trial_state())
+
+    assert cast(dict[str, Any], result["output"])["recommendation"] == (
+        "Gotowa do złożenia"
+    )
+
+
+@pytest.mark.parametrize(
+    ("severity", "expected"),
+    [
+        (
+            FindingSeverity.MINOR,
+            ("Gotowa do złożenia", "Gotowa do złożenia po poprawkach"),
+        ),
+        (FindingSeverity.MAJOR, ("Gotowa do złożenia po poprawkach",)),
+        (FindingSeverity.CRITICAL, ("Wymaga istotnych poprawek",)),
+    ],
+)
+def test_the_findings_decide_a_trial_recommendation(
+    severity: FindingSeverity, expected: tuple[str, ...]
+) -> None:
+    assert allowed_recommendations([_finding(severity)], trial=True) == expected

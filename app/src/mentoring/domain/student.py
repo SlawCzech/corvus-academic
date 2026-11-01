@@ -74,6 +74,8 @@ class Student:
     # checklist: see ADR 0015.
     research_area: str | None = None
     research_aim: str | None = None
+    # One thesis reviewed once, nobody supervised: see ADR 0017.
+    is_one_off: bool = False
 
     def __post_init__(self) -> None:
         self.full_name = _require_text(self.full_name, "full_name")
@@ -82,6 +84,40 @@ class Student:
             self.index_number = _require_text(self.index_number, "index_number")
         self.research_area = _optional_text(self.research_area)
         self.research_aim = _optional_text(self.research_aim)
+
+    @classmethod
+    def one_off(
+        cls,
+        id: UUID,
+        promotor_id: UUID,
+        full_name: str,
+        field_of_study: str,
+        thesis_type: ThesisType,
+        at: datetime | None = None,
+        research_area: str | None = None,
+        research_aim: str | None = None,
+    ) -> "Student":
+        """A thesis to review once, with nobody to supervise.
+
+        Born archived: nothing about it is ongoing, and the retention clock
+        starts with the upload rather than with a status change that nobody
+        would ever make.
+        """
+        created = at or datetime.now(UTC)
+        return cls(
+            id=id,
+            promotor_id=promotor_id,
+            full_name=full_name,
+            field_of_study=field_of_study,
+            thesis_type=thesis_type,
+            status=StudentStatus.ARCHIVED,
+            created_at=created,
+            updated_at=created,
+            closed_at=created,
+            research_area=research_area,
+            research_aim=research_aim,
+            is_one_off=True,
+        )
 
     @property
     def has_topic(self) -> bool:
@@ -163,12 +199,25 @@ class Student:
         Leaving `active` starts the retention clock once; moving from
         `graduated` to `archived` does not restart it. Returning to `active`
         stops it.
+
+        A one-off review has no such lifecycle: reactivating one would stop
+        its clock and leave it hidden, so its thesis would never be purged.
+        `promote` is the way out.
         """
+        if self.is_one_off:
+            raise ValueError("A one-off review has no lifecycle status")
         self.status = status
         if status is StudentStatus.ACTIVE:
             self.closed_at = None
         elif self.closed_at is None:
             self.closed_at = at or datetime.now(UTC)
+
+    def promote(self) -> None:
+        """Turn a one-off review into a student on the roster, for good."""
+        if not self.is_one_off:
+            raise ValueError("Only a one-off review can be promoted")
+        self.is_one_off = False
+        self.change_status(StudentStatus.ACTIVE)
 
     def accept_draft(self, draft_id: UUID, at: datetime | None = None) -> None:
         """Mark one version as the final one."""

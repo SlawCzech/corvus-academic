@@ -42,6 +42,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from src.application.graph import build_action_graph
+from src.application.nodes.review import advice_in
 from src.application.tasks import (
     _initial_state,  # pyright: ignore[reportPrivateUsage]
 )
@@ -151,6 +152,12 @@ def run_case(
         node_errors=cast(list[str], final.get("node_errors") or []),
         error=cast(str | None, final.get("error")),
         recommendation=recommendation,
+        # Advice is what a trial review is for.
+        advice=(
+            advice_in(str(output.get("summary", "")))
+            if output and action_type != ActionType.TRIAL_REVIEW
+            else ()
+        ),
     )
 
 
@@ -169,7 +176,11 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--action",
         default=ActionType.GENERATE_REVIEW,
-        choices=[ActionType.GENERATE_REVIEW, ActionType.EVALUATE_METHODOLOGY],
+        choices=[
+            ActionType.GENERATE_REVIEW,
+            ActionType.TRIAL_REVIEW,
+            ActionType.EVALUATE_METHODOLOGY,
+        ],
     )
     parser.add_argument("--cases", nargs="*", help="case ids (default: all)")
     args = parser.parse_args(argv)

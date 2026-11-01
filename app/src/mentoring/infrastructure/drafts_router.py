@@ -7,10 +7,11 @@ from fastapi import APIRouter, HTTPException, Response, UploadFile, status
 
 from src.mentoring.application.exceptions import (
     DraftNotFoundError,
+    OneOffReviewError,
     StudentNotFoundError,
 )
 from src.mentoring.infrastructure.dependencies import CallerDep, DraftServiceDep
-from src.mentoring.infrastructure.errors import not_found
+from src.mentoring.infrastructure.errors import conflict, not_found
 from src.mentoring.infrastructure.schemas import DraftResponse, draft_response
 from src.shared.downloads import attachment_response, read_upload
 
@@ -46,6 +47,8 @@ async def upload_draft(
         )
     except StudentNotFoundError as exc:
         raise not_found(exc) from exc
+    except OneOffReviewError as exc:
+        raise conflict(exc) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)

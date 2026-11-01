@@ -102,9 +102,7 @@ describe("StudentDetail — action history", () => {
     expect(screen.getByTestId("summary")).toHaveTextContent(
       "Praca spełnia wymagania",
     )
-    expect(screen.getByTestId("recommendation")).toHaveTextContent(
-      "Dopuścić do obrony",
-    )
+    expect(screen.queryByTestId("recommendation")).not.toBeInTheDocument()
   })
 
   it("closes it again on a second click", async () => {

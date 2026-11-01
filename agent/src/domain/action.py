@@ -21,6 +21,7 @@ class ActionType(StrEnum):
     DRAFT_MEETING_NOTE = "draft_meeting_note"
     DEFENCE_QUESTIONS = "defence_questions"
     GENERATE_REVIEW = "generate_review"
+    TRIAL_REVIEW = "trial_review"
     VERIFY_BIBLIOGRAPHY = "verify_bibliography"
     REVIEW_FRAGMENT = "review_fragment"
 

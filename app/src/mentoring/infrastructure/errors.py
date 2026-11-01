@@ -8,6 +8,11 @@ package needs to communicate the same way, rather than each building its own
 from fastapi import HTTPException, status
 
 
+def conflict(exc: Exception) -> HTTPException:
+    """Map a request the record's present state rules out to 409."""
+    return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+
+
 def not_found(exc: Exception) -> HTTPException:
     """Map an invisible-or-missing student (or one of its actions) to 404.
 

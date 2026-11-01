@@ -11,6 +11,7 @@ from src.mentoring.application.exceptions import (
     ActionNotFoundError,
     AgentUnavailableError,
     FragmentNotFoundError,
+    OneOffReviewError,
     PartConflictError,
     PartNotFoundError,
     StudentNotFoundError,
@@ -23,7 +24,7 @@ from src.mentoring.infrastructure.dependencies import (
     TimelineServiceDep,
     TokenDep,
 )
-from src.mentoring.infrastructure.errors import not_found
+from src.mentoring.infrastructure.errors import conflict, not_found
 from src.mentoring.infrastructure.schemas import (
     FragmentFeedbackRequest,
     FragmentResponse,
@@ -42,10 +43,6 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/students", tags=["mentoring"])
 
 
-def _conflict(exc: PartConflictError) -> HTTPException:
-    return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
-
-
 @router.post(
     "/{student_id}/parts",
     response_model=PartResponse,
@@ -62,8 +59,8 @@ async def add_part(
         part = await svc.add_part(caller, student_id, body.name, body.due_on)
     except StudentNotFoundError as exc:
         raise not_found(exc) from exc
-    except PartConflictError as exc:
-        raise _conflict(exc) from exc
+    except (PartConflictError, OneOffReviewError) as exc:
+        raise conflict(exc) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
@@ -93,7 +90,7 @@ async def update_part(
     except (StudentNotFoundError, PartNotFoundError) as exc:
         raise not_found(exc) from exc
     except PartConflictError as exc:
-        raise _conflict(exc) from exc
+        raise conflict(exc) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
@@ -116,7 +113,7 @@ async def delete_part(
     except (StudentNotFoundError, PartNotFoundError) as exc:
         raise not_found(exc) from exc
     except PartConflictError as exc:
-        raise _conflict(exc) from exc
+        raise conflict(exc) from exc
 
 
 @router.post(
@@ -154,6 +151,8 @@ async def upload_fragment(
         )
     except StudentNotFoundError as exc:
         raise not_found(exc) from exc
+    except OneOffReviewError as exc:
+        raise conflict(exc) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)

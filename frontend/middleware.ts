@@ -26,7 +26,11 @@ export function middleware(request: NextRequest): NextResponse {
 
   // An admin has no roster: the promoter's screens send them to their own.
   if (role === "admin") {
-    if (pathname.startsWith("/dashboard") || pathname.startsWith("/students")) {
+    if (
+      pathname.startsWith("/dashboard") ||
+      pathname.startsWith("/students") ||
+      pathname.startsWith("/reviews")
+    ) {
       return NextResponse.redirect(new URL(homeFor(role), request.url))
     }
     // The catalog they manage is /admin/guidelines; a single version's page
@@ -44,6 +48,7 @@ export const config = {
     "/admin/:path*",
     "/dashboard/:path*",
     "/students/:path*",
+    "/reviews/:path*",
     "/profile/:path*",
     "/guidelines/:path*",
     // File links are plain navigations: no API client stands behind them to

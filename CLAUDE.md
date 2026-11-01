@@ -86,18 +86,24 @@ Użytkownik
       │                  akceptacja wersji finalnej, retencja (ADR 0006)
       ├─ /students/{id}/fragments, /parts, /timeline — fragmenty pracy w rundach,
       │                  feedback promotora, oś czasu (ADR 0014)
+      ├─ /reviews      — jednorazowa recenzja: ukryty student z flagą, potem te same
+      │                  /students/{id}/actions i drafts; promocja do studenta (ADR 0017)
       └─ /guidelines/* — katalog wytycznych; zapis pod /guidelines/admin
   → agent :8002 (POST /actions, GET /actions/{task_id})
   → Celery task (broker: Redis) → agent-worker
       status zapisywany do Postgresa: running → completed | failed
   → LangGraph — graf zależny od typu akcji
-      → generate_review:      [Struktura ∥ Metodologia ∥ Wymogi ∥ Rozdział×N → Spójność]
+      → generate_review, trial_review (ten sam graf, inny ostatni prompt, ADR 0018):
+                              [Struktura ∥ Metodologia ∥ Wymogi ∥ Rozdział×N → Spójność]
                               → [Weryfikacja]
                               → [Wybór promotora]* → [Recenzja]
         (Rozdział×N: `Send` per rozdział z mapy dokumentu — streszczenie z cytatami;
          Spójność: czy wnioski wynikają z wyników, czy hipotezy rozstrzygnięte)
         (*tylko gdy promotor zaznaczył „Pokaż mi uwagi…”: `interrupt`, status
          `awaiting_input`, wznowienie POST …/actions/{id}/resume z indeksami uwag)
+        (tekst recenzji to ocena skończonej pracy do wklejenia w system uczelni:
+         bez zaleceń i bez planów na obronę; `nodes/review.py` przepisuje raz, gdy
+         mimo to się pojawią)
       → propose_topic:        [Propozycja tematu]
       → defence_questions:    [Pytania na obronę]
       → check_progress:       [Porównanie dwóch wersji]
@@ -172,17 +178,17 @@ corvus/
 │   │   ├── mentoring/
 │   │   │   ├── domain/       # student.py, draft.py, fragment.py, action.py, retention.py
 │   │   │   ├── application/  # student_service (Caller, reguła własności),
-│   │   │   │                   draft_service, fragment_service, fragment_feedback,
+│   │   │   │                   draft_service, review_service, fragment_service, fragment_feedback,
 │   │   │   │                   timeline_service, retention_service, context,
 │   │   │   │                   guidelines_port, agent_client,
 │   │   │   │                   action_service, exceptions
 │   │   │   └── infrastructure/  # dependencies, schemas, errors,
-│   │   │                          {students,actions,drafts}_router,
+│   │   │                          {students,actions,drafts,reviews}_router,
 │   │   │                          router (agreguje), orm/, repositories,
 │   │   │                          retention (pętla sweepu), guidelines_adapter
 │   │   ├── guidelines/       # domain/catalog.py, application/{catalog,
 │   │   │                       admin_service}, infrastructure/ (router, orm…)
-│   │   ├── document/         # document.py, extractor.py, outline.py
+│   │   ├── document/         # document.py, extractor.py, outline.py, title_page.py
 │   │   │                       (mapa dokumentu bez modelu, wołane in-process)
 │   │   └── shared/           # settings, database, health, logging, middleware,
 │   │                           files (port FileStore), sql_file_store, downloads
@@ -504,6 +510,14 @@ Lokalne modele czatu są domyślnie wyłączone wszędzie, nie tylko na produkcj
 `LOCAL_MODELS_ENABLED=true` przywraca Ollamę, kod i testy tej ścieżki zostają,
 embeddingi działają dalej, a prompty oceniamy na Claude —
 [ADR 0016](docs/adr/0016-local-chat-models-are-off-by-default.md).
+Jednorazowa recenzja to ukryty student (`is_one_off`): rodzi się zarchiwizowany,
+więc retencja działa sama, ma jedną pracę i trzy akcje, a na listę studentów
+trafia tylko na prośbę promotora. Nowa lista studentów musi pamiętać o fladze —
+[ADR 0017](docs/adr/0017-a-one-off-review-is-a-hidden-student.md).
+Recenzje są dwie: próbna (`trial_review`) mówi, co poprawić przed złożeniem, i czyta
+najnowszą wersję, a finalna (`generate_review`) ocenia skończoną pracę, czyta wersję
+zaakceptowaną i nie pokazuje rekomendacji. Jednorazówki znają tylko finalną —
+[ADR 0018](docs/adr/0018-a-trial-review-and-a-final-review.md).
 
 ---
 

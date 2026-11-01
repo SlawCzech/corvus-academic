@@ -5,6 +5,7 @@ import useSWR, { useSWRConfig } from "swr"
 import {
   IconBooks,
   IconBulb,
+  IconFileSearch,
   IconFileText,
   IconGitCompare,
   IconLayoutGrid,
@@ -73,9 +74,15 @@ const ACTIONS: ActionSpec[] = [
     icon: IconBooks,
   },
   {
+    type: "trial_review",
+    label: "Recenzja próbna",
+    hint: "Co poprawić przed złożeniem pracy",
+    icon: IconFileSearch,
+  },
+  {
     type: "generate_review",
-    label: "Napisz recenzję",
-    hint: "Pełna recenzja ostatniej wersji",
+    label: "Recenzja finalna",
+    hint: "Ocena gotowej pracy do systemu uczelni",
     icon: IconFileText,
   },
   {
@@ -97,7 +104,7 @@ const STAGES: { title: string; note: string; types: ActionType[] }[] = [
   {
     title: "Gotowa całość",
     note: "Gdy jest już cała praca",
-    types: ["evaluate_methodology", "verify_bibliography", "generate_review"],
+    types: ["evaluate_methodology", "verify_bibliography", "trial_review", "generate_review"],
   },
   {
     title: "Obrona",
@@ -110,6 +117,14 @@ function actionsOf(types: ActionType[]): ActionSpec[] {
   return ACTIONS.filter((a) => types.includes(a.type))
 }
 
+function stagesFor(only?: ActionType[]): typeof STAGES {
+  if (!only) return STAGES
+  return STAGES.map((stage) => ({
+    ...stage,
+    types: stage.types.filter((type) => only.includes(type)),
+  })).filter((stage) => stage.types.length > 0)
+}
+
 const STATUS_LABELS: Record<string, string> = {
   pending: "W kolejce",
   running: "Liczy się…",
@@ -120,7 +135,10 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 /** Judged against university requirements — the chosen set matters here. */
-const USES_GUIDELINES: ActionType[] = ["generate_review", "evaluate_methodology"]
+const USES_GUIDELINES: ActionType[] = ["generate_review", "trial_review", "evaluate_methodology"]
+
+/** The whole graph, with a pause to pick the findings if asked. */
+const FULL_REVIEWS: ActionType[] = ["generate_review", "trial_review"]
 
 const optionInputClass =
   "w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[13.5px] " +
@@ -129,10 +147,16 @@ const optionInputClass =
 export default function ActionPanel({
   student,
   initialType,
+  only,
+  notes,
 }: {
   student: Student
   /** Open on this action — a suggestion elsewhere on the page led here. */
   initialType?: ActionType
+  /** Offer just these: a one-off review takes fewer actions than a student. */
+  only?: ActionType[]
+  /** A word on what a chosen action will work from, when that is not obvious. */
+  notes?: Partial<Record<ActionType, string>>
 }) {
   const defaults = useAiDefaults()
   const { data: actions } = useSWR<AgentAction[]>(
@@ -154,6 +178,8 @@ export default function ActionPanel({
         actions.some((a) => a.action_type === "verify_bibliography" && a.status === "completed")
       }
       initialType={initialType}
+      stages={stagesFor(only)}
+      notes={notes}
     />
   )
 }
@@ -164,6 +190,8 @@ function ActionPanelInner({
   unfinished,
   bibliographyChecked,
   initialType,
+  stages,
+  notes,
 }: {
   student: Student
   defaults: AiDefaults
@@ -172,6 +200,8 @@ function ActionPanelInner({
   /** Whether the student's references were ever checked against the catalogues. */
   bibliographyChecked: boolean
   initialType?: ActionType
+  stages: typeof STAGES
+  notes?: Partial<Record<ActionType, string>>
 }) {
   const { action, running, error, run, accept, cancel, resume, watch, dismiss } = useAction(
     student.id,
@@ -216,7 +246,7 @@ function ActionPanelInner({
       model: effectiveModel,
       language,
       reviewTone,
-      reviewFindingsFirst: selectedType === "generate_review" && findingsFirst,
+      reviewFindingsFirst: FULL_REVIEWS.includes(selectedType) && findingsFirst,
     })
   }
 
@@ -243,7 +273,7 @@ function ActionPanelInner({
       {selectedType === null ? (
         // Nothing chosen: the whole catalogue, with room to say what each does.
         <div data-testid="action-tiles" className="space-y-6">
-          {STAGES.map((stage) => (
+          {stages.map((stage) => (
             <section key={stage.title} aria-label={stage.title}>
               <div className="mb-2.5 flex items-baseline gap-2.5">
                 <h3 className="text-[13.5px] font-semibold text-foreground">{stage.title}</h3>
@@ -291,7 +321,7 @@ function ActionPanelInner({
           >
             <IconLayoutGrid size={16} stroke={1.75} />
           </button>
-          {STAGES.map((stage, index) => (
+          {stages.map((stage, index) => (
             <Fragment key={stage.title}>
               {index > 0 && <span aria-hidden className="mx-1 h-5 w-px bg-line" />}
               {actionsOf(stage.types).map((a) => (
@@ -319,6 +349,12 @@ function ActionPanelInner({
       {spec && (
         <div className="mt-4 rounded-xl border border-line bg-surface p-5">
           <p className="text-[13.5px] text-muted-strong">{spec.hint}</p>
+
+          {selectedType && notes?.[selectedType] && (
+            <p data-testid="action-note" className="mt-2 text-[12.5px] text-major-text">
+              {notes[selectedType]}
+            </p>
+          )}
 
           {spec.detailLabel && (
             <label className="mt-3.5 block">
@@ -352,17 +388,20 @@ function ActionPanelInner({
                 value={reviewTone}
                 onChange={setReviewTone}
               />
-              <label className="mt-3 flex cursor-pointer items-center gap-2 text-[13px] text-muted-strong">
-                <input
-                  type="checkbox"
-                  checked={findingsFirst}
-                  onChange={(e) => setFindingsFirst(e.target.checked)}
-                  data-testid="findings-first"
-                  className="accent-accent"
-                />
-                Pokaż mi uwagi, zanim powstanie recenzja
-              </label>
             </div>
+          )}
+
+          {selectedType && FULL_REVIEWS.includes(selectedType) && (
+            <label className="mt-3 flex cursor-pointer items-center gap-2 text-[13px] text-muted-strong">
+              <input
+                type="checkbox"
+                checked={findingsFirst}
+                onChange={(e) => setFindingsFirst(e.target.checked)}
+                data-testid="findings-first"
+                className="accent-accent"
+              />
+              Pokaż mi uwagi, zanim powstanie recenzja
+            </label>
           )}
 
           {/* Always in view: which model an action runs on is not a detail. */}
@@ -451,7 +490,7 @@ function ActionPanelInner({
                 <p className="mt-3 text-[13px] text-muted">Zaakceptowano.</p>
               )}
 
-              {shown.action_type === "generate_review" &&
+              {FULL_REVIEWS.includes(shown.action_type) &&
                 shown.status === "completed" &&
                 !bibliographyChecked && (
                   <div

@@ -60,6 +60,15 @@ class ProviderRequiredError(Exception):
     """
 
 
+class OneOffReviewError(Exception):
+    """Asked of a one-off review something only a supervised student has.
+
+    Notes, fragments, a second version, the actions outside ONE_OFF_ACTIONS.
+    Refused rather than quietly done: a promoter who wants them promotes the
+    review first.
+    """
+
+
 class MissingContextError(Exception):
     """The student's record does not yet hold what this action needs.
 
