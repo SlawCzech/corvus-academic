@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useLayoutEffect, useRef, useState } from "react"
 import ActionProgress from "@/components/students/ActionProgress"
 import { useModelChoice } from "@/components/ai/ModelSelect"
 import { isUnfinished } from "@/hooks/useAction"
@@ -196,7 +196,17 @@ function FeedbackForm({
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  async function save(copy: boolean): Promise<void> {
+  // Grows with the text, so a long draft is read and edited without a scrollbar.
+  const box = useRef<HTMLTextAreaElement>(null)
+  useLayoutEffect(() => {
+    const element = box.current
+    if (!element) return
+    element.style.height = "auto"
+    const border = element.offsetHeight - element.clientHeight
+    element.style.height = `${element.scrollHeight + border}px`
+  }, [text])
+
+  async function save(): Promise<void> {
     if (!verdict) {
       setError("Wybierz ocenę, zanim zapiszesz")
       return
@@ -211,7 +221,6 @@ function FeedbackForm({
         sourceActionId: review && text.trim() ? review.id : null,
         nextDueOn: nextDue || null,
       })
-      if (copy) await copyToClipboard(text)
       onChange()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Nie udało się zapisać feedbacku")
@@ -220,12 +229,13 @@ function FeedbackForm({
     }
   }
 
-  async function copyToClipboard(value: string): Promise<void> {
+  async function copy(): Promise<void> {
+    setError(null)
     try {
-      await navigator.clipboard.writeText(value)
-      setNotice("Zapisano i skopiowano")
+      await navigator.clipboard.writeText(text)
+      setNotice("Skopiowano do schowka")
     } catch {
-      setNotice("Zapisano. Schowek jest niedostępny, skopiuj tekst ręcznie.")
+      setNotice("Schowek jest niedostępny, skopiuj tekst ręcznie.")
     }
   }
 
@@ -237,12 +247,13 @@ function FeedbackForm({
         </p>
       )}
       <textarea
+        ref={box}
         value={text}
         onChange={(e) => setText(e.target.value)}
         rows={7}
         aria-label="Feedback dla studenta"
         placeholder="Co przekażesz studentowi?"
-        className="mb-3 w-full rounded-lg border border-line bg-surface px-3 py-2 text-[13.5px] text-foreground focus:border-accent focus:outline-none"
+        className="mb-3 w-full resize-none overflow-hidden rounded-lg border border-line bg-surface px-3 py-2 text-[13.5px] text-foreground focus:border-accent focus:outline-none"
       />
       <div className="mb-3 flex flex-wrap items-center gap-2" role="group" aria-label="Ocena">
         {VERDICTS.map((option) => (
@@ -280,18 +291,18 @@ function FeedbackForm({
         <button
           type="button"
           disabled={busy}
-          onClick={() => void save(true)}
+          onClick={() => void save()}
           className="h-9 rounded-lg bg-accent px-4 text-[13px] font-semibold text-white hover:bg-accent-hover disabled:opacity-50"
         >
-          Zapisz i kopiuj do maila
+          Zapisz
         </button>
         <button
           type="button"
-          disabled={busy}
-          onClick={() => void save(false)}
+          disabled={!text.trim()}
+          onClick={() => void copy()}
           className="h-9 rounded-lg border border-line px-4 text-[13px] font-medium text-foreground hover:bg-surface-alt disabled:opacity-50"
         >
-          Zapisz
+          Kopiuj do schowka
         </button>
       </div>
     </div>

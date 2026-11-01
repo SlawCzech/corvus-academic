@@ -140,7 +140,7 @@ describe("fragmentFeedbackDraft", () => {
     const text = fragmentFeedbackDraft(REVIEW)
 
     expect(text).toContain("Literatura wystarcza.")
-    expect(text).toContain("Co działa:\n- Dobrze postawiony problem.")
+    expect(text).toContain("Mocne strony:\n- Dobrze postawiony problem.")
     expect(text).toContain("Do zmiany:\n- Uzasadnij dobór próby.")
     expect(text).toContain("Następny krok: Dopisać narzędzie badawcze.")
     expect(text).not.toContain("Fragment omawia")
@@ -205,7 +205,8 @@ describe("WorkTimeline", () => {
     })
   })
 
-  it("copies what was saved to the clipboard", async () => {
+  it("copies the text to the clipboard without saving it", async () => {
+    current = timeline(entry({ summary: null, review: null, feedback: "Moje słowa." }))
     const user = userEvent.setup()
     const writeText = vi.fn(() => Promise.resolve())
     Object.defineProperty(navigator, "clipboard", {
@@ -215,12 +216,23 @@ describe("WorkTimeline", () => {
     show()
 
     await screen.findByLabelText("Feedback dla studenta")
-    await user.click(screen.getByRole("button", { name: "Zapisz i kopiuj do maila" }))
+    await user.click(screen.getByRole("button", { name: "Kopiuj do schowka" }))
 
-    await waitFor(() => expect(writeText).toHaveBeenCalled())
-    const copied = writeText.mock.calls[0] as unknown as string[]
-    expect(copied[0]).toContain("Uzasadnij dobór próby.")
-    expect(await screen.findByText("Zapisano i skopiowano")).toBeInTheDocument()
+    expect(await screen.findByText("Skopiowano do schowka")).toBeInTheDocument()
+    expect(writeText).toHaveBeenCalledWith("Moje słowa.")
+    expect(calls.some((c) => c.url.endsWith("/feedback"))).toBe(false)
+  })
+
+  it("grows the box with the text", async () => {
+    const scrollHeight = vi
+      .spyOn(HTMLElement.prototype, "scrollHeight", "get")
+      .mockReturnValue(640)
+    show()
+
+    const box = await screen.findByLabelText<HTMLTextAreaElement>("Feedback dla studenta")
+
+    expect(box.style.height).toBe("640px")
+    scrollHeight.mockRestore()
   })
 
   it("asks for a verdict before saving", async () => {
