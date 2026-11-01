@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useTheme } from "next-themes"
+import useSWR from "swr"
 import {
   IconLayoutDashboard,
   IconUserCircle,
@@ -18,6 +19,8 @@ import {
 import Logo from "@/components/Logo"
 import LogoutButton from "@/components/LogoutButton"
 import { useHydrated } from "@/hooks/useHydrated"
+import { fetcher } from "@/lib/api.client"
+import type { AdminModelCatalog } from "@/lib/api.types"
 
 interface SidebarProps {
   email: string | null
@@ -74,6 +77,12 @@ export default function Sidebar({ email, role }: SidebarProps) {
   const { resolvedTheme, setTheme } = useTheme()
   const isDark = useHydrated() && resolvedTheme === "dark"
   const compact = useCompact()
+  const { data: models } = useSWR<AdminModelCatalog>(
+    role === "admin" ? "/api/admin/models" : null,
+    fetcher,
+  )
+  // With the switch off there is nothing to manage there (ADR 0016).
+  const localModels = models?.local_enabled !== false
 
   // Two roles, two menus: an admin runs the platform, a promoter supervises
   // students. The profile is the only screen they share.
@@ -92,11 +101,15 @@ export default function Sidebar({ email, role }: SidebarProps) {
             // A version's own page is shared with promoters.
             also: ["/guidelines"],
           },
-          {
-            href: "/admin/models",
-            label: "Modele AI",
-            icon: <IconCpu size={17} stroke={1.75} />,
-          },
+          ...(localModels
+            ? [
+                {
+                  href: "/admin/models",
+                  label: "Modele AI",
+                  icon: <IconCpu size={17} stroke={1.75} />,
+                },
+              ]
+            : []),
           {
             href: "/admin/login-events",
             label: "Logi logowań",

@@ -20,7 +20,7 @@ Lokalna aplikacja webowa wspomagająca promotorów i recenzentów w analizie stu
   - metodologia i źródła bibliograficzne
   - zgodność z wymogami uczelnianymi (RAG)
   - generowanie szkicu recenzji z oceną punktową
-- Wybór modelu AI: lokalny (Ollama) lub komercyjny (Claude API / OpenAI)
+- Wybór modelu AI: komercyjny (Claude API / OpenAI) na kluczu promotora; lokalny (Ollama) tylko po włączeniu `LOCAL_MODELS_ENABLED`
 - Historia analiz i raportów per użytkownik
 - Panel administracyjny do zarządzania wytycznymi i kluczami API
 - Monitoring kolejki zadań (Flower UI)
@@ -115,7 +115,7 @@ Użytkownik
          idą wyłącznie opisy bibliograficzne, nigdy tekst pracy)
   → model selector
       → promotor wybiera przy akcji: własny klucz (BYOK) do Claude albo
-        OpenAI — po jednym na dostawcę — albo Ollama (lokalny, domyślny);
+        OpenAI — po jednym na dostawcę — albo Ollama (schowana, ADR 0016);
         zapisany klucz nie jest używany, dopóki akcja o niego nie poprosi
         klucz jedzie osobnym argumentem taska, zaszyfrowany na czas kolejki
         (ADR 0012), i żyje w ContextVar tylko na czas przebiegu grafu — nigdy
@@ -498,6 +498,10 @@ Promotor może podać obszar badawczy i ustalony cel z hipotezami. To kontekst, 
 wymagania: węzły oceniające sens pracy dostają je we wspólnym bloku
 (`application/brief.py`), a reguła czytania pojawia się tylko, gdy pola są wypełnione —
 [ADR 0015](docs/adr/0015-research-area-and-aim-on-the-student.md).
+Lokalne modele czatu są domyślnie wyłączone wszędzie, nie tylko na produkcji:
+`LOCAL_MODELS_ENABLED=true` przywraca Ollamę, kod i testy tej ścieżki zostają,
+embeddingi działają dalej, a prompty oceniamy na Claude —
+[ADR 0016](docs/adr/0016-local-chat-models-are-off-by-default.md).
 
 ---
 
