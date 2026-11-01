@@ -23,7 +23,7 @@ dependencies = [
     "fastapi-limiter>=0.1.6",
     "email-validator>=2.2.0",
     "httpx>=0.28.1",
-    "pymupdf>=1.27.2.3",
+    "pymupdf>=2.0",
     "python-docx>=1.2.0",
     "python-multipart>=0.0.29",
 ]
