@@ -18,6 +18,7 @@ const STEP_LABELS: Record<string, string> = {
   defence_questions: "Pytania na obronę",
   check_progress: "Porównanie wersji",
   draft_meeting_note: "Szkic notatki",
+  draft_student_email: "Szkic maila",
   review_fragment: "Czytanie fragmentu",
   extract_references: "Lista pozycji",
   match_references: "Dopasowanie w Crossref i katalogach",

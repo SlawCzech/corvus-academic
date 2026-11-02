@@ -108,6 +108,7 @@ export type ActionType =
   | "evaluate_methodology"
   | "check_progress"
   | "draft_meeting_note"
+  | "draft_student_email"
   | "defence_questions"
   | "generate_review"
   | "trial_review"
@@ -180,6 +181,8 @@ export interface ActionOutput {
   content?: string
   topics_discussed?: string[]
   agreed_actions?: string[]
+  subject?: string
+  body?: string
   recommendation?: string
   total_percentage?: number
   references?: CheckedReference[]

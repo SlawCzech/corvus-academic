@@ -33,6 +33,7 @@ from .nodes.coherence import (
 )
 from .nodes.defence_questions import defence_questions
 from .nodes.draft_meeting_note import draft_meeting_note
+from .nodes.draft_student_email import draft_student_email
 from .nodes.methodology import analyze_methodology
 from .nodes.promoter_review import promoter_review
 from .nodes.propose_topic import propose_topic
@@ -216,6 +217,10 @@ def build_action_graph(
         case ActionType.DRAFT_MEETING_NOTE:
             return _build_single_node_graph(
                 "draft_meeting_note", draft_meeting_note, checkpointer
+            )
+        case ActionType.DRAFT_STUDENT_EMAIL:
+            return _build_single_node_graph(
+                "draft_student_email", draft_student_email, checkpointer
             )
         case ActionType.VERIFY_BIBLIOGRAPHY:
             return build_bibliography_graph(checkpointer)

@@ -19,6 +19,7 @@ class ActionType(StrEnum):
     EVALUATE_METHODOLOGY = "evaluate_methodology"
     CHECK_PROGRESS = "check_progress"
     DRAFT_MEETING_NOTE = "draft_meeting_note"
+    DRAFT_STUDENT_EMAIL = "draft_student_email"
     DEFENCE_QUESTIONS = "defence_questions"
     GENERATE_REVIEW = "generate_review"
     TRIAL_REVIEW = "trial_review"

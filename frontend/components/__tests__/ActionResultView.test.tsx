@@ -103,6 +103,21 @@ describe("ActionResultView", () => {
     )
   })
 
+  it("shows the drafted mail with its subject, to copy and not to send", () => {
+    const action: AgentAction = {
+      ...base,
+      action_type: "draft_student_email",
+      output: { output: { subject: "Praca: poprawki", body: "Dzień dobry,\nproszę poprawić." } },
+    }
+    render(<ActionResultView action={action} />)
+
+    const mail = screen.getByTestId("student-email")
+    expect(mail).toHaveTextContent("Temat: Praca: poprawki")
+    expect(mail).toHaveTextContent("proszę poprawić.")
+    expect(screen.getByRole("button", { name: "Kopiuj treść" })).toBeEnabled()
+    expect(screen.queryByRole("button", { name: /wyślij/i })).not.toBeInTheDocument()
+  })
+
   it("shows the error instead of a result when the action failed", () => {
     const action: AgentAction = {
       ...base,

@@ -15,6 +15,7 @@ from typing import Any
 
 from src.document.outline import outline_payload
 from src.mentoring.application.exceptions import MissingContextError
+from src.mentoring.domain.action import AgentAction
 from src.mentoring.domain.draft import ThesisDraft
 from src.mentoring.domain.fragment import PartState, ThesisFragment, ThesisPart
 from src.mentoring.domain.student import MeetingNote, Student
@@ -221,6 +222,29 @@ def assemble_draft_meeting_note_context(
         "detail": detail,
         "current_topic": student.current_topic,
         "recent_notes": [n.content for n in recent_notes[:_MAX_NOTES]],
+    }
+
+
+def assemble_draft_student_email_context(
+    student: Student,
+    trial_review: AgentAction | None,
+    detail: str | None = None,
+) -> dict[str, Any]:
+    """Build the context for a mail: the review and its findings, not the thesis."""
+    review_text = (
+        str(trial_review.structured_output().get("summary") or "").strip()
+        if trial_review
+        else ""
+    )
+    if trial_review is None or not review_text:
+        raise MissingContextError(
+            "A mail to the student is written from a trial review — run one first"
+        )
+    return {
+        "current_topic": student.current_topic,
+        "review_text": review_text,
+        "findings": trial_review.findings(),
+        "detail": detail,
     }
 
 

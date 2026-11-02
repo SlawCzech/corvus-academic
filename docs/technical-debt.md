@@ -322,14 +322,11 @@ Zostaje:
 
 ## Jednorazowe recenzje (2026-11-01)
 
-- [ ] **Recenzja próbna bez evala treści** — klucz odpowiedzi mierzy uwagi, nie to, czy
-  zalecenia są konkretne i trafne.
-- [ ] **Teksty akcji mówią o „ostatniej wersji”** — na stronie recenzji jest tylko
-  jedna wersja, a etykiety panelu akcji są wspólne ze stroną studenta.
+- [x] ~~**Recenzja próbna bez evala treści**~~ — od 2026-11-01 `make eval-trial`.
+- [x] ~~**Teksty akcji mówią o „ostatniej wersji”**~~ — panel mówi ogólnie o pracy.
 - [ ] **`/reviews` pyta o pracę każdej recenzji osobno** — jedno zapytanie na wiersz.
   Przy kilkudziesięciu recenzjach trzeba zebrać to jednym zapytaniem.
-- [ ] **Potwierdzenie usunięcia wspomina notatki** — wspólne ze studentem, a jednorazówka
-  ich nie ma.
+- [x] ~~**Potwierdzenie usunięcia wspomina notatki**~~ — jednorazówka ma własny tekst.
 
 ---
 

@@ -51,8 +51,10 @@ export default function DeleteStudentConfirm({ student, onDeleted, onCancel }: P
         Usunąć {student.full_name} na zawsze?
       </h3>
       <p className="text-[13px] text-muted-strong">
-        Znikną notatki ze spotkań, wszystkie wersje pracy razem z plikami i wszystkie wyniki AI —
-        także po stronie serwisu AI. Tego nie da się cofnąć.
+        {student.is_one_off
+          ? "Znikną praca razem z plikiem i wszystkie wyniki AI"
+          : "Znikną notatki ze spotkań, wszystkie wersje pracy razem z plikami i wszystkie wyniki AI"}{" "}
+        — także po stronie serwisu AI. Tego nie da się cofnąć.
       </p>
       {student.status === "active" && (
         <p className="mt-2 text-[13px] text-muted-strong">

@@ -9,6 +9,7 @@ import type { ActionType, AgentAction } from "@/lib/api.types"
 const ORDER: ActionType[] = [
   "generate_review",
   "trial_review",
+  "draft_student_email",
   "defence_questions",
   "evaluate_methodology",
   "verify_bibliography",
