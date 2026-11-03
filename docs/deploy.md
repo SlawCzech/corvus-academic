@@ -155,9 +155,16 @@ echo test > /tmp/test.txt && rclone copy /tmp/test.txt r2:corvus-backups && rclo
 
 Kopie są szyfrowane (gpg) przed wysłaniem, więc R2 widzi tylko zaszyfrowane pliki.
 
-Opcjonalnie: darmowe konto na healthchecks.io, check „daily”, jego URL do
-`BACKUP_PING_URL`. Dostaniesz maila, jeśli przez dobę nie przyjdzie żaden
-udany backup.
+Darmowe konto na healthchecks.io, dwa checki — bez nich o awarii dowiesz się
+od testerów:
+
+- **backup**, okres 1 dzień: URL do `BACKUP_PING_URL`. Mail, gdy przez dobę nie
+  przyjdzie żaden udany backup.
+- **watch**, okres 5 minut, grace 10 minut: URL do `WATCH_PING_URL`. `watch.sh`
+  (cron co 5 minut) sprawdza `/api/health` i szuka w logach zdarzeń, o których
+  ktoś musi wiedzieć (`task_status_write_failed`, `token_store_check_failed_fail_open`).
+  Problem wysyła na `/fail` z opisem w treści; brak pingu znaczy, że leży serwer
+  albo cron.
 
 ### 7. GitHub
 
@@ -213,10 +220,11 @@ zanonimizowane albo za zgodą autora.
   która już z tej kolumny nie korzysta.
 - **Logi:** `ssh deploy@<IP>`, potem
   `cd /srv/corvus && IMAGE_TAG=$(cat .deployed-tag) docker compose -f docker-compose.prod.yml logs -f app agent-worker`.
-- **Monitoring:** UptimeRobot (darmowy), monitor HTTP(s) na
-  `https://corvus.saek.dev/api/health` co 5 minut. Ten adres odpowiada 200 także
-  przy `degraded`, żeby brak workera nie cofał deployu, więc martwy worker wychodzi
-  dopiero w body: monitor typu Keyword na `"status":"ok"`.
+- **Monitoring:** `watch.sh` co 5 minut, z crona, i check „watch” na
+  healthchecks.io (krok 6). `/api/health` odpowiada 200 także przy `degraded`, żeby
+  brak workera nie cofał deployu, więc skrypt czyta body. Log skryptu:
+  `/srv/corvus/backups/watch.log`. Na serwerze postawionym przed 2026-11-03 cron
+  trzeba dopisać ręcznie (`/etc/cron.d/corvus-watch`, jak w `setup-server.sh`).
 
 ## Odtworzenie z kopii
 

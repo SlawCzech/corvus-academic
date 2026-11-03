@@ -107,8 +107,8 @@ Zostaje:
 - [ ] **Zapis statusu z workera połyka błędy bazy** — `agent/src/infrastructure/task_status.py`
   loguje i idzie dalej, żeby awaria zapisu nie powodowała retry analizy, która się udała
   (kilka minut pracy LLM). Skutek: przy niedostępnej bazie wiersz zostaje nieświeży, a
-  jedynym śladem jest log `task_status_write_failed`. Wymaga alertu na ten event, tak samo
-  jak `token_store_check_failed_fail_open`.
+  jedynym śladem jest log `task_status_write_failed` — od 2026-11-03 `watch.sh` wysyła
+  na niego alert (check „watch” na healthchecks.io, [deploy.md](deploy.md)).
 
 - [x] ~~**Zawieszony worker zostawia akcję w `running` na zawsze**~~ — od 2026-09-30
   (ADR 0010) taski są potwierdzane po zakończeniu, a padnięty worker wznawia
@@ -158,7 +158,7 @@ Zostaje:
 - [ ] **Rotacja nie wykrywa kradzieży** — użycie odwołanego tokenu to zwykłe 401, nie
   unieważnia całej rodziny tokenów. Wymagałoby śledzenia rodzin w Redis.
 
-- [ ] **Fail-open w `RevokedTokenStore`** — jeśli Redis jest niedostępny, `is_revoked()` zwraca `False` (odwołane tokeny, od 2026-10-03 także access tokeny, są akceptowane). Celowy kompromis dostępność vs. bezpieczeństwo — wymaga alertu/monitoringu na log event `token_store_check_failed_fail_open`.
+- [ ] **Fail-open w `RevokedTokenStore`** — jeśli Redis jest niedostępny, `is_revoked()` zwraca `False` (odwołane tokeny, od 2026-10-03 także access tokeny, są akceptowane). Celowy kompromis dostępność vs. bezpieczeństwo; od 2026-11-03 `watch.sh` alarmuje na log event `token_store_check_failed_fail_open`.
 
 ### Funkcjonalność
 
