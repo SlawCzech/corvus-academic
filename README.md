@@ -19,7 +19,7 @@ Upload a PDF or DOCX thesis. Corvus analyses its structure, methodology, and com
 | Frontend | Next.js (TypeScript) |
 | app | FastAPI — auth/users/roles, document extraction, (soon) mentoring domain |
 | agent | FastAPI + LangGraph + Celery — analysis and review |
-| Models | Claude API / OpenAI via user-supplied key; local chat models off by default (ADR 0016) |
+| Models | Claude API / OpenAI, always on the promoter's own key (ADR 0022) |
 | Broker | Redis |
 | Database | PostgreSQL + Alembic |
 

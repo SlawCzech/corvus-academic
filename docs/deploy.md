@@ -2,7 +2,7 @@
 
 > Jeden VPS (OVHcloud, Kanada), `docker compose`, Caddy z HTTPS, wdrożenie po każdym merge'u
 > do `main`. Decyzje: [ADR 0013](adr/0013-a-server-without-local-models.md)
-> (bez lokalnych modeli czatu). Pliki serwera: [`infra/deploy/`](../infra/deploy/).
+> (bez modeli lokalnych, ADR 0022). Pliki serwera: [`infra/deploy/`](../infra/deploy/).
 
 ## Jak to wygląda
 

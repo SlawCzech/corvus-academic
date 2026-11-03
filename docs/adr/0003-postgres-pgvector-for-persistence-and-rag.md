@@ -1,6 +1,6 @@
 # ADR 0003: Keep Postgres for everything, add pgvector for guideline RAG
 
-- Status: Accepted
+- Status: Accepted; the retrieval part superseded by [ADR 0021](0021-requirements-go-into-the-prompt-whole.md)
 - Date: 2026-09-05
 
 ## Context

@@ -1,6 +1,6 @@
 # ADR 0007: The admin decides which local models promoters may use
 
-- Status: Accepted
+- Status: Superseded by [ADR 0022](0022-every-action-runs-on-a-providers-key.md)
 - Date: 2026-09-23
 - Extends: [ADR 0004](0004-self-hosted-default-model-with-byok.md)
 

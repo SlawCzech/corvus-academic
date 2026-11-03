@@ -208,8 +208,8 @@ Zostaje:
   `app` → `agent` to jawny HTTP w sieci compose (TLS między serwisami, przy deployu).
 
 - [ ] **Nie można wybrać modelu u dostawcy** — BYOK używa stałych domyślnych
-  (`claude-sonnet-5-5`, `gpt-6.1-sol`); parametr `model` dotyczy tylko Ollamy, bo to
-  tag lokalnego modelu. Do wystawienia razem z listą modeli per dostawca.
+  (`claude-sonnet-5-5`, `gpt-6.1-sol`); parametru `model` od ADR 0022 nie ma.
+  Do wystawienia razem z listą modeli per dostawca.
 
 - [x] ~~**Brak walidacji klucza przy zapisie**~~ — `PATCH /settings/api-key` pyta
   dostawcę o listę modeli; odrzucony klucz to 422 i nie jest zapisywany (2026-09-30).
@@ -330,9 +330,8 @@ są nieaktualne. Zostają dla historii.
   prompt dawał 3 z 7, po strojeniu 20 z 21 (`agent/evals/README.md`).
 - [x] **Pełna recenzja bez evala po zmianie kontekstu** — puszczona 2026-11-01 na
   Claude, poziom sprzed zmian. Na `qwen3` nadal niezmierzona.
-- [ ] **Przypadki graniczne fragmentów są niestabilne na `qwen3`** — `cel-nie-caly` i
-  `runda-druga` przechodziły 2 z 3 powtórzeń, a po strojeniu pod Claude `qwen3` nie
-  był mierzony. Werdykt i tak ustawia promotor.
+- [x] ~~**Przypadki graniczne fragmentów są niestabilne na `qwen3`**~~ — nieaktualne:
+  modeli lokalnych nie ma od ADR 0022.
 - [ ] **Na Claude `obszar-bez-wymagan` przechodzi 2 z 3** — raz obszar zamienił się w
   podpowiedź teorii.
 - [ ] **Poziom magisterki przy fragmentach bez evala** — `review_fragment` dostaje typ
@@ -406,4 +405,4 @@ odłożone:
 
 ---
 
-*Ostatnia aktualizacja: 2026-11-03 (sprzątanie długu: CSP, izolacja ekstrakcji, limiter, sesje po zmianie hasła)*
+*Ostatnia aktualizacja: 2026-11-03 (bez embeddingów i modeli lokalnych: ADR 0021, 0022)*

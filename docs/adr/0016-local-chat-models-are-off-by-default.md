@@ -1,6 +1,6 @@
 # ADR 0016: Local chat models are off by default
 
-- Status: Accepted
+- Status: Superseded by [ADR 0022](0022-every-action-runs-on-a-providers-key.md)
 - Date: 2026-11-01
 - Amends: [ADR 0004](0004-self-hosted-default-model-with-byok.md) (the local model as the default), [ADR 0007](0007-admin-managed-local-model-allowlist.md) (the admin's model page), [ADR 0013](0013-a-server-without-local-models.md) (the switch defaults to on)
 
