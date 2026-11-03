@@ -100,8 +100,6 @@ Referencje między kontekstami to gołe UUID bez kluczy obcych.
 | redis | 6379 | Redis | broker Celery + blacklist refresh tokenów |
 | postgres | 5432 | PostgreSQL 16 + pgvector | schematy identity, mentoring, guidelines, analysis |
 | flower | 5555 | Celery Flower | monitoring kolejki |
-| jenkins | 8080 | Jenkins LTS | CI/CD pipeline (jeszcze nieskonfigurowany — Faza 6) |
-| sonarqube | 9000 | SonarQube CE | analiza jakości kodu (jeszcze nieskonfigurowany — Faza 6) |
 
 `agent` i `agent-worker` współdzielą ten sam obraz Dockera —
 `agent` uruchamia serwer FastAPI (przyjmuje żądania, zapisuje rekord
@@ -368,8 +366,8 @@ corvus/
 │   └── pyproject.toml
 │
 ├── infra/
-│   ├── docker-compose.yml        # 10 serwisów: frontend, app, agent, agent-worker,
-│   │                                flower, ollama, redis, postgres, jenkins, sonarqube
+│   ├── docker-compose.yml        # 7 serwisów: frontend, app, agent, agent-worker,
+│   │                                flower, redis, postgres
 │   └── docker-compose.override.yml  # lokalne overrides (hot-reload, DEBUG)
 │
 ├── docs/
@@ -537,7 +535,6 @@ Pełna referencja: [.env.example](../.env.example).
 | `FERNET_KEY` | app | szyfrowanie kluczy API użytkowników |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | app | seed pierwszego konta admina (wymagane, min. 12 znaków hasła) |
 | `AGENT_URL` | app | adres serwisu agent (`http://agent:8002`) |
-| `SONAR_TOKEN` / `SONAR_HOST_URL` | CI/CD | jeszcze nieużywane — Faza 6 |
 
 Generowanie kluczy:
 ```bash
@@ -552,8 +549,8 @@ python -c "import secrets; print(secrets.token_hex(32))"
 
 ## CI/CD pipeline
 
-Testy, lint i typy sprawdza GitHub Actions przy każdym PR i pushu na `main`.
-Jenkins tylko wdraża to, co już przeszło.
+Testy, lint i typy sprawdza GitHub Actions przy każdym PR i pushu na `main`;
+po zielonym CI na `main` wdraża `cd.yml` ([deploy.md](deploy.md)).
 
 ```
 git push / PR
@@ -563,19 +560,14 @@ GitHub Actions (.github/workflows/ci.yml)
   ├── app         uv sync --frozen · ruff · pyright src · pytest
   ├── agent       uv sync --frozen · ruff · pyright src · pytest
   ├── frontend    npm ci · eslint · tsc --noEmit · vitest
-  ├── migrations  wszystkie trzy lineage'y na pustej bazie
-  │               (obraz pgvector/pgvector:pg16 — migracja 0004 go wymaga)
-  └── sonarqube   po przejściu trzech pierwszych; pomijany, gdy nie ma
-                  SONAR_TOKEN (serwer jest self-hosted)
+  └── migrations  wszystkie lineage'y na pustej bazie
+                  (obraz pgvector/pgvector:pg16 — migracja 0004 go wymaga)
   │
-  ▼ (merge do main)
+  ▼ (merge do main, CI zielone)
   │
-Jenkins (infra/jenkins/Jenkinsfile)
-  ├── Checkout + .env z Jenkins credentials
-  ├── docker compose build
-  ├── Migracje (identity, mentoring, analysis) PRZED startem kontenerów
-  ├── docker compose up -d --remove-orphans
-  └── Healthcheck /health (raportuje też stan agenta), do 150 s
+GitHub Actions (.github/workflows/cd.yml)
+  ├── obrazy → GHCR, tag = commit
+  └── ssh → infra/deploy/deploy.sh: pull, up -d, healthchecki, rollback
 ```
 
 `pyright` w CI sprawdza **`src`**, nie testy: w testach zostaje ok. 250 błędów

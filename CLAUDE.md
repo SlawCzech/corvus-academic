@@ -64,8 +64,6 @@ agent/src/           — analysis + review: graf LangGraph, węzły, recenzja
 | redis | 6379 | Redis | — |
 | postgres | 5432 | PostgreSQL 16 + Alembic (obraz z pgvector, ADR 0021) | — |
 | flower | 5555 | Celery Flower | — |
-| jenkins | 8080 | Jenkins | — |
-| sonarqube | 9000 | SonarQube CE | — |
 
 Jedyny podział sieciowy: szybkie synchroniczne CRUD (`app`) vs wolne
 asynchroniczne wywołania LLM (`agent`) — patrz ADR 0002.
@@ -227,16 +225,12 @@ corvus/
 ├── infra/
 │   ├── docker-compose.yml
 │   ├── docker-compose.override.yml   # lokalne overrides
-│   ├── jenkins/
-│   │   └── Jenkinsfile
-│   ├── sonarqube/
-│   │   └── sonar-project.properties
 │   └── postgres/
 │       └── init.sql
 │
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml            # testy + SonarQube przy PR
+│       ├── ci.yml            # testy, lint, typy i migracje przy PR
 │       └── cd.yml            # build + deploy przy merge do main
 │
 ├── .pre-commit-config.yaml
@@ -330,12 +324,10 @@ Pliki są w repo — poniżej tylko co gdzie leży i dlaczego tak:
 
 | Plik | Co robi |
 |---|---|
-| [.github/workflows/ci.yml](.github/workflows/ci.yml) | PR i push na `main`: `app`, `agent`, `frontend`, `migrations`, `sonarqube` |
+| [.github/workflows/ci.yml](.github/workflows/ci.yml) | PR i push na `main`: `app`, `agent`, `frontend`, `migrations` |
 | [.pre-commit-config.yaml](.pre-commit-config.yaml) | `ruff --fix`, eslint, higiena plików, `detect-private-key` |
 | [.github/workflows/cd.yml](.github/workflows/cd.yml) | po zielonym CI na `main`: obrazy → GHCR → ssh → `infra/deploy/deploy.sh` |
 | [infra/deploy/](infra/deploy/) | produkcja: compose bez portów poza Caddy, backup, setup serwera — [docs/deploy.md](docs/deploy.md) |
-| [infra/jenkins/Jenkinsfile](infra/jenkins/Jenkinsfile) | build → migracje → `compose up -d` → healthcheck (lokalnie; produkcja idzie przez `cd.yml`) |
-| [infra/sonarqube/sonar-project.properties](infra/sonarqube/sonar-project.properties) | trzy pakiety, jeden projekt |
 
 Zasady, które warto znać przed zmianą któregokolwiek z nich:
 
@@ -346,12 +338,11 @@ Zasady, które warto znać przed zmianą któregokolwiek z nich:
 - **Job `migrations` stawia schemat od zera** na obrazie `pgvector/pgvector:pg16`.
   Zwykły `postgres` przeszedłby CI i wywrócił się przy deployu na
   `CREATE EXTENSION vector`.
-- **Produkcja (`corvus.saek.dev`) wdraża się z `cd.yml`, nie z Jenkinsa.**
+- **Produkcja (`corvus.saek.dev`) wdraża się z `cd.yml`.** Jenkinsa i SonarQube
+  nie ma od 2026-11-03: nikt ich nie używał, a CI robi to samo.
   `.env` mieszka tylko na serwerze; `deploy.sh` czeka na healthchecki i sam
   wraca do poprzedniego obrazu, gdy nowy nie wstanie. Bez modeli lokalnych
   (ADR 0022), backup bazy codziennie.
-- **Sonar jest pomijany, gdy nie ma `SONAR_TOKEN`** — czerwony krzyżyk na każdym
-  buildzie forka uczy ludzi ignorować czerwone krzyżyki.
 - **Hooki nie odpalają `pytest` ani `pyright`** — 55 s na commit to hook wyłączany
   przez `--no-verify`. Od tego jest CI.
 - **Granic kontekstów w `app` pilnuje `lint-imports` w CI**, z tego samego powodu
@@ -449,7 +440,7 @@ class SecretService:
 
 Zasady:
 - `.env` zawsze w `.gitignore`
-- Klucze produkcyjne wyłącznie w GitHub Secrets i Jenkins Credentials
+- Klucze produkcyjne wyłącznie w GitHub Secrets i w `.env` na serwerze
 - Klucze API użytkowników w Postgres jako zaszyfrowany `text`, nigdy plain text
 - Klucz usera (BYOK) odszyfrowywany wyłącznie w żądaniu, które go zaraz użyje,
   i tylko ten jeden, którego dostawcę wybrano dla akcji;
@@ -565,9 +556,6 @@ JWT_ALGORITHM=HS256
 MAX_UPLOAD_BYTES=26214400                # 25 MB
 RETENTION_SWEEP_INTERVAL_HOURS=24        # 0 = sweep tylko z `make purge-drafts`
 
-# SonarQube
-SONAR_TOKEN=                             # z panelu SonarQube
-SONAR_HOST_URL=http://sonarqube:9000
 ```
 
 ---
@@ -584,5 +572,4 @@ SONAR_HOST_URL=http://sonarqube:9000
 | Ruff | [docs.astral.sh/ruff](https://docs.astral.sh/ruff) |
 | Pyright | [github.com/microsoft/pyright](https://github.com/microsoft/pyright) |
 | DDD (Evans) | _Domain-Driven Design_ — Eric Evans |
-| SonarQube | [docs.sonarsource.com](https://docs.sonarsource.com) |
 | Claude Code | [docs.claude.ai/claude-code](https://docs.anthropic.com/claude-code) |

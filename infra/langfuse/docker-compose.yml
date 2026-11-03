@@ -5,13 +5,13 @@
 # Start it with `make langfuse-up`, then open http://localhost:3100.
 #
 # Why self-hosted and not LangSmith: every traced prompt carries a student's
-# thesis text. Sending that to a SaaS in another jurisdiction contradicts the
-# point of the local default model (ADR 0004); here the traces stay on the
+# thesis text. Sending that to one more SaaS, besides the provider the
+# promoter chose, is a copy nobody asked for; here the traces stay on the
 # same machine as the thesis itself.
 #
 # Trimmed from https://github.com/langfuse/langfuse/blob/main/docker-compose.yml
 # (v4). Ports are moved off the ones Corvus already binds — 3000 (frontend),
-# 9000 (SonarQube), 6379, 5432 — and only the web UI is published at all.
+# 6379, 5432 — and only the web UI is published at all.
 #
 # The project and its API keys are created on first start from the
 # LANGFUSE_INIT_* variables below, so the agent can send traces without anyone

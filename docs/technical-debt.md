@@ -285,8 +285,7 @@ są nieaktualne. Zostają dla historii.
   obrazy raz, taguje je commitem i wypycha do GHCR, a serwer je ciągnie. Rollback to
   poprzedni obraz: `deploy.sh` wraca do niego sam, gdy nowy nie wstanie, a ręcznie
   służy do tego ponowne uruchomienie starszego przebiegu Deploy
-  ([deploy.md](deploy.md)). Migracji nie cofa. Jenkins nadal buduje na hoście, ale
-  to już tylko ścieżka lokalna.
+  ([deploy.md](deploy.md)). Migracji nie cofa. Jenkinsa nie ma od 2026-11-03.
 
 - [x] ~~**Brak deploymentu innego niż lokalny compose**~~ — od 2026-10-09 produkcja
   (`corvus.saek.dev`) wdraża się po merge'u do `main` na VPS za Caddy z HTTPS
@@ -295,8 +294,8 @@ są nieaktualne. Zostają dla historii.
 - [ ] **Brak środowiska staging** — jest tylko lokalny compose i produkcja, więc
   merge do `main` po zielonym CI idzie od razu na serwer.
 
-- [ ] **SonarQube nieskonfigurowany w CI** — kontener `sonarqube` chodzi lokalnie, ale
-  nikt nie ustawił `SONAR_TOKEN`; job w CI się pomija.
+- [x] ~~**SonarQube nieskonfigurowany w CI**~~ — usunięty 2026-11-03 razem z
+  Jenkinsem: nikt nie ustawił `SONAR_TOKEN`, a ruff, pyright i eslint w CI już są.
 
 - [ ] **Brak testów E2E w CI** — pipeline sprawdza jednostki i migracje, nikt nie
   uruchamia prawdziwej akcji przez `docker compose` (wymagałoby modelu w runnerze).

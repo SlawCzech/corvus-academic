@@ -7,8 +7,7 @@
 #   - no `ports:` except Caddy's 80/443 — Postgres, Redis and the agent
 #     answer only on the internal network. Docker's published ports
 #     bypass ufw, so "not published" is the only firewall that holds here;
-#   - no Flower, Jenkins or SonarQube — Flower would show every queued task,
-#     and the other two are CI tools;
+#   - no Flower — it would show every queued task;
 #   - no Ollama — chat runs on the promoters' own keys (ADR 0013) and
 #     nothing embeds anything (ADR 0021).
 #

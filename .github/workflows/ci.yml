@@ -53,12 +53,6 @@ jobs:
           ADMIN_PASSWORD: ci-admin-password-123
           AGENT_URL: http://agent:8002
 
-      - uses: actions/upload-artifact@v6
-        if: always()
-        with:
-          name: coverage-app
-          path: app/coverage.xml
-
   agent:
     name: agent (analysis · review)
     runs-on: ubuntu-latest
@@ -90,12 +84,6 @@ jobs:
         env:
           DATABASE_URL: postgresql+asyncpg://user:pass@localhost:5432/thesis_reviewer
           JWT_SECRET: ci-secret-key-that-is-long-enough-32ch
-
-      - uses: actions/upload-artifact@v6
-        if: always()
-        with:
-          name: coverage-agent
-          path: agent/coverage.xml
 
   frontend:
     runs-on: ubuntu-latest
@@ -158,27 +146,3 @@ jobs:
         run: |
           uv sync --frozen
           uv run alembic upgrade head
-
-  sonarqube:
-    needs: [app, agent, frontend]
-    runs-on: ubuntu-latest
-    # Job-level so the step's `if` can see it: GitHub evaluates `if` before a
-    # step's own `env` block exists.
-    env:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - uses: actions/download-artifact@v7
-        with:
-          pattern: coverage-*
-          path: coverage
-
-      # Skipped rather than failed when no server is configured: SonarQube is
-      # self-hosted here, and a fork or a fresh clone has no token.
-      - name: Scan
-        if: env.SONAR_TOKEN != ''
-        uses: SonarSource/sonarqube-scan-action@v8
