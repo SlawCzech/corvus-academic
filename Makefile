@@ -3,7 +3,7 @@ COMPOSE = docker compose -f infra/docker-compose.yml
 # sets DEBUG=true, which the entrypoints turn into uvicorn --reload.
 COMPOSE_DEV = $(COMPOSE) -f infra/docker-compose.override.yml
 
-.PHONY: help up build down down-volumes logs ps restart migrate ingest-guidelines seed-guidelines seed-demo demo-reset purge-drafts \
+.PHONY: help up build down down-volumes logs ps restart migrate seed-guidelines seed-demo demo-reset purge-drafts \
         dev dev-build eval eval-fragments eval-defence eval-progress eval-maps langfuse-up langfuse-down \
         front-up front-down front-restart front-logs front-dev \
         shell-app shell-agent
@@ -39,9 +39,6 @@ migrate:  ## Run database migrations (all app lineages: identity, mentoring, gui
 	$(COMPOSE) run --rm app alembic -c alembic_identity.ini upgrade head
 	$(COMPOSE) run --rm app alembic -c alembic_mentoring.ini upgrade head
 	$(COMPOSE) run --rm app alembic -c alembic_guidelines.ini upgrade head
-
-ingest-guidelines:  ## Embed the university requirements into the vector store
-	$(COMPOSE) run --rm agent python scripts/ingest_guidelines.py
 
 seed-guidelines:  ## Fill the guideline catalog (UPDATE=1 publishes changed seed data as a new version)
 	$(COMPOSE) run --rm app python scripts/seed_guidelines.py $(if $(UPDATE),--update)

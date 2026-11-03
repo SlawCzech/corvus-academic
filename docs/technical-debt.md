@@ -227,26 +227,29 @@ Zostaje:
 
 ---
 
-## RAG nad wytycznymi (Faza 5)
+## RAG nad wytycznymi (Faza 5) — ✅ usunięty 2026-11-03 (ADR 0021)
+
+Wyszukiwanie zniknęło razem z tabelą i kontenerem Ollamy, więc poniższe punkty
+są nieaktualne. Zostają dla historii.
 
 - [x] ~~**Model embeddingów nie jest jeszcze uruchomiony**~~ — `nomic-embed-text`
   pobrany do kontenera `ollama` (2026-09-06), wytyczne zaingestowane (14 + 18 chunków,
   768 wymiarów), retrieval działa na żywo. Serwer czatu tego użytkownika nie obsługuje
   embeddingów, dlatego doszło osobne `EMBEDDING_BASE_URL`.
 
-- [ ] **Krótkie podsekcje szumią w wynikach** — chunki po 50-60 znaków (np. „1.1 Strona
+- [x] ~~**Krótkie podsekcje szumią w wynikach**~~ — nieaktualne (ADR 0021): chunki po 50-60 znaków (np. „1.1 Strona
   tytułowa") potrafią trafić do top-k przy zapytaniu, z którym nie mają wiele wspólnego.
   Do rozważenia: łączenie sąsiednich krótkich podsekcji albo próg minimalnej długości.
 
-- [ ] **Brak indeksu ANN** — kolumna `embedding` jest bezwymiarowa, więc nie da się na
+- [x] ~~**Brak indeksu ANN**~~ — nieaktualne (ADR 0021): kolumna `embedding` jest bezwymiarowa, więc nie da się na
   niej założyć HNSW/IVFFlat. Przy kilkunastu chunkach na typ pracy skan sekwencyjny jest
   szybszy i dokładniejszy; przy większym korpusie trzeba ustalić wymiar i dołożyć indeks.
 
-- [ ] **Zapytanie to pierwsze 2000 znaków pracy** — przybliżenie: nasz „query" to
+- [x] ~~**Zapytanie to pierwsze 2000 znaków pracy**~~ — nieaktualne (ADR 0021): przybliżenie: nasz „query" to
   początek dokumentu (temat, problem, metoda). Lepsze byłoby zapytanie per sekcja
   wymogów albo streszczenie pracy.
 
-- [ ] **Ingestia nie jest wersjonowana** — zmiana pliku wymogów wymaga ręcznego
+- [x] ~~**Ingestia nie jest wersjonowana**~~ — nieaktualne (ADR 0021): zmiana pliku wymogów wymaga ręcznego
   `make ingest-guidelines`; nic nie wykrywa, że wektory są starsze niż plik.
 
 ---

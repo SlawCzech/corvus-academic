@@ -72,8 +72,6 @@ services:
     depends_on:
       agent:
         condition: service_healthy
-      ollama:
-        condition: service_started
     # The image's own HEALTHCHECK asks the HTTP API on :8002, which a Celery
     # worker does not serve — inherited unchanged, it reports every healthy
     # worker as unhealthy. Ask Celery instead, over the broker it is listening on.
@@ -97,14 +95,6 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  ollama:
-    image: ollama/ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    restart: unless-stopped
-
   redis:
     image: redis:7-alpine
     ports:
@@ -118,8 +108,8 @@ services:
     restart: unless-stopped
 
   postgres:
-    # Postgres 16 + pgvector, built from infra/postgres/Dockerfile — the
-    # guideline embeddings live in the same database as everything else.
+    # Postgres 16 + pgvector, built from infra/postgres/Dockerfile — an old
+    # migration (agent 0004) still creates the extension on a fresh database.
     build:
       context: ./postgres
       dockerfile: Dockerfile
@@ -163,7 +153,6 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  ollama_data:
   jenkins_data:
   sonarqube_data:
   sonarqube_logs:

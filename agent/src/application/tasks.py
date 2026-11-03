@@ -11,7 +11,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.types import Command
 
 from src.application.graph import CompiledActionGraph, build_action_graph
-from src.application.guidelines import retrieve_relevant_guidelines
+from src.application.guidelines import load_guidelines
 from src.application.nodes.promoter_review import PROMOTER_REVIEWS_FINDINGS
 from src.application.state import ActionState
 from src.domain.action import ActionType, TaskStatus
@@ -48,9 +48,8 @@ _RESULT_KEYS = (
 )
 
 
-# Actions judged against university requirements. The guideline text is
-# `agent`-owned static data (files today, pgvector in Phase 5), so it is loaded
-# here rather than shipped over the wire by `app`.
+# Actions judged against university requirements. Without a guideline set from
+# `app`, they read the agent's own requirements file.
 _ACTIONS_NEEDING_GUIDELINES = frozenset(
     {
         ActionType.GENERATE_REVIEW,
@@ -63,14 +62,13 @@ _ACTIONS_NEEDING_GUIDELINES = frozenset(
 def _with_guidelines(action_type: str, context: dict[str, Any]) -> dict[str, Any]:
     """Add the university requirements to the context, if the action needs them.
 
-    Retrieved against the thesis rather than pasted whole: the sections that
-    bear on this work, plus the rules that define how to judge it.
+    `app` sends the rubric of the student's guideline set when there is one;
+    otherwise the agent's own requirements file for the thesis type, whole.
     """
     if action_type not in _ACTIONS_NEEDING_GUIDELINES or "guidelines" in context:
         return context
     thesis_type = str(context.get("thesis_type", ThesisType.BACHELOR))
-    guidelines = retrieve_relevant_guidelines(thesis_type, str(context.get("text", "")))
-    return {**context, "guidelines": guidelines}
+    return {**context, "guidelines": load_guidelines(thesis_type)}
 
 
 def _to_json(obj: Any) -> Any:  # noqa: ANN401

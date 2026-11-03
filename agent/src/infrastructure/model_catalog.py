@@ -38,11 +38,7 @@ class ModelCatalog:
 def _is_embedding(name: str, family: str) -> bool:
     # Embedding models sit in the same Ollama and answer /api/tags alike, but
     # a chat request to one fails. Ollama marks them only by family.
-    return (
-        name.split(":")[0] == settings.embedding_model.split(":")[0]
-        or "embed" in name
-        or family.endswith("bert")
-    )
+    return "embed" in name or family.endswith("bert")
 
 
 def _as_dict(value: object) -> dict[str, object]:

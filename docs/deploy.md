@@ -9,7 +9,7 @@
 ```
 przeglądarka ──https──► Caddy :443 ──► frontend ──► app ──► agent / agent-worker ──► Claude / OpenAI
                          (certyfikat                  │          │                    (klucz promotora)
-                          sam się odnawia)          postgres   redis   ollama (tylko embeddingi)
+                          sam się odnawia)          postgres   redis
 
 GitHub: PR → CI → merge → CI na main → Deploy: obrazy → GHCR → ssh → deploy.sh
 ```
@@ -178,13 +178,11 @@ Workflow `Deploy` startuje sam po zielonym CI na `main`. Pierwszy raz można go
 uruchomić ręcznie: **Actions → Deploy → Run workflow**. Pierwszy build trwa
 dłużej (brak cache), kolejne kilka minut.
 
-Gdy jest zielony, jednorazowo na serwerze wczytaj wytyczne uczelni i ich
-embeddingi:
+Gdy jest zielony, jednorazowo na serwerze wczytaj wytyczne uczelni:
 
 ```bash
 cd /srv/corvus && export IMAGE_TAG=$(cat .deployed-tag)
 docker compose -f docker-compose.prod.yml run --rm app python scripts/seed_guidelines.py
-docker compose -f docker-compose.prod.yml run --rm agent python scripts/ingest_guidelines.py
 ```
 
 Potem `https://corvus.saek.dev`, zaloguj się adminem (`ADMIN_EMAIL` /

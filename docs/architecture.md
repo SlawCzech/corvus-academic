@@ -41,14 +41,11 @@ OpenAI, po jednym na dostawcę) w profilu i przy każdej akcji wybiera, czy
 jedzie ona na któryś z nich, czy na lokalną Ollamę; bez wyboru liczy się
 lokalnie ([ADR 0011](adr/0011-a-key-per-provider-chosen-per-action.md)). Klucz jest szyfrowany Fernetem, odszyfrowywany tylko w
 żądaniu, które go użyje, i nigdy nie trafia do stanu grafu ani do bazy akcji.
-**Zrobione (Faza 5):** wytyczne uczelniane nie są już wklejane w całości do
-promptu — leżą w `analysis.guideline_chunks` pocięte na sekcje i podsekcje,
-z embeddingami, a akcja dostaje te fragmenty, które dotyczą jej pracy (plus
-zawsze sekcję definiującą wagi błędów). Model `nomic-embed-text` jest pobrany
-i wytyczne zaingestowane: 14 chunków dla pracy licencjackiej, 18 dla
-magisterskiej; zapytanie o formatowanie wyciąga inne sekcje niż o bibliografię.
-Bez zaingestowanych wektorów albo bez modelu embeddingów wszystko działa jak
-wcześniej — cały plik.
+**Zrobione (Faza 5), potem cofnięte (2026-11-03, ADR 0021):** wytyczne szły
+przez embeddingi i pgvector, a akcja dostawała sekcje wyszukane pod swoją pracę.
+Wyszukiwanie działało tylko dla studenta bez zestawu wytycznych, nad plikami po
+kilka KB, więc model z chmury dostaje teraz cały plik, a Ollama zniknęła z
+deployu.
 **Zrobione (Faza 6):** CI/CD — GitHub Actions, Jenkins, pre-commit.
 **Zrobione (2026-09-23, ADR 0006):** wytyczne uczelni są danymi, a nie plikami
 w obrazie agenta — kontekst `guidelines` w `app` (uczelnie → zestawy per typ
@@ -101,7 +98,7 @@ Referencje między kontekstami to gołe UUID bez kluczy obcych.
 | agent-worker | — | Celery | worker wykonujący graf LangGraph (ten sam obraz co `agent`) |
 | ollama | 11434 | Ollama | lokalne modele LLM |
 | redis | 6379 | Redis | broker Celery + blacklist refresh tokenów |
-| postgres | 5432 | PostgreSQL 16 + pgvector | schematy identity, mentoring, guidelines, analysis (w tym embeddingi wytycznych) |
+| postgres | 5432 | PostgreSQL 16 + pgvector | schematy identity, mentoring, guidelines, analysis |
 | flower | 5555 | Celery Flower | monitoring kolejki |
 | jenkins | 8080 | Jenkins LTS | CI/CD pipeline (jeszcze nieskonfigurowany — Faza 6) |
 | sonarqube | 9000 | SonarQube CE | analiza jakości kodu (jeszcze nieskonfigurowany — Faza 6) |
@@ -206,12 +203,8 @@ app :8000
        Gdy student ma wybrany zestaw, rubrykę opublikowanej wersji wkłada do
        kontekstu `app` (klucz `guidelines`), a `input_ref` akcji zapisuje
        `guideline_version_id`. W przeciwnym razie wytyczne uczelniane dokłada
-       `agent` (dane statyczne, których jest właścicielem) — nie cały plik,
-       tylko sekcje wyszukane pod tę pracę (pgvector, `nomic-embed-text`,
-       768 wymiarów) plus sekcja definiująca wagi błędów, zawsze.
-       Embeddingi liczy `EMBEDDING_BASE_URL`, który nie musi być tym samym
-       serwerem co modele czatu — serwer czatu bywa bez embeddingów.
-       Brak ingestii albo brak modelu → fallback na cały dokument.
+       `agent` (dane statyczne, których jest właścicielem) — cały plik
+       dla typu pracy, bez wyszukiwania (ADR 0021).
 
        Stan grafu (ActionState) jest wspólny dla wszystkich akcji: to, co
        specyficzne dla akcji, siedzi w `context`, dzięki czemu nowa akcja to

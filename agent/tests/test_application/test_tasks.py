@@ -413,9 +413,9 @@ def test_review_actions_get_the_university_requirements() -> None:
     with (
         patch("src.application.tasks.build_action_graph", return_value=graph),
         patch(
-            "src.application.tasks.retrieve_relevant_guidelines",
+            "src.application.tasks.load_guidelines",
             return_value=_GUIDELINES,
-        ) as retrieve,
+        ) as load,
     ):
         run_action.apply(
             args=(
@@ -426,8 +426,7 @@ def test_review_actions_get_the_university_requirements() -> None:
             )
         )
 
-    # Retrieved against the thesis, so both the type and the text are needed.
-    retrieve.assert_called_once_with("master_article", _TEXT)
+    load.assert_called_once_with("master_article")
     call_state: dict[str, Any] = graph.invoke.call_args[0][0]
     assert call_state["context"]["guidelines"] == _GUIDELINES
 
@@ -438,13 +437,13 @@ def test_other_actions_are_not_given_guidelines() -> None:
 
     with (
         patch("src.application.tasks.build_action_graph", return_value=graph),
-        patch("src.application.tasks.retrieve_relevant_guidelines") as retrieve,
+        patch("src.application.tasks.load_guidelines") as load,
     ):
         run_action.apply(
             args=(ACTION_ID, ActionType.PROPOSE_TOPIC, STUDENT_ID, {"detail": "x"})
         )
 
-    retrieve.assert_not_called()
+    load.assert_not_called()
     call_state: dict[str, Any] = graph.invoke.call_args[0][0]
     assert "guidelines" not in call_state["context"]
 

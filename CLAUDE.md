@@ -18,7 +18,7 @@ Lokalna aplikacja webowa wspomagająca promotorów i recenzentów w analizie stu
 - Analiza pracy w czterech wymiarach:
   - struktura i spójność rozdziałów
   - metodologia i źródła bibliograficzne
-  - zgodność z wymogami uczelnianymi (RAG)
+  - zgodność z wymogami uczelnianymi
   - generowanie szkicu recenzji z oceną punktową
 - Wybór modelu AI: komercyjny (Claude API / OpenAI) na kluczu promotora; lokalny (Ollama) tylko po włączeniu `LOCAL_MODELS_ENABLED`
 - Historia analiz i raportów per użytkownik
@@ -37,7 +37,7 @@ Lokalna aplikacja webowa wspomagająca promotorów i recenzentów w analizie stu
 > dokumentu na platformę mentoringową (studenci, notatki, predefiniowane akcje AI).
 > **Wszystkie sześć faz pivotu jest zrobionych**: konsolidacja serwisów, domena
 > mentoringowa, sześć akcji AI, frontend oparty o studentów, BYOK, RAG nad
-> wytycznymi (pgvector) i CI/CD. Decyzje: [docs/adr/](docs/adr/) · plan i status faz:
+> wytycznymi (później usunięty, ADR 0021) i CI/CD. Decyzje: [docs/adr/](docs/adr/) · plan i status faz:
 > [docs/specs/mentoring-platform-implementation-plan.md](docs/specs/mentoring-platform-implementation-plan.md).
 > Sekcja 9 poniżej (kolejność implementacji) jest **nieaktualna** — zastąpiona tym planem.
 
@@ -61,9 +61,8 @@ agent/src/           — analysis + review: graf LangGraph, węzły, recenzja
 | app | 8000 | FastAPI, Postgres | identity + document + mentoring + guidelines |
 | agent | 8002 | FastAPI, LangGraph | analysis + review |
 | agent-worker | — | Celery | wykonuje graf (ten sam obraz co agent) |
-| ollama | 11434 | Ollama | — |
 | redis | 6379 | Redis | — |
-| postgres | 5432 | PostgreSQL 16 + pgvector + Alembic | — |
+| postgres | 5432 | PostgreSQL 16 + Alembic (obraz z pgvector, ADR 0021) | — |
 | flower | 5555 | Celery Flower | — |
 | jenkins | 8080 | Jenkins | — |
 | sonarqube | 9000 | SonarQube CE | — |
@@ -217,8 +216,6 @@ corvus/
 │   │   │   └── tasks.py      # Celery: run_action
 │   │   └── infrastructure/
 │   │       ├── llm_factory.py   # BYOK (ContextVar) → Claude/OpenAI, inaczej Ollama
-│   │       ├── embeddings.py    # model embeddingów (lokalny, zawsze)
-│   │       ├── guideline_store.py  # wyszukiwanie chunków (pgvector)
 │   │       ├── logging.py       # configure_logging — wołane z main.py i celery_app.py
 │   │       ├── task_status.py
 │   │       └── repositories.py
@@ -499,7 +496,7 @@ Klucz w kolejce Celery jest zaszyfrowany — przy late acks wiadomość leży w 
 przez cały przebieg i widać ją we Flower —
 [ADR 0012](docs/adr/0012-seal-the-provider-key-for-the-task-queue.md).
 Na produkcji nie ma lokalnych modeli czatu: `LOCAL_MODELS_ENABLED=false`, akcja
-bez dostawcy to 409, embeddingi zostają na lokalnej Ollamie —
+bez dostawcy to 409 —
 [ADR 0013](docs/adr/0013-a-server-without-local-models.md).
 Fragmenty pracy (rozdział, część literaturowa) to osobny byt niż wersje pracy, bo
 akcje czytają „ostatnią wersję”: część pracy ma rundy, werdykt ustawia promotor,
@@ -512,7 +509,7 @@ wymagania: węzły oceniające sens pracy dostają je we wspólnym bloku
 [ADR 0015](docs/adr/0015-research-area-and-aim-on-the-student.md).
 Lokalne modele czatu są domyślnie wyłączone wszędzie, nie tylko na produkcji:
 `LOCAL_MODELS_ENABLED=true` przywraca Ollamę, kod i testy tej ścieżki zostają,
-embeddingi działają dalej, a prompty oceniamy na Claude —
+a prompty oceniamy na Claude —
 [ADR 0016](docs/adr/0016-local-chat-models-are-off-by-default.md).
 Jednorazowa recenzja to ukryty student (`is_one_off`): rodzi się zarchiwizowany,
 więc retencja działa sama, ma jedną pracę i trzy akcje, a na listę studentów
@@ -529,6 +526,10 @@ Progi liczbowe z wytycznych porównuje kod i podaje węzłowi wymogów jako fakt
 i jej wagę wystawia model: objętość jest tylko sugerowana, praca projektowa może mieć
 mniej źródeł, a wpis z adresem www może być netografią. Języka pozycji kod nie zgaduje —
 [ADR 0020](docs/adr/0020-code-measures-the-model-judges.md).
+Embeddingów nie ma: agent wkłada swój plik wymogów do promptu w całości, gdy student
+nie ma zestawu wytycznych, a Ollama zniknęła z obu compose'ów. Obraz pgvector
+zostaje, bo stara migracja tworzy rozszerzenie —
+[ADR 0021](docs/adr/0021-requirements-go-into-the-prompt-whole.md).
 
 ---
 

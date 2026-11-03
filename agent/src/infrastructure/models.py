@@ -7,8 +7,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from pgvector.sqlalchemy import Vector
-from sqlalchemy import Boolean, DateTime, Index, Integer, String, Text, Uuid
+from sqlalchemy import DateTime, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.types import JSON
@@ -77,48 +76,4 @@ class AgentTaskModel(Base):
         nullable=False,
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
-    )
-
-
-class GuidelineChunkModel(Base):
-    """One retrievable piece of a university requirements document.
-
-    The embedding column is deliberately dimensionless (`vector`, not
-    `vector(768)`): the embedding model is a setting, and pinning its
-    dimension into the schema would make swapping it a migration. At this
-    corpus size — tens of chunks per thesis type — an exact scan is both
-    instant and more accurate than an approximate index; add HNSW, and a
-    fixed dimension with it, when the corpus stops being small.
-    """
-
-    __tablename__ = "guideline_chunks"
-    __table_args__ = (
-        Index(
-            "ix_analysis_guideline_chunks_lookup",
-            "thesis_type",
-            "embedding_model",
-        ),
-        {"schema": _SCHEMA},
-    )
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    thesis_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    section: Mapped[str] = mapped_column(String(255), nullable=False)
-    chunk_text: Mapped[str] = mapped_column(Text, nullable=False)
-    # Which model produced the vector, and how wide it is. Both are recorded
-    # so a stale row from a different model can never join a result set.
-    embedding_model: Mapped[str] = mapped_column(String(100), nullable=False)
-    dimensions: Mapped[int] = mapped_column(Integer, nullable=False)
-    embedding: Mapped[Any] = mapped_column(  # type: ignore[assignment]
-        Vector().with_variant(JSON(), "sqlite"), nullable=False
-    )
-    # Rules the model must always see — how severities are decided, say —
-    # regardless of what the similarity search turns up. A normative document
-    # loses its meaning if retrieval quietly drops the part that defines the
-    # judgement.
-    always_include: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )
