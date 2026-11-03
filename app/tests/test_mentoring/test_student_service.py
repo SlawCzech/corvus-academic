@@ -220,7 +220,7 @@ async def test_add_note_defaults_occurred_at_to_now(
     note = await service.add_meeting_note(PROMOTOR, student.id, content="Ad hoc")
     # SQLite has no timestamptz: the value refreshed from it comes back naive
     # (it is UTC), while Postgres keeps it aware. Compare on the same footing.
-    assert note.occurred_at.replace(tzinfo=UTC) >= before
+    assert note.occurred_at >= before
 
 
 async def test_add_note_keeps_action_provenance(service: StudentService) -> None:

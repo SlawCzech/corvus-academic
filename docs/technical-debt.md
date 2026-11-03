@@ -82,11 +82,10 @@ Zostaje:
   a liczby dla routerów są zaniżone. Do zdiagnozowania osobno (prawdopodobnie
   `COVERAGE_CORE=sysmon` / tracing wątków).
 
-- [ ] **SQLite w testach gubi `tzinfo`** — `DateTime(timezone=True)` odczytany po
-  `refresh()` wraca naiwny, na Postgresie zostaje aware. Jedno miejsce już to
-  obchodzi (`tests/test_mentoring/test_student_service.py`). Przy Fazie 2 dochodzą
-  kolejne znaczniki czasu (`accepted_at`, `updated_at`) — albo znormalizować odczyt
-  w repozytoriach, albo testować czas na Postgresie.
+- [x] ~~**SQLite w testach gubi `tzinfo`**~~ — naprawione 2026-11-03: kolumny czasu
+  w `app` to `UtcDateTime` (`shared/orm_types.py`), który zawsze oddaje aware UTC.
+  Schemat bez zmian; obejścia w `retention.py`, `timeline_service.py` i testach
+  usunięte.
 
 - [ ] **Zapis statusu z workera połyka błędy bazy** — `agent/src/infrastructure/task_status.py`
   loguje i idzie dalej, żeby awaria zapisu nie powodowała retry analizy, która się udała

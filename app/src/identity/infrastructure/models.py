@@ -7,8 +7,10 @@ data is physically isolated from other bounded contexts.
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, Uuid
+from sqlalchemy import Boolean, ForeignKey, Index, String, Text, Uuid
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+from src.shared.orm_types import UtcDateTime
 
 _SCHEMA = "identity"
 
@@ -30,7 +32,7 @@ class UserModel(Base):
     role: Mapped[str] = mapped_column(String(50), nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
+        UtcDateTime(),
         nullable=False,
         default=lambda: datetime.now(UTC),
     )
@@ -54,7 +56,7 @@ class UserApiKeyModel(Base):
     provider: Mapped[str] = mapped_column(String(50), primary_key=True)
     key_encrypted: Mapped[str] = mapped_column(String(500), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
+        UtcDateTime(),
         nullable=False,
         default=lambda: datetime.now(UTC),
     )
@@ -79,7 +81,7 @@ class LoginEventModel(Base):
     ip_address: Mapped[str] = mapped_column(String(45), nullable=False)
     user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
+        UtcDateTime(),
         nullable=False,
         default=lambda: datetime.now(UTC),
     )
@@ -100,7 +102,7 @@ class AccessRequestModel(Base):
     )
     email: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
+        UtcDateTime(),
         nullable=False,
         default=lambda: datetime.now(UTC),
     )

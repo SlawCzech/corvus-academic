@@ -9,11 +9,12 @@ shared across a context boundary. A context declares its table with
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, Integer, LargeBinary, String, Uuid, delete
+from sqlalchemy import Integer, LargeBinary, String, Uuid, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.shared.files import StoredFile, sha256_hex
+from src.shared.orm_types import UtcDateTime
 
 
 class FileBlobColumns:
@@ -28,7 +29,7 @@ class FileBlobColumns:
     sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+        UtcDateTime(), nullable=False, default=lambda: datetime.now(UTC)
     )
 
 

@@ -12,7 +12,6 @@ from typing import Any
 from sqlalchemy import (
     JSON,
     Date,
-    DateTime,
     ForeignKey,
     Integer,
     String,
@@ -23,6 +22,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from src.shared.orm_types import UtcDateTime
 from src.shared.sql_file_store import FileBlobColumns
 
 SCHEMA = "guidelines"
@@ -104,11 +104,9 @@ class GuidelineVersionModel(Base):
     source_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+        UtcDateTime(), nullable=False, default=lambda: datetime.now(UTC)
     )
     published_by: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True), nullable=True
     )
-    published_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    published_at: Mapped[datetime | None] = mapped_column(UtcDateTime(), nullable=True)
