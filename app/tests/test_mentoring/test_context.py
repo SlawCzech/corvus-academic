@@ -193,6 +193,25 @@ def test_a_chosen_guideline_rubric_travels_in_the_context() -> None:
     assert methodology["guidelines"] == "## Wymogi UE Katowice"
 
 
+def test_thresholds_travel_with_the_review_and_stay_out_of_methodology() -> None:
+    """Only the requirements node reads them, and only a review runs it."""
+    review = assemble_generate_review_context(
+        _student(), _draft(_LONG_THESIS), thresholds={"min_sources": 25}
+    )
+    methodology = assemble_evaluate_methodology_context(
+        _student(), _draft(_LONG_THESIS)
+    )
+
+    assert review["thresholds"] == {"min_sources": 25}
+    assert "thresholds" not in methodology
+
+
+def test_without_thresholds_the_key_is_absent() -> None:
+    context = assemble_generate_review_context(_student(), _draft(_LONG_THESIS))
+
+    assert "thresholds" not in context
+
+
 def test_without_a_rubric_the_key_is_absent_so_the_agent_loads_its_own() -> None:
     """`agent` falls back exactly when `guidelines` is not in the context."""
     context = assemble_generate_review_context(_student(), _draft(_LONG_THESIS))

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from itertools import takewhile
 
 # One entry per section the requirements documents name, with the spellings
 # theses actually use. The canonical key groups the aliases; the title kept in
@@ -105,6 +106,20 @@ _MAX_HEADING_CHARS = 80
 
 # Numbered bibliography entries: "1. Adamczyk, J., ...".
 _NUMBERED_ENTRY = re.compile(r"^\s*(\d{1,3})\.\s*(.*)$")
+
+# Where a bibliography's web part begins. The source minimums leave netography
+# out, so what follows one of these is not counted as literature.
+_NETOGRAPHY_HEADINGS = frozenset(
+    {
+        "netografia",
+        "źródła internetowe",
+        "zrodla internetowe",
+        "strony internetowe",
+        "netography",
+    }
+)
+
+_WEB_ADDRESS = re.compile(r"(?:https?://|www\.)\S+", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -312,29 +327,60 @@ def _entry_number(line: str) -> int | None:
     return int(match.group(1))
 
 
-def count_bibliography_entries(text: str, outline: list[Section]) -> int | None:
-    """Count entries in the bibliography, or None when there is no bibliography.
+def _bibliography_entries(text: str, outline: list[Section]) -> list[str] | None:
+    """The entries of the bibliography, up to a netography heading if it has one.
 
-    Counts numbered entries first, since that is how these theses are written,
-    and falls back to lines carrying a publication year.
+    None when there is no bibliography. Reads numbered entries first, since
+    that is how these theses are written, and falls back to lines carrying a
+    publication year.
     """
     section = find_section(outline, "bibliography")
     if section is None:
         return None
     body = text[section.start : section.start + section.char_count]
-    lines = body.splitlines()[1:]  # drop the heading itself
+    lines = list(
+        takewhile(
+            lambda line: _normalise(line) not in _NETOGRAPHY_HEADINGS,
+            body.splitlines()[1:],  # drop the heading itself
+        )
+    )
 
     # Follow the numbering rather than counting every line that starts with a
     # digit: an entry wrapping onto a second line can begin with a page range
     # or a DOI, and those are numbers too. Entries run 1, 2, 3…, so only a
     # line carrying the number we are waiting for opens a new one.
-    expected = 1
+    entries: list[str] = []
     for line in lines:
-        if _entry_number(line) == expected:
-            expected += 1
-    if expected > 1:
-        return expected - 1
-    return sum(1 for line in lines if _YEAR.search(line))
+        if _entry_number(line) == len(entries) + 1:
+            entries.append(line)
+        elif entries:
+            entries[-1] += f" {line}"
+    return entries or [line for line in lines if _YEAR.search(line)]
+
+
+def count_bibliography_entries(text: str, outline: list[Section]) -> int | None:
+    """Count entries in the bibliography, or None when there is no bibliography."""
+    entries = _bibliography_entries(text, outline)
+    return None if entries is None else len(entries)
+
+
+def _cites_a_web_page(entry: str) -> bool:
+    """Whether an entry gives a web address other than a DOI's.
+
+    A journal article with a doi.org link is literature, however it is linked.
+    """
+    return any("doi" not in url.casefold() for url in _WEB_ADDRESS.findall(entry))
+
+
+def count_web_entries(text: str, outline: list[Section]) -> int | None:
+    """How many counted entries give a web address, so may be netography.
+
+    Only "may": deciding what a page is takes reading it. This is the number a
+    source minimum needs next to the total, whether the thesis keeps its web
+    sources under a heading of their own or mixed in with the books.
+    """
+    entries = _bibliography_entries(text, outline)
+    return None if entries is None else sum(map(_cites_a_web_page, entries))
 
 
 # Where the work itself begins and ends. The length requirement counts the
@@ -372,4 +418,5 @@ def outline_payload(text: str) -> dict[str, object]:
             for s in outline
         ],
         "bibliography_entries": count_bibliography_entries(text, outline),
+        "bibliography_web_entries": count_web_entries(text, outline),
     }

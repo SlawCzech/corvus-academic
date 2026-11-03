@@ -11,6 +11,7 @@ a numbered bibliography that looks a lot like numbered headings.
 from src.document.outline import (
     body_char_count,
     count_bibliography_entries,
+    count_web_entries,
     extract_outline,
     find_section,
     outline_payload,
@@ -95,6 +96,52 @@ def test_bibliography_entries_are_counted_not_estimated() -> None:
     # one omits the space after its number, and one is a bare "5." with the
     # author wrapped onto the next line. All three shapes are from real PDFs.
     assert count_bibliography_entries(THESIS, outline) == 5
+
+
+def _bibliography(*lines: str) -> str:
+    return "\n".join(["Wstęp", "Tekst pracy.", "Bibliografia", *lines])
+
+
+def test_web_entries_are_counted_apart_from_the_rest() -> None:
+    text = _bibliography(
+        "1. Kowalski, J. (2020). Finanse. Warszawa: PWN.",
+        "2. NBP (2022). Komunikat. https://nbp.pl",
+        "3. Bankier.pl (2023). Czy kryptowaluty zagrażają bankom?",
+        "www.bankier.pl",
+    )
+    outline = extract_outline(text)
+
+    assert count_bibliography_entries(text, outline) == 3
+    assert count_web_entries(text, outline) == 2
+
+
+def test_a_doi_link_is_not_a_web_source() -> None:
+    text = _bibliography(
+        "1. Smith, J. (2021). Saving. Journal of Finance. https://doi.org/10.1/x"
+    )
+
+    assert count_web_entries(text, extract_outline(text)) == 0
+
+
+def test_a_netography_heading_ends_the_literature() -> None:
+    """Numbered on from the literature or from 1, it stays out of the minimum."""
+    for first_web_entry in ("3.", "1."):
+        text = _bibliography(
+            "1. Kowalski, J. (2020). Finanse. Warszawa: PWN.",
+            "2. Nowak, A. (2019). Bankowość. Kraków: UEK.",
+            "Netografia",
+            f"{first_web_entry} NBP (2022). Komunikat. https://nbp.pl",
+        )
+        outline = extract_outline(text)
+
+        assert count_bibliography_entries(text, outline) == 2
+        assert count_web_entries(text, outline) == 0
+
+
+def test_no_bibliography_means_no_web_count_rather_than_zero() -> None:
+    text = "Wstęp\nTekst pracy."
+
+    assert count_web_entries(text, extract_outline(text)) is None
 
 
 def test_entry_numbering_survives_how_pdfs_break_lines() -> None:

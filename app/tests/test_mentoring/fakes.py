@@ -194,10 +194,19 @@ class FakeGuidelineSource:
     def __init__(self) -> None:
         self.sets: dict[UUID, tuple[str, GuidelineRubric | None]] = {}
 
-    def publish(self, set_id: UUID, thesis_type: str, rubric_md: str) -> UUID:
+    def publish(
+        self,
+        set_id: UUID,
+        thesis_type: str,
+        rubric_md: str,
+        thresholds: dict[str, Any] | None = None,
+    ) -> UUID:
         """Put a set with a published rubric in the catalog; return the version id."""
         version_id = UUID(int=len(self.sets) + 1)
-        self.sets[set_id] = (thesis_type, GuidelineRubric(version_id, rubric_md))
+        self.sets[set_id] = (
+            thesis_type,
+            GuidelineRubric(version_id, rubric_md, thresholds or {}),
+        )
         return version_id
 
     async def thesis_type_of(self, set_id: UUID) -> str | None:

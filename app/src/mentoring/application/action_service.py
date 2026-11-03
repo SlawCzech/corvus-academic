@@ -562,6 +562,7 @@ class ActionService:
                         detail,
                         review_tone,
                         guidelines=rubric.rubric_md if rubric else None,
+                        thresholds=rubric.thresholds if rubric else None,
                     ),
                     base_ref | self._draft_ref(latest[:1]) | self._rubric_ref(rubric),
                 )

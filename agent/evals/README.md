@@ -170,6 +170,12 @@ zaskakującą liczbę da się przeczytać, zamiast puszczać jeszcze raz.
 | 2026-09-30 | punkt wyjścia (przed structured output i weryfikacją cytatów) | qwen3:30b-a3b | 0.61 | 1 | 0 | 0 | 1 | 1552 s |
 | 2026-09-30 | + structured output, cytaty i weryfikacja (punkty 3–4) | qwen3:30b-a3b | 0.67 | 0 | 3 | 0 | 0 | 1846 s |
 | 2026-11-01 | po rozdzieleniu recenzji (ADR 0018), `advice in reviews` 0 | claude-sonnet-5-5 | 0.83 | 1 | 7 | 0 | 0 | 87 s |
+| 2026-11-02 | progi jako fakty dla węzła wymogów (ADR 0020), przebieg 1 | claude-sonnet-5-5 | 0.83 | 1 | 11 | 0 | 0 | 90 s |
+| 2026-11-02 | to samo, przebieg 2 | claude-sonnet-5-5 | 0.83 | 1 | 12 | 0 | 0 | 96 s |
+
+Kontrola 2026-11-02: ten sam kod bez progów, dwa przebiegi, dał 7 i 10 duplikatów, ale też
+raz 2 fałszywe alarmy i raz rekomendacje 2 z 3 (recall 1.00, underrated 3). Rozrzut jest
+większy niż różnica, więc te liczby nie rozstrzygają wpływu progów na duplikaty.
 
 ### Obszar i cel (ADR 0015)
 
