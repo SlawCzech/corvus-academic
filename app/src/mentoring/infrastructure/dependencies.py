@@ -37,7 +37,6 @@ from src.mentoring.application.demo_roster import DemoRoster
 from src.mentoring.application.draft_service import DraftService
 from src.mentoring.application.fragment_feedback import FragmentFeedbackService
 from src.mentoring.application.fragment_service import FragmentService
-from src.mentoring.application.model_service import ModelService
 from src.mentoring.application.review_service import ReviewService
 from src.mentoring.application.student_deletion import StudentDeletionService
 from src.mentoring.application.student_service import Caller, StudentService
@@ -47,7 +46,6 @@ from src.mentoring.infrastructure.orm import DraftFileModel
 from src.mentoring.infrastructure.repositories import (
     AgentActionRepository,
     MeetingNoteRepository,
-    ModelSettingRepository,
     StudentRepository,
     ThesisDraftRepository,
     ThesisFragmentRepository,
@@ -133,33 +131,11 @@ def get_agent_client(request: Request) -> AgentClient:
     return AgentClient(client, settings.agent_url, _agent_statuses)
 
 
-def get_model_service(
-    session: Annotated[AsyncSession, Depends(get_db_session)],
-    agent: Annotated[AgentClient, Depends(get_agent_client)],
-) -> ModelService:
-    return ModelService(
-        ModelSettingRepository(session), agent, settings.local_models_enabled
-    )
-
-
-def require_model_admin(
-    user: Annotated[User, Depends(get_current_user)],
-) -> User:
-    """Only an admin decides which local models promoters may use."""
-    if not user.can(Permission.MANAGE_MODELS):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Model management permission required",
-        )
-    return user
-
-
 def get_action_service(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     students: Annotated[StudentService, Depends(get_student_service)],
     agent: Annotated[AgentClient, Depends(get_agent_client)],
     catalog: Annotated[GuidelineCatalog, Depends(get_catalog)],
-    models: Annotated[ModelService, Depends(get_model_service)],
 ) -> ActionService:
     return ActionService(
         students,
@@ -167,7 +143,6 @@ def get_action_service(
         ThesisDraftRepository(session),
         agent,
         CatalogGuidelineSource(catalog),
-        models,
         ThesisPartRepository(session),
         ThesisFragmentRepository(session),
     )
@@ -289,5 +264,3 @@ DashboardServiceDep = Annotated[DashboardService, Depends(get_dashboard_service)
 StudentDeletionServiceDep = Annotated[
     StudentDeletionService, Depends(get_student_deletion_service)
 ]
-ModelServiceDep = Annotated[ModelService, Depends(get_model_service)]
-ModelAdminDep = Annotated[User, Depends(require_model_admin)]

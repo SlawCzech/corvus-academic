@@ -237,7 +237,7 @@ def test_an_unfinished_action_is_named_after_the_author(
     agent.runs_with({"steps": ["a"], "done": []})
     client.post(
         f"/students/{review_id}/actions",
-        json={"action_type": "generate_review"},
+        json={"provider": "claude", "action_type": "generate_review"},
         headers=headers,
     )
 
@@ -279,7 +279,7 @@ def test_a_reviewers_actions_run(
 
     resp = client.post(
         f"/students/{review_id}/actions",
-        json={"action_type": action_type},
+        json={"provider": "claude", "action_type": action_type},
         headers=headers,
     )
 
@@ -293,7 +293,7 @@ def test_the_review_is_told_who_wrote_the_thesis(
 
     client.post(
         f"/students/{review_id}/actions",
-        json={"action_type": "generate_review"},
+        json={"provider": "claude", "action_type": "generate_review"},
         headers=headers,
     )
 
@@ -314,7 +314,7 @@ def test_the_supervising_actions_are_refused(
 
     resp = client.post(
         f"/students/{review_id}/actions",
-        json={"action_type": action_type, "detail": "punkty"},
+        json={"provider": "claude", "action_type": action_type, "detail": "punkty"},
         headers=headers,
     )
 
@@ -406,7 +406,7 @@ def test_promotion_puts_the_author_on_the_roster(
     review_id = _new_review(client, headers)
     client.post(
         f"/students/{review_id}/actions",
-        json={"action_type": "generate_review"},
+        json={"provider": "claude", "action_type": "generate_review"},
         headers=headers,
     )
 

@@ -64,7 +64,11 @@ def _review(
 ) -> Any:  # noqa: ANN401
     return client.post(
         f"/students/{student_id}/actions",
-        json={"action_type": "review_fragment", "fragment_id": fragment_id},
+        json={
+            "provider": "claude",
+            "action_type": "review_fragment",
+            "fragment_id": fragment_id,
+        },
         headers=headers,
     )
 
@@ -167,7 +171,7 @@ def test_full_thesis_actions_still_read_only_whole_versions(
 
     resp = client.post(
         f"/students/{student_id}/actions",
-        json={"action_type": "generate_review"},
+        json={"provider": "claude", "action_type": "generate_review"},
         headers=headers,
     )
 

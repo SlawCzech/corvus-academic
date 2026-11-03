@@ -48,7 +48,6 @@ services:
     env_file: .env
     environment:
       ENVIRONMENT: production
-      LOCAL_MODELS_ENABLED: "false"
       AGENT_URL: http://agent:8002
       REDIS_URL: redis://redis:6379/0
       DATABASE_URL: postgresql+asyncpg://corvus:${POSTGRES_PASSWORD}@postgres:5432/corvus

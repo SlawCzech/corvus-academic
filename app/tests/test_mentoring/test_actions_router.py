@@ -49,7 +49,7 @@ def _new_student(client: TestClient, headers: dict[str, str]) -> str:
 def _trigger(
     client: TestClient, headers: dict[str, str], student_id: str, **body: object
 ) -> dict[str, Any]:
-    payload = {"action_type": "propose_topic", **body}
+    payload = {"provider": "claude", "action_type": "propose_topic", **body}
     resp = client.post(f"/students/{student_id}/actions", json=payload, headers=headers)
     assert resp.status_code == 202, resp.text
     result: dict[str, Any] = resp.json()
@@ -88,7 +88,8 @@ def test_trigger_forwards_the_callers_token(
 
 def test_trigger_requires_auth(client: TestClient, agent: FakeAgentClient) -> None:
     resp = client.post(
-        f"/students/{uuid.uuid4()}/actions", json={"action_type": "propose_topic"}
+        f"/students/{uuid.uuid4()}/actions",
+        json={"provider": "claude", "action_type": "propose_topic"},
     )
     assert resp.status_code == 401
 
@@ -102,7 +103,7 @@ def test_trigger_on_another_promotors_student_is_404(
     mine = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
     resp = client.post(
         f"/students/{student_id}/actions",
-        json={"action_type": "propose_topic"},
+        json={"provider": "claude", "action_type": "propose_topic"},
         headers=mine,
     )
     assert resp.status_code == 404
@@ -116,7 +117,7 @@ def test_unknown_action_type_is_rejected(
 
     resp = client.post(
         f"/students/{student_id}/actions",
-        json={"action_type": "write_the_whole_thesis"},
+        json={"provider": "claude", "action_type": "write_the_whole_thesis"},
         headers=headers,
     )
     assert resp.status_code == 422
@@ -131,7 +132,7 @@ def test_action_without_the_data_it_needs_is_409(
 
     resp = client.post(
         f"/students/{student_id}/actions",
-        json={"action_type": "check_progress"},
+        json={"provider": "claude", "action_type": "check_progress"},
         headers=headers,
     )
     assert resp.status_code == 409
@@ -147,7 +148,7 @@ def test_unavailable_agent_reports_503(
 
     resp = client.post(
         f"/students/{student_id}/actions",
-        json={"action_type": "propose_topic"},
+        json={"provider": "claude", "action_type": "propose_topic"},
         headers=headers,
     )
     assert resp.status_code == 503
@@ -447,7 +448,7 @@ def test_defence_questions_without_a_thesis_are_409(
 
     resp = client.post(
         f"/students/{student_id}/actions",
-        json={"action_type": "defence_questions"},
+        json={"provider": "claude", "action_type": "defence_questions"},
         headers=headers,
     )
 
@@ -540,7 +541,7 @@ def test_bibliography_check_without_a_thesis_is_409(
 
     resp = client.post(
         f"/students/{student_id}/actions",
-        json={"action_type": "verify_bibliography"},
+        json={"provider": "claude", "action_type": "verify_bibliography"},
         headers=headers,
     )
 
@@ -622,23 +623,6 @@ def test_resuming_sends_the_kept_findings_and_the_key_again(
     # On the account it started on, not the other key the promoter holds.
     assert sent["byok"].provider == "claude"
     assert sent["byok"].api_key == "sk-ant-user-key"
-
-
-def test_a_review_started_on_the_local_model_resumes_without_a_key(
-    client: TestClient, agent: FakeAgentClient
-) -> None:
-    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
-    _store_key(client, headers, "claude", "sk-ant-user-key")
-    student_id, action_id = _paused_review(client, agent, headers)
-
-    resp = client.post(
-        f"/students/{student_id}/actions/{action_id}/resume",
-        json={"accepted_findings": [0]},
-        headers=headers,
-    )
-
-    assert resp.status_code == 200
-    assert agent.resumed[0]["byok"] is None
 
 
 def test_resuming_after_the_key_was_removed_is_409_and_stays_paused(
@@ -735,18 +719,21 @@ def test_the_chosen_providers_key_is_used_for_the_run(
     assert body["provider"] == "openai"
 
 
-def test_a_stored_key_is_not_used_unless_asked_for(
+def test_without_a_provider_the_run_is_refused(
     client: TestClient, agent: FakeAgentClient
 ) -> None:
-    """Holding a key is not consent to be billed for every run."""
+    """Holding a key is not consent to be billed for every run (ADR 0022)."""
     headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
     student_id = _new_student(client, headers)
-    _store_key(client, headers, "claude", "sk-ant-user-key")
 
-    body = _trigger(client, headers, student_id)
+    resp = client.post(
+        f"/students/{student_id}/actions",
+        json={"action_type": "propose_topic"},
+        headers=headers,
+    )
 
-    assert agent.submitted[0]["byok"] is None
-    assert body["provider"] is None
+    assert resp.status_code == 409
+    assert agent.submitted == []
 
 
 def test_asking_for_a_provider_without_a_key_is_409_and_nothing_runs(
@@ -780,17 +767,6 @@ def test_an_unknown_provider_is_422(client: TestClient, agent: FakeAgentClient) 
 
     assert resp.status_code == 422
     assert agent.submitted == []
-
-
-def test_without_a_stored_key_the_run_stays_self_hosted(
-    client: TestClient, agent: FakeAgentClient
-) -> None:
-    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
-    student_id = _new_student(client, headers)
-
-    _trigger(client, headers, student_id)
-
-    assert agent.submitted[0]["byok"] is None
 
 
 def test_one_promotors_key_is_not_used_for_another(

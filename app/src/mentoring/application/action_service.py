@@ -38,6 +38,7 @@ from src.mentoring.application.exceptions import (
     FragmentNotFoundError,
     OneOffReviewError,
     ProviderKeyMissingError,
+    ProviderRequiredError,
     UnsupportedActionError,
 )
 from src.mentoring.application.fragment_service import (
@@ -48,7 +49,6 @@ from src.mentoring.application.guidelines_port import (
     GuidelineRubric,
     GuidelineSource,
 )
-from src.mentoring.application.model_service import ModelService
 from src.mentoring.application.student_service import (
     Caller,
     StudentService,
@@ -74,10 +74,10 @@ from src.mentoring.infrastructure.repositories import (
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 
-async def _key_for(provider: str | None, keys: KeyLoader | None) -> BYOK | None:
-    """The key a run on `provider` needs; None for the self-hosted model."""
+async def _key_for(provider: str | None, keys: KeyLoader | None) -> BYOK:
+    """The key a run on `provider` needs. Every run needs one (ADR 0022)."""
     if provider is None:
-        return None
+        raise ProviderRequiredError
     byok = await keys(provider) if keys is not None else None
     if byok is None:
         raise ProviderKeyMissingError(provider)
@@ -130,7 +130,6 @@ class ActionService:
         drafts: ThesisDraftRepository,
         agent: AgentClient,
         guidelines: GuidelineSource | None = None,
-        models: ModelService | None = None,
         parts: ThesisPartRepository | None = None,
         fragments: ThesisFragmentRepository | None = None,
     ) -> None:
@@ -139,7 +138,6 @@ class ActionService:
         self._drafts = drafts
         self._agent = agent
         self._guidelines = guidelines
-        self._models = models
         self._parts = parts
         self._fragments = fragments
 
@@ -152,7 +150,6 @@ class ActionService:
         action_type: ActionType,
         token: str,
         detail: str | None = None,
-        model: str | None = None,
         language: str = "pl",
         review_tone: str = "auto",
         provider: str | None = None,
@@ -163,7 +160,7 @@ class ActionService:
         """Record and dispatch one action for a student the caller can see.
 
         `provider` is whose account the run goes on: one of the providers the
-        promoter has a key for, or None for the self-hosted model. The key is
+        promoter has a key for. The key is
         fetched through `keys`, forwarded, and never written to the action
         row — the row keeps only the provider's name, which is what a resume
         needs and what the promoter can read back later.
@@ -174,21 +171,16 @@ class ActionService:
         `fragment_id` is what a `review_fragment` runs on; the fragment then
         points at this run, the latest of any before it.
 
-        Raises ProviderKeyMissingError when `provider` names a provider the
-        promoter has no key for, and OneOffReviewError for an action a one-off
-        review does not take.
+        Raises ProviderRequiredError without a provider, ProviderKeyMissingError
+        when `provider` names a provider the promoter has no key for, and
+        OneOffReviewError for an action a one-off review does not take.
         """
         student = await self._students.get(caller, student_id)
         if student.is_one_off and action_type not in ONE_OFF_ACTIONS:
             raise OneOffReviewError(f"A one-off review does not take {action_type}")
+        # Before anything is recorded: a run nobody can pay for is a bad
+        # request, not a failed action in the student's history.
         byok = await _key_for(provider, keys)
-        if byok is not None:
-            # The provider's own model runs; a local tag would be ignored.
-            model = None
-        elif self._models is not None:
-            # Before anything is recorded: a refused model is a bad request,
-            # not a failed action in the student's history.
-            model = await self._models.resolve(model)
         context, input_ref = await self._assemble(
             caller, student, action_type, detail, review_tone, fragment_id
         )
@@ -203,7 +195,7 @@ class ActionService:
             action_type=str(action_type),
             status=str(ActionStatus.PENDING),
             detail=detail,
-            provider=byok.provider if byok else None,
+            provider=byok.provider,
             # IDs only: the context itself is reproducible from these rows,
             # and the prompt can be large.
             input_ref=input_ref,
@@ -221,7 +213,6 @@ class ActionService:
                 student_id=student.id,
                 context=context,
                 token=token,
-                model=model,
                 language=language,
                 byok=byok,
             )
@@ -248,7 +239,7 @@ class ActionService:
             task_id=task_id,
             student_id=str(student.id),
             # Which account pays for this run; never the key itself.
-            byok_provider=byok.provider if byok else None,
+            byok_provider=byok.provider,
         )
         return _to_domain(record)
 
@@ -377,7 +368,8 @@ class ActionService:
         paused run.
 
         Raises ValueError for an action that is not waiting for a decision,
-        and ProviderKeyMissingError when the key it started on is gone.
+        ProviderKeyMissingError when the key it started on is gone, and
+        ProviderRequiredError for a run started on a local model.
         """
         record = await self._require_record(caller, student_id, action_id)
         action = _to_domain(record)

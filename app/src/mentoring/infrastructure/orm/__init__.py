@@ -26,7 +26,6 @@ from src.mentoring.infrastructure.orm.fragment import (
     ThesisFragmentModel,
     ThesisPartModel,
 )
-from src.mentoring.infrastructure.orm.model_setting import ModelSettingModel
 from src.mentoring.infrastructure.orm.student import MeetingNoteModel, StudentModel
 
 __all__ = [
@@ -34,7 +33,6 @@ __all__ = [
     "Base",
     "DraftFileModel",
     "MeetingNoteModel",
-    "ModelSettingModel",
     "StudentModel",
     "ThesisDraftModel",
     "ThesisFragmentModel",

@@ -67,7 +67,7 @@ def test_a_review_waiting_for_the_promoter_is_in_progress_and_called_out(
     student_id = _new_student(client, headers, full_name="Anna Nowak")
     client.post(
         f"/students/{student_id}/actions",
-        json={"action_type": "propose_topic"},
+        json={"provider": "claude", "action_type": "propose_topic"},
         headers=headers,
     )
     agent.next_status = AgentActionStatus("awaiting_input", {"findings": []}, None)
@@ -90,7 +90,7 @@ def test_summary_counts_actions_in_progress_and_lists_recent_activity(
     student_id = _new_student(client, headers, full_name="Anna Nowak")
     client.post(
         f"/students/{student_id}/actions",
-        json={"action_type": "propose_topic"},
+        json={"provider": "claude", "action_type": "propose_topic"},
         headers=headers,
     )
 
@@ -117,7 +117,7 @@ def test_summary_is_scoped_to_the_caller_own_students(client: TestClient) -> Non
 def _trigger(client: TestClient, headers: dict[str, str], student_id: str) -> str:
     resp = client.post(
         f"/students/{student_id}/actions",
-        json={"action_type": "propose_topic"},
+        json={"provider": "claude", "action_type": "propose_topic"},
         headers=headers,
     )
     assert resp.status_code == 202, resp.text

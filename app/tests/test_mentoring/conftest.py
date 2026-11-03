@@ -21,7 +21,8 @@ from src.identity.application.key_check import KeyCheck, KeyVerdict
 from src.identity.infrastructure.dependencies import get_key_checker
 from src.identity.infrastructure.limiter import login_rate_limit
 from src.identity.infrastructure.models import Base as IdentityBase
-from src.identity.infrastructure.models import UserModel
+from src.identity.infrastructure.models import UserApiKeyModel, UserModel
+from src.identity.infrastructure.secrets import get_secret_service
 from src.mentoring.infrastructure.orm import Base as MentoringBase
 from src.shared.database import get_db_session
 
@@ -41,6 +42,7 @@ PROMOTOR_EMAIL = "promotor@example.com"
 PROMOTOR_PASSWORD = "promotor-secret"
 OTHER_PROMOTOR_EMAIL = "other@example.com"
 OTHER_PROMOTOR_PASSWORD = "other-secret"
+PROMOTOR_CLAUDE_KEY = "sk-ant-promotor-key"
 
 
 def _hash(plain: str) -> str:
@@ -81,6 +83,16 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
                 hashed_password=_hash(OTHER_PROMOTOR_PASSWORD),
             )
         )
+        # Every action runs on a provider's key (ADR 0022): both promoters
+        # start with one for Claude, as a promoter who can run anything does.
+        for user_id in (PROMOTOR_UUID, OTHER_PROMOTOR_UUID):
+            session.add(
+                UserApiKeyModel(
+                    user_id=user_id,
+                    provider="claude",
+                    key_encrypted=get_secret_service().encrypt(PROMOTOR_CLAUDE_KEY),
+                )
+            )
         await session.commit()
         yield session
     await engine.dispose()

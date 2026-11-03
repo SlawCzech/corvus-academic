@@ -40,7 +40,12 @@ from src.mentoring.infrastructure.repositories import (
     ThesisFragmentRepository,
 )
 from src.shared.sql_file_store import SqlFileStore
-from tests.test_mentoring.fakes import FakeAgentClient, docx_bytes, note_payload
+from tests.test_mentoring.fakes import (
+    FakeAgentClient,
+    claude_key,
+    docx_bytes,
+    note_payload,
+)
 
 _SQLITE_URL = "sqlite+aiosqlite:///:memory:"
 _SCHEMA_TRANSLATE = {"schema_translate_map": {"mentoring": None}}
@@ -104,7 +109,12 @@ async def _student_with_everything(env: _Env, caller: Caller = PROMOTOR) -> Stud
         )
     await env.students.add_meeting_note(caller, student.id, content="Spotkanie 1")
     await env.actions.trigger(
-        caller, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+        caller,
+        student.id,
+        action_type=ActionType.PROPOSE_TOPIC,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
     return student
 
@@ -185,6 +195,8 @@ async def test_a_note_keeps_its_text_when_its_action_is_deleted(env: _Env) -> No
         action_type=ActionType.DRAFT_MEETING_NOTE,
         token=TOKEN,
         detail="zakres rozdz. 2",
+        provider="claude",
+        keys=claude_key,
     )
     env.agent.completes_with(note_payload("Omówiliśmy zakres rozdziału 2."))
     await env.actions.get_action(PROMOTOR, student.id, action.id, TOKEN)

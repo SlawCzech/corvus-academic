@@ -21,6 +21,7 @@ from src.mentoring.application.exceptions import (
     AgentUnavailableError,
     MissingContextError,
     ProviderKeyMissingError,
+    ProviderRequiredError,
     StudentNotFoundError,
 )
 from src.mentoring.application.student_service import Caller, StudentService
@@ -37,6 +38,7 @@ from src.shared.sql_file_store import SqlFileStore
 from tests.test_mentoring.fakes import (
     FakeAgentClient,
     FakeGuidelineSource,
+    claude_key,
     docx_bytes,
     note_payload,
     topic_payload,
@@ -117,6 +119,8 @@ async def test_trigger_records_the_attempt_and_dispatches(env: _Fixture) -> None
         action_type=ActionType.PROPOSE_TOPIC,
         token=TOKEN,
         detail="coś ilościowego",
+        provider="claude",
+        keys=claude_key,
     )
 
     assert action.status is ActionStatus.PENDING
@@ -139,6 +143,8 @@ async def test_trigger_sends_the_assembled_context(env: _Fixture) -> None:
         action_type=ActionType.PROPOSE_TOPIC,
         token=TOKEN,
         detail="temat z komponentem ilościowym",
+        provider="claude",
+        keys=claude_key,
     )
 
     context = env.agent.submitted[0]["context"]
@@ -163,6 +169,8 @@ async def test_trigger_passes_review_tone_to_the_review_context(
         action_type=ActionType.GENERATE_REVIEW,
         token=TOKEN,
         review_tone="enthusiastic",
+        provider="claude",
+        keys=claude_key,
     )
 
     context = env.agent.submitted[0]["context"]
@@ -176,7 +184,12 @@ async def test_trigger_defaults_review_tone_to_auto(env: _Fixture) -> None:
     )
 
     await env.actions.trigger(
-        PROMOTOR, student.id, action_type=ActionType.GENERATE_REVIEW, token=TOKEN
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.GENERATE_REVIEW,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
 
     assert env.agent.submitted[0]["context"]["review_tone"] == "auto"
@@ -197,7 +210,12 @@ async def test_review_is_judged_against_the_chosen_guideline_set(
     )
 
     action = await env.actions.trigger(
-        PROMOTOR, student.id, action_type=ActionType.GENERATE_REVIEW, token=TOKEN
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.GENERATE_REVIEW,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
 
     assert env.agent.submitted[0]["context"]["guidelines"] == "## UE Katowice v2"
@@ -224,7 +242,12 @@ async def test_both_reviews_carry_the_thresholds_of_the_set(
     )
 
     await env.actions.trigger(
-        PROMOTOR, student.id, action_type=action_type, token=TOKEN
+        PROMOTOR,
+        student.id,
+        action_type=action_type,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
 
     assert env.agent.submitted[0]["context"]["thresholds"] == {"min_sources": 25}
@@ -241,6 +264,8 @@ async def test_without_a_guideline_set_the_agent_uses_its_own(env: _Fixture) -> 
         student.id,
         action_type=ActionType.EVALUATE_METHODOLOGY,
         token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
 
     assert "guidelines" not in env.agent.submitted[0]["context"]
@@ -344,7 +369,12 @@ async def test_trigger_on_another_promotors_student_is_not_found(
 
     with pytest.raises(StudentNotFoundError):
         await env.actions.trigger(
-            PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+            PROMOTOR,
+            student.id,
+            action_type=ActionType.PROPOSE_TOPIC,
+            token=TOKEN,
+            provider="claude",
+            keys=claude_key,
         )
     assert env.agent.submitted == []
 
@@ -361,6 +391,8 @@ async def test_action_needing_a_draft_is_refused_without_one(
             student.id,
             action_type=ActionType.DEFENCE_QUESTIONS,
             token=TOKEN,
+            provider="claude",
+            keys=claude_key,
         )
     assert await env.actions.list_actions(PROMOTOR, student.id, TOKEN) == []
     assert env.agent.submitted == []
@@ -374,7 +406,12 @@ async def test_progress_check_needs_two_versions(env: _Fixture) -> None:
 
     with pytest.raises(MissingContextError, match="two uploaded versions"):
         await env.actions.trigger(
-            PROMOTOR, student.id, action_type=ActionType.CHECK_PROGRESS, token=TOKEN
+            PROMOTOR,
+            student.id,
+            action_type=ActionType.CHECK_PROGRESS,
+            token=TOKEN,
+            provider="claude",
+            keys=claude_key,
         )
 
 
@@ -385,7 +422,12 @@ async def test_failed_dispatch_stays_in_the_history(env: _Fixture) -> None:
 
     with pytest.raises(AgentUnavailableError):
         await env.actions.trigger(
-            PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+            PROMOTOR,
+            student.id,
+            action_type=ActionType.PROPOSE_TOPIC,
+            token=TOKEN,
+            provider="claude",
+            keys=claude_key,
         )
 
     actions = await env.actions.list_actions(PROMOTOR, student.id, TOKEN)
@@ -400,7 +442,12 @@ async def test_failed_dispatch_stays_in_the_history(env: _Fixture) -> None:
 async def test_polling_copies_the_agents_view(env: _Fixture) -> None:
     student = await _student(env)
     action = await env.actions.trigger(
-        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.PROPOSE_TOPIC,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
     env.agent.completes_with(topic_payload("Instytucje a wzrost"))
 
@@ -414,7 +461,12 @@ async def test_finished_action_is_not_polled_again(env: _Fixture) -> None:
     """Once terminal, the answer is ours — the agent is not asked twice."""
     student = await _student(env)
     action = await env.actions.trigger(
-        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.PROPOSE_TOPIC,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
     env.agent.completes_with(topic_payload("Instytucje a wzrost"))
     await env.actions.get_action(PROMOTOR, student.id, action.id, TOKEN)
@@ -429,7 +481,12 @@ async def test_polling_survives_an_unavailable_agent(env: _Fixture) -> None:
     """A restarting agent must not turn a poll into an error."""
     student = await _student(env)
     action = await env.actions.trigger(
-        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.PROPOSE_TOPIC,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
     env.agent.unavailable = True
 
@@ -441,7 +498,12 @@ async def test_polling_survives_an_unavailable_agent(env: _Fixture) -> None:
 async def test_agent_failure_is_recorded(env: _Fixture) -> None:
     student = await _student(env)
     action = await env.actions.trigger(
-        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.PROPOSE_TOPIC,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
     env.agent.fails_with("Ollama unreachable")
 
@@ -455,7 +517,12 @@ async def test_listing_picks_up_a_result_nobody_polled_for(env: _Fixture) -> Non
     """A reloaded page only asks for the list — the result must still land."""
     student = await _student(env)
     action = await env.actions.trigger(
-        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.PROPOSE_TOPIC,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
     env.agent.completes_with(topic_payload("Instytucje a wzrost"))
 
@@ -481,7 +548,12 @@ async def test_listing_does_not_poll_finished_actions(env: _Fixture) -> None:
 async def test_listing_survives_an_unavailable_agent(env: _Fixture) -> None:
     student = await _student(env)
     await env.actions.trigger(
-        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.PROPOSE_TOPIC,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
     env.agent.unavailable = True
 
@@ -493,7 +565,12 @@ async def test_listing_survives_an_unavailable_agent(env: _Fixture) -> None:
 async def test_cancel_stops_the_run_and_marks_the_action(env: _Fixture) -> None:
     student = await _student(env)
     action = await env.actions.trigger(
-        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.PROPOSE_TOPIC,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
 
     cancelled = await env.actions.cancel(PROMOTOR, student.id, action.id, TOKEN)
@@ -508,7 +585,12 @@ async def test_cancel_holds_without_the_agent(env: _Fixture) -> None:
     """A run dead long ago is cleared even when the agent cannot be told."""
     student = await _student(env)
     action = await env.actions.trigger(
-        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.PROPOSE_TOPIC,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
     env.agent.unavailable = True
 
@@ -529,7 +611,12 @@ async def test_a_finished_action_cannot_be_cancelled(env: _Fixture) -> None:
 async def test_a_cancelled_action_is_not_polled(env: _Fixture) -> None:
     student = await _student(env)
     action = await env.actions.trigger(
-        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.PROPOSE_TOPIC,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
     await env.actions.cancel(PROMOTOR, student.id, action.id, TOKEN)
     env.agent.completes_with(topic_payload("Za późno"))
@@ -544,7 +631,12 @@ async def test_a_cancelled_action_is_not_polled(env: _Fixture) -> None:
 async def test_in_progress_drops_what_the_agent_finished(env: _Fixture) -> None:
     student = await _student(env)
     await env.actions.trigger(
-        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.PROPOSE_TOPIC,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
     running = await env.actions.in_progress(PROMOTOR, TOKEN)
     env.agent.completes_with(topic_payload("Instytucje a wzrost"))
@@ -559,7 +651,12 @@ async def test_action_of_another_student_is_not_found(env: _Fixture) -> None:
     mine = await _student(env)
     theirs = await _student(env)
     action = await env.actions.trigger(
-        PROMOTOR, theirs.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+        PROMOTOR,
+        theirs.id,
+        action_type=ActionType.PROPOSE_TOPIC,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
 
     with pytest.raises(ActionNotFoundError):
@@ -569,7 +666,12 @@ async def test_action_of_another_student_is_not_found(env: _Fixture) -> None:
 async def test_list_filters_by_action_type(env: _Fixture) -> None:
     student = await _student(env)
     await env.actions.trigger(
-        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.PROPOSE_TOPIC,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
 
     assert (
@@ -595,7 +697,12 @@ async def _completed_action(
     env: _Fixture, student_id: uuid.UUID, *titles: str
 ) -> uuid.UUID:
     action = await env.actions.trigger(
-        PROMOTOR, student_id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+        PROMOTOR,
+        student_id,
+        action_type=ActionType.PROPOSE_TOPIC,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
     env.agent.completes_with(topic_payload(*titles))
     await env.actions.get_action(PROMOTOR, student_id, action.id, TOKEN)
@@ -630,7 +737,12 @@ async def test_accepting_twice_is_rejected(env: _Fixture) -> None:
 async def test_unfinished_action_cannot_be_accepted(env: _Fixture) -> None:
     student = await _student(env)
     action = await env.actions.trigger(
-        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.PROPOSE_TOPIC,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
 
     with pytest.raises(ValueError, match="cannot be accepted"):
@@ -662,6 +774,8 @@ async def test_accepting_a_drafted_note_saves_it_with_its_provenance(
         action_type=ActionType.DRAFT_MEETING_NOTE,
         token=TOKEN,
         detail="rozdział 2, dobór próby, termin 15.03",
+        provider="claude",
+        keys=claude_key,
     )
     env.agent.completes_with(note_payload("Omówiliśmy zakres rozdziału 2."))
     await env.actions.get_action(PROMOTOR, student.id, action.id, TOKEN)
@@ -685,6 +799,8 @@ async def test_meeting_note_action_needs_rough_notes(env: _Fixture) -> None:
             student.id,
             action_type=ActionType.DRAFT_MEETING_NOTE,
             token=TOKEN,
+            provider="claude",
+            keys=claude_key,
         )
 
 
@@ -699,7 +815,12 @@ async def test_defence_questions_use_the_latest_version(env: _Fixture) -> None:
     )
 
     await env.actions.trigger(
-        PROMOTOR, student.id, action_type=ActionType.DEFENCE_QUESTIONS, token=TOKEN
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.DEFENCE_QUESTIONS,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
 
     context = env.agent.submitted[0]["context"]
@@ -718,7 +839,12 @@ async def test_progress_check_sends_both_versions(env: _Fixture) -> None:
     )
 
     action = await env.actions.trigger(
-        PROMOTOR, student.id, action_type=ActionType.CHECK_PROGRESS, token=TOKEN
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.CHECK_PROGRESS,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
 
     context = env.agent.submitted[0]["context"]
@@ -750,7 +876,12 @@ async def test_progress_check_sends_only_the_notes_between_the_versions(
     await note("Po drugiej wersji")
 
     await env.actions.trigger(
-        PROMOTOR, student.id, action_type=ActionType.CHECK_PROGRESS, token=TOKEN
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.CHECK_PROGRESS,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
 
     context = env.agent.submitted[0]["context"]
@@ -767,7 +898,12 @@ async def test_review_context_carries_the_student_as_metadata(env: _Fixture) -> 
     )
 
     await env.actions.trigger(
-        PROMOTOR, student.id, action_type=ActionType.GENERATE_REVIEW, token=TOKEN
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.GENERATE_REVIEW,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
 
     metadata = env.agent.submitted[0]["context"]["metadata"]
@@ -825,32 +961,23 @@ async def test_a_provider_without_a_key_is_refused_before_anything_is_recorded(
     assert await env.actions.list_actions(PROMOTOR, student.id, TOKEN) == []
 
 
-async def test_a_held_key_is_not_used_when_no_provider_is_asked_for(
+async def test_without_a_provider_nothing_is_recorded_or_dispatched(
     env: _Fixture,
 ) -> None:
+    """Holding a key is not consent to be billed, and there is no other model."""
     student = await _student(env)
 
-    action = await env.actions.trigger(
-        PROMOTOR,
-        student.id,
-        action_type=ActionType.PROPOSE_TOPIC,
-        token=TOKEN,
-        keys=_keys,
-    )
+    with pytest.raises(ProviderRequiredError):
+        await env.actions.trigger(
+            PROMOTOR,
+            student.id,
+            action_type=ActionType.PROPOSE_TOPIC,
+            token=TOKEN,
+            keys=_keys,
+        )
 
-    assert env.agent.submitted[0]["byok"] is None
-    assert action.provider is None
-
-
-async def test_without_a_key_nothing_is_forwarded(env: _Fixture) -> None:
-    """No key means the self-hosted model, which needs none."""
-    student = await _student(env)
-
-    await env.actions.trigger(
-        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
-    )
-
-    assert env.agent.submitted[0]["byok"] is None
+    assert env.agent.submitted == []
+    assert await env.actions.list_actions(PROMOTOR, student.id, TOKEN) == []
 
 
 async def test_the_key_is_not_written_to_the_action_row(env: _Fixture) -> None:
@@ -878,7 +1005,12 @@ async def test_the_key_is_not_written_to_the_action_row(env: _Fixture) -> None:
 async def test_a_failure_the_promoter_can_fix_keeps_its_code(env: _Fixture) -> None:
     student = await _student(env)
     action = await env.actions.trigger(
-        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.PROPOSE_TOPIC,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
     env.agent.fails_with("anthropic: credit balance too low", "provider_no_credits")
 
@@ -892,7 +1024,12 @@ async def test_the_tokens_an_action_spent_are_kept_with_it(env: _Fixture) -> Non
     """Copied once the agent reports them, and still there when it is gone."""
     student = await _student(env)
     action = await env.actions.trigger(
-        PROMOTOR, student.id, action_type=ActionType.PROPOSE_TOPIC, token=TOKEN
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.PROPOSE_TOPIC,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
     )
     usage = {
         "input_tokens": 12000,

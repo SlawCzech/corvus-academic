@@ -88,7 +88,7 @@ async def delete_api_key(
     """Remove the caller's key for one provider; idempotent.
 
     Actions that asked for that provider are refused from now on; the other
-    provider's key, and the self-hosted model, are unaffected.
+    provider's key is unaffected.
     """
     if provider not in SUPPORTED_PROVIDERS:
         raise HTTPException(
