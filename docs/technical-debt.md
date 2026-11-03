@@ -403,4 +403,4 @@ odłożone:
 
 ---
 
-*Ostatnia aktualizacja: 2026-11-02 (progi z wytycznych, ADR 0020)*
+*Ostatnia aktualizacja: 2026-11-03 (sprzątanie długu: CSP, izolacja ekstrakcji, limiter, sesje po zmianie hasła)*

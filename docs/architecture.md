@@ -519,7 +519,7 @@ config każdemu węzłowi, a `llm.invoke` w węźle podnosi callback z kontekstu
 | `pydantic-settings` | konfiguracja z env |
 | `alembic` | migracje bazy danych (identity, agent) |
 | `email-validator` | walidacja adresów e-mail (identity) |
-| `fastapi-limiter` | rate limiting (identity — `/auth/login`) |
+| `RateLimit` (własny) | rate limiting (identity — logowanie, zmiana hasła, prośby o dostęp) |
 
 ### TypeScript (frontend)
 
@@ -630,5 +630,5 @@ który ludzie wyłączają przez `--no-verify`. Od tego jest CI.
   worker ([ADR 0012](adr/0012-seal-the-provider-key-for-the-task-queue.md))
 - każdy serwis ma non-root user w Dockerze
 - audyt logowań (`LoginEventModel`) — IP, user-agent, sukces/porażka
-- rate limiting na `/auth/login` (fastapi-limiter)
+- rate limiting na `/auth/login` (`identity/infrastructure/limiter.py`, okno przesuwne per klient)
 - Dependabot / Renovate Bot — **jeszcze nieskonfigurowane**
