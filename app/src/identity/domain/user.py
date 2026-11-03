@@ -38,9 +38,7 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
             Permission.MANAGE_MODELS,
         }
     ),
-    Role.PROMOTOR: frozenset(
-        {Permission.SUBMIT_ANALYSIS, Permission.MANAGE_STUDENTS}
-    ),
+    Role.PROMOTOR: frozenset({Permission.SUBMIT_ANALYSIS, Permission.MANAGE_STUDENTS}),
 }
 
 

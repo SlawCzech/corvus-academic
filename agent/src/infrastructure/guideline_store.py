@@ -59,11 +59,7 @@ def search_chunks(
     before this table existed.
     """
     try:
-        return asyncio.run(
-            _search(thesis_type, embedding, embedding_model, limit)
-        )
+        return asyncio.run(_search(thesis_type, embedding, embedding_model, limit))
     except Exception as exc:
-        logger.error(
-            "guideline_search_failed", thesis_type=thesis_type, error=str(exc)
-        )
+        logger.error("guideline_search_failed", thesis_type=thesis_type, error=str(exc))
         return []

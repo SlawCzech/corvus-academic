@@ -474,9 +474,7 @@ class ActionService:
             record.accepted_at = action.accepted_at
             await self._actions.update(record)
 
-    async def runs_on_fragment(
-        self, student_id: UUID, fragment_id: UUID
-    ) -> list[UUID]:
+    async def runs_on_fragment(self, student_id: UUID, fragment_id: UUID) -> list[UUID]:
         """Every `review_fragment` run on a fragment, whatever became of it."""
         records = await self._actions.find_by_student(
             student_id, action_type=str(ActionType.REVIEW_FRAGMENT)

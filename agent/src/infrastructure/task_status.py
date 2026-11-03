@@ -49,9 +49,7 @@ async def _write_progress(task_id: str, progress: dict[str, Any]) -> bool:
     try:
         factory = async_sessionmaker(engine, expire_on_commit=False)
         async with factory() as session:
-            return await AgentTaskRepository(session).update_progress(
-                task_id, progress
-            )
+            return await AgentTaskRepository(session).update_progress(task_id, progress)
     finally:
         await engine.dispose()
 

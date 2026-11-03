@@ -124,9 +124,7 @@ def test_the_other_parts_come_with_where_they_stand(
     ]
 
 
-def test_a_review_needs_a_fragment(
-    client: TestClient, agent: FakeAgentClient
-) -> None:
+def test_a_review_needs_a_fragment(client: TestClient, agent: FakeAgentClient) -> None:
     headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
     student_id = _new_student(client, headers)
 
@@ -369,9 +367,7 @@ def test_deleting_a_fragment_takes_its_file_and_runs_with_it(
     url = f"/students/{student_id}"
 
     assert (
-        client.delete(
-            f"{url}/fragments/{fragment['id']}", headers=headers
-        ).status_code
+        client.delete(f"{url}/fragments/{fragment['id']}", headers=headers).status_code
         == 204
     )
 

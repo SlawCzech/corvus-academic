@@ -111,7 +111,6 @@ class AgentTaskRepository:
         await self._session.commit()
         return True
 
-
     async def add_usage(self, task_id: str, usage: Usage) -> bool:
         """Add one run's tokens to what the task has spent so far.
 

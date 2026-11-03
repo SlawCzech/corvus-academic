@@ -41,7 +41,9 @@ class Settings(BaseSettings):
 
     admin_email: str = "admin@corvus.local"
     admin_password: str = Field(
-        ..., min_length=12, description="Initial admin password (min 12 chars)"  # noqa: S105
+        ...,
+        min_length=12,
+        description="Initial admin password (min 12 chars)",  # noqa: S105
     )
 
     # Downstream services still reached over HTTP.

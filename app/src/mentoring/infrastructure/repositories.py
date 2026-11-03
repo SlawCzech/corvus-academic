@@ -359,9 +359,7 @@ class ThesisPartRepository:
         )
         return list(result.scalars().all())
 
-    async def find_by_ids(
-        self, part_ids: Sequence[uuid.UUID]
-    ) -> list[ThesisPartModel]:
+    async def find_by_ids(self, part_ids: Sequence[uuid.UUID]) -> list[ThesisPartModel]:
         """Return the parts with these ids, in no particular order."""
         result = await self._session.execute(
             select(ThesisPartModel).where(ThesisPartModel.id.in_(part_ids))

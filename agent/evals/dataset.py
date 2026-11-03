@@ -109,9 +109,7 @@ def condensed_guidelines(thesis_type: str) -> str:
 
 def load_case(directory: Path) -> EvalCase:
     """Read one case directory."""
-    raw = cast(
-        dict[str, Any], json.loads((directory / "case.json").read_text("utf-8"))
-    )
+    raw = cast(dict[str, Any], json.loads((directory / "case.json").read_text("utf-8")))
     expected = cast(list[dict[str, str]], raw["expected"])
     return EvalCase(
         id=str(raw["id"]),

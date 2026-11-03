@@ -98,9 +98,7 @@ async def update_part(
     return [part_response(p) for p in parts]
 
 
-@router.delete(
-    "/{student_id}/parts/{part_id}", status_code=status.HTTP_204_NO_CONTENT
-)
+@router.delete("/{student_id}/parts/{part_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_part(
     student_id: uuid.UUID,
     part_id: uuid.UUID,

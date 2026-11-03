@@ -98,9 +98,7 @@ def _grounded(
     fragment = ThesisText(text)
     kept = [c for c in changes if fragment.contains(c.quote)]
     if len(kept) < len(changes):
-        logger.info(
-            "fragment_changes_ungrounded", dropped=len(changes) - len(kept)
-        )
+        logger.info("fragment_changes_ungrounded", dropped=len(changes) - len(kept))
     return kept[: prompts.MAX_CHANGES]
 
 

@@ -19,9 +19,7 @@ def test_passes_through_when_the_promoter_did_not_ask() -> None:
 
 
 def test_keeps_the_accepted_findings_in_their_order() -> None:
-    state = make_state(
-        context={"promoter_reviews_findings": True}, findings=_FINDINGS
-    )
+    state = make_state(context={"promoter_reviews_findings": True}, findings=_FINDINGS)
     with patch(
         "src.application.nodes.promoter_review.interrupt",
         return_value={"accepted": [1, 7, "x"]},
@@ -33,10 +31,6 @@ def test_keeps_the_accepted_findings_in_their_order() -> None:
 
 
 def test_a_decision_without_a_list_keeps_everything() -> None:
-    state = make_state(
-        context={"promoter_reviews_findings": True}, findings=_FINDINGS
-    )
-    with patch(
-        "src.application.nodes.promoter_review.interrupt", return_value="ok"
-    ):
+    state = make_state(context={"promoter_reviews_findings": True}, findings=_FINDINGS)
+    with patch("src.application.nodes.promoter_review.interrupt", return_value="ok"):
         assert promoter_review(state) == {}

@@ -272,12 +272,8 @@ def test_only_an_empty_part_can_be_deleted(client: TestClient) -> None:
     empty = client.post(url, json={"name": "Rozdział 3"}, headers=headers).json()
     used = _paste(client, headers, student_id, part_name="Rozdział 1").json()
 
-    assert (
-        client.delete(f"{url}/{empty['id']}", headers=headers).status_code == 204
-    )
-    assert (
-        client.delete(f"{url}/{used['part_id']}", headers=headers).status_code == 409
-    )
+    assert client.delete(f"{url}/{empty['id']}", headers=headers).status_code == 204
+    assert client.delete(f"{url}/{used['part_id']}", headers=headers).status_code == 409
 
 
 def test_another_promoter_sees_none_of_it(client: TestClient) -> None:

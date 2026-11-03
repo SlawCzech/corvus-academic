@@ -73,9 +73,7 @@ class LoginEventModel(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    user_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid(as_uuid=True), nullable=True
-    )
+    user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
     email: Mapped[str] = mapped_column(String(255), nullable=False)
     success: Mapped[bool] = mapped_column(Boolean, nullable=False)
     ip_address: Mapped[str] = mapped_column(String(45), nullable=False)

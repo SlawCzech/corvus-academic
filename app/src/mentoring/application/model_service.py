@@ -168,4 +168,3 @@ class ModelService:
             raise ModelNotInstalledError(name)
         await self._repo.set_default(name, by)
         return await self.admin_catalog(token)
-

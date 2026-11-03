@@ -34,9 +34,7 @@ class ReviewService:
         self._students = students
         self._drafts = drafts
 
-    def suggest(
-        self, filename: str, data: bytes, content_type: str = ""
-    ) -> TitlePage:
+    def suggest(self, filename: str, data: bytes, content_type: str = "") -> TitlePage:
         """Read a thesis's title page for the form. Nothing is stored.
 
         Raises ValueError for an unsupported or unreadable file.

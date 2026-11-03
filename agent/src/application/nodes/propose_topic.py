@@ -59,9 +59,7 @@ def propose_topic(state: ActionState) -> ActionState:
             node="propose_topic",
         )
         topics = [t.model_dump() for t in reply.topics]
-        recommended = (
-            reply.recommended if 0 <= reply.recommended < len(topics) else 0
-        )
+        recommended = reply.recommended if 0 <= reply.recommended < len(topics) else 0
 
         logger.info(
             "propose_topic_complete",

@@ -27,9 +27,7 @@ def agent() -> Generator[FakeAgentClient, None, None]:
     app.dependency_overrides.pop(get_agent_client, None)
 
 
-def _new_student(
-    client: TestClient, headers: dict[str, str], **overrides: str
-) -> str:
+def _new_student(client: TestClient, headers: dict[str, str], **overrides: str) -> str:
     body = {
         "full_name": "Jan Kowalski",
         "field_of_study": "Ekonomia",

@@ -72,8 +72,7 @@ _REPLY = TypeAdapter(_JudgeReply)
 def render_findings(findings: Sequence[Finding]) -> str:
     """Findings numbered from 1, as the judge refers to them."""
     return "\n".join(
-        f"{i}. [{f.severity}] ({f.source or 'unknown'}) {f.section}: "
-        f"{f.description}"
+        f"{i}. [{f.severity}] ({f.source or 'unknown'}) {f.section}: {f.description}"
         for i, f in enumerate(findings, start=1)
     )
 
@@ -117,8 +116,7 @@ def parse_judgement(
     false_map = cast(dict[str, Any], raw_false) if isinstance(raw_false, dict) else {}
     return Judgement(
         expected={
-            e.id: _numbers(expected_map.get(e.id), finding_count)
-            for e in case.expected
+            e.id: _numbers(expected_map.get(e.id), finding_count) for e in case.expected
         },
         false_claims={
             i: _numbers(false_map.get(str(i)), finding_count)

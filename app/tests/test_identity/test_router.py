@@ -54,16 +54,12 @@ def test_login_promotor_success(client: TestClient) -> None:
 
 
 def test_login_wrong_password(client: TestClient) -> None:
-    resp = client.post(
-        "/auth/login", json={"email": ADMIN_EMAIL, "password": "wrong"}
-    )
+    resp = client.post("/auth/login", json={"email": ADMIN_EMAIL, "password": "wrong"})
     assert resp.status_code == 401
 
 
 def test_login_password_over_bcrypt_limit_is_401(client: TestClient) -> None:
-    resp = client.post(
-        "/auth/login", json={"email": ADMIN_EMAIL, "password": "ż" * 37}
-    )
+    resp = client.post("/auth/login", json={"email": ADMIN_EMAIL, "password": "ż" * 37})
     assert resp.status_code == 401
 
 
@@ -185,9 +181,7 @@ def test_logout_leaves_other_sessions_alone(client: TestClient) -> None:
 
 def test_logout_without_a_token_still_succeeds(client: TestClient) -> None:
     assert client.post("/auth/logout").status_code == 204
-    resp = client.post(
-        "/auth/logout", headers={"Authorization": "Bearer not.a.token"}
-    )
+    resp = client.post("/auth/logout", headers={"Authorization": "Bearer not.a.token"})
     assert resp.status_code == 204
 
 
@@ -471,7 +465,7 @@ def test_a_key_the_provider_rejects_is_not_stored(
 def test_a_rejection_carries_what_the_provider_said(
     client: TestClient, key_checker: FakeKeyChecker
 ) -> None:
-    """"Rejected" alone sends the promoter looking for a typo that is not there."""
+    """ "Rejected" alone sends the promoter looking for a typo that is not there."""
     key_checker.verdict = KeyVerdict.REJECTED
     key_checker.provider_message = "This API key is not scoped to a workspace"
     token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)

@@ -2,8 +2,8 @@
 
 EXTRACT = (
     "You are given the bibliography of a diploma thesis. List every entry in "
-    "it, in order. Return a JSON object: {\"references\": [{\"entry\": str, "
-    "\"authors\": str, \"year\": int | null, \"title\": str, \"venue\": "
+    'it, in order. Return a JSON object: {"references": [{"entry": str, '
+    '"authors": str, "year": int | null, "title": str, "venue": '
     "str}]}. `entry` is the whole entry exactly as written (without its "
     "number); the other fields are taken from it — `venue` is the journal, "
     "publisher or website. Do not correct, complete or add anything. Return "
@@ -47,9 +47,9 @@ BUDGET_SPENT = (
 VERDICTS = (
     "Below is an investigation of references that an automatic check could "
     "not settle, with the tool results. Give a verdict for each reference by "
-    "its index. Return a JSON object: {{\"verdicts\": [{{\"index\": int, "
-    "\"status\": \"found\" | \"mismatch\" | \"not_indexed\" | \"suspicious\", "
-    "\"note\": str, \"doi\": str}}]}}.\n"
+    'its index. Return a JSON object: {{"verdicts": [{{"index": int, '
+    '"status": "found" | "mismatch" | "not_indexed" | "suspicious", '
+    '"note": str, "doi": str}}]}}.\n'
     "- found: a record matches the reference (give its doi if it has one, "
     "and say in the note where it was found);\n"
     "- mismatch: the work exists but the reference gets something wrong — "

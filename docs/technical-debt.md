@@ -61,10 +61,9 @@ Zostaje:
   Naprawka: anotować odpowiedzi w testach albo per-file suppression dla `tests/**`
   — świadomie, jako osobna zmiana.
 
-- [ ] **`ruff format` nie jest włączony** — przeformatowałby ~30 istniejących plików
-  w obu serwisach. Warto to zrobić, ale jako osobną zmianę, nie przy okazji CI
-  (ten sam powód co przy pinach `fastapi`/`starlette`). Wtedy dołożyć hook
-  `ruff-format` do `.pre-commit-config.yaml` i krok do CI.
+- [x] ~~**`ruff format` nie jest włączony**~~ — włączony 2026-11-03: 33 pliki
+  przeformatowane jednym commitem, hook `ruff-format` i krok `Format` w CI. `rev`
+  hooka idzie za wersją ruffa z lockfile'ów (0.17.3).
 
 - [x] ~~**`ruff` w `agent/` — 36 błędów**~~ — naprawione w Fazie 2 (2026-09-05).
   Oba serwisy są czyste. Pliki z promptami (`agent/src/application/prompts/*.py`,

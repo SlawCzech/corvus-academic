@@ -21,14 +21,15 @@ repos:
       - id: check-case-conflict
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.14
+    rev: v0.17.3
     hooks:
       # Each service carries its own pyproject; ruff resolves the config from
       # the file's own directory, so one hook covers both.
+      # Keep `rev` on the ruff the services lock: two formatter versions
+      # would reformat each other's output back and forth.
       - id: ruff-check
         args: [--fix]
-      # `ruff format` is not enabled: it would reformat ~30 existing files in
-      # one go. Worth doing — as its own change, not folded into every commit.
+      - id: ruff-format
 
   - repo: local
     hooks:

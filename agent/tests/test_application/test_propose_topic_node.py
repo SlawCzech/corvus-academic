@@ -72,9 +72,7 @@ def test_propose_topic_api_error() -> None:
 def test_propose_topic_accepts_fenced_json() -> None:
     """Models like to wrap JSON in markdown; that must not fail the action."""
     mock_llm = MagicMock()
-    mock_llm.invoke.return_value = AIMessage(
-        content=f"```json\n{_VALID_RESPONSE}\n```"
-    )
+    mock_llm.invoke.return_value = AIMessage(content=f"```json\n{_VALID_RESPONSE}\n```")
 
     with patch("src.application.nodes.propose_topic.get_llm", return_value=mock_llm):
         result = propose_topic(_make_state())
