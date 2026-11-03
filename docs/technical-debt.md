@@ -72,10 +72,11 @@ Zostaje:
   `nodes/review.py`) mają świadomy per-file wyjątek na `E501` — łamanie linii w
   literale zmienia prompt, nie formatowanie.
 
-- [ ] **Piny `fastapi==0.136.3` + `starlette==1.3.1` w `app/pyproject.toml`** — świeży
-  lockfile podbijał je do 0.141 / 1.6, co wciągnęłoby nietestowany upgrade zależności
-  w środek refaktoru strukturalnego. Odpiąć i zaktualizować osobno (starlette 1.6
-  deprecjonuje też `httpx` w `TestClient`).
+- [x] ~~**Piny `fastapi==0.136.3` + `starlette==1.3.1` w `app/pyproject.toml`**~~ —
+  zdjęte 2026-11-03: `fastapi>=0.162.0` jak w agencie, starlette 1.10 z lockfile'a.
+  Dependabot przestaje je pomijać. Zostaje: starlette 1.10 ostrzega, że `httpx` w
+  `TestClient` jest przestarzały (`httpx2`) — działa, do zmiany przy następnym
+  dużym podbiciu.
 
 - [x] ~~**Coverage nie mierzy ciał async endpointów**~~ — zdiagnozowane i naprawione
   2026-11-03: winny nie był wątek `TestClient`, tylko greenlet, w którym async

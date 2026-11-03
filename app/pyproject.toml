@@ -4,12 +4,7 @@ version = "0.1.0"
 description = "Corvus app service — identity, document extraction, mentoring domain"
 requires-python = ">=3.12"
 dependencies = [
-    # Pinned to the versions the merged code was actually tested against. A fresh
-    # lockfile resolved fastapi 0.136 -> 0.141 and starlette 1.2 -> 1.6, which would
-    # have folded an untested dependency upgrade into a structural refactor. Unpin
-    # and upgrade deliberately, as its own change — see docs/technical-debt.md.
-    "fastapi==0.136.3",
-    "starlette==1.3.1",
+    "fastapi>=0.162.0",
     "bcrypt>=4.3.0",
     "pydantic-settings>=2.16.2",
     "redis>=6.2.0",
