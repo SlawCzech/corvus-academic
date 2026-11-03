@@ -4,10 +4,17 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import AIMessage, HumanMessage
+from langchain_openai import ChatOpenAI
+from pydantic import SecretStr
 
 from src.application.replies import FINDINGS, REVIEW, TOPIC_PROPOSAL
-from src.application.structured import StructuredOutputError, invoke_structured
+from src.application.structured import (
+    StructuredOutputError,
+    invoke_structured,
+    response_format,
+)
 
 _FINDING = (
     '[{"section": "Wstęp", "description": "Brak hipotez", '
@@ -90,12 +97,54 @@ def test_a_reply_that_stays_wrong_raises() -> None:
         invoke_structured(llm, [HumanMessage("x")], FINDINGS, node="t")
 
 
-def test_other_backends_get_no_format_argument() -> None:
+def test_an_object_reply_goes_with_its_schema() -> None:
+    llm = _llm(
+        '{"topics": [{"title": "T", "rationale": "R", "research_question": "Q"}]}'
+    )
+
+    invoke_structured(llm, [HumanMessage("x")], TOPIC_PROPOSAL, node="propose topic")
+
+    sent = llm.invoke.call_args.kwargs["response_format"]
+    assert sent["type"] == "json_schema"
+    assert sent["json_schema"]["name"] == "propose_topic"
+    assert sent["json_schema"]["schema"] == TOPIC_PROPOSAL.json_schema()
+    assert sent["json_schema"]["strict"] is False
+
+
+def test_a_list_of_findings_is_left_free() -> None:
+    """OpenAI takes only an object at the root; the prompt asks for a list."""
     llm = _llm(_FINDING)
 
     invoke_structured(llm, [HumanMessage("x")], FINDINGS, node="t")
 
     assert llm.invoke.call_args.kwargs == {}
+
+
+def test_claude_receives_the_schema_as_output_config() -> None:
+    """The wiring LangChain does: response_format becomes output_config.format."""
+    llm = ChatAnthropic(model="claude-sonnet-5-5", api_key=SecretStr("k"))  # pyright: ignore[reportCallIssue]
+    constrained = response_format(TOPIC_PROPOSAL, "propose_topic")
+    assert constrained is not None
+
+    payload = llm._get_request_payload(  # pyright: ignore[reportPrivateUsage]
+        [HumanMessage("x")], response_format=constrained
+    )
+
+    sent = payload["output_config"]["format"]
+    assert sent["type"] == "json_schema"
+    assert sent["schema"]["additionalProperties"] is False
+    assert "response_format" not in payload
+
+
+def test_openai_receives_the_schema_as_response_format() -> None:
+    llm = ChatOpenAI(model="gpt-6.1-sol", api_key=SecretStr("k"))  # pyright: ignore[reportCallIssue]
+    constrained = response_format(TOPIC_PROPOSAL, "propose_topic")
+
+    payload = llm._get_request_payload(  # pyright: ignore[reportPrivateUsage]
+        [HumanMessage("x")], response_format=constrained
+    )
+
+    assert payload["response_format"] == constrained
 
 
 # ---------- the reply shapes ----------

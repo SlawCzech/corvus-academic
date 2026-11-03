@@ -112,7 +112,7 @@ def test_supervisor_context_reaches_the_prompt() -> None:
     """What the promoter typed, and where the student already is, must be sent."""
     captured: list[Any] = []
 
-    def _capture(messages: list[Any]) -> AIMessage:
+    def _capture(messages: list[Any], **_: Any) -> AIMessage:  # noqa: ANN401
         captured.extend(messages)
         return AIMessage(content=_VALID_RESPONSE)
 
@@ -138,7 +138,7 @@ def test_language_selects_the_prompt_language() -> None:
     """The output language is a top-level state field, not part of context."""
     captured: list[Any] = []
 
-    def _capture(messages: list[Any]) -> AIMessage:
+    def _capture(messages: list[Any], **_: Any) -> AIMessage:  # noqa: ANN401
         captured.extend(messages)
         return AIMessage(content=_VALID_RESPONSE)
 

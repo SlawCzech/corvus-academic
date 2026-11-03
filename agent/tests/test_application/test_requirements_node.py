@@ -134,7 +134,7 @@ def test_node_passes_guidelines_from_state_to_model_prompt() -> None:
     mock_llm = MagicMock()
     captured_messages: list[Any] = []
 
-    def capture_invoke(messages: list[Any]) -> AIMessage:
+    def capture_invoke(messages: list[Any], **_: Any) -> AIMessage:  # noqa: ANN401
         captured_messages.extend(messages)
         return AIMessage(content=_EMPTY_RESPONSE)
 

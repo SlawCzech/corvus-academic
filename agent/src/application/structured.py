@@ -5,20 +5,28 @@ model that closed a bracket too early, called a key ``criterion`` instead of
 ``criteria`` or wrote "Major" for "major" cost the whole branch: the node
 logged a parse error and the review went ahead without it.
 
-Two layers:
+Three layers, cheapest first:
 
-1. **Validation** against a Pydantic model. Valid JSON can still be the
-   wrong JSON: a missing key, a severity outside the three.
-2. **Repair**: when validation fails, the model is shown its own reply and the
+1. **The provider's structured outputs.** The reply's JSON schema goes with
+   the request as ``response_format``; LangChain hands it to Anthropic as
+   ``output_config.format`` and to OpenAI as it is. Claude then decodes only
+   tokens that keep the reply valid against it. Only for shapes whose root is
+   an object: OpenAI takes nothing else, and a list of findings stays a list
+   rather than a prompt that says one thing and a schema that says another.
+2. **Validation** against a Pydantic model, always. Valid JSON can still be
+   the wrong JSON — a list of findings is not constrained, and OpenAI's
+   non-strict mode is a strong hint, not a guarantee.
+3. **Repair**: when validation fails, the model is shown its own reply and the
    validation error, and asked once more. Cheaper than failing the branch,
    and the error message is usually all it needed.
 
-The prompts describe the shape in words; the words are what the model
-follows, and what explains *why* a field is there.
+The prompts still describe the shape in words: they explain to the model
+*why* a field is there, which a schema does not.
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from typing import Any, cast
 
@@ -41,6 +49,28 @@ _REPAIR_PROMPT = """Your previous reply could not be used:
 
 Reply again with ONLY the corrected JSON — same content, fixed to match the \
 required format. No markdown, no explanation."""
+
+
+_NAME = re.compile(r"[^a-zA-Z0-9_-]")
+
+
+def response_format(shape: TypeAdapter[Any], node: str) -> dict[str, Any] | None:
+    """The schema to send with the request, or None to leave the reply free.
+
+    Not strict on OpenAI: strict mode wants every property required, and the
+    replies have optional keys. Claude's structured outputs have no such mode.
+    """
+    schema = shape.json_schema()
+    if schema.get("type") != "object":
+        return None
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": _NAME.sub("_", node),
+            "schema": schema,
+            "strict": False,
+        },
+    }
 
 
 class StructuredOutputError(ValueError):
@@ -70,10 +100,15 @@ def invoke_structured[T](
     Raises `StructuredOutputError` when every attempt fails; nodes catch it
     like any other failure and report it in state.
     """
+    kwargs: dict[str, Any] = {}
+    constrained = response_format(shape, node)
+    if constrained is not None:
+        kwargs["response_format"] = constrained
+
     conversation = list(messages)
     last_error: Exception | None = None
     for attempt in range(1, _ATTEMPTS + 1):
-        response = llm.invoke(conversation)
+        response = llm.invoke(conversation, **kwargs)
         metadata = cast(dict[str, Any], response.response_metadata)  # pyright: ignore[reportUnknownMemberType]
         if metadata.get("stop_reason") == "refusal":
             # A hosted model's safety classifier declined; asking again with

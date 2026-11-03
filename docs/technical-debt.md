@@ -380,10 +380,12 @@ odłożone:
   (`stop_reason: refusal`); zgłaszamy to wprost, ale nie ponawiamy na innym modelu.
   Wymaga parametru beta, którego przez LangChain nie przetestowano.
 
-- [ ] **Wymuszanie schematu tylko na Ollamie** — na dostawcy zostaje prompt, walidacja
-  i jedna tura naprawcza. W recenzjach z 2026-10-01 dwie z trzech analiz potrzebowały
-  tury naprawczej (brak `severity`); prompty podają teraz kształt JSON-a dosłownie,
-  skutek niezmierzony. Docelowo: structured outputs dostawcy.
+- [~] **Wymuszanie schematu u dostawcy** — od 2026-11-03 odpowiedzi-obiekty idą ze
+  schematem (`response_format` → `output_config.format` u Anthropic, niestrict u
+  OpenAI; `structured.response_format`). Zostaje: lista uwag trzech analiz ma tablicę
+  na wierzchu, więc jedzie bez schematu (OpenAI przyjmuje tylko obiekt, a prompt prosi
+  o listę) — to te analizy najczęściej potrzebowały tury naprawczej. Skutek na żywo
+  niezmierzony: pierwszy przebieg `make eval MODEL=claude` po zmianie.
 
 - [ ] **Uwagi w recenzji nie mają pozycji w dokumencie** — `section` to wolny tekst
   modelu, więc listy uwag nie da się posortować kolejnością rozdziałów (jest po wadze).

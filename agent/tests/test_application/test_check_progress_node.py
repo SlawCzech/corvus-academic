@@ -102,7 +102,7 @@ def test_summary_is_required() -> None:
 def test_both_versions_reach_the_prompt() -> None:
     captured: list[Any] = []
 
-    def _capture(messages: list[Any]) -> AIMessage:
+    def _capture(messages: list[Any], **_: Any) -> AIMessage:  # noqa: ANN401
         captured.extend(messages)
         return AIMessage(content=_VALID_RESPONSE)
 

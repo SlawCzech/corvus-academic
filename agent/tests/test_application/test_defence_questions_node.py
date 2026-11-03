@@ -128,7 +128,7 @@ def test_a_long_thesis_goes_in_whole() -> None:
     """The committee reads the whole work, and so does the model."""
     captured: list[Any] = []
 
-    def _capture(messages: list[Any]) -> AIMessage:
+    def _capture(messages: list[Any], **_: Any) -> AIMessage:  # noqa: ANN401
         captured.extend(messages)
         return AIMessage(content=_VALID_RESPONSE)
 
@@ -147,7 +147,7 @@ def test_a_long_thesis_goes_in_whole() -> None:
 def test_supervisor_instructions_reach_the_prompt() -> None:
     captured: list[Any] = []
 
-    def _capture(messages: list[Any]) -> AIMessage:
+    def _capture(messages: list[Any], **_: Any) -> AIMessage:  # noqa: ANN401
         captured.extend(messages)
         return AIMessage(content=_VALID_RESPONSE)
 
