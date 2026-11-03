@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { isTokenExpired, getRole, homeFor } from "@/lib/auth"
 
-export function middleware(request: NextRequest): NextResponse {
+export function proxy(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl
   const accessToken = request.cookies.get("access_token")?.value
   const refreshToken = request.cookies.get("refresh_token")?.value

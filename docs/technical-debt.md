@@ -33,8 +33,8 @@ Zostaje:
 - [ ] **Brak Content-Security-Policy.** Caddy wysyła HSTS, `nosniff`,
   `X-Frame-Options`, `Referrer-Policy`; CSP wymaga noncy dla skryptów inline
   Next.js — osobna praca.
-- [ ] **`middleware.ts` → `proxy.ts`.** Next 16 zgłasza konwencję `middleware`
-  jako przestarzałą.
+- [x] ~~**`middleware.ts` → `proxy.ts`.**~~ — przemianowane 2026-11-03 (konwencja
+  Next 16), logika i matcher bez zmian.
 - [x] ~~**Hydration mismatch ikony motywu** w `Sidebar`~~ — naprawione w PR #12:
   przełącznik czeka na hydratację (`hooks/useHydrated.ts`).
 - [x] ~~**`@testing-library/*` i `vitest` w `dependencies`**~~ — przeniesione do

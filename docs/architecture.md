@@ -264,7 +264,7 @@ corvus/
 │   │                              ActionResultView
 │   ├── lib/                      # api.client, api.types, appProxy (APP_URL)
 │   ├── hooks/useAction.ts        # trigger + polling jednej akcji
-│   ├── middleware.ts            # ochrona /admin i /students (cookie JWT)
+│   ├── proxy.ts                 # ochrona /admin i /students (cookie JWT)
 │   ├── vitest.config.ts
 │   ├── eslint.config.mjs
 │   └── tsconfig.json            # strict: true
