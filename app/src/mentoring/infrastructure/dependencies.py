@@ -74,10 +74,7 @@ def get_caller(
     user: Annotated[User, Depends(require_students_access)],
 ) -> Caller:
     """Project the authenticated user into the mentoring context."""
-    return Caller(
-        user_id=user.id,
-        can_view_all=user.can(Permission.VIEW_ALL_STUDENTS),
-    )
+    return Caller(user_id=user.id)
 
 
 def get_student_service(

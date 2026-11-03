@@ -20,10 +20,8 @@ class Permission(StrEnum):
     """Fine-grained permissions granted to roles."""
 
     MANAGE_USERS = "manage_users"
-    VIEW_ALL_ANALYSES = "view_all_analyses"
     SUBMIT_ANALYSIS = "submit_analysis"
     MANAGE_STUDENTS = "manage_students"
-    VIEW_ALL_STUDENTS = "view_all_students"
     MANAGE_GUIDELINES = "manage_guidelines"
     MANAGE_MODELS = "manage_models"
 

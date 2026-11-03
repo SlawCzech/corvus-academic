@@ -48,14 +48,12 @@ def test_promotor_manages_own_students_only() -> None:
         id=PROMOTOR_UUID, email=PROMOTOR_EMAIL, role=Role.PROMOTOR
     )
     assert promotor.can(Permission.MANAGE_STUDENTS) is True
-    assert promotor.can(Permission.VIEW_ALL_STUDENTS) is False
 
 
 def test_admin_has_no_access_to_students() -> None:
     """An admin runs the platform; theses and students are the promoters'."""
     admin = user_domain.User(id=ADMIN_UUID, email=ADMIN_EMAIL, role=Role.ADMIN)
     assert admin.can(Permission.MANAGE_STUDENTS) is False
-    assert admin.can(Permission.VIEW_ALL_STUDENTS) is False
     assert admin.can(Permission.SUBMIT_ANALYSIS) is False
 
 

@@ -306,8 +306,7 @@ class ActionService:
         """
         students = await self._students.list_students(caller)
         names = {s.id: s.full_name for s in students}
-        promotor_filter = None if caller.can_view_all else caller.user_id
-        records = await self._actions.find_unfinished_by_promotor(promotor_filter)
+        records = await self._actions.find_unfinished_by_promotor(caller.user_id)
 
         unfinished: list[ActionInProgress] = []
         for record in records:

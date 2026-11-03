@@ -48,11 +48,10 @@ Zostaje:
 
 ## Jakość kodu — stan faktyczny (zweryfikowany 2026-09-05)
 
-- [ ] **Martwa ścieżka „widzi wszystkich studentów”** (od ADR 0008, 2026-09-23) —
-  żadna rola nie ma już `VIEW_ALL_STUDENTS`, więc `Caller.can_view_all` i gałęzie
-  „view all” w `mentoring/infrastructure/repositories.py` (oraz nieużywane
-  `VIEW_ALL_ANALYSES`) są nieosiągalne. Usunąć albo świadomie zostawić pod
-  przyszłą rolę nadzoru (np. dziekanat).
+- [x] ~~**Martwa ścieżka „widzi wszystkich studentów”**~~ — usunięta 2026-11-03:
+  nie ma już `Caller.can_view_all`, `VIEW_ALL_STUDENTS` ani `VIEW_ALL_ANALYSES`, a
+  zapytania o akcje promotora wymagają jego id. Rola nadzoru (np. dziekanat), jeśli
+  kiedyś przyjdzie, dostanie własną decyzję zamiast uśpionej gałęzi.
 
 - [~] **`pyright --strict` — kod produkcyjny czysty, testy nie.** Historycznie nie
   przechodził nigdy (przed konsolidacją: `identity` **736** błędów, `parser` **88**;

@@ -28,12 +28,11 @@ class Caller:
     """The acting user, projected into the mentoring context.
 
     Deliberately not identity's ``User``: mentoring only needs who is acting
-    and whether they may look past their own roster, so the permission lookup
-    stays in the router and the two contexts stay decoupled.
+    — every caller sees their own roster and nobody else's (ADR 0008) — so
+    the two contexts stay decoupled.
     """
 
     user_id: UUID
-    can_view_all: bool = False
 
 
 def to_domain(model: StudentModel) -> Student:
@@ -213,14 +212,13 @@ class StudentService:
         status: StudentStatus | None = None,
         one_off: bool | None = None,
     ) -> list[Student]:
-        """Return the caller's students — or everyone's, for an admin.
+        """Return the caller's students.
 
         Left unset, `one_off` includes one-off reviews: whatever names an
         action needs them. The roster and the history each ask for their own.
         """
-        promotor_filter = None if caller.can_view_all else caller.user_id
         models = await self._students.find_all(
-            promotor_id=promotor_filter,
+            promotor_id=caller.user_id,
             status=str(status) if status is not None else None,
             one_off=one_off,
         )
@@ -384,6 +382,6 @@ class StudentService:
         model = await self._students.find_by_id(student_id)
         if model is None:
             raise StudentNotFoundError(str(student_id))
-        if not caller.can_view_all and model.promotor_id != caller.user_id:
+        if model.promotor_id != caller.user_id:
             raise StudentNotFoundError(str(student_id))
         return model
