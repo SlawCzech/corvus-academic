@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Source_Serif_4, Public_Sans } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
@@ -19,11 +20,14 @@ export const metadata: Metadata = {
   description: "AI-powered diploma thesis analysis and review",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Set by `proxy.ts` with the page's Content-Security-Policy. Reading it
+  // renders every page per request, which the nonce needs anyway.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html
       lang="pl"
@@ -32,7 +36,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider nonce={nonce}>{children}</ThemeProvider>
       </body>
     </html>
   );

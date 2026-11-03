@@ -39,9 +39,13 @@ Zostaje:
   każde limitowane żądanie 500-ką. Zastąpiony własnym `RateLimit` (okno przesuwne
   per klient, metoda i ścieżka, `identity/infrastructure/limiter.py`); zmiana hasła
   też przekazuje `X-Forwarded-For`.
-- [ ] **Brak Content-Security-Policy.** Caddy wysyła HSTS, `nosniff`,
-  `X-Frame-Options`, `Referrer-Policy`; CSP wymaga noncy dla skryptów inline
-  Next.js — osobna praca.
+- [x] ~~**Brak Content-Security-Policy.**~~ — od 2026-11-03 `proxy.ts` daje każdej
+  stronie politykę z noncem: skrypty tylko z noncem żądania i `'strict-dynamic'`,
+  `frame-ancestors 'none'`, `object-src 'none'`, bez `unsafe-eval` poza devem.
+  Sprawdzone na buildzie produkcyjnym: logowanie, panel admina, lista i strona
+  studenta, zmiana hasła — zero naruszeń. Zostaje: `style-src 'unsafe-inline'`,
+  bo React pisze atrybuty `style`, a te nie przyjmą noncy. Wszystkie strony
+  renderują się teraz per żądanie (nonce wymaga dynamicznego renderu).
 - [x] ~~**`middleware.ts` → `proxy.ts`.**~~ — przemianowane 2026-11-03 (konwencja
   Next 16), logika i matcher bez zmian.
 - [x] ~~**Hydration mismatch ikony motywu** w `Sidebar`~~ — naprawione w PR #12:

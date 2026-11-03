@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { NextRequest } from "next/server"
-import { config, proxy } from "./proxy"
+import { config, contentSecurityPolicy, proxy } from "./proxy"
 
 function fakeJwt(payload: Record<string, unknown>): string {
   const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }))
@@ -21,8 +21,8 @@ describe("proxy", () => {
     expect(res.headers.get("location")).toContain("/login")
   })
 
-  it("redirects /analysis to /login when no token", () => {
-    const res = proxy(makeRequest("/analysis"))
+  it("redirects /students to /login when no token", () => {
+    const res = proxy(makeRequest("/students"))
     expect(res.status).toBe(307)
     expect(res.headers.get("location")).toContain("/login")
   })
@@ -44,9 +44,9 @@ describe("proxy", () => {
     expect(res.headers.get("location")).toBeNull()
   })
 
-  it("allows /analysis through with any valid token", () => {
+  it("allows /profile through with any valid token", () => {
     const token = fakeJwt({ sub: "u1", role: "promotor", exp: 9999999999 })
-    const res = proxy(makeRequest("/analysis", token))
+    const res = proxy(makeRequest("/profile", token))
     expect(res.headers.get("location")).toBeNull()
   })
 
@@ -92,5 +92,30 @@ describe("proxy", () => {
   it("lets a promoter into the roster", () => {
     const token = fakeJwt({ sub: "u1", role: "promotor", exp: 9999999999 })
     expect(proxy(makeRequest("/students", token)).headers.get("location")).toBeNull()
+  })
+
+  it("lets anyone onto the landing page and the login form", () => {
+    for (const path of ["/", "/login"]) {
+      expect(proxy(makeRequest(path)).headers.get("location")).toBeNull()
+    }
+  })
+
+  it("gives every page a policy with a fresh nonce", () => {
+    const first = proxy(makeRequest("/login")).headers.get("content-security-policy")
+    const second = proxy(makeRequest("/login")).headers.get("content-security-policy")
+    expect(first).toMatch(/script-src 'self' 'nonce-[A-Za-z0-9+/=]+' 'strict-dynamic'/)
+    expect(first).not.toBe(second)
+  })
+
+  it("puts no policy on a file", () => {
+    const token = fakeJwt({ sub: "u1", role: "promotor", exp: 9999999999 })
+    const res = proxy(makeRequest("/api/students/s/drafts/d/file", token))
+    expect(res.headers.get("content-security-policy")).toBeNull()
+  })
+
+  it("allows eval only in development", () => {
+    expect(contentSecurityPolicy("n", true)).toContain("'unsafe-eval'")
+    expect(contentSecurityPolicy("n", false)).not.toContain("'unsafe-eval'")
+    expect(contentSecurityPolicy("n", false)).toContain("upgrade-insecure-requests")
   })
 })
