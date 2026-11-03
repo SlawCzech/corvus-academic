@@ -77,12 +77,11 @@ Zostaje:
   w środek refaktoru strukturalnego. Odpiąć i zaktualizować osobno (starlette 1.6
   deprecjonuje też `httpx` w `TestClient`).
 
-- [ ] **Coverage nie mierzy ciał async endpointów wykonywanych przez `TestClient`** —
-  np. `/auth/login` w `identity/infrastructure/router.py` pokazuje się jako niepokryte
-  mimo kilkudziesięciu wywołań w testach (kod leci w wątku roboczym portalu anyio).
-  Skutek praktyczny: pokrycie warstwy application trzeba robić testami bezpośrednimi,
-  a liczby dla routerów są zaniżone. Do zdiagnozowania osobno (prawdopodobnie
-  `COVERAGE_CORE=sysmon` / tracing wątków).
+- [x] ~~**Coverage nie mierzy ciał async endpointów**~~ — zdiagnozowane i naprawione
+  2026-11-03: winny nie był wątek `TestClient`, tylko greenlet, w którym async
+  SQLAlchemy wykonuje zapytania. Coverage gubił ślad przy pierwszym `await` do bazy.
+  `concurrency = ["greenlet", "thread"]` w obu serwisach: `users_router` 78% → 100%,
+  `auth_router` 65% → 87%, agent 176 → 132 niepokrytych linii.
 
 - [x] ~~**SQLite w testach gubi `tzinfo`**~~ — naprawione 2026-11-03: kolumny czasu
   w `app` to `UtcDateTime` (`shared/orm_types.py`), który zawsze oddaje aware UTC.

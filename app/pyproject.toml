@@ -67,6 +67,12 @@ asyncio_mode = "auto"
 addopts = "--cov=src --cov-report=xml"
 pythonpath = ["."]
 
+[tool.coverage.run]
+# Async SQLAlchemy runs every query in a greenlet: without this, coverage
+# loses the trace at the first `await` that touches the database, and the
+# rest of the endpoint reads as never run.
+concurrency = ["greenlet", "thread"]
+
 [tool.coverage.report]
 fail_under = 80
 
