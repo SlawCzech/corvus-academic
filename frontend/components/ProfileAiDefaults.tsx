@@ -28,8 +28,8 @@ function ProfileAiDefaultsForm({ saved }: { saved: AiDefaults }) {
   const { preference } = useModelChoice(draft.model)
 
   function save(): void {
-    // Saving drops a withdrawn model, or a provider whose key is gone,
-    // instead of keeping a preference that can no longer be honoured.
+    // Saving drops a provider whose key is gone, instead of keeping a
+    // preference that can no longer be honoured.
     writeAiDefaults({ ...draft, model: preference })
     setJustSaved(true)
     setTimeout(() => setJustSaved(false), 2000)

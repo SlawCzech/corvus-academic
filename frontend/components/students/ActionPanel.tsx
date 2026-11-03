@@ -240,10 +240,9 @@ function ActionPanelInner({
   const [language, setLanguage] = useState(defaults.language)
   const [reviewTone, setReviewTone] = useState(defaults.reviewTone)
   const [findingsFirst, setFindingsFirst] = useState(false)
-  // What actually gets sent: a saved model the admin has since withdrawn, or
-  // a provider whose key was removed, falls back to the default local model
-  // rather than getting the action refused.
-  const { provider, model: effectiveModel, needsKey } = useModelChoice(model)
+  // What actually gets sent: a provider whose key was removed is never
+  // swapped for the other one — the run button waits for a key instead.
+  const { provider, needsKey } = useModelChoice(model)
 
   const spec = ACTIONS.find((a) => a.type === selectedType) ?? null
   const shown = action && action.action_type === selectedType ? action : null
@@ -257,7 +256,6 @@ function ActionPanelInner({
     setTopicIndex(0)
     await run(selectedType, detail.trim() || undefined, {
       provider,
-      model: effectiveModel,
       language,
       reviewTone,
       reviewFindingsFirst: FULL_REVIEWS.includes(selectedType) && findingsFirst,

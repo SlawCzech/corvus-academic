@@ -440,38 +440,9 @@ export interface GuidelineSetDetail {
   versions: GuidelineVersionSummary[]
 }
 
-export interface LocalModel {
-  name: string
-  parameter_size: string | null
-}
-
-/** What a promoter may pick: installed models the admin has enabled. */
+/** Provider → the model a stored key for it runs on. */
 export interface ModelCatalog {
-  /** The model an action runs on when none is picked. */
-  default: string
-  available: LocalModel[]
-  /** False when the agent could not reach Ollama — `available` is then empty. */
-  local_available: boolean
-  /** Provider → the model a stored key runs on. */
   byok: Record<string, string>
-  /** False when this server offers no local models: every action needs a key. */
-  local_enabled: boolean
-}
-
-export interface AdminModel {
-  name: string
-  parameter_size: string | null
-  /** False when the server no longer has it — a setting left behind. */
-  installed: boolean
-  enabled: boolean
-  is_default: boolean
-}
-
-export interface AdminModelCatalog {
-  models: AdminModel[]
-  local_available: boolean
-  server_default: string
-  local_enabled: boolean
 }
 
 export interface ApiKeyStatus {

@@ -59,11 +59,11 @@ describe("ApiKeySection", () => {
     mockStatus([])
   })
 
-  it("says the local model is used when no key is stored", async () => {
+  it("says a key is needed to run anything when none is stored", async () => {
     renderSection()
     await waitFor(() =>
       expect(screen.getByTestId("api-key-status")).toHaveTextContent(
-        "model lokalny",
+        "dodaj klucz, żeby uruchamiać akcje AI",
       ),
     )
   })
