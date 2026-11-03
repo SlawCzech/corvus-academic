@@ -32,6 +32,13 @@ Zostaje:
   logowaniu to 401, nie 500. Od 2026-11-03 zmiana hasła kończy wszystkie sesje
   użytkownika (`sessions_from:{user}` w Redis, porównywane z `iat` z ułamkiem
   sekundy); przeglądarka, która je zmieniła, dostaje w odpowiedzi nową parę.
+- [x] ~~**Limit logowań nadal wspólny dla całego świata**~~ — znalezione i naprawione
+  2026-11-03: `X-Forwarded-For` z przeglądu nic nie dawał, bo pamięciowy backend
+  fastapi-limitera trzymał jeden bucket dla wszystkich kluczy — pięć logowań na
+  minutę dla wszystkich razem. Do tego od FastAPI 0.162 jego szukanie trasy kończyło
+  każde limitowane żądanie 500-ką. Zastąpiony własnym `RateLimit` (okno przesuwne
+  per klient, metoda i ścieżka, `identity/infrastructure/limiter.py`); zmiana hasła
+  też przekazuje `X-Forwarded-For`.
 - [ ] **Brak Content-Security-Policy.** Caddy wysyła HSTS, `nosniff`,
   `X-Frame-Options`, `Referrer-Policy`; CSP wymaga noncy dla skryptów inline
   Next.js — osobna praca.

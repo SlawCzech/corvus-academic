@@ -1,7 +1,7 @@
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
-import { APP_URL, refreshTokenIn, setSession } from "@/lib/appProxy"
+import { APP_URL, forwardedFor, refreshTokenIn, setSession } from "@/lib/appProxy"
 
 export async function PATCH(request: Request): Promise<Response> {
   const token = (await cookies()).get("access_token")?.value
@@ -17,6 +17,8 @@ export async function PATCH(request: Request): Promise<Response> {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
+      // The change is rate limited per browser, like a login.
+      ...forwardedFor(request),
     },
     body: JSON.stringify(body),
   })
