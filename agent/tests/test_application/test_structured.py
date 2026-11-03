@@ -1,11 +1,10 @@
 """Tests for structured replies: constrained where possible, repaired when not."""
 
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
-from langchain_ollama import ChatOllama
 
 from src.application.replies import FINDINGS, REVIEW, TOPIC_PROPOSAL
 from src.application.structured import StructuredOutputError, invoke_structured
@@ -89,19 +88,6 @@ def test_a_reply_that_stays_wrong_raises() -> None:
 
     with pytest.raises(StructuredOutputError, match="2 attempts"):
         invoke_structured(llm, [HumanMessage("x")], FINDINGS, node="t")
-
-
-def test_ollama_is_given_the_schema_to_decode_against() -> None:
-    llm = ChatOllama(model="qwen3:30b-a3b")
-
-    with patch.object(
-        ChatOllama, "invoke", return_value=AIMessage(content=_FINDING)
-    ) as invoke:
-        invoke_structured(llm, [HumanMessage("x")], FINDINGS, node="t")
-
-    schema = invoke.call_args.kwargs["format"]
-    assert schema["type"] == "array"
-    assert schema["items"]["$ref"].endswith("FindingReply")
 
 
 def test_other_backends_get_no_format_argument() -> None:

@@ -4,8 +4,8 @@ LangGraph saves the state after every step (and, within a step of parallel
 branches, the writes of each branch that finished). With a checkpointer the
 graph can be invoked again with no input and the same ``thread_id``, and it
 continues from the last saved step instead of starting over. For a review
-that is the difference between redoing three analyses — ten minutes on a
-local model — and redoing only the one that had not finished.
+that is the difference between redoing three analyses, and paying for them
+twice, and redoing only the one that had not finished.
 
 The thread is the Celery task id: a retry of the task, or a redelivery after
 the worker died, runs under the same id and so finds its own checkpoints.

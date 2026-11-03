@@ -171,7 +171,7 @@ def extract_references(state: BibliographyState) -> dict[str, Any]:
         return {"error": "no bibliography found in the thesis"}
     try:
         reply = invoke_structured(
-            get_llm(state["model"]),
+            get_llm(),
             [SystemMessage(content=prompts.EXTRACT), HumanMessage(content=section)],
             REFERENCES,
             node="extract_references",
@@ -273,7 +273,7 @@ def investigate(state: BibliographyState) -> dict[str, Any]:
         ]
     if _budget_spent(messages):
         new.append(HumanMessage(content=prompts.BUDGET_SPENT))
-    model = get_llm(state["model"]).bind_tools(TOOLS)  # pyright: ignore[reportUnknownMemberType]
+    model = get_llm().bind_tools(TOOLS)  # pyright: ignore[reportUnknownMemberType]
     try:
         reply = model.invoke([*messages, *new])
     except Exception as exc:
@@ -327,7 +327,7 @@ def report(state: BibliographyState) -> dict[str, Any]:
         language = prompts.LANGUAGE_NAMES.get(state.get("language", "pl"), "Polish")
         try:
             reply = invoke_structured(
-                get_llm(state["model"]),
+                get_llm(),
                 [
                     SystemMessage(content=prompts.VERDICTS.format(language=language)),
                     HumanMessage(content=_transcript(messages)),

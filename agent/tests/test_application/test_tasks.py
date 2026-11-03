@@ -263,16 +263,16 @@ def test_run_action_records_running_then_completed(
 
 def test_node_error_is_recorded_as_a_failed_task(status_writes: MagicMock) -> None:
     """A node that could not produce anything is a failure, not a done task."""
-    graph = _mock_graph(_final_state(error="Ollama unreachable"))
+    graph = _mock_graph(_final_state(error="provider unreachable"))
 
     with patch("src.application.tasks.build_action_graph", return_value=graph):
         run_action.apply(args=(ACTION_ID, ActionType.GENERATE_REVIEW, STUDENT_ID, {}))
 
     last = status_writes.call_args_list[-1]
     assert last.args[1] == TaskStatus.FAILED
-    assert last.kwargs["error"] == "Ollama unreachable"
+    assert last.kwargs["error"] == "provider unreachable"
     # The partial payload is still stored — it says which node got how far.
-    assert last.kwargs["result"]["error"] == "Ollama unreachable"
+    assert last.kwargs["result"]["error"] == "provider unreachable"
 
 
 def test_a_review_written_despite_a_failed_branch_completes_and_says_so(
@@ -282,7 +282,7 @@ def test_a_review_written_despite_a_failed_branch_completes_and_says_so(
     graph = _mock_graph(
         _final_state(
             output={"summary": "Praca poprawna.", "recommendation": "Dopuścić"},
-            node_errors=["structure: Ollama timeout"],
+            node_errors=["structure: provider timeout"],
         )
     )
 
@@ -291,7 +291,7 @@ def test_a_review_written_despite_a_failed_branch_completes_and_says_so(
 
     last = status_writes.call_args_list[-1]
     assert last.args[1] == TaskStatus.COMPLETED
-    assert last.kwargs["result"]["node_errors"] == ["structure: Ollama timeout"]
+    assert last.kwargs["result"]["node_errors"] == ["structure: provider timeout"]
 
 
 def test_analysis_that_failed_with_nothing_to_show_is_a_failed_task(
@@ -530,7 +530,7 @@ def test_the_key_never_reaches_the_stored_result(status_writes: MagicMock) -> No
 
 
 def test_without_a_key_nothing_is_in_effect() -> None:
-    """Ollama is the fallback: no key, no credentials, no change of model."""
+    """No key, no credentials: the nodes fail rather than run on another's."""
     seen: list[Any] = []
 
     def _capture(state: dict[str, Any], config: Any = None) -> dict[str, Any]:  # noqa: ANN401

@@ -17,6 +17,9 @@ from evals.defence import (
     run_case,
     score,
 )
+from src.infrastructure.llm_factory import ModelCredentials
+
+_KEY = ModelCredentials(provider="claude", api_key="k")
 
 _GOOD = [
     "Co było celem pracy o motywowaniu pokolenia Z?",
@@ -119,7 +122,7 @@ def test_run_case_goes_through_the_real_graph() -> None:
     llm.invoke.return_value = AIMessage(content=json.dumps(_output()))
 
     with patch("src.application.nodes.defence_questions.get_llm", return_value=llm):
-        result = run_case(case, "m", lambda _c, _o: _verdict())
+        result = run_case(case, "m", lambda _c, _o: _verdict(), _KEY)
 
     assert result.passed, result.problems
     assert _GOOD[0] in render_markdown([result])

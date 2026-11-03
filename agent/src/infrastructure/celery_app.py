@@ -30,7 +30,7 @@ celery_app.conf.update(
     task_acks_late=True,
     task_reject_on_worker_lost=True,
     # Redis redelivers an unacknowledged task after this long, running or
-    # not. Well above the longest review (~15 min on a local model) so a slow
-    # run is never started twice; a dead worker's task comes back within it.
+    # not. Well above the longest review (a few minutes on a provider) so a
+    # slow run is never started twice; a dead worker's task comes back within it.
     broker_transport_options={"visibility_timeout": 2 * 60 * 60},
 )

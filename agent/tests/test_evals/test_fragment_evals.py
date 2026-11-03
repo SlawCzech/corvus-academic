@@ -18,6 +18,9 @@ from evals.fragments import (
     score,
 )
 from src.domain.action import ActionType
+from src.infrastructure.llm_factory import ModelCredentials
+
+_KEY = ModelCredentials(provider="claude", api_key="k")
 
 
 def _case(**fields: Any) -> FragmentCase:  # noqa: ANN401
@@ -142,7 +145,7 @@ def test_a_failed_run_is_reported_not_judged(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setattr("evals.fragments.build_action_graph", lambda _: graph)
     judge = MagicMock()
 
-    result = run_case(_case(), "m", judge)
+    result = run_case(_case(), "m", judge, _KEY)
 
     assert result.error == "model down"
     judge.assert_not_called()

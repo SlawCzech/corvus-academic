@@ -16,10 +16,6 @@ from ..state import ActionState, AnalysisUpdate
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
-# How much of the thesis this node reads. The map that travels with the
-# excerpt covers what falls outside it — see `excerpt.render_document_block`.
-_HEAD_CHARS = 30000
-
 _SYSTEM_PROMPT_BASE = """You are checking a thesis against university requirements.
 
 The requirements document is provided below. Check each requirement
@@ -71,11 +67,11 @@ def check_requirements(state: ActionState) -> AnalysisUpdate:
     """Check thesis conformance against university guidelines from state."""
     try:
         ctx = state["context"]
-        llm = get_llm(state["model"])
+        llm = get_llm()
         blocks = (
             f"University requirements:\n{ctx.get('guidelines', '')}",
             render_threshold_block(ctx),
-            render_document_block(ctx, head_chars=_HEAD_CHARS),
+            render_document_block(ctx),
         )
         messages = [
             SystemMessage(content=_get_system_prompt(state.get("language", "pl"))),  # type: ignore[attr-defined]

@@ -20,19 +20,9 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, cast
 
-from src.application.excerpt import reading_budget, within_budget
-
-# On the local model: big enough for a chapter of a bachelor's thesis in one
-# call; a longer one is cut into parts rather than truncated — a digest of
-# half a chapter reads as a digest of the chapter. A hosted model reads every
-# chapter in one piece.
-_CHUNK_CHARS = 14000
 # More parts than this and the fan-out costs more than it reveals: adjacent
 # parts are merged until the count fits.
 _MAX_CHUNKS = 10
-# How much of the introduction and the conclusions the coherence node reads
-# on the local model; all of both on a hosted one.
-_FRAME_CHARS = 9000
 
 # "2.3. Formy prawne" — numbered below the chapter level.
 _SUBSECTION = re.compile(r"^\s*\d{1,2}\.\d")
@@ -145,11 +135,7 @@ def split_chapters(text: str, document_map: Mapping[str, Any]) -> list[Chapter]:
         body = text[start:end].strip()
         if not body:
             continue
-        chunk = reading_budget(_CHUNK_CHARS) or len(body)
-        parts = [body[i : i + chunk] for i in range(0, len(body), chunk)]
-        for n, part in enumerate(parts, start=1):
-            label = title if len(parts) == 1 else f"{title} (część {n}/{len(parts)})"
-            chapters.append(Chapter(title=label, text=part))
+        chapters.append(Chapter(title=title, text=body))
 
     while len(chapters) > _MAX_CHUNKS:
         chapters = _merge_smallest_neighbours(chapters)
@@ -183,4 +169,4 @@ def frame(text: str, document_map: Mapping[str, Any], canonical: str) -> str:
         int(s.get("start") or 0) for s in sections if int(s.get("start") or 0) > start
     ]
     end = min(following) if following else len(text)
-    return within_budget(text[start:end].strip(), _FRAME_CHARS)
+    return text[start:end].strip()

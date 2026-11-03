@@ -19,7 +19,11 @@ from src.domain.analysis import ThesisType
 from src.infrastructure.checkpoints import delete as delete_checkpoints
 from src.infrastructure.checkpoints import open_checkpointer
 from src.infrastructure.key_transit import KeyUnsealError, unseal
-from src.infrastructure.llm_factory import ModelCredentials, use_credentials
+from src.infrastructure.llm_factory import (
+    ModelCredentials,
+    model_label,
+    use_credentials,
+)
 from src.infrastructure.provider_errors import classify as classify_provider_error
 from src.infrastructure.task_status import (
     record_task_progress,
@@ -342,8 +346,7 @@ def _credentials(
     """Open the promoter's key, here in the worker that is about to use it.
 
     A key that will not open fails the task at once: retrying cannot fix it,
-    and running on the local model instead would be a silent fallback the
-    promoter did not choose (ADR 0011).
+    and there is no other model to run on (ADR 0022).
     """
     if not (provider and sealed_api_key):
         return None
@@ -361,7 +364,9 @@ def run_action(
     action_type: str,
     student_id: str,
     context: dict[str, Any],
-    model: str = "qwen3:30b-a3b",
+    # Unused: the provider decides the model. Still accepted, because a task
+    # queued by an older `app` carries it.
+    model: str | None = None,
     language: str = "pl",
     provider: str | None = None,
     sealed_api_key: str | None = None,
@@ -384,7 +389,7 @@ def run_action(
         action_type=action_type,
         student_id=student_id,
         task_id=task_id,
-        model=model,
+        model=model_label(credentials),
         # The provider is worth knowing; the key is never logged.
         byok_provider=credentials.provider if credentials else None,
     )
@@ -397,7 +402,7 @@ def run_action(
                     action_type,
                     student_id,
                     _with_guidelines(action_type, context),
-                    model,
+                    model_label(credentials),
                     language,
                 ),
             )

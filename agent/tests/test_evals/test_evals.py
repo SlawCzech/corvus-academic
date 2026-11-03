@@ -215,11 +215,11 @@ def test_summary_and_report_aggregate_across_cases() -> None:
 # ---------- run: which model is under test ----------
 
 
-def test_an_ollama_tag_needs_no_key_and_is_its_own_label() -> None:
-    from evals.run import credentials_for, model_label
+def test_only_a_provider_can_be_under_test() -> None:
+    from evals.run import credentials_for
 
-    assert credentials_for("qwen3:30b-a3b", "--model") is None
-    assert model_label("qwen3:30b-a3b") == "qwen3:30b-a3b"
+    with pytest.raises(SystemExit, match="claude or openai"):
+        credentials_for("qwen3:30b-a3b", "--model")
 
 
 def test_a_provider_takes_its_key_from_the_environment(

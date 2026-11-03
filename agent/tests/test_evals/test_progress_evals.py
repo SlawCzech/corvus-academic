@@ -16,6 +16,9 @@ from evals.progress import (
     run_case,
     score,
 )
+from src.infrastructure.llm_factory import ModelCredentials
+
+_KEY = ModelCredentials(provider="claude", api_key="k")
 
 
 def _case() -> ProgressCase:
@@ -107,7 +110,7 @@ def test_the_graph_gets_both_versions_and_the_notes(
     monkeypatch.setattr("evals.progress.build_action_graph", lambda _: graph)
     judge = MagicMock(return_value=JudgeReply(must_say={"1": True}))
 
-    assert run_case(_case(), "m", judge).passed
+    assert run_case(_case(), "m", judge, _KEY).passed
 
     context = graph.invoke.call_args.args[0]["context"]
     assert context["previous_text"] == "Wersja 1"
@@ -121,7 +124,7 @@ def test_a_failed_run_is_reported_not_judged(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setattr("evals.progress.build_action_graph", lambda _: graph)
     judge = MagicMock()
 
-    result = run_case(_case(), "m", judge)
+    result = run_case(_case(), "m", judge, _KEY)
 
     assert result.error == "model down"
     judge.assert_not_called()

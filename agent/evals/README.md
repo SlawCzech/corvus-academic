@@ -5,17 +5,14 @@ do każdej i skrypt, który puszcza je przez prawdziwy graf akcji i liczy wynik.
 Bez tego każda zmiana promptu to wrażenie z jednego przebiegu.
 
 ```bash
-make eval                                   # qwen3:30b-a3b, wszystkie przypadki
-make eval MODEL=gemma4:26b                  # inny model, ten sam klucz
-make eval MODEL=qwen3:30b-a3b CASES="pokolenie-z"
-cd agent && uv run python -m evals.run --model qwen3:30b-a3b --judge claude  # ANTHROPIC_API_KEY
-cd agent && uv run python -m evals.run --model claude                        # graf i sędzia na Claude
+make eval                                   # Claude, wszystkie przypadki
+make eval CASES="pokolenie-z"
+make eval MODEL=openai JUDGE=claude         # OPENAI_API_KEY i ANTHROPIC_API_KEY
 ```
 
-Chodzi na hoście, przeciw Ollamie z hosta (`127.0.0.1:11434` — nie `localhost`,
-bo na Macu z postawionym compose `::1:11434` to kontener bez modeli czatu). Nie
-potrzebuje Postgresa, Celery ani `app`. Pełen przebieg na qwen3:30b-a3b to ok.
-25 minut.
+Chodzi na hoście, z kluczem z eksportowanej zmiennej (`ANTHROPIC_API_KEY`,
+`OPENAI_API_KEY`), nie z `.env`. Nie potrzebuje Postgresa, Celery ani `app`.
+Modeli lokalnych nie ma od ADR 0022; wiersze z `qwen3` w tabelach niżej to historia.
 
 Recenzję próbną puszcza `--action trial_review`, ale klucz odpowiedzi mierzy tylko
 uwagi, więc nie mówi nic o jakości jej zaleceń; od tego jest `make eval-trial`. Raport
@@ -50,7 +47,7 @@ Osobny zestaw w `fragment_cases/`, bo ta akcja nie zwraca uwag z wagą, a jej
 najważniejszego wymogu, łagodnego tonu, nie utrzyma żaden test jednostkowy.
 
 ```bash
-make eval-fragments                         # qwen3:30b-a3b, wszystkie przypadki
+make eval-fragments                         # Claude, wszystkie przypadki
 make eval-fragments MODEL=claude            # ANTHROPIC_API_KEY
 ```
 

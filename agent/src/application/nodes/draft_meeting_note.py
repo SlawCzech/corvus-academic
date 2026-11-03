@@ -40,7 +40,7 @@ def draft_meeting_note(state: ActionState) -> ActionState:
         if not str(ctx.get("detail", "")).strip():
             raise ValueError("no rough notes to write up")
 
-        llm = get_llm(state["model"])
+        llm = get_llm()
         reply = invoke_structured(
             llm,
             [

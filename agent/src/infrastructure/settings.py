@@ -11,11 +11,6 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    model_backend: str = "ollama"
-    ollama_model: str = "qwen3:30b-a3b"
-    ollama_base_url: str = "http://ollama:11434"
-
-    anthropic_api_key: str = ""
     # How much Claude thinks before it answers — the dial for latency and
     # cost on a model whose thinking cannot be turned off. `medium` is a
     # starting point, to be settled by the evals (`make eval MODEL=claude`).

@@ -52,7 +52,7 @@ def draft_student_email(state: ActionState) -> ActionState:
         if not str(ctx.get("review_text", "")).strip():
             raise ValueError("no trial review to write from")
 
-        llm = get_llm(state["model"])
+        llm = get_llm()
         reply = invoke_structured(
             llm,
             [

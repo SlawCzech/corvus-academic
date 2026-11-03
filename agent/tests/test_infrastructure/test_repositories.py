@@ -95,11 +95,11 @@ async def test_update_status_keeps_earlier_result(repo: AgentTaskRepository) -> 
 
 async def test_update_status_records_error(repo: AgentTaskRepository) -> None:
     await repo.save(_task("task-1"))
-    await repo.update_status("task-1", TaskStatus.FAILED, error="Ollama unreachable")
+    await repo.update_status("task-1", TaskStatus.FAILED, error="provider unreachable")
 
     found = await repo.find_by_task_id("task-1")
     assert found is not None
-    assert found.error == "Ollama unreachable"
+    assert found.error == "provider unreachable"
 
 
 async def test_a_cancelled_task_stays_cancelled(repo: AgentTaskRepository) -> None:

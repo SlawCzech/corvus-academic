@@ -1,24 +1,20 @@
 """Asking a chat model for JSON of a known shape, and getting it.
 
-Before this, every node did ``llm.invoke`` → ``json.loads`` and hoped. A local
+Before this, every node did ``llm.invoke`` → ``json.loads`` and hoped. A
 model that closed a bracket too early, called a key ``criterion`` instead of
 ``criteria`` or wrote "Major" for "major" cost the whole branch: the node
 logged a parse error and the review went ahead without it.
 
-Three layers, cheapest first:
+Two layers:
 
-1. **Constrained decoding** where the backend has it. Ollama takes a JSON
-   schema as ``format`` and samples only tokens that keep the output valid
-   against it — malformed JSON stops being possible rather than unlikely.
-2. **Validation** against a Pydantic model, on every backend. Valid JSON can
-   still be the wrong JSON: a missing key, a severity outside the three.
-3. **Repair**: when validation fails, the model is shown its own reply and the
+1. **Validation** against a Pydantic model. Valid JSON can still be the
+   wrong JSON: a missing key, a severity outside the three.
+2. **Repair**: when validation fails, the model is shown its own reply and the
    validation error, and asked once more. Cheaper than failing the branch,
    and the error message is usually all it needed.
 
-The prompts still describe the shape in words. The schema makes it binding on
-Ollama; the words are what a hosted model follows, and what explains to any
-model *why* a field is there.
+The prompts describe the shape in words; the words are what the model
+follows, and what explains *why* a field is there.
 """
 
 from __future__ import annotations
@@ -29,7 +25,6 @@ from typing import Any, cast
 import structlog
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage
-from langchain_ollama import ChatOllama
 from pydantic import TypeAdapter, ValidationError
 
 from src.application.json_output import extract_json, message_text
@@ -75,14 +70,10 @@ def invoke_structured[T](
     Raises `StructuredOutputError` when every attempt fails; nodes catch it
     like any other failure and report it in state.
     """
-    kwargs: dict[str, Any] = {}
-    if isinstance(llm, ChatOllama):
-        kwargs["format"] = shape.json_schema()
-
     conversation = list(messages)
     last_error: Exception | None = None
     for attempt in range(1, _ATTEMPTS + 1):
-        response = llm.invoke(conversation, **kwargs)
+        response = llm.invoke(conversation)
         metadata = cast(dict[str, Any], response.response_metadata)  # pyright: ignore[reportUnknownMemberType]
         if metadata.get("stop_reason") == "refusal":
             # A hosted model's safety classifier declined; asking again with
