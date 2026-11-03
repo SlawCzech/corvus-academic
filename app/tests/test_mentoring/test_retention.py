@@ -327,3 +327,36 @@ async def test_actions_never_read_a_purged_version(session: AsyncSession) -> Non
 
     latest = await repo.find_latest(student.id, limit=2)
     assert [m.id for m in latest] == [first.draft.id]
+
+
+async def test_newest_drafts_takes_one_version_per_student(
+    session: AsyncSession,
+) -> None:
+    """The review list reads every thesis in one query, newest version each."""
+    students = StudentService(
+        StudentRepository(session), MeetingNoteRepository(session)
+    )
+    drafts = DraftService(
+        students,
+        ThesisDraftRepository(session),
+        SqlFileStore(session, DraftFileModel),
+    )
+    jan = await students.create(
+        _CALLER, full_name="Jan", field_of_study="Ekonomia", thesis_type="bachelor"
+    )
+    ola = await students.create(
+        _CALLER, full_name="Ola", field_of_study="Ekonomia", thesis_type="bachelor"
+    )
+    bez = await students.create(
+        _CALLER, full_name="Bez", field_of_study="Ekonomia", thesis_type="bachelor"
+    )
+    await drafts.upload(_CALLER, jan.id, "v1.docx", docx_bytes("Jeden"))
+    jan_v2 = await drafts.upload(_CALLER, jan.id, "v2.docx", docx_bytes("Dwa"))
+    ola_v1 = await drafts.upload(_CALLER, ola.id, "v1.docx", docx_bytes("Raz"))
+
+    newest = await drafts.newest_drafts([jan, ola, bez])
+
+    assert {k: v.draft.id for k, v in newest.items()} == {
+        jan.id: jan_v2.draft.id,
+        ola.id: ola_v1.draft.id,
+    }

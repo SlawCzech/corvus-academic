@@ -9,7 +9,6 @@ from datetime import UTC, datetime
 
 from sqlalchemy import (
     Boolean,
-    DateTime,
     ForeignKey,
     Index,
     String,
@@ -20,6 +19,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.mentoring.infrastructure.orm.base import SCHEMA, Base
+from src.shared.orm_types import UtcDateTime
 
 
 class StudentModel(Base):
@@ -41,19 +41,17 @@ class StudentModel(Base):
     thesis_type: Mapped[str] = mapped_column(String(50), nullable=False)
     current_topic: Mapped[str | None] = mapped_column(Text, nullable=True)
     current_topic_set_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        UtcDateTime(), nullable=True
     )
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="active")
-    closed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    closed_at: Mapped[datetime | None] = mapped_column(UtcDateTime(), nullable=True)
     # No foreign key: thesis_drafts already points here, and a cycle between
     # the two tables buys nothing the service does not already check.
     accepted_draft_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True), nullable=True
     )
     draft_accepted_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        UtcDateTime(), nullable=True
     )
     # Points into the `guidelines` schema — no foreign key across contexts.
     guideline_set_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -65,10 +63,10 @@ class StudentModel(Base):
         Boolean, nullable=False, default=False, server_default=false()
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+        UtcDateTime(), nullable=False, default=lambda: datetime.now(UTC)
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
+        UtcDateTime(),
         nullable=False,
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
@@ -97,9 +95,7 @@ class MeetingNoteModel(Base):
         nullable=False,
     )
     promotor_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
-    occurred_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    occurred_at: Mapped[datetime] = mapped_column(UtcDateTime(), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     # Provenance: set when the note started life as an accepted AI draft.
     source_action_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -108,5 +104,5 @@ class MeetingNoteModel(Base):
         nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+        UtcDateTime(), nullable=False, default=lambda: datetime.now(UTC)
     )

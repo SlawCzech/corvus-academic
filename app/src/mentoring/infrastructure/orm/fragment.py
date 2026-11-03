@@ -9,7 +9,6 @@ from datetime import UTC, date, datetime
 
 from sqlalchemy import (
     Date,
-    DateTime,
     ForeignKey,
     Index,
     Integer,
@@ -23,6 +22,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.mentoring.infrastructure.orm.base import SCHEMA, Base
+from src.shared.orm_types import UtcDateTime
 
 
 class ThesisPartModel(Base):
@@ -46,7 +46,7 @@ class ThesisPartModel(Base):
     position: Mapped[int] = mapped_column(Integer, nullable=False)
     due_on: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+        UtcDateTime(), nullable=False, default=lambda: datetime.now(UTC)
     )
 
 
@@ -104,9 +104,7 @@ class ThesisFragmentModel(Base):
     )
     file_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
     file_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    purged_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    purged_at: Mapped[datetime | None] = mapped_column(UtcDateTime(), nullable=True)
     review_action_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey(f"{SCHEMA}.agent_actions.id", ondelete="SET NULL"),
@@ -114,14 +112,12 @@ class ThesisFragmentModel(Base):
     )
     verdict: Mapped[str | None] = mapped_column(String(20), nullable=True)
     feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
-    feedback_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    feedback_at: Mapped[datetime | None] = mapped_column(UtcDateTime(), nullable=True)
     feedback_source_action_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey(f"{SCHEMA}.agent_actions.id", ondelete="SET NULL"),
         nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+        UtcDateTime(), nullable=False, default=lambda: datetime.now(UTC)
     )

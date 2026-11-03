@@ -24,7 +24,17 @@ class AccessClaims:
 
     user: User
     jti: str
+    issued_at: float
     expires_at: datetime
+
+
+@dataclass(frozen=True)
+class RefreshClaims:
+    """What a verified refresh token says."""
+
+    user_id: UUID
+    jti: str
+    issued_at: float
 
 
 def create_access_token(user: User) -> str:
@@ -36,7 +46,9 @@ def create_access_token(user: User) -> str:
         "role": str(user.role),
         "type": _ACCESS_TYPE,
         "jti": str(uuid.uuid4()),
-        "iat": now,
+        # Not whole seconds: ending sessions on a password change must tell a
+        # token from a moment earlier apart from the one issued right after.
+        "iat": now.timestamp(),
         "exp": now + timedelta(minutes=settings.access_token_expire_minutes),
     }
     return jwt.encode(  # pyright: ignore[reportUnknownMemberType]
@@ -55,7 +67,7 @@ def create_refresh_token(user: User) -> tuple[str, str]:
         "sub": str(user.id),
         "type": _REFRESH_TYPE,
         "jti": jti,
-        "iat": now,
+        "iat": now.timestamp(),
         "exp": now + timedelta(days=settings.refresh_token_expire_days),
     }
     token = jwt.encode(  # pyright: ignore[reportUnknownMemberType]
@@ -87,7 +99,7 @@ def decode_access_token(token: str) -> AccessClaims:
             token,
             settings.jwt_secret,
             algorithms=[settings.jwt_algorithm],
-            options={"require": ["exp", "jti", "sub"]},
+            options={"require": ["exp", "iat", "jti", "sub"]},
         )
         if payload.get("type") != _ACCESS_TYPE:
             raise ValueError("Not an access token")
@@ -98,25 +110,31 @@ def decode_access_token(token: str) -> AccessClaims:
                 role=Role(str(payload["role"])),
             ),
             jti=str(payload["jti"]),
+            issued_at=float(payload["iat"]),
             expires_at=datetime.fromtimestamp(int(payload["exp"]), UTC),
         )
     except (jwt.InvalidTokenError, KeyError, ValueError) as exc:
         raise ValueError(f"Invalid token: {exc}") from exc
 
 
-def verify_refresh_token(token: str) -> tuple[UUID, str]:
+def verify_refresh_token(token: str) -> RefreshClaims:
     """Decode and validate a refresh token.
 
-    Returns (user_id, jti). Raises ValueError if invalid or wrong type.
+    Raises ValueError if invalid or wrong type.
     """
     try:
-        payload: dict[str, str] = jwt.decode(  # pyright: ignore[reportUnknownMemberType]
+        payload: dict[str, str | int] = jwt.decode(  # pyright: ignore[reportUnknownMemberType]
             token,
             settings.jwt_secret,
             algorithms=[settings.jwt_algorithm],
+            options={"require": ["exp", "iat", "jti", "sub"]},
         )
         if payload.get("type") != _REFRESH_TYPE:
             raise ValueError("Not a refresh token")
-        return UUID(payload["sub"]), payload["jti"]
+        return RefreshClaims(
+            user_id=UUID(str(payload["sub"])),
+            jti=str(payload["jti"]),
+            issued_at=float(payload["iat"]),
+        )
     except (jwt.InvalidTokenError, KeyError, ValueError) as exc:
         raise ValueError(f"Invalid refresh token: {exc}") from exc

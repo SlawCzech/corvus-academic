@@ -45,9 +45,9 @@ EVIDENCE_INSTRUCTION = (
     "\nEVIDENCE — every finding also has a `quote` field: a short passage "
     "(one sentence, at most about 200 characters) copied WORD FOR WORD from "
     "the thesis text you were given, showing the problem. Copy it exactly — "
-    "do not translate, paraphrase, shorten words or fix typos; use \"...\" "
+    'do not translate, paraphrase, shorten words or fix typos; use "..." '
     "only to skip words inside it. When the problem is that something is "
-    "absent, and there is no passage that shows it, set `quote` to \"\". "
+    'absent, and there is no passage that shows it, set `quote` to "". '
     "A finding whose quote cannot be found in the thesis is discarded.\n"
 )
 
@@ -116,7 +116,5 @@ def scope_instruction(own: FindingSource) -> str:
         "Leave a problem out if it falls in their scope, however serious — "
         "it will be reported there, and reporting it twice distorts the "
         "review. Report each problem once: one finding per problem, not one "
-        "per place where it shows.\n"
-        + CALIBRATION
-        + EVIDENCE_INSTRUCTION
+        "per place where it shows.\n" + CALIBRATION + EVIDENCE_INSTRUCTION
     )

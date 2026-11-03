@@ -109,9 +109,8 @@ class DashboardService:
             if s.status == StudentStatus.ACTIVE and s.current_topic is None
         )
 
-        promotor_filter = None if caller.can_view_all else caller.user_id
         recent = await self._actions.find_recent_by_promotor(
-            promotor_filter, limit=_RECENT_ACTIVITY_SHOWN
+            caller.user_id, limit=_RECENT_ACTIVITY_SHOWN
         )
         recent_activity = [
             RecentActivity(

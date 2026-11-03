@@ -12,6 +12,7 @@ vi.mock("next/headers", () => ({
 
 import { POST as login } from "@/app/api/auth/login/route"
 import { GET, POST } from "@/app/api/auth/refresh/route"
+import { PATCH as changePassword } from "@/app/api/users/me/password/route"
 
 const APP_COOKIE = "refresh_token=ref-new; HttpOnly; Max-Age=2592000; Path=/auth/refresh; SameSite=strict"
 
@@ -41,6 +42,23 @@ describe("session routes", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals()
+  })
+
+  it("a password change keeps the new session app hands back", async () => {
+    jar.set("access_token", "old.e30.c")
+    fetchMock.mockResolvedValueOnce(fromApp({ access_token: "new.e30.c" }, 200, APP_COOKIE))
+
+    const res = await changePassword(
+      new Request("http://test/api/users/me/password", {
+        method: "PATCH",
+        body: JSON.stringify({ current_password: "a", new_password: "b" }),
+      }),
+    )
+
+    const cookies = setCookies(res)
+    expect(res.status).toBe(200)
+    expect(cookies).toMatch(/access_token=new\.e30\.c;/)
+    expect(cookies).toMatch(/refresh_token=ref-new;/)
   })
 
   it("login keeps the refresh token that app sets as a cookie", async () => {

@@ -38,9 +38,7 @@ def test_writes_through_to_the_repository() -> None:
 
 
 def test_database_failure_does_not_propagate() -> None:
-    with patch(
-        "src.infrastructure.task_status._write", side_effect=OSError("db down")
-    ):
+    with patch("src.infrastructure.task_status._write", side_effect=OSError("db down")):
         record_task_status("task-1", TaskStatus.COMPLETED)  # must not raise
 
 

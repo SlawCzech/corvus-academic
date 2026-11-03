@@ -84,7 +84,7 @@ async def read_title_page(
     """
     data = await read_upload(file)
     try:
-        page = svc.suggest(file.filename or "", data, file.content_type or "")
+        page = await svc.suggest(file.filename or "", data, file.content_type or "")
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)

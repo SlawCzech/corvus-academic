@@ -55,7 +55,9 @@ async def get_current_user(
         claims = decode_access_token(credentials.credentials)
     except ValueError as exc:
         raise _unauthorized(str(exc)) from exc
-    if await token_store.is_revoked(claims.jti):
+    if await token_store.is_revoked(
+        claims.jti, user_id=claims.user.id, issued_at=claims.issued_at
+    ):
         raise _unauthorized("Token revoked")
     return claims.user
 

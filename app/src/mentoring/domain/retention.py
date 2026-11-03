@@ -6,17 +6,11 @@ Pure rules, no clock and no database: the sweep that applies them passes
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 
 from src.mentoring.domain.draft import ThesisDraft
 from src.mentoring.domain.fragment import ThesisFragment
 from src.mentoring.domain.student import Student
-
-
-def _utc(moment: datetime) -> datetime:
-    """Read a naive timestamp as UTC — every timestamp here is stored as UTC,
-    and a backend that drops the zone (SQLite) must not crash the comparison."""
-    return moment if moment.tzinfo else moment.replace(tzinfo=UTC)
 
 
 @dataclass(frozen=True)
@@ -40,13 +34,13 @@ class RetentionPolicy:
             return None
         due: list[datetime] = []
         if student.closed_at is not None:
-            due.append(_utc(student.closed_at) + self.after_close)
+            due.append(student.closed_at + self.after_close)
         if (
             student.accepted_draft_id is not None
             and student.draft_accepted_at is not None
             and draft.id != student.accepted_draft_id
         ):
-            due.append(_utc(student.draft_accepted_at) + self.non_final_grace)
+            due.append(student.draft_accepted_at + self.non_final_grace)
         return min(due) if due else None
 
     def fragment_purge_due_at(
@@ -61,9 +55,9 @@ class RetentionPolicy:
             return None
         due: list[datetime] = []
         if student.closed_at is not None:
-            due.append(_utc(student.closed_at) + self.after_close)
+            due.append(student.closed_at + self.after_close)
         if student.draft_accepted_at is not None:
-            due.append(_utc(student.draft_accepted_at) + self.non_final_grace)
+            due.append(student.draft_accepted_at + self.non_final_grace)
         return min(due) if due else None
 
     def fragments_to_purge(
@@ -74,7 +68,7 @@ class RetentionPolicy:
             f
             for f in fragments
             if (due := self.fragment_purge_due_at(student, f)) is not None
-            and due <= _utc(now)
+            and due <= now
         ]
 
     def drafts_to_purge(
@@ -84,5 +78,5 @@ class RetentionPolicy:
         return [
             d
             for d in drafts
-            if (due := self.purge_due_at(student, d)) is not None and due <= _utc(now)
+            if (due := self.purge_due_at(student, d)) is not None and due <= now
         ]

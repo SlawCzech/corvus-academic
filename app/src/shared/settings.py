@@ -41,7 +41,9 @@ class Settings(BaseSettings):
 
     admin_email: str = "admin@corvus.local"
     admin_password: str = Field(
-        ..., min_length=12, description="Initial admin password (min 12 chars)"  # noqa: S105
+        ...,
+        min_length=12,
+        description="Initial admin password (min 12 chars)",  # noqa: S105
     )
 
     # Downstream services still reached over HTTP.
@@ -51,6 +53,15 @@ class Settings(BaseSettings):
     # megabytes; this leaves room while refusing anything absurd before it is
     # read into memory in full.
     max_upload_bytes: int = 25 * 1024 * 1024
+
+    # Text is extracted from an upload in a child process that is killed past
+    # these limits (`document/isolated.py`). A 300-page thesis reads in a few
+    # seconds and well under the memory cap. Off in the test suite only, where
+    # spawning a process per upload would cost minutes; its own tests keep the
+    # isolated path covered.
+    extraction_isolated: bool = True
+    extraction_timeout_seconds: float = 60
+    extraction_max_memory_bytes: int = 1024 * 1024 * 1024
 
     # How often the retention sweep runs in-process; 0 turns it off (tests,
     # or a deployment that runs `scripts/purge_drafts.py` from cron instead).

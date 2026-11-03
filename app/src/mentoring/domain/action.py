@@ -128,9 +128,7 @@ class AgentAction:
         """
         topics = self.proposed_topics()
         if not 0 <= index < len(topics):
-            raise ValueError(
-                f"No proposed topic at index {index} (got {len(topics)})"
-            )
+            raise ValueError(f"No proposed topic at index {index} (got {len(topics)})")
         title = str(topics[index].get("title", "")).strip()
         if not title:
             raise ValueError(f"Proposed topic {index} has no title")

@@ -175,9 +175,7 @@ async def test_ingestion_is_idempotent(
     await guidelines.replace_for_type(
         "bachelor", "nomic-embed-text", [_chunk("1."), _chunk("2.")]
     )
-    await guidelines.replace_for_type(
-        "bachelor", "nomic-embed-text", [_chunk("1.")]
-    )
+    await guidelines.replace_for_type("bachelor", "nomic-embed-text", [_chunk("1.")])
 
     assert await guidelines.count("bachelor", "nomic-embed-text") == 1
 
@@ -205,9 +203,7 @@ async def test_thesis_types_are_ingested_independently(
         [_chunk("1.", thesis_type="master_article")],
     )
 
-    await guidelines.replace_for_type(
-        "bachelor", "nomic-embed-text", [_chunk("1.")]
-    )
+    await guidelines.replace_for_type("bachelor", "nomic-embed-text", [_chunk("1.")])
 
     assert await guidelines.count("master_article", "nomic-embed-text") == 1
 

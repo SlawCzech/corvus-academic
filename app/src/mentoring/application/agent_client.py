@@ -5,6 +5,7 @@ calls `agent` explicitly, with a context it assembled itself, instead of
 forwarding a request it does not understand.
 """
 
+import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any, cast
@@ -54,12 +55,53 @@ class AgentActionStatus:
     usage: dict[str, Any] | None = None
 
 
+class StatusCache:
+    """The agent's last answer per task, reused for a moment.
+
+    Polling an action reaches the agent on every call. The UI asks every
+    three seconds; a client that asks faster, or ten tabs on the same action,
+    get the same answer instead of as many requests to the agent. Shared by
+    the whole process, so it outlives the per-request client.
+    """
+
+    def __init__(
+        self, ttl_seconds: float = 2.0, clock: Callable[[], float] = time.monotonic
+    ) -> None:
+        self._ttl = ttl_seconds
+        self._clock = clock
+        self._entries: dict[str, tuple[float, AgentActionStatus]] = {}
+
+    def get(self, task_id: str) -> AgentActionStatus | None:
+        entry = self._entries.get(task_id)
+        if entry is None or self._clock() - entry[0] >= self._ttl:
+            return None
+        return entry[1]
+
+    def put(self, task_id: str, status: AgentActionStatus) -> None:
+        now = self._clock()
+        # Expired entries go on every write: the cache holds a few seconds of
+        # polling, never every task the process has seen.
+        self._entries = {
+            k: v for k, v in self._entries.items() if now - v[0] < self._ttl
+        }
+        self._entries[task_id] = (now, status)
+
+    def forget(self, task_id: str) -> None:
+        self._entries.pop(task_id, None)
+
+
 class AgentClient:
     """Thin typed wrapper over the agent's `/actions` endpoints."""
 
-    def __init__(self, client: httpx.AsyncClient, base_url: str) -> None:
+    def __init__(
+        self,
+        client: httpx.AsyncClient,
+        base_url: str,
+        statuses: StatusCache | None = None,
+    ) -> None:
         self._client = client
         self._base_url = base_url.rstrip("/")
+        self._statuses = statuses
 
     async def submit_action(
         self,
@@ -89,14 +131,22 @@ class AgentClient:
         return str(data["task_id"])
 
     async def get_action(self, task_id: str, token: str) -> AgentActionStatus:
-        """Read one action's current status from the agent."""
+        """Read one action's current status from the agent.
+
+        Answered from the cache when the agent was asked a moment ago.
+        """
+        if (
+            self._statuses is not None
+            and (cached := self._statuses.get(task_id)) is not None
+        ):
+            return cached
         data = await self._get(f"/actions/{task_id}", token)
         result: Any = data.get("result")
         error: Any = data.get("error")
         progress: Any = data.get("progress")
         error_code: Any = data.get("error_code")
         usage: Any = data.get("usage")
-        return AgentActionStatus(
+        status = AgentActionStatus(
             status=str(data["status"]),
             result=cast(dict[str, Any], result) if isinstance(result, dict) else None,
             error=str(error) if error else None,
@@ -106,6 +156,9 @@ class AgentClient:
             error_code=str(error_code) if error_code else None,
             usage=cast(dict[str, Any], usage) if isinstance(usage, dict) else None,
         )
+        if self._statuses is not None:
+            self._statuses.put(task_id, status)
+        return status
 
     async def resume_action(
         self,
@@ -119,10 +172,12 @@ class AgentClient:
         if byok is not None:
             payload["byok"] = {"provider": byok.provider, "api_key": byok.api_key}
         await self._post(f"/actions/{task_id}/resume", payload, token)
+        self._forget(task_id)
 
     async def cancel_action(self, task_id: str, token: str) -> AgentActionStatus:
         """Ask the agent to stop one action; a finished one is left as it is."""
         data = await self._post(f"/actions/{task_id}/cancel", {}, token)
+        self._forget(task_id)
         return AgentActionStatus(status=str(data["status"]), result=None, error=None)
 
     async def delete_action(self, task_id: str, token: str) -> None:
@@ -138,6 +193,11 @@ class AgentClient:
         return await self._get("/models", token)
 
     # ---------- transport ----------
+
+    def _forget(self, task_id: str) -> None:
+        """Drop a cached status the promoter's own move has just made stale."""
+        if self._statuses is not None:
+            self._statuses.forget(task_id)
 
     async def _post(
         self, path: str, payload: dict[str, Any], token: str

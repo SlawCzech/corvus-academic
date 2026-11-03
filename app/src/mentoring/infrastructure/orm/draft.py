@@ -9,7 +9,6 @@ import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import (
-    DateTime,
     ForeignKey,
     Integer,
     String,
@@ -20,6 +19,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.mentoring.infrastructure.orm.base import SCHEMA, Base
+from src.shared.orm_types import UtcDateTime
 from src.shared.sql_file_store import FileBlobColumns
 
 
@@ -65,9 +65,7 @@ class ThesisDraftModel(Base):
     )
     file_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
     file_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    purged_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    purged_at: Mapped[datetime | None] = mapped_column(UtcDateTime(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+        UtcDateTime(), nullable=False, default=lambda: datetime.now(UTC)
     )

@@ -64,9 +64,7 @@ def upgrade() -> None:
     )
 
     # Actions carry action_id instead; only the legacy flow sets this.
-    op.alter_column(
-        "agent_tasks", "evaluation_id", nullable=True, schema=_SCHEMA
-    )
+    op.alter_column("agent_tasks", "evaluation_id", nullable=True, schema=_SCHEMA)
 
     # Old vocabulary was Celery's ("PENDING" written once, never updated).
     op.execute(
@@ -97,9 +95,7 @@ def downgrade() -> None:
     op.execute(
         "UPDATE analysis.agent_tasks SET evaluation_id = '' WHERE evaluation_id IS NULL"
     )
-    op.alter_column(
-        "agent_tasks", "evaluation_id", nullable=False, schema=_SCHEMA
-    )
+    op.alter_column("agent_tasks", "evaluation_id", nullable=False, schema=_SCHEMA)
     op.drop_index(
         "ix_analysis_agent_tasks_action_id", table_name="agent_tasks", schema=_SCHEMA
     )

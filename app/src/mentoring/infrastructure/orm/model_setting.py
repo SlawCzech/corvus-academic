@@ -7,10 +7,11 @@ offered — the admin opts models in, never out of a list they never saw.
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, Index, String, Uuid, text
+from sqlalchemy import Boolean, Index, String, Uuid, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.mentoring.infrastructure.orm.base import SCHEMA, Base
+from src.shared.orm_types import UtcDateTime
 
 
 class ModelSettingModel(Base):
@@ -33,5 +34,5 @@ class ModelSettingModel(Base):
     is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     updated_by: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+        UtcDateTime(), nullable=False, default=lambda: datetime.now(UTC)
     )

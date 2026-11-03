@@ -7,12 +7,13 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, Uuid
+from sqlalchemy import Boolean, ForeignKey, Index, String, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import JSON
 
 from src.mentoring.infrastructure.orm.base import SCHEMA, Base
+from src.shared.orm_types import UtcDateTime
 
 # JSONB on Postgres, plain JSON on SQLite (test engine) — same pattern as
 # agent's AnalysisModel.result. Only this table needs it, so it stays local
@@ -65,9 +66,7 @@ class AgentActionModel(Base):
         _JSON, nullable=True, default=None
     )
     accepted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    accepted_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    accepted_at: Mapped[datetime | None] = mapped_column(UtcDateTime(), nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     # The agent's code for a failure the promoter can act on; see the agent's
     # `ActionErrorCode`.
@@ -77,10 +76,10 @@ class AgentActionModel(Base):
         _JSON, nullable=True, default=None
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+        UtcDateTime(), nullable=False, default=lambda: datetime.now(UTC)
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
+        UtcDateTime(),
         nullable=False,
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),

@@ -78,7 +78,7 @@ def test_sections_beyond_an_excerpt_are_still_in_the_map() -> None:
 
 
 def test_a_named_section_runs_until_the_next_named_section() -> None:
-    """"Wyniki badań" followed by "3.1." is a chapter, not a 13-character stub."""
+    """ "Wyniki badań" followed by "3.1." is a chapter, not a 13-character stub."""
     results = find_section(extract_outline(THESIS), "results")
 
     assert results is not None
@@ -145,7 +145,7 @@ def test_no_bibliography_means_no_web_count_rather_than_zero() -> None:
 
 
 def test_entry_numbering_survives_how_pdfs_break_lines() -> None:
-    """"11.Czarnecka" and a bare "17." are both real; the count must survive them."""
+    """ "11.Czarnecka" and a bare "17." are both real; the count must survive them."""
     assert count_bibliography_entries(THESIS, extract_outline(THESIS)) == 5
 
 

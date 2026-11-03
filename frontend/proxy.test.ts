@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { NextRequest } from "next/server"
-import { config, middleware } from "./middleware"
+import { config, contentSecurityPolicy, proxy } from "./proxy"
 
 function fakeJwt(payload: Record<string, unknown>): string {
   const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }))
@@ -14,15 +14,15 @@ function makeRequest(path: string, token?: string): NextRequest {
   return new NextRequest(`http://localhost${path}`, { headers })
 }
 
-describe("middleware", () => {
+describe("proxy", () => {
   it("redirects /admin to /login when no token", () => {
-    const res = middleware(makeRequest("/admin"))
+    const res = proxy(makeRequest("/admin"))
     expect(res.status).toBe(307)
     expect(res.headers.get("location")).toContain("/login")
   })
 
-  it("redirects /analysis to /login when no token", () => {
-    const res = middleware(makeRequest("/analysis"))
+  it("redirects /students to /login when no token", () => {
+    const res = proxy(makeRequest("/students"))
     expect(res.status).toBe(307)
     expect(res.headers.get("location")).toContain("/login")
   })
@@ -33,43 +33,43 @@ describe("middleware", () => {
     // assert: those never matched a real token, so this gate silently
     // blocked every real admin from every /admin/* page.
     const token = fakeJwt({ sub: "u1", role: "promotor", exp: 9999999999 })
-    const res = middleware(makeRequest("/admin", token))
+    const res = proxy(makeRequest("/admin", token))
     expect(res.status).toBe(307)
     expect(res.headers.get("location")).toContain("/login")
   })
 
   it("allows /admin through when role is admin", () => {
     const token = fakeJwt({ sub: "u1", role: "admin", exp: 9999999999 })
-    const res = middleware(makeRequest("/admin", token))
+    const res = proxy(makeRequest("/admin", token))
     expect(res.headers.get("location")).toBeNull()
   })
 
-  it("allows /analysis through with any valid token", () => {
+  it("allows /profile through with any valid token", () => {
     const token = fakeJwt({ sub: "u1", role: "promotor", exp: 9999999999 })
-    const res = middleware(makeRequest("/analysis", token))
+    const res = proxy(makeRequest("/profile", token))
     expect(res.headers.get("location")).toBeNull()
   })
 
   it("sends an admin away from the promoter's screens", () => {
     const token = fakeJwt({ sub: "u1", role: "admin", exp: 9999999999 })
     for (const path of ["/dashboard", "/students", "/students/abc"]) {
-      const res = middleware(makeRequest(path, token))
+      const res = proxy(makeRequest(path, token))
       expect(res.headers.get("location")).toBe("http://localhost/admin/users")
     }
   })
 
   it("sends an admin to the catalog they manage, but lets a version page through", () => {
     const token = fakeJwt({ sub: "u1", role: "admin", exp: 9999999999 })
-    expect(middleware(makeRequest("/guidelines", token)).headers.get("location")).toBe(
+    expect(proxy(makeRequest("/guidelines", token)).headers.get("location")).toBe(
       "http://localhost/admin/guidelines",
     )
-    expect(middleware(makeRequest("/guidelines/v1", token)).headers.get("location")).toBeNull()
+    expect(proxy(makeRequest("/guidelines/v1", token)).headers.get("location")).toBeNull()
   })
 
   it("renews an expired token on a file link and comes back to the file", () => {
     const expired = fakeJwt({ sub: "u1", role: "promotor", exp: 1 })
     const path = "/api/students/s1/drafts/d1/file"
-    const res = middleware(
+    const res = proxy(
       new NextRequest(`http://localhost${path}`, {
         headers: { cookie: `access_token=${expired}; refresh_token=ref-1` },
       }),
@@ -91,6 +91,31 @@ describe("middleware", () => {
 
   it("lets a promoter into the roster", () => {
     const token = fakeJwt({ sub: "u1", role: "promotor", exp: 9999999999 })
-    expect(middleware(makeRequest("/students", token)).headers.get("location")).toBeNull()
+    expect(proxy(makeRequest("/students", token)).headers.get("location")).toBeNull()
+  })
+
+  it("lets anyone onto the landing page and the login form", () => {
+    for (const path of ["/", "/login"]) {
+      expect(proxy(makeRequest(path)).headers.get("location")).toBeNull()
+    }
+  })
+
+  it("gives every page a policy with a fresh nonce", () => {
+    const first = proxy(makeRequest("/login")).headers.get("content-security-policy")
+    const second = proxy(makeRequest("/login")).headers.get("content-security-policy")
+    expect(first).toMatch(/script-src 'self' 'nonce-[A-Za-z0-9+/=]+' 'strict-dynamic'/)
+    expect(first).not.toBe(second)
+  })
+
+  it("puts no policy on a file", () => {
+    const token = fakeJwt({ sub: "u1", role: "promotor", exp: 9999999999 })
+    const res = proxy(makeRequest("/api/students/s/drafts/d/file", token))
+    expect(res.headers.get("content-security-policy")).toBeNull()
+  })
+
+  it("allows eval only in development", () => {
+    expect(contentSecurityPolicy("n", true)).toContain("'unsafe-eval'")
+    expect(contentSecurityPolicy("n", false)).not.toContain("'unsafe-eval'")
+    expect(contentSecurityPolicy("n", false)).toContain("upgrade-insecure-requests")
   })
 })

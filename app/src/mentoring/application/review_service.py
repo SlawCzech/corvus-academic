@@ -10,7 +10,7 @@ from uuid import UUID
 
 import structlog
 
-from src.document.extractor import extract
+from src.document.isolated import extract_upload
 from src.document.title_page import TitlePage, read_title_page
 from src.mentoring.application.draft_service import DraftService, DraftView
 from src.mentoring.application.student_service import Caller, StudentService
@@ -34,14 +34,15 @@ class ReviewService:
         self._students = students
         self._drafts = drafts
 
-    def suggest(
+    async def suggest(
         self, filename: str, data: bytes, content_type: str = ""
     ) -> TitlePage:
         """Read a thesis's title page for the form. Nothing is stored.
 
         Raises ValueError for an unsupported or unreadable file.
         """
-        return read_title_page(extract(data, filename, content_type).text)
+        document = await extract_upload(data, filename, content_type)
+        return read_title_page(document.text)
 
     async def create(
         self,
@@ -95,10 +96,9 @@ class ReviewService:
     async def list_reviews(self, caller: Caller) -> list[ReviewView]:
         """Return the caller's one-off reviews, newest first."""
         students = await self._students.list_students(caller, one_off=True)
-        return [
-            ReviewView(s, (await self._drafts.list_drafts(caller, s.id))[0])
-            for s in students
-        ]
+        drafts = await self._drafts.newest_drafts(students)
+        # A review is born with its thesis; one without is not shown.
+        return [ReviewView(s, drafts[s.id]) for s in students if s.id in drafts]
 
     async def promote(self, caller: Caller, review_id: UUID) -> Student:
         """Put the review's author on the roster; there is no way back.

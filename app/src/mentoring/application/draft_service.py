@@ -12,7 +12,8 @@ from uuid import UUID
 
 import structlog
 
-from src.document.extractor import CANONICAL_CONTENT_TYPE, extract
+from src.document.extractor import CANONICAL_CONTENT_TYPE
+from src.document.isolated import extract_upload
 from src.mentoring.application.exceptions import (
     DraftNotFoundError,
     OneOffReviewError,
@@ -135,7 +136,7 @@ class DraftService:
         version = await self._drafts.next_version_number(student.id)
         if student.is_one_off and version > 1:
             raise OneOffReviewError("A one-off review holds one thesis")
-        document = extract(data, filename, content_type)
+        document = await extract_upload(data, filename, content_type)
 
         # Written in the same commit as the draft row below: the store flushes,
         # the repository commits, so a file never exists without its draft.
@@ -176,6 +177,19 @@ class DraftService:
         student = await self._students.get(caller, student_id)
         models = await self._drafts.find_by_student(student.id)
         return [self._view(student, to_domain(m)) for m in models]
+
+    async def newest_drafts(self, students: list[Student]) -> dict[UUID, DraftView]:
+        """Return each student's newest version, keyed by student id.
+
+        The students come from a list already filtered to the caller's, so
+        nothing is checked again — one query, however long the list.
+        """
+        models = await self._drafts.find_newest_for([s.id for s in students])
+        return {
+            s.id: self._view(s, to_domain(models[s.id]))
+            for s in students
+            if s.id in models
+        }
 
     async def download(
         self, caller: Caller, student_id: UUID, draft_id: UUID

@@ -68,9 +68,7 @@ _ALIASES: dict[str, tuple[str, ...]] = {
 }
 
 _BY_ALIAS: dict[str, str] = {
-    alias: canonical
-    for canonical, aliases in _ALIASES.items()
-    for alias in aliases
+    alias: canonical for canonical, aliases in _ALIASES.items() for alias in aliases
 }
 
 # A table-of-contents line: "Metodyka badań.................18".
@@ -187,13 +185,15 @@ def _drop_false_headings(
     the filter is positional rather than another guess at the text.
     """
     body_start = next(
-        (i for i, (_, canonical, _) in enumerate(found)
-         if canonical is not None and canonical != "toc"),
+        (
+            i
+            for i, (_, canonical, _) in enumerate(found)
+            if canonical is not None and canonical != "toc"
+        ),
         0,
     )
     bibliography = next(
-        (i for i, (_, canonical, _) in enumerate(found)
-         if canonical == "bibliography"),
+        (i for i, (_, canonical, _) in enumerate(found) if canonical == "bibliography"),
         len(found),
     )
     return [
@@ -393,9 +393,7 @@ _BODY_END = ("bibliography", "attachments")
 
 def body_char_count(text: str, outline: list[Section]) -> int | None:
     """Length of the thesis proper, or None when its bounds are not known."""
-    start = next(
-        (s.start for s in outline if s.canonical in _BODY_START), None
-    )
+    start = next((s.start for s in outline if s.canonical in _BODY_START), None)
     if start is None:
         return None
     ends = [s.start for s in outline if s.canonical in _BODY_END and s.start > start]

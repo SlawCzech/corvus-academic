@@ -99,9 +99,7 @@ def split_into_chunks(document: str) -> list[GuidelineChunk]:
     preamble = parts[0].strip()
     if preamble:
         chunks.append(
-            GuidelineChunk(
-                section="0. Preamble", text=preamble, always_include=False
-            )
+            GuidelineChunk(section="0. Preamble", text=preamble, always_include=False)
         )
 
     for part in parts[1:]:
@@ -114,9 +112,7 @@ def split_into_chunks(document: str) -> list[GuidelineChunk]:
     return chunks
 
 
-def _section_chunks(
-    heading: str, body: str, pinned: bool
-) -> list[GuidelineChunk]:
+def _section_chunks(heading: str, body: str, pinned: bool) -> list[GuidelineChunk]:
     """Split one `##` section, by its `###` subsections when it is long.
 
     Pinned sections are never split: the severity rules are one rulebook, and

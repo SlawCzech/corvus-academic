@@ -306,8 +306,7 @@ class ActionService:
         """
         students = await self._students.list_students(caller)
         names = {s.id: s.full_name for s in students}
-        promotor_filter = None if caller.can_view_all else caller.user_id
-        records = await self._actions.find_unfinished_by_promotor(promotor_filter)
+        records = await self._actions.find_unfinished_by_promotor(caller.user_id)
 
         unfinished: list[ActionInProgress] = []
         for record in records:
@@ -475,9 +474,7 @@ class ActionService:
             record.accepted_at = action.accepted_at
             await self._actions.update(record)
 
-    async def runs_on_fragment(
-        self, student_id: UUID, fragment_id: UUID
-    ) -> list[UUID]:
+    async def runs_on_fragment(self, student_id: UUID, fragment_id: UUID) -> list[UUID]:
         """Every `review_fragment` run on a fragment, whatever became of it."""
         records = await self._actions.find_by_student(
             student_id, action_type=str(ActionType.REVIEW_FRAGMENT)

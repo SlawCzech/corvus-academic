@@ -29,30 +29,46 @@ Zostaje:
 - [x] ~~**Zmiana hasła nie sprawdza obecnego hasła.**~~ — naprawione 2026-11-01:
   `current_password` jest wymagane, złe to 403 (nie 401, bo klient odnawiałby sesję
   i powtarzał żądanie), a endpoint ma limit prób logowania. Hasło ponad 72 bajty przy
-  logowaniu to 401, nie 500. Zostaje: zmiana hasła nie odwołuje pozostałych sesji.
-- [ ] **Brak Content-Security-Policy.** Caddy wysyła HSTS, `nosniff`,
-  `X-Frame-Options`, `Referrer-Policy`; CSP wymaga noncy dla skryptów inline
-  Next.js — osobna praca.
-- [ ] **`middleware.ts` → `proxy.ts`.** Next 16 zgłasza konwencję `middleware`
-  jako przestarzałą.
+  logowaniu to 401, nie 500. Od 2026-11-03 zmiana hasła kończy wszystkie sesje
+  użytkownika (`sessions_from:{user}` w Redis, porównywane z `iat` z ułamkiem
+  sekundy); przeglądarka, która je zmieniła, dostaje w odpowiedzi nową parę.
+- [x] ~~**Limit logowań nadal wspólny dla całego świata**~~ — znalezione i naprawione
+  2026-11-03: `X-Forwarded-For` z przeglądu nic nie dawał, bo pamięciowy backend
+  fastapi-limitera trzymał jeden bucket dla wszystkich kluczy — pięć logowań na
+  minutę dla wszystkich razem. Do tego od FastAPI 0.162 jego szukanie trasy kończyło
+  każde limitowane żądanie 500-ką. Zastąpiony własnym `RateLimit` (okno przesuwne
+  per klient, metoda i ścieżka, `identity/infrastructure/limiter.py`); zmiana hasła
+  też przekazuje `X-Forwarded-For`.
+- [x] ~~**Brak Content-Security-Policy.**~~ — od 2026-11-03 `proxy.ts` daje każdej
+  stronie politykę z noncem: skrypty tylko z noncem żądania i `'strict-dynamic'`,
+  `frame-ancestors 'none'`, `object-src 'none'`, bez `unsafe-eval` poza devem.
+  Sprawdzone na buildzie produkcyjnym: logowanie, panel admina, lista i strona
+  studenta, zmiana hasła — zero naruszeń. Zostaje: `style-src 'unsafe-inline'`,
+  bo React pisze atrybuty `style`, a te nie przyjmą noncy. Wszystkie strony
+  renderują się teraz per żądanie (nonce wymaga dynamicznego renderu).
+- [x] ~~**`middleware.ts` → `proxy.ts`.**~~ — przemianowane 2026-11-03 (konwencja
+  Next 16), logika i matcher bez zmian.
 - [x] ~~**Hydration mismatch ikony motywu** w `Sidebar`~~ — naprawione w PR #12:
   przełącznik czeka na hydratację (`hooks/useHydrated.ts`).
 - [x] ~~**`@testing-library/*` i `vitest` w `dependencies`**~~ — przeniesione do
   `devDependencies` 2026-11-01, wersje w lockfile'u bez zmian. `npm audit --omit=dev`
   czysty; pełny `npm audit` pokazuje 18 ostrzeżeń `moderate` w narzędziach dev.
-- [ ] **Parsowanie niezaufanych PDF/DOCX** w procesie `app` (limit rozmiaru jest,
-  limitu czasu i pamięci ekstrakcji nie ma). Przy kilku zaufanych testerach do
-  przyjęcia; przy otwartej rejestracji — do osobnego procesu z limitami.
+- [x] ~~**Parsowanie niezaufanych PDF/DOCX** w procesie `app`~~ — od 2026-11-03
+  każdy upload czyta osobny proces (spawn, `document/isolated.py`) z limitem 60 s
+  i 1 GB (`RLIMIT_AS`, egzekwowany na Linuksie — sprawdzone w obrazie `app`; 300
+  stron to ok. 56 MB). Przekroczenie to zwykłe 422. Ekstrakcja przestała też
+  blokować pętlę zdarzeń — wcześniej szła synchronicznie w handlerze. Koszt:
+  ok. 0,4 s na plik. Testy wyłączają izolację (`EXTRACTION_ISOLATED=false`) poza
+  `test_isolated.py`.
 
 ---
 
 ## Jakość kodu — stan faktyczny (zweryfikowany 2026-09-05)
 
-- [ ] **Martwa ścieżka „widzi wszystkich studentów”** (od ADR 0008, 2026-09-23) —
-  żadna rola nie ma już `VIEW_ALL_STUDENTS`, więc `Caller.can_view_all` i gałęzie
-  „view all” w `mentoring/infrastructure/repositories.py` (oraz nieużywane
-  `VIEW_ALL_ANALYSES`) są nieosiągalne. Usunąć albo świadomie zostawić pod
-  przyszłą rolę nadzoru (np. dziekanat).
+- [x] ~~**Martwa ścieżka „widzi wszystkich studentów”**~~ — usunięta 2026-11-03:
+  nie ma już `Caller.can_view_all`, `VIEW_ALL_STUDENTS` ani `VIEW_ALL_ANALYSES`, a
+  zapytania o akcje promotora wymagają jego id. Rola nadzoru (np. dziekanat), jeśli
+  kiedyś przyjdzie, dostanie własną decyzję zamiast uśpionej gałęzi.
 
 - [~] **`pyright --strict` — kod produkcyjny czysty, testy nie.** Historycznie nie
   przechodził nigdy (przed konsolidacją: `identity` **736** błędów, `parser` **88**;
@@ -62,33 +78,31 @@ Zostaje:
   Naprawka: anotować odpowiedzi w testach albo per-file suppression dla `tests/**`
   — świadomie, jako osobna zmiana.
 
-- [ ] **`ruff format` nie jest włączony** — przeformatowałby ~30 istniejących plików
-  w obu serwisach. Warto to zrobić, ale jako osobną zmianę, nie przy okazji CI
-  (ten sam powód co przy pinach `fastapi`/`starlette`). Wtedy dołożyć hook
-  `ruff-format` do `.pre-commit-config.yaml` i krok do CI.
+- [x] ~~**`ruff format` nie jest włączony**~~ — włączony 2026-11-03: 33 pliki
+  przeformatowane jednym commitem, hook `ruff-format` i krok `Format` w CI. `rev`
+  hooka idzie za wersją ruffa z lockfile'ów (0.17.3).
 
 - [x] ~~**`ruff` w `agent/` — 36 błędów**~~ — naprawione w Fazie 2 (2026-09-05).
   Oba serwisy są czyste. Pliki z promptami (`agent/src/application/prompts/*.py`,
   `nodes/review.py`) mają świadomy per-file wyjątek na `E501` — łamanie linii w
   literale zmienia prompt, nie formatowanie.
 
-- [ ] **Piny `fastapi==0.136.3` + `starlette==1.3.1` w `app/pyproject.toml`** — świeży
-  lockfile podbijał je do 0.141 / 1.6, co wciągnęłoby nietestowany upgrade zależności
-  w środek refaktoru strukturalnego. Odpiąć i zaktualizować osobno (starlette 1.6
-  deprecjonuje też `httpx` w `TestClient`).
+- [x] ~~**Piny `fastapi==0.136.3` + `starlette==1.3.1` w `app/pyproject.toml`**~~ —
+  zdjęte 2026-11-03: `fastapi>=0.162.0` jak w agencie, starlette 1.10 z lockfile'a.
+  Dependabot przestaje je pomijać. Zostaje: starlette 1.10 ostrzega, że `httpx` w
+  `TestClient` jest przestarzały (`httpx2`) — działa, do zmiany przy następnym
+  dużym podbiciu.
 
-- [ ] **Coverage nie mierzy ciał async endpointów wykonywanych przez `TestClient`** —
-  np. `/auth/login` w `identity/infrastructure/router.py` pokazuje się jako niepokryte
-  mimo kilkudziesięciu wywołań w testach (kod leci w wątku roboczym portalu anyio).
-  Skutek praktyczny: pokrycie warstwy application trzeba robić testami bezpośrednimi,
-  a liczby dla routerów są zaniżone. Do zdiagnozowania osobno (prawdopodobnie
-  `COVERAGE_CORE=sysmon` / tracing wątków).
+- [x] ~~**Coverage nie mierzy ciał async endpointów**~~ — zdiagnozowane i naprawione
+  2026-11-03: winny nie był wątek `TestClient`, tylko greenlet, w którym async
+  SQLAlchemy wykonuje zapytania. Coverage gubił ślad przy pierwszym `await` do bazy.
+  `concurrency = ["greenlet", "thread"]` w obu serwisach: `users_router` 78% → 100%,
+  `auth_router` 65% → 87%, agent 176 → 132 niepokrytych linii.
 
-- [ ] **SQLite w testach gubi `tzinfo`** — `DateTime(timezone=True)` odczytany po
-  `refresh()` wraca naiwny, na Postgresie zostaje aware. Jedno miejsce już to
-  obchodzi (`tests/test_mentoring/test_student_service.py`). Przy Fazie 2 dochodzą
-  kolejne znaczniki czasu (`accepted_at`, `updated_at`) — albo znormalizować odczyt
-  w repozytoriach, albo testować czas na Postgresie.
+- [x] ~~**SQLite w testach gubi `tzinfo`**~~ — naprawione 2026-11-03: kolumny czasu
+  w `app` to `UtcDateTime` (`shared/orm_types.py`), który zawsze oddaje aware UTC.
+  Schemat bez zmian; obejścia w `retention.py`, `timeline_service.py` i testach
+  usunięte.
 
 - [ ] **Zapis statusu z workera połyka błędy bazy** — `agent/src/infrastructure/task_status.py`
   loguje i idzie dalej, żeby awaria zapisu nie powodowała retry analizy, która się udała
@@ -174,9 +188,12 @@ Zostaje:
 - [x] ~~**Email validation regex zbyt prosta**~~ — naprawione: `UserRegistration` używa
   biblioteki `email-validator` (commit `097798c`).
 
-- [ ] **Brak rate limitingu na polling akcji** — `GET /students/{id}/actions/{action_id}`
-  odpytuje `agent` przy każdym wywołaniu, dopóki akcja nie jest terminalna. Frontend pyta
-  co 3 s; nic nie broni się przed szybszym klientem.
+- [x] ~~**Brak rate limitingu na polling akcji**~~ — od 2026-11-03 odpowiedź agenta
+  o danym tasku żyje 2 s w `StatusCache` procesu `app`, więc szybszy klient albo
+  dziesięć kart dostaje tę samą odpowiedź zamiast tylu żądań do agenta. Bez 429:
+  UI pyta co 3 s i niczego nie zauważa. Wznowienie i anulowanie czyszczą wpis.
+  Pierwotny opis: `GET /students/{id}/actions/{action_id}` odpytuje `agent` przy
+  każdym wywołaniu, dopóki akcja nie jest terminalna.
 
 ---
 
@@ -324,8 +341,8 @@ Zostaje:
 
 - [x] ~~**Recenzja próbna bez evala treści**~~ — od 2026-11-01 `make eval-trial`.
 - [x] ~~**Teksty akcji mówią o „ostatniej wersji”**~~ — panel mówi ogólnie o pracy.
-- [ ] **`/reviews` pyta o pracę każdej recenzji osobno** — jedno zapytanie na wiersz.
-  Przy kilkudziesięciu recenzjach trzeba zebrać to jednym zapytaniem.
+- [x] ~~**`/reviews` pyta o pracę każdej recenzji osobno**~~ — od 2026-11-03 jedno
+  zapytanie o najnowsze wersje wszystkich jednorazówek (`find_newest_for`).
 - [x] ~~**Potwierdzenie usunięcia wspomina notatki**~~ — jednorazówka ma własny tekst.
 
 ---
@@ -386,4 +403,4 @@ odłożone:
 
 ---
 
-*Ostatnia aktualizacja: 2026-11-02 (progi z wytycznych, ADR 0020)*
+*Ostatnia aktualizacja: 2026-11-03 (sprzątanie długu: CSP, izolacja ekstrakcji, limiter, sesje po zmianie hasła)*

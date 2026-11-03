@@ -54,16 +54,12 @@ def test_login_promotor_success(client: TestClient) -> None:
 
 
 def test_login_wrong_password(client: TestClient) -> None:
-    resp = client.post(
-        "/auth/login", json={"email": ADMIN_EMAIL, "password": "wrong"}
-    )
+    resp = client.post("/auth/login", json={"email": ADMIN_EMAIL, "password": "wrong"})
     assert resp.status_code == 401
 
 
 def test_login_password_over_bcrypt_limit_is_401(client: TestClient) -> None:
-    resp = client.post(
-        "/auth/login", json={"email": ADMIN_EMAIL, "password": "ż" * 37}
-    )
+    resp = client.post("/auth/login", json={"email": ADMIN_EMAIL, "password": "ż" * 37})
     assert resp.status_code == 401
 
 
@@ -185,9 +181,7 @@ def test_logout_leaves_other_sessions_alone(client: TestClient) -> None:
 
 def test_logout_without_a_token_still_succeeds(client: TestClient) -> None:
     assert client.post("/auth/logout").status_code == 204
-    resp = client.post(
-        "/auth/logout", headers={"Authorization": "Bearer not.a.token"}
-    )
+    resp = client.post("/auth/logout", headers={"Authorization": "Bearer not.a.token"})
     assert resp.status_code == 204
 
 
@@ -303,9 +297,34 @@ def test_change_password(client: TestClient) -> None:
         },
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert resp.status_code == 204
+    assert resp.status_code == 200
     new_token = _login(client, PROMOTOR_EMAIL, "new-secure-password")
     assert len(new_token) > 0
+
+
+def test_change_password_ends_every_other_session(client: TestClient) -> None:
+    other_browser = client.post(
+        "/auth/login", json={"email": PROMOTOR_EMAIL, "password": PROMOTOR_PASSWORD}
+    ).cookies["refresh_token"]
+    token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    resp = client.patch(
+        "/users/me/password",
+        json={
+            "current_password": PROMOTOR_PASSWORD,
+            "new_password": "new-secure-password",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    def me(access: str) -> int:
+        headers = {"Authorization": f"Bearer {access}"}
+        return client.get("/users/me", headers=headers).status_code
+
+    assert me(token) == 401
+    assert _refresh_with(client, other_browser).status_code == 401
+    # The browser that made the change carries on with the pair it got back.
+    assert me(resp.json()["access_token"]) == 200
+    assert _refresh_with(client, resp.cookies["refresh_token"]).status_code == 200
 
 
 @pytest.mark.parametrize("current", ["wrong-password", "ż" * 37])
@@ -471,7 +490,7 @@ def test_a_key_the_provider_rejects_is_not_stored(
 def test_a_rejection_carries_what_the_provider_said(
     client: TestClient, key_checker: FakeKeyChecker
 ) -> None:
-    """"Rejected" alone sends the promoter looking for a typo that is not there."""
+    """ "Rejected" alone sends the promoter looking for a typo that is not there."""
     key_checker.verdict = KeyVerdict.REJECTED
     key_checker.provider_message = "This API key is not scoped to a workspace"
     token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)

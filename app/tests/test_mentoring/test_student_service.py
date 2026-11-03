@@ -28,9 +28,6 @@ _SCHEMA_TRANSLATE = {"schema_translate_map": {"mentoring": None}}
 
 PROMOTOR = Caller(user_id=uuid.UUID("00000000-0000-0000-0000-0000000000a1"))
 OTHER = Caller(user_id=uuid.UUID("00000000-0000-0000-0000-0000000000a2"))
-ADMIN = Caller(
-    user_id=uuid.UUID("00000000-0000-0000-0000-0000000000a3"), can_view_all=True
-)
 
 
 @pytest.fixture
@@ -71,7 +68,7 @@ async def test_create_validates_before_touching_the_database(
 ) -> None:
     with pytest.raises(ValueError, match="full_name"):
         await _add(service, full_name="   ")
-    assert await service.list_students(ADMIN) == []
+    assert await service.list_students(PROMOTOR) == []
 
 
 # ---------- visibility ----------
@@ -86,13 +83,6 @@ async def test_list_returns_only_the_callers_students(
     assert [s.full_name for s in await service.list_students(PROMOTOR)] == [
         "Moja Studentka"
     ]
-
-
-async def test_admin_lists_every_roster(service: StudentService) -> None:
-    await _add(service, PROMOTOR, "Moja Studentka")
-    await _add(service, OTHER, "Cudzy Student")
-
-    assert len(await service.list_students(ADMIN)) == 2
 
 
 async def test_list_filters_by_status(service: StudentService) -> None:
@@ -115,11 +105,6 @@ async def test_get_other_promotors_student_raises_not_found(
 async def test_get_unknown_student_raises_not_found(service: StudentService) -> None:
     with pytest.raises(StudentNotFoundError):
         await service.get(PROMOTOR, uuid.uuid4())
-
-
-async def test_admin_gets_any_student(service: StudentService) -> None:
-    student = await _add(service, OTHER)
-    assert (await service.get(ADMIN, student.id)).id == student.id
 
 
 # ---------- update ----------
@@ -220,9 +205,9 @@ async def test_add_note_records_the_caller_as_author(
     service: StudentService,
 ) -> None:
     student = await _add(service, OTHER)
-    note = await service.add_meeting_note(ADMIN, student.id, content="Wpis admina")
+    note = await service.add_meeting_note(OTHER, student.id, content="Wpis")
 
-    assert note.promotor_id == ADMIN.user_id
+    assert note.promotor_id == OTHER.user_id
     assert note.student_id == student.id
     assert note.is_ai_drafted is False
 
@@ -235,7 +220,7 @@ async def test_add_note_defaults_occurred_at_to_now(
     note = await service.add_meeting_note(PROMOTOR, student.id, content="Ad hoc")
     # SQLite has no timestamptz: the value refreshed from it comes back naive
     # (it is UTC), while Postgres keeps it aware. Compare on the same footing.
-    assert note.occurred_at.replace(tzinfo=UTC) >= before
+    assert note.occurred_at >= before
 
 
 async def test_add_note_keeps_action_provenance(service: StudentService) -> None:

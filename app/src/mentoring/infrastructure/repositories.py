@@ -57,9 +57,9 @@ class StudentRepository:
     ) -> list[StudentModel]:
         """Return students with optional filters, newest first.
 
-        ``promotor_id=None`` means "every promoter's students" — only callers
-        holding VIEW_ALL_STUDENTS ever pass that. ``one_off=None`` means both
-        students and one-off reviews.
+        Services always pass ``promotor_id``: a promoter sees only their own
+        students (ADR 0008). ``one_off=None`` means both students and one-off
+        reviews.
         """
         stmt = select(StudentModel).order_by(StudentModel.created_at.desc())
         if promotor_id is not None:
@@ -207,24 +207,21 @@ class AgentActionRepository:
 
     async def find_recent_by_promotor(
         self,
-        promotor_id: uuid.UUID | None,
+        promotor_id: uuid.UUID,
         limit: int = 30,
     ) -> list[AgentActionModel]:
-        """Return the most recently updated actions across a promoter's students.
-
-        ``promotor_id=None`` means every promoter's actions — only a caller
-        with ``VIEW_ALL_STUDENTS`` ever passes that, mirroring
-        ``StudentRepository.find_all``.
-        """
-        stmt = select(AgentActionModel).order_by(AgentActionModel.updated_at.desc())
-        if promotor_id is not None:
-            stmt = stmt.where(AgentActionModel.promotor_id == promotor_id)
-        stmt = stmt.limit(limit)
+        """Return the most recently updated actions across a promoter's students."""
+        stmt = (
+            select(AgentActionModel)
+            .where(AgentActionModel.promotor_id == promotor_id)
+            .order_by(AgentActionModel.updated_at.desc())
+            .limit(limit)
+        )
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
     async def find_unfinished_by_promotor(
-        self, promotor_id: uuid.UUID | None
+        self, promotor_id: uuid.UUID
     ) -> list[AgentActionModel]:
         """Return every action that is not over, oldest first.
 
@@ -232,18 +229,16 @@ class AgentActionRepository:
         their pick of findings is the one unfinished action that needs them.
 
         No limit: this is the list the promoter clears stale runs from, and
-        the oldest are the likeliest to be dead. ``promotor_id=None`` as in
-        ``find_recent_by_promotor``.
+        the oldest are the likeliest to be dead.
         """
         stmt = (
             select(AgentActionModel)
             .where(
-                AgentActionModel.status.in_(("pending", "running", "awaiting_input"))
+                AgentActionModel.promotor_id == promotor_id,
+                AgentActionModel.status.in_(("pending", "running", "awaiting_input")),
             )
             .order_by(AgentActionModel.created_at)
         )
-        if promotor_id is not None:
-            stmt = stmt.where(AgentActionModel.promotor_id == promotor_id)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
@@ -281,6 +276,33 @@ class ThesisDraftRepository:
             .order_by(ThesisDraftModel.version_number.desc())
         )
         return list(result.scalars().all())
+
+    async def find_newest_for(
+        self, student_ids: list[uuid.UUID]
+    ) -> dict[uuid.UUID, ThesisDraftModel]:
+        """Return each student's newest version, purged or not, in one query.
+
+        For lists: one row per student, without a query per student.
+        """
+        if not student_ids:
+            return {}
+        newest = (
+            select(
+                ThesisDraftModel.student_id,
+                func.max(ThesisDraftModel.version_number).label("version_number"),
+            )
+            .where(ThesisDraftModel.student_id.in_(student_ids))
+            .group_by(ThesisDraftModel.student_id)
+            .subquery()
+        )
+        result = await self._session.execute(
+            select(ThesisDraftModel).join(
+                newest,
+                (ThesisDraftModel.student_id == newest.c.student_id)
+                & (ThesisDraftModel.version_number == newest.c.version_number),
+            )
+        )
+        return {m.student_id: m for m in result.scalars().all()}
 
     async def find_latest(
         self, student_id: uuid.UUID, limit: int = 1
@@ -364,9 +386,7 @@ class ThesisPartRepository:
         )
         return list(result.scalars().all())
 
-    async def find_by_ids(
-        self, part_ids: Sequence[uuid.UUID]
-    ) -> list[ThesisPartModel]:
+    async def find_by_ids(self, part_ids: Sequence[uuid.UUID]) -> list[ThesisPartModel]:
         """Return the parts with these ids, in no particular order."""
         result = await self._session.execute(
             select(ThesisPartModel).where(ThesisPartModel.id.in_(part_ids))

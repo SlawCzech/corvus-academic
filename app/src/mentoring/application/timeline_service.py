@@ -5,7 +5,7 @@ versions already say what happened and when (ADR 0014).
 """
 
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from uuid import UUID
 
 from src.mentoring.application.action_service import ActionService
@@ -28,11 +28,6 @@ from src.mentoring.infrastructure.repositories import (
     ThesisFragmentRepository,
     ThesisPartRepository,
 )
-
-
-def _utc(moment: datetime) -> datetime:
-    """Read a naive timestamp as UTC, as `retention.py` does for SQLite."""
-    return moment if moment.tzinfo else moment.replace(tzinfo=UTC)
 
 
 @dataclass(frozen=True)
@@ -145,7 +140,7 @@ class TimelineService:
             )
             for d in await self._drafts.list_drafts(caller, student.id)
         ]
-        events.sort(key=lambda e: (e.on, _utc(e.recorded_at)), reverse=True)
+        events.sort(key=lambda e: (e.on, e.recorded_at), reverse=True)
 
         return WorkTimeline(
             parts=[

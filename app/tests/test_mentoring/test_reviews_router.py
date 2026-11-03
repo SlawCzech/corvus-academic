@@ -151,9 +151,7 @@ async def test_a_file_nobody_can_read_leaves_nothing_behind(
     assert count == 0
 
 
-def test_a_blank_author_is_refused(
-    client: TestClient, headers: dict[str, str]
-) -> None:
+def test_a_blank_author_is_refused(client: TestClient, headers: dict[str, str]) -> None:
     assert _create(client, headers, full_name="   ").status_code == 422
     assert client.get("/reviews", headers=headers).json() == []
 
