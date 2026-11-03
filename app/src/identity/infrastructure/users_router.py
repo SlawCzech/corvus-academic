@@ -3,22 +3,25 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from src.identity.application.user_service import UserService, WrongPasswordError
 from src.identity.domain.user import Role, UserRegistration
 from src.identity.infrastructure.dependencies import (
     AdminDep,
     CurrentUserDep,
+    TokenStoreDep,
     UserServiceDep,
 )
 from src.identity.infrastructure.limiter import login_rate_limit
 from src.identity.infrastructure.schemas import (
     ChangePasswordRequest,
+    LoginResponse,
     RegisterRequest,
     UserResponse,
     user_response,
 )
+from src.identity.infrastructure.session import REFRESH_TTL, start_session
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -70,14 +73,20 @@ async def delete_user(
     await svc.delete(user_id)
 
 
-@router.patch("/me/password", status_code=status.HTTP_204_NO_CONTENT)
+@router.patch("/me/password", response_model=LoginResponse)
 async def change_password(
     body: ChangePasswordRequest,
+    response: Response,
     user: CurrentUserDep,
     svc: UserServiceDep,
+    token_store: TokenStoreDep,
     _rl: Annotated[None, Depends(login_rate_limit)],
-) -> None:
-    """Change the current user's password, confirmed with the current one."""
+) -> LoginResponse:
+    """Change the current user's password, confirmed with the current one.
+
+    Every session the user has ends with it, this one included; the caller
+    gets a new one back, so only the browser that made the change stays in.
+    """
     try:
         await svc.change_password(user.id, body.current_password, body.new_password)
     except WrongPasswordError as exc:
@@ -91,3 +100,5 @@ async def change_password(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc
+    await token_store.end_sessions(user.id, REFRESH_TTL)
+    return LoginResponse(access_token=start_session(response, user))

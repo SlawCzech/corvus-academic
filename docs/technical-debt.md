@@ -29,7 +29,9 @@ Zostaje:
 - [x] ~~**Zmiana hasła nie sprawdza obecnego hasła.**~~ — naprawione 2026-11-01:
   `current_password` jest wymagane, złe to 403 (nie 401, bo klient odnawiałby sesję
   i powtarzał żądanie), a endpoint ma limit prób logowania. Hasło ponad 72 bajty przy
-  logowaniu to 401, nie 500. Zostaje: zmiana hasła nie odwołuje pozostałych sesji.
+  logowaniu to 401, nie 500. Od 2026-11-03 zmiana hasła kończy wszystkie sesje
+  użytkownika (`sessions_from:{user}` w Redis, porównywane z `iat` z ułamkiem
+  sekundy); przeglądarka, która je zmieniła, dostaje w odpowiedzi nową parę.
 - [ ] **Brak Content-Security-Policy.** Caddy wysyła HSTS, `nosniff`,
   `X-Frame-Options`, `Referrer-Policy`; CSP wymaga noncy dla skryptów inline
   Next.js — osobna praca.

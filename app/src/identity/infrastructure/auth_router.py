@@ -9,8 +9,6 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from src.identity.application.auth import (
-    create_access_token,
-    create_refresh_token,
     decode_access_token,
     verify_refresh_token,
 )
@@ -26,14 +24,16 @@ from src.identity.infrastructure.schemas import (
     LoginResponse,
     RefreshResponse,
 )
-from src.shared.settings import settings
+from src.identity.infrastructure.session import (
+    REFRESH_COOKIE,
+    REFRESH_TTL,
+    start_session,
+)
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-_REFRESH_COOKIE = "refresh_token"
-_REFRESH_TTL = settings.refresh_token_expire_days * 24 * 3600
 # How long a replaced refresh token still works. Long enough for the requests
 # already on their way with it, short enough to be no use to anyone who stole it.
 _REFRESH_GRACE_SECONDS = 30
@@ -76,18 +76,7 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_token = create_access_token(user)
-    refresh_token, _jti = create_refresh_token(user)
-
-    response.set_cookie(
-        key=_REFRESH_COOKIE,
-        value=refresh_token,
-        httponly=True,
-        secure=settings.cookie_secure,
-        samesite="strict",
-        max_age=_REFRESH_TTL,
-        path="/auth/refresh",
-    )
+    access_token = start_session(response, user)
     logger.info("login_success", email=body.email, role=str(user.role))
     return LoginResponse(access_token=access_token)
 
@@ -97,7 +86,7 @@ async def refresh_token(
     response: Response,
     svc: UserServiceDep,
     token_store: TokenStoreDep,
-    refresh_token_cookie: str | None = Cookie(default=None, alias=_REFRESH_COOKIE),
+    refresh_token_cookie: str | None = Cookie(default=None, alias=REFRESH_COOKIE),
 ) -> RefreshResponse:
     """Replace the refresh cookie and issue a new access token.
 
@@ -110,38 +99,28 @@ async def refresh_token(
             detail="Refresh token missing",
         )
     try:
-        user_id, jti = verify_refresh_token(refresh_token_cookie)
+        claims = verify_refresh_token(refresh_token_cookie)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)
         ) from exc
 
-    if await token_store.is_revoked(jti):
+    if await token_store.is_revoked(
+        claims.jti, user_id=claims.user_id, issued_at=claims.issued_at
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token revoked",
         )
 
-    user = await svc.get_by_id(user_id)
+    user = await svc.get_by_id(claims.user_id)
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
         )
 
-    await token_store.retire(jti, _REFRESH_TTL, _REFRESH_GRACE_SECONDS)
-    new_access = create_access_token(user)
-    new_refresh, _new_jti = create_refresh_token(user)
-
-    response.set_cookie(
-        key=_REFRESH_COOKIE,
-        value=new_refresh,
-        httponly=True,
-        secure=settings.cookie_secure,
-        samesite="strict",
-        max_age=_REFRESH_TTL,
-        path="/auth/refresh",
-    )
-    return RefreshResponse(access_token=new_access)
+    await token_store.retire(claims.jti, REFRESH_TTL, _REFRESH_GRACE_SECONDS)
+    return RefreshResponse(access_token=start_session(response, user))
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
@@ -151,7 +130,7 @@ async def logout(
     bearer: Annotated[
         HTTPAuthorizationCredentials | None, Depends(_optional_bearer)
     ] = None,
-    refresh_token_cookie: str | None = Cookie(default=None, alias=_REFRESH_COOKIE),
+    refresh_token_cookie: str | None = Cookie(default=None, alias=REFRESH_COOKIE),
 ) -> None:
     """Revoke the access token in use and the refresh token, clear the cookie.
 
@@ -168,8 +147,8 @@ async def logout(
             pass
     if refresh_token_cookie is not None:
         try:
-            _user_id, jti = verify_refresh_token(refresh_token_cookie)
-            await token_store.revoke(jti, _REFRESH_TTL)
+            jti = verify_refresh_token(refresh_token_cookie).jti
+            await token_store.revoke(jti, REFRESH_TTL)
         except ValueError:
             pass  # already invalid — still clear the cookie
-    response.delete_cookie(key=_REFRESH_COOKIE, path="/auth/refresh")
+    response.delete_cookie(key=REFRESH_COOKIE, path="/auth/refresh")

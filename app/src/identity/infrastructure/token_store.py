@@ -1,6 +1,7 @@
 """Redis-backed blacklist for revoked tokens, access and refresh alike."""
 
 import time
+from uuid import UUID
 
 import redis.asyncio as aioredis  # type: ignore[import-untyped]
 import structlog
@@ -54,19 +55,36 @@ class RevokedTokenStore:
         except RedisError:
             logger.error("token_store_revoke_failed", jti=jti)
 
-    async def is_revoked(self, jti: str) -> bool:
-        """Return True if the jti has been blacklisted and its grace is over.
+    async def end_sessions(self, user_id: UUID, ttl_seconds: int) -> None:
+        """Refuse every token of this user issued before now.
 
-        The stored value is the moment revocation starts, so the ``"1"`` that
-        ``revoke`` writes is simply a moment long past.
+        For a password change: whoever else holds a session — another browser,
+        or someone who learned the old password — is signed out. The marker
+        lives as long as the longest token it has to outlast.
+        """
+        try:
+            await self._redis.setex(  # type: ignore[misc]
+                f"sessions_from:{user_id}", ttl_seconds, str(time.time())
+            )
+        except RedisError:
+            logger.error("token_store_end_sessions_failed", user_id=str(user_id))
+
+    async def is_revoked(self, jti: str, *, user_id: UUID, issued_at: float) -> bool:
+        """Return True if the token is refused.
+
+        Refused when its jti is blacklisted and the grace is over — the stored
+        value is the moment revocation starts, so the ``"1"`` that ``revoke``
+        writes is simply a moment long past — or when it was issued before the
+        user's sessions were ended.
 
         Falls back to False on Redis unavailability — tokens remain usable
         until Redis recovers, which is preferable to a hard outage.
         This is a conscious security trade-off; monitor for ERROR log events.
         """
         try:
-            revoked_from = await self._redis.get(f"revoked_jti:{jti}")  # type: ignore[misc]
-            return revoked_from is not None and float(revoked_from) <= time.time()  # type: ignore[arg-type]
+            revoked_from, sessions_from = await self._redis.mget(  # type: ignore[misc]
+                f"revoked_jti:{jti}", f"sessions_from:{user_id}"
+            )
         except RedisError:
             logger.error(
                 "token_store_check_failed_fail_open",
@@ -74,3 +92,6 @@ class RevokedTokenStore:
                 warning="revoked token may be accepted until Redis recovers",
             )
             return False
+        if revoked_from is not None and float(revoked_from) <= time.time():  # type: ignore[arg-type]
+            return True
+        return sessions_from is not None and issued_at < float(sessions_from)  # type: ignore[arg-type]

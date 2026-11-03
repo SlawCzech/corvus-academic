@@ -18,7 +18,9 @@ os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 os.environ.setdefault("LOCAL_MODELS_ENABLED", "true")
 
 
+import time  # noqa: E402
 from collections.abc import Generator  # noqa: E402
+from uuid import UUID  # noqa: E402
 
 import pytest  # noqa: E402
 
@@ -34,6 +36,7 @@ class InMemoryTokenStore:
         self.revoked: dict[str, int] = {}
         # Retired tokens still in their grace period. Tests end it by hand.
         self.retiring: set[str] = set()
+        self.sessions_from: dict[UUID, float] = {}
 
     async def revoke(self, jti: str, ttl_seconds: int) -> None:
         if ttl_seconds > 0:
@@ -47,8 +50,12 @@ class InMemoryTokenStore:
         self.revoked |= dict.fromkeys(self.retiring, 1)
         self.retiring.clear()
 
-    async def is_revoked(self, jti: str) -> bool:
-        return jti in self.revoked
+    async def end_sessions(self, user_id: UUID, ttl_seconds: int) -> None:
+        self.sessions_from[user_id] = time.time()
+
+    async def is_revoked(self, jti: str, *, user_id: UUID, issued_at: float) -> bool:
+        cutoff = self.sessions_from.get(user_id)
+        return jti in self.revoked or (cutoff is not None and issued_at < cutoff)
 
 
 @pytest.fixture(autouse=True)

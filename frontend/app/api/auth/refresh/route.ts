@@ -1,8 +1,7 @@
 import { cookies } from "next/headers"
 import { NextResponse, type NextRequest } from "next/server"
 
-import { APP_URL, refreshTokenIn, safeRedirectPath } from "@/lib/appProxy"
-import { ACCESS_COOKIE_MAX_AGE, REFRESH_COOKIE_MAX_AGE } from "@/lib/auth"
+import { APP_URL, refreshTokenIn, safeRedirectPath, setSession } from "@/lib/appProxy"
 
 /**
  * A relative `Location`, on purpose: behind Caddy `request.url` carries the
@@ -61,23 +60,8 @@ export async function POST(request: NextRequest): Promise<Response> {
   const rotated = refreshTokenIn(upstream)
 
   const response = redirect ? redirectTo(redirect) : NextResponse.json({ ok: true })
-  response.cookies.set("access_token", data.access_token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: ACCESS_COOKIE_MAX_AGE,
-  })
   // `app` retires the token it was just given, so this one has to be kept.
-  if (rotated) {
-    response.cookies.set("refresh_token", rotated, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: REFRESH_COOKIE_MAX_AGE,
-    })
-  }
+  setSession(response, data.access_token, rotated)
   return response
 }
 

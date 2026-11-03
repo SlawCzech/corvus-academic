@@ -1,7 +1,7 @@
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
-import { APP_URL } from "@/lib/appProxy"
+import { APP_URL, refreshTokenIn, setSession } from "@/lib/appProxy"
 
 export async function PATCH(request: Request): Promise<Response> {
   const token = (await cookies()).get("access_token")?.value
@@ -28,5 +28,10 @@ export async function PATCH(request: Request): Promise<Response> {
       { status: res.status },
     )
   }
-  return NextResponse.json({ ok: true })
+  // The change ends every other session, this one included: `app` hands
+  // back a new pair so the browser that changed it stays signed in.
+  const data = (await res.json()) as { access_token: string }
+  const response = NextResponse.json({ ok: true })
+  setSession(response, data.access_token, refreshTokenIn(res))
+  return response
 }

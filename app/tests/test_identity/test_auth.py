@@ -91,9 +91,9 @@ def test_create_refresh_token_returns_tuple(admin_user: User) -> None:
 
 def test_refresh_token_roundtrip(admin_user: User) -> None:
     token, jti = create_refresh_token(admin_user)
-    user_id, recovered_jti = verify_refresh_token(token)
-    assert user_id == admin_user.id
-    assert recovered_jti == jti
+    claims = verify_refresh_token(token)
+    assert claims.user_id == admin_user.id
+    assert claims.jti == jti
 
 
 def test_access_token_rejected_as_refresh(admin_user: User) -> None:
@@ -127,8 +127,28 @@ def test_access_token_without_jti_is_rejected(admin_user: User) -> None:
         "email": admin_user.email,
         "role": str(admin_user.role),
         "type": "access",
+        "iat": datetime.now(UTC).timestamp(),
         "exp": datetime.now(UTC).timestamp() + 60,
     }
     token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
     with pytest.raises(ValueError, match="jti"):
+        verify_access_token(token)
+
+
+def test_access_token_without_iat_is_rejected(admin_user: User) -> None:
+    """Without it, ending a user's sessions could not tell old from new."""
+    import jwt
+
+    from src.shared.settings import settings
+
+    payload = {
+        "sub": str(admin_user.id),
+        "email": admin_user.email,
+        "role": str(admin_user.role),
+        "type": "access",
+        "jti": "x",
+        "exp": datetime.now(UTC).timestamp() + 60,
+    }
+    token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+    with pytest.raises(ValueError, match="iat"):
         verify_access_token(token)

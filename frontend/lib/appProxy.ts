@@ -1,6 +1,8 @@
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
+import { ACCESS_COOKIE_MAX_AGE, REFRESH_COOKIE_MAX_AGE } from "@/lib/auth"
+
 /**
  * Base URL of the `app` service.
  *
@@ -35,6 +37,35 @@ export function refreshTokenIn(upstream: Response): string | null {
     if (match) return match[1]
   }
   return null
+}
+
+/**
+ * Put a session `app` has just issued into this site's cookies.
+ *
+ * Login, refresh and a password change all end with a fresh pair; the
+ * refresh token is absent only when `app` did not send one.
+ */
+export function setSession(
+  response: NextResponse,
+  accessToken: string,
+  refreshToken: string | null,
+): void {
+  const options = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+  } as const
+  response.cookies.set("access_token", accessToken, {
+    ...options,
+    maxAge: ACCESS_COOKIE_MAX_AGE,
+  })
+  if (refreshToken) {
+    response.cookies.set("refresh_token", refreshToken, {
+      ...options,
+      maxAge: REFRESH_COOKIE_MAX_AGE,
+    })
+  }
 }
 
 /**
