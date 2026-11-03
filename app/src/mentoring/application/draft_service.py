@@ -177,6 +177,19 @@ class DraftService:
         models = await self._drafts.find_by_student(student.id)
         return [self._view(student, to_domain(m)) for m in models]
 
+    async def newest_drafts(self, students: list[Student]) -> dict[UUID, DraftView]:
+        """Return each student's newest version, keyed by student id.
+
+        The students come from a list already filtered to the caller's, so
+        nothing is checked again — one query, however long the list.
+        """
+        models = await self._drafts.find_newest_for([s.id for s in students])
+        return {
+            s.id: self._view(s, to_domain(models[s.id]))
+            for s in students
+            if s.id in models
+        }
+
     async def download(
         self, caller: Caller, student_id: UUID, draft_id: UUID
     ) -> tuple[StoredFile, bytes]:

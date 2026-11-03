@@ -172,9 +172,12 @@ Zostaje:
 - [x] ~~**Email validation regex zbyt prosta**~~ — naprawione: `UserRegistration` używa
   biblioteki `email-validator` (commit `097798c`).
 
-- [ ] **Brak rate limitingu na polling akcji** — `GET /students/{id}/actions/{action_id}`
-  odpytuje `agent` przy każdym wywołaniu, dopóki akcja nie jest terminalna. Frontend pyta
-  co 3 s; nic nie broni się przed szybszym klientem.
+- [x] ~~**Brak rate limitingu na polling akcji**~~ — od 2026-11-03 odpowiedź agenta
+  o danym tasku żyje 2 s w `StatusCache` procesu `app`, więc szybszy klient albo
+  dziesięć kart dostaje tę samą odpowiedź zamiast tylu żądań do agenta. Bez 429:
+  UI pyta co 3 s i niczego nie zauważa. Wznowienie i anulowanie czyszczą wpis.
+  Pierwotny opis: `GET /students/{id}/actions/{action_id}` odpytuje `agent` przy
+  każdym wywołaniu, dopóki akcja nie jest terminalna.
 
 ---
 
@@ -322,8 +325,8 @@ Zostaje:
 
 - [x] ~~**Recenzja próbna bez evala treści**~~ — od 2026-11-01 `make eval-trial`.
 - [x] ~~**Teksty akcji mówią o „ostatniej wersji”**~~ — panel mówi ogólnie o pracy.
-- [ ] **`/reviews` pyta o pracę każdej recenzji osobno** — jedno zapytanie na wiersz.
-  Przy kilkudziesięciu recenzjach trzeba zebrać to jednym zapytaniem.
+- [x] ~~**`/reviews` pyta o pracę każdej recenzji osobno**~~ — od 2026-11-03 jedno
+  zapytanie o najnowsze wersje wszystkich jednorazówek (`find_newest_for`).
 - [x] ~~**Potwierdzenie usunięcia wspomina notatki**~~ — jednorazówka ma własny tekst.
 
 ---

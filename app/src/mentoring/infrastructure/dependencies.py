@@ -26,7 +26,12 @@ from src.identity.domain.user import Permission, User
 from src.identity.infrastructure.dependencies import get_current_user
 from src.identity.infrastructure.repositories import ApiKeyRepository
 from src.mentoring.application.action_service import ActionService
-from src.mentoring.application.agent_client import BYOK, AgentClient, KeyLoader
+from src.mentoring.application.agent_client import (
+    BYOK,
+    AgentClient,
+    KeyLoader,
+    StatusCache,
+)
 from src.mentoring.application.dashboard_service import DashboardService
 from src.mentoring.application.demo_roster import DemoRoster
 from src.mentoring.application.draft_service import DraftService
@@ -117,10 +122,15 @@ def get_key_loader(
     return load
 
 
+# One per process, like the HTTP client: what one request learned from the
+# agent spares the next poll of the same action.
+_agent_statuses = StatusCache()
+
+
 def get_agent_client(request: Request) -> AgentClient:
     """Wrap the process-wide HTTP client kept in application state."""
     client: httpx.AsyncClient = request.app.state.http_client
-    return AgentClient(client, settings.agent_url)
+    return AgentClient(client, settings.agent_url, _agent_statuses)
 
 
 def get_model_service(

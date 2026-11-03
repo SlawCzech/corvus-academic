@@ -93,10 +93,9 @@ class ReviewService:
     async def list_reviews(self, caller: Caller) -> list[ReviewView]:
         """Return the caller's one-off reviews, newest first."""
         students = await self._students.list_students(caller, one_off=True)
-        return [
-            ReviewView(s, (await self._drafts.list_drafts(caller, s.id))[0])
-            for s in students
-        ]
+        drafts = await self._drafts.newest_drafts(students)
+        # A review is born with its thesis; one without is not shown.
+        return [ReviewView(s, drafts[s.id]) for s in students if s.id in drafts]
 
     async def promote(self, caller: Caller, review_id: UUID) -> Student:
         """Put the review's author on the roster; there is no way back.

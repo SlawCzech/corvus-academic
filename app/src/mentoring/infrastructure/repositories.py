@@ -277,6 +277,33 @@ class ThesisDraftRepository:
         )
         return list(result.scalars().all())
 
+    async def find_newest_for(
+        self, student_ids: list[uuid.UUID]
+    ) -> dict[uuid.UUID, ThesisDraftModel]:
+        """Return each student's newest version, purged or not, in one query.
+
+        For lists: one row per student, without a query per student.
+        """
+        if not student_ids:
+            return {}
+        newest = (
+            select(
+                ThesisDraftModel.student_id,
+                func.max(ThesisDraftModel.version_number).label("version_number"),
+            )
+            .where(ThesisDraftModel.student_id.in_(student_ids))
+            .group_by(ThesisDraftModel.student_id)
+            .subquery()
+        )
+        result = await self._session.execute(
+            select(ThesisDraftModel).join(
+                newest,
+                (ThesisDraftModel.student_id == newest.c.student_id)
+                & (ThesisDraftModel.version_number == newest.c.version_number),
+            )
+        )
+        return {m.student_id: m for m in result.scalars().all()}
+
     async def find_latest(
         self, student_id: uuid.UUID, limit: int = 1
     ) -> list[ThesisDraftModel]:
