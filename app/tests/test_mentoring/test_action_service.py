@@ -207,6 +207,29 @@ async def test_review_is_judged_against_the_chosen_guideline_set(
     assert stored["guideline_version_id"] == str(version_id)
 
 
+@pytest.mark.parametrize(
+    "action_type", [ActionType.GENERATE_REVIEW, ActionType.TRIAL_REVIEW]
+)
+async def test_both_reviews_carry_the_thresholds_of_the_set(
+    env: _Fixture, action_type: ActionType
+) -> None:
+    student = await _student(env)
+    set_id = uuid.uuid4()
+    env.guidelines.publish(set_id, "bachelor", "## v1", {"min_sources": 25})
+    await env.students.update(
+        PROMOTOR, student.id, guideline_set_id=set_id, set_guidelines=True
+    )
+    await env.drafts.upload(
+        PROMOTOR, student.id, filename="praca.docx", data=docx_bytes()
+    )
+
+    await env.actions.trigger(
+        PROMOTOR, student.id, action_type=action_type, token=TOKEN
+    )
+
+    assert env.agent.submitted[0]["context"]["thresholds"] == {"min_sources": 25}
+
+
 async def test_without_a_guideline_set_the_agent_uses_its_own(env: _Fixture) -> None:
     student = await _student(env)
     await env.drafts.upload(

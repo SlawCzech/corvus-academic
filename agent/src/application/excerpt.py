@@ -97,7 +97,11 @@ def _format_map(document_map: Mapping[str, Any], with_sections: bool = True) -> 
 
     entries = document_map.get("bibliography_entries")
     if isinstance(entries, int):
-        lines.append(f"Bibliography entries counted: {entries}.")
+        web = document_map.get("bibliography_web_entries")
+        lines.append(
+            f"Bibliography entries counted: {entries}"
+            + (f", of which {web} give a web address." if web else ".")
+        )
 
     if sections:
         lines.append("")

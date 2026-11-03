@@ -38,6 +38,14 @@ _LENGTH_RULES = {
     ),
 }
 
+# The bachelor thresholds `app` seeds, with the length scaled the same way.
+_CONDENSED_THRESHOLDS = {
+    "min_sources": 25,
+    "min_foreign_sources": 4,
+    "min_body_chars": 5_000,
+    "max_body_chars": 20_000,
+}
+
 
 @dataclass(frozen=True)
 class ExpectedIssue:
@@ -78,6 +86,7 @@ class EvalCase:
             "thesis_type": self.thesis_type,
             "review_tone": self.metadata.get("review_tone", "auto"),
             "guidelines": condensed_guidelines(self.thesis_type),
+            "thresholds": _CONDENSED_THRESHOLDS,
         }
         if self.document_map is not None:
             context["document_map"] = self.document_map

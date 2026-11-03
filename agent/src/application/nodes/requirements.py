@@ -7,6 +7,7 @@ from src.application.excerpt import render_document_block
 from src.application.prompts.scopes import scope_instruction
 from src.application.replies import FINDINGS
 from src.application.structured import invoke_structured
+from src.application.thresholds import render_threshold_block
 from src.domain.analysis import Finding, FindingSeverity, FindingSource
 from src.infrastructure.llm_factory import get_llm
 from src.infrastructure.provider_errors import raise_if_provider_error
@@ -71,14 +72,14 @@ def check_requirements(state: ActionState) -> AnalysisUpdate:
     try:
         ctx = state["context"]
         llm = get_llm(state["model"])
+        blocks = (
+            f"University requirements:\n{ctx.get('guidelines', '')}",
+            render_threshold_block(ctx),
+            render_document_block(ctx, head_chars=_HEAD_CHARS),
+        )
         messages = [
             SystemMessage(content=_get_system_prompt(state.get("language", "pl"))),  # type: ignore[attr-defined]
-            HumanMessage(
-                content=(
-                    f"University requirements:\n{ctx.get('guidelines', '')}\n\n"
-                    f"{render_document_block(ctx, head_chars=_HEAD_CHARS)}"
-                )
-            ),
+            HumanMessage(content="\n\n".join(b for b in blocks if b)),
         ]
         data = invoke_structured(llm, messages, FINDINGS, node="requirements")
         new_findings: list[Finding] = [

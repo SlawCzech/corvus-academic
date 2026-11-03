@@ -330,6 +330,20 @@ Zostaje:
 
 ---
 
+## Progi z wytycznych (2026-11-02)
+
+- [ ] **Liczby są w dwóch miejscach** — rubryka i progi to osobne pola wersji, admin
+  edytuje je niezależnie, a przy rozjeździe model widzi oba. Nic tego nie wykrywa.
+- [ ] **Pozycji obcojęzycznych liczy model** — język wpisu to czytanie, więc kod podaje
+  tylko próg (ADR 0020). Pewność tej liczby jest taka jak wcześniej.
+- [ ] **Netografia pod numerowanym nagłówkiem** („3. Netografia”) nie kończy literatury.
+  Wpisy z adresem i tak trafiają do licznika www, więc model widzi zastrzeżenie.
+- [ ] **Metryki ewalu rozjeżdżają się między przebiegami** — ten sam kod daje od 5 do
+  18 duplikatów. Pojedynczy przebieg nie mówi, czy zmiana je zwiększyła; do oceny
+  potrzeba kilku przebiegów i kontroli (`agent/evals/README.md`).
+
+---
+
 ## Moduł AI na dostawcy (2026-10-01)
 
 Pierwszy dzień akcji na żywo na Claude (`claude-sonnet-5-5`). Co zostało świadomie
@@ -372,4 +386,4 @@ odłożone:
 
 ---
 
-*Ostatnia aktualizacja: 2026-11-01 (`POST /users`, zmiana hasła, zależności testowe, Dependabot, import-linter, CI/CD po wdrożeniu)*
+*Ostatnia aktualizacja: 2026-11-02 (progi z wytycznych, ADR 0020)*

@@ -5,8 +5,8 @@ and only ``infrastructure/guidelines_adapter.py`` knows the catalog exists —
 the same one-way seam as identity, kept at the edge of the context.
 """
 
-from dataclasses import dataclass
-from typing import Protocol
+from dataclasses import dataclass, field
+from typing import Any, Protocol
 from uuid import UUID
 
 
@@ -16,6 +16,8 @@ class GuidelineRubric:
 
     version_id: UUID
     rubric_md: str
+    thresholds: dict[str, Any] = field(default_factory=dict[str, Any])
+    """The numeric requirements, as they travel to `agent`."""
 
 
 class GuidelineSource(Protocol):

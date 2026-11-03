@@ -193,3 +193,26 @@ def test_findings_are_tagged_as_requirements() -> None:
         result = check_requirements(_make_state())
 
     assert {f.source for f in result["findings"]} == {FindingSource.REQUIREMENTS}
+
+
+def _prompt_of(state: ActionState) -> str:
+    llm = MagicMock()
+    llm.invoke.return_value = AIMessage(content=_EMPTY_RESPONSE)
+    with patch("src.application.nodes.requirements.get_llm", return_value=llm):
+        check_requirements(state)
+    return str(llm.invoke.call_args.args[0][1].content)
+
+
+def test_the_thresholds_reach_the_model_compared() -> None:
+    state = _make_state()
+    state["context"] = {
+        **state["context"],
+        "thresholds": {"min_sources": 25},
+        "document_map": {"bibliography_entries": 22},
+    }
+
+    assert "22 entries, at least 25 required: BELOW" in _prompt_of(state)
+
+
+def test_without_thresholds_the_prompt_does_not_mention_them() -> None:
+    assert "compared by code" not in _prompt_of(_make_state())

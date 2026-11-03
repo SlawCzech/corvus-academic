@@ -209,6 +209,7 @@ corvus/
 │   │   │   ├── brief.py      # temat, kierunek, typ, obszar i cel jednym blokiem
 │   │   │   ├── excerpt.py    # fragment + mapa całości + reguły dla węzłów
 │   │   │   │                   czytających tekst pracy (patrz `document/outline.py`)
+│   │   │   ├── thresholds.py # progi z wytycznych porównane z mapą, fakt dla węzła wymogów
 │   │   │   ├── nodes/        # structure, methodology, requirements, review,
 │   │   │   │                   propose_topic, defence_questions,
 │   │   │   │                   check_progress, draft_meeting_note,
@@ -524,6 +525,10 @@ zaakceptowaną i nie pokazuje rekomendacji. Jednorazówki znają tylko finalną 
 Mail do studenta powstaje z najnowszej recenzji próbnej, osobną akcją, bez czytania
 pracy. Student dostaje listę poprawek, nie punkty ani ocenę, a Corvus nic nie wysyła —
 [ADR 0019](docs/adr/0019-a-mail-is-written-from-a-trial-review.md).
+Progi liczbowe z wytycznych porównuje kod i podaje węzłowi wymogów jako fakt, a uwagę
+i jej wagę wystawia model: objętość jest tylko sugerowana, praca projektowa może mieć
+mniej źródeł, a wpis z adresem www może być netografią. Języka pozycji kod nie zgaduje —
+[ADR 0020](docs/adr/0020-code-measures-the-model-judges.md).
 
 ---
 

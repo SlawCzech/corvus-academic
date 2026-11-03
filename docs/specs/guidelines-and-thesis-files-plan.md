@@ -45,8 +45,8 @@ thesis is discarded after extraction, and nothing is ever deleted.
 
 ## Out of scope — next steps
 
-- Check `thresholds` in code in `agent` (deterministic findings instead of the
-  model comparing numbers).
+- ~~Check `thresholds` in code in `agent`~~ — done 2026-11-02, as facts for the model
+  rather than findings: [ADR 0020](../adr/0020-code-measures-the-model-judges.md).
 - AI action "draft a rubric from the regulation", reviewed and published by the admin.
 - Retrieval over the full regulation text (findings cite paragraphs); retire the
   static `.md` files and `analysis.guideline_chunks` in `agent`.

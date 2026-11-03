@@ -10,7 +10,7 @@ context whole at dispatch, so a Celery worker's job never depends on `app`
 being up, and no node needs a database.
 """
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from src.document.outline import outline_payload
@@ -297,16 +297,18 @@ def assemble_generate_review_context(
     detail: str | None = None,
     review_tone: str = "auto",
     guidelines: str | None = None,
+    thresholds: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the context for the full four-node review.
 
     `guidelines` is the rubric of the guideline set the promoter chose for
     this student. Without one, `agent` falls back to its own requirements for
-    the thesis type.
+    the thesis type. `thresholds` come from the same set: the requirements
+    node compares them with the document map, ADR 0020.
     """
     if latest_draft is None:
         raise MissingContextError("There is no thesis to review yet")
-    return _with_guidelines(
+    context = _with_guidelines(
         {
             "text": latest_draft.content,
             "document_map": _document_map(latest_draft),
@@ -319,3 +321,4 @@ def assemble_generate_review_context(
         },
         guidelines,
     )
+    return {**context, "thresholds": dict(thresholds)} if thresholds else context
