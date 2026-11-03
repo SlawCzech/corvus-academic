@@ -170,12 +170,13 @@ zaskakującą liczbę da się przeczytać, zamiast puszczać jeszcze raz.
 | 2026-09-30 | punkt wyjścia (przed structured output i weryfikacją cytatów) | qwen3:30b-a3b | 0.61 | 1 | 0 | 0 | 1 | 1552 s |
 | 2026-09-30 | + structured output, cytaty i weryfikacja (punkty 3–4) | qwen3:30b-a3b | 0.67 | 0 | 3 | 0 | 0 | 1846 s |
 | 2026-11-01 | po rozdzieleniu recenzji (ADR 0018), `advice in reviews` 0 | claude-sonnet-5-5 | 0.83 | 1 | 7 | 0 | 0 | 87 s |
-| 2026-11-02 | progi jako fakty dla węzła wymogów (ADR 0020), przebieg 1 | claude-sonnet-5-5 | 0.83 | 1 | 11 | 0 | 0 | 90 s |
-| 2026-11-02 | to samo, przebieg 2 | claude-sonnet-5-5 | 0.83 | 1 | 12 | 0 | 0 | 96 s |
+| 2026-11-02/03 | progi jako fakty dla węzła wymogów (ADR 0020), 5 przebiegów | claude-sonnet-5-5 | 0.83 ×5 | 1 | 8–18, śr. 11,4 | 0 | 0 | 90–114 s |
 
-Kontrola 2026-11-02: ten sam kod bez progów, dwa przebiegi, dał 7 i 10 duplikatów, ale też
-raz 2 fałszywe alarmy i raz rekomendacje 2 z 3 (recall 1.00, underrated 3). Rozrzut jest
-większy niż różnica, więc te liczby nie rozstrzygają wpływu progów na duplikaty.
+Kontrola: ten sam kod bez progów, też 5 przebiegów: recall 0.83–1.00, duplikaty 5–12
+(śr. 9,0), w jednym przebiegu 2 fałszywe alarmy, w innym rekomendacje 2 z 3. Z progami
+fałszywych alarmów nie było, a rekomendacje zawsze 3 z 3. Duplikaty skaczą między
+identycznymi przebiegami bardziej, niż różnią się średnie, więc wpływu progów na nie nie
+widać. Jeden przebieg nie wystarcza, żeby ocenić zmianę w tej metryce.
 
 ### Obszar i cel (ADR 0015)
 

@@ -24,7 +24,8 @@ The comparison sits in `agent`, not `app`, because it is prompt text: it is writ
 ## Consequences
 
 - Source counts and length are no longer the model's arithmetic. Three repeats on Claude with the seeded rubric: 22 sources gave a critical finding each time, a thesis meeting the numbers got no finding about them, and a length under the suggested range stayed minor, each time called only suggested.
-- Not shown: that a real project thesis keeps its reduced source count. The one attempt added a sentence to an empirical thesis, and the model rightly read it as empirical. It needs a project thesis in the eval cases.
+- The full eval, five runs with thresholds against five without, shows no effect either way. Duplicates swing more between identical runs (5 to 18) than the means differ. With thresholds there were no false flags and every recommendation was right; without them, one run had two false flags and another a wrong recommendation.
+- The project-thesis exception is not exercised: the promoters this serves have no project theses. It stays in the rubric because the regulation has it.
 - The numbers in the rubric and in the thresholds are two copies an admin edits apart. If they differ, the model sees both.
 - Maps stored or computed before this have no web count, and the block reads that as none.
 - The foreign-language minimum stays as uncertain as a model's count of a bibliography.
