@@ -54,6 +54,15 @@ class Settings(BaseSettings):
     # read into memory in full.
     max_upload_bytes: int = 25 * 1024 * 1024
 
+    # Text is extracted from an upload in a child process that is killed past
+    # these limits (`document/isolated.py`). A 300-page thesis reads in a few
+    # seconds and well under the memory cap. Off in the test suite only, where
+    # spawning a process per upload would cost minutes; its own tests keep the
+    # isolated path covered.
+    extraction_isolated: bool = True
+    extraction_timeout_seconds: float = 60
+    extraction_max_memory_bytes: int = 1024 * 1024 * 1024
+
     # How often the retention sweep runs in-process; 0 turns it off (tests,
     # or a deployment that runs `scripts/purge_drafts.py` from cron instead).
     retention_sweep_interval_hours: float = 24

@@ -12,7 +12,8 @@ from uuid import UUID
 
 import structlog
 
-from src.document.extractor import CANONICAL_CONTENT_TYPE, extract
+from src.document.extractor import CANONICAL_CONTENT_TYPE
+from src.document.isolated import extract_upload
 from src.mentoring.application.exceptions import (
     DraftNotFoundError,
     OneOffReviewError,
@@ -135,7 +136,7 @@ class DraftService:
         version = await self._drafts.next_version_number(student.id)
         if student.is_one_off and version > 1:
             raise OneOffReviewError("A one-off review holds one thesis")
-        document = extract(data, filename, content_type)
+        document = await extract_upload(data, filename, content_type)
 
         # Written in the same commit as the draft row below: the store flushes,
         # the repository commits, so a file never exists without its draft.

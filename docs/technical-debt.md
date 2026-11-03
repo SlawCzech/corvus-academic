@@ -49,9 +49,13 @@ Zostaje:
 - [x] ~~**`@testing-library/*` i `vitest` w `dependencies`**~~ — przeniesione do
   `devDependencies` 2026-11-01, wersje w lockfile'u bez zmian. `npm audit --omit=dev`
   czysty; pełny `npm audit` pokazuje 18 ostrzeżeń `moderate` w narzędziach dev.
-- [ ] **Parsowanie niezaufanych PDF/DOCX** w procesie `app` (limit rozmiaru jest,
-  limitu czasu i pamięci ekstrakcji nie ma). Przy kilku zaufanych testerach do
-  przyjęcia; przy otwartej rejestracji — do osobnego procesu z limitami.
+- [x] ~~**Parsowanie niezaufanych PDF/DOCX** w procesie `app`~~ — od 2026-11-03
+  każdy upload czyta osobny proces (spawn, `document/isolated.py`) z limitem 60 s
+  i 1 GB (`RLIMIT_AS`, egzekwowany na Linuksie — sprawdzone w obrazie `app`; 300
+  stron to ok. 56 MB). Przekroczenie to zwykłe 422. Ekstrakcja przestała też
+  blokować pętlę zdarzeń — wcześniej szła synchronicznie w handlerze. Koszt:
+  ok. 0,4 s na plik. Testy wyłączają izolację (`EXTRACTION_ISOLATED=false`) poza
+  `test_isolated.py`.
 
 ---
 

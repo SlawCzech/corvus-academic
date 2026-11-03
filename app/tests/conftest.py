@@ -16,6 +16,8 @@ os.environ.setdefault("AGENT_URL", "http://agent:8002")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 # Off by default, on here: the hidden path stays covered (ADR 0016).
 os.environ.setdefault("LOCAL_MODELS_ENABLED", "true")
+# A process per upload would cost minutes here; `test_isolated.py` covers it.
+os.environ.setdefault("EXTRACTION_ISOLATED", "false")
 
 
 import time  # noqa: E402

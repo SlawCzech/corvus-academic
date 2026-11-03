@@ -11,7 +11,8 @@ from uuid import UUID
 
 import structlog
 
-from src.document.extractor import CANONICAL_CONTENT_TYPE, extract
+from src.document.extractor import CANONICAL_CONTENT_TYPE
+from src.document.isolated import extract_upload
 from src.mentoring.application.exceptions import (
     FragmentNotFoundError,
     OneOffReviewError,
@@ -255,7 +256,7 @@ class FragmentService:
         if received > now.date() + _FUTURE_TOLERANCE:
             raise ValueError("received_on must not be in the future")
 
-        content = self._read(upload)
+        content = await self._read(upload)
 
         name = ThesisPart(
             id=uuid.uuid4(), student_id=student.id, name=part_name, position=1
@@ -378,13 +379,13 @@ class FragmentService:
     # ---------- internals ----------
 
     @staticmethod
-    def _read(upload: FragmentUpload) -> _Content:
+    async def _read(upload: FragmentUpload) -> _Content:
         """Extract or check the upload; raises ValueError when it is unusable."""
         if (upload.data is None) == (upload.text is None):
             raise ValueError("Send either a file or text, not both or neither")
         if upload.data is not None:
             filename = upload.filename or ""
-            document = extract(upload.data, filename, upload.content_type)
+            document = await extract_upload(upload.data, filename, upload.content_type)
             return _Content(
                 text=document.text,
                 format=document.format,
