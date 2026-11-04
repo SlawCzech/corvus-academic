@@ -59,7 +59,7 @@ def test_draft_student_email_happy_path() -> None:
 def test_the_mail_is_written_from_the_review_and_the_promoters_word() -> None:
     captured: list[Any] = []
 
-    def _capture(messages: list[Any]) -> AIMessage:
+    def _capture(messages: list[Any], **_: Any) -> AIMessage:  # noqa: ANN401
         captured.extend(messages)
         return AIMessage(content=_VALID_RESPONSE)
 

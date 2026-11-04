@@ -1,13 +1,10 @@
 """LLM factory — which model answers, and on whose account.
 
-Two ways in, in priority order:
-
-1. **BYOK** — the promoter's own provider key, travelling with one task. It is
-   held in a ContextVar for the duration of that task rather than in the graph
-   state, so it cannot reach a node's `state.copy()`, a LangGraph checkpoint,
-   or the persisted result.
-2. **The service's own backend** (`MODEL_BACKEND`) — self-hosted Ollama by
-   default, which is what runs when nobody brought a key.
+Always the promoter's own provider key (BYOK), travelling with one task. It
+is held in a ContextVar for the duration of that task rather than in the
+graph state, so it cannot reach a node's `state.copy()`, a LangGraph
+checkpoint, or the persisted result. There is no service model to fall back
+on (ADR 0022): a run without a key fails rather than runs on someone else's.
 """
 
 from collections.abc import Generator
@@ -17,15 +14,12 @@ from dataclasses import dataclass
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
-from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
 
 from src.infrastructure.settings import settings
 
-# Model per provider when the user brings the key. Deliberately not the
-# caller's `model` argument: that names an Ollama tag, and handing "qwen3:30b"
-# to Anthropic would just fail.
+# The model each provider runs on.
 _BYOK_MODELS: dict[str, str] = {
     "claude": "claude-sonnet-5-5",
     # OpenAI's counterpart of Sonnet: "near-flagship at a lower cost", and the
@@ -88,41 +82,21 @@ def current_credentials() -> ModelCredentials | None:
     return _credentials.get()
 
 
-def hosted_model_in_effect() -> bool:
-    """Whether the next `get_llm()` is a provider's model, not the local one.
-
-    The two read a thesis differently. A hosted model takes the whole work in
-    one prompt; the local one has a context of a few thousand tokens to spend,
-    and what it is shown is rationed (see `application.excerpt`).
-    """
-    return current_credentials() is not None or settings.model_backend != "ollama"
+class MissingCredentialsError(ValueError):
+    """A model was asked for outside any promoter's key."""
 
 
-def get_llm(
-    model_override: str | None = None,
-    credentials: ModelCredentials | None = None,
-) -> BaseChatModel:
-    """Return the chat model this call should use.
+def model_label(credentials: ModelCredentials | None) -> str:
+    """The model a run on these credentials answers with, for traces and logs."""
+    return _BYOK_MODELS[credentials.provider] if credentials else "none"
 
-    A user's own key wins over the service's backend; `model_override` names
-    an Ollama tag and applies only to the self-hosted path.
-    """
+
+def get_llm(credentials: ModelCredentials | None = None) -> BaseChatModel:
+    """Return the chat model this call should use: the promoter's, always."""
     byok = credentials or current_credentials()
-    if byok is not None:
-        return _byok_model(byok)
-
-    match settings.model_backend:
-        case "claude":
-            return _claude(settings.anthropic_api_key)
-        case "ollama":
-            return ChatOllama(  # pyright: ignore[reportCallIssue]
-                model=model_override or settings.ollama_model,
-                base_url=settings.ollama_base_url,
-            )
-        case "openai":
-            return ChatOpenAI(model=_BYOK_MODELS["openai"])  # pyright: ignore[reportCallIssue]
-        case _:
-            raise ValueError(f"Unknown MODEL_BACKEND: {settings.model_backend!r}")
+    if byok is None:
+        raise MissingCredentialsError("this run has no provider key")
+    return _byok_model(byok)
 
 
 def _claude(api_key: str) -> BaseChatModel:

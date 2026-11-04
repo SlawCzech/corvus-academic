@@ -47,16 +47,14 @@ class ProviderKeyMissingError(Exception):
     """The promoter asked for a provider they have no stored key for.
 
     Raised before anything is dispatched. There is no quiet fallback to the
-    self-hosted model: which account pays for a run is the promoter's
-    choice, and a different model answering is not what they asked for.
+    other provider: which account pays for a run is the promoter's choice.
     """
 
 
 class ProviderRequiredError(Exception):
-    """No provider was picked, and this server runs no local models.
+    """No provider was picked, and every action runs on one (ADR 0022).
 
-    Raised before anything is dispatched, like ProviderKeyMissingError: with
-    local models switched off there is nothing an action could fall back to.
+    Raised before anything is dispatched, like ProviderKeyMissingError.
     """
 
 

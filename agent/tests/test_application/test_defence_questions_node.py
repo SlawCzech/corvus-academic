@@ -124,15 +124,11 @@ def test_empty_question_list_is_an_error() -> None:
     assert result["output"] is None
 
 
-def test_long_thesis_is_truncated_not_refused() -> None:
-    """A full thesis exceeds the context window; the node must still run.
-
-    And it must say so: a slice presented as the whole work is what produced
-    questions about chapters the model never saw.
-    """
+def test_a_long_thesis_goes_in_whole() -> None:
+    """The committee reads the whole work, and so does the model."""
     captured: list[Any] = []
 
-    def _capture(messages: list[Any]) -> AIMessage:
+    def _capture(messages: list[Any], **_: Any) -> AIMessage:  # noqa: ANN401
         captured.extend(messages)
         return AIMessage(content=_VALID_RESPONSE)
 
@@ -142,16 +138,16 @@ def test_long_thesis_is_truncated_not_refused() -> None:
     with patch(
         "src.application.nodes.defence_questions.get_llm", return_value=mock_llm
     ):
-        result = defence_questions(_make_state(text="x" * 40000))
+        result = defence_questions(_make_state(text="x" * 40000 + " KONIEC"))
 
     assert result["error"] is None
-    assert "the remainder is NOT shown" in str(captured[1].content)
+    assert "x" * 40000 + " KONIEC" in str(captured[1].content)
 
 
 def test_supervisor_instructions_reach_the_prompt() -> None:
     captured: list[Any] = []
 
-    def _capture(messages: list[Any]) -> AIMessage:
+    def _capture(messages: list[Any], **_: Any) -> AIMessage:  # noqa: ANN401
         captured.extend(messages)
         return AIMessage(content=_VALID_RESPONSE)
 

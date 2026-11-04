@@ -11,7 +11,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.types import Command
 
 from src.application.graph import CompiledActionGraph, build_action_graph
-from src.application.guidelines import retrieve_relevant_guidelines
+from src.application.guidelines import load_guidelines
 from src.application.nodes.promoter_review import PROMOTER_REVIEWS_FINDINGS
 from src.application.state import ActionState
 from src.domain.action import ActionType, TaskStatus
@@ -19,7 +19,11 @@ from src.domain.analysis import ThesisType
 from src.infrastructure.checkpoints import delete as delete_checkpoints
 from src.infrastructure.checkpoints import open_checkpointer
 from src.infrastructure.key_transit import KeyUnsealError, unseal
-from src.infrastructure.llm_factory import ModelCredentials, use_credentials
+from src.infrastructure.llm_factory import (
+    ModelCredentials,
+    model_label,
+    use_credentials,
+)
 from src.infrastructure.provider_errors import classify as classify_provider_error
 from src.infrastructure.task_status import (
     record_task_progress,
@@ -48,9 +52,8 @@ _RESULT_KEYS = (
 )
 
 
-# Actions judged against university requirements. The guideline text is
-# `agent`-owned static data (files today, pgvector in Phase 5), so it is loaded
-# here rather than shipped over the wire by `app`.
+# Actions judged against university requirements. Without a guideline set from
+# `app`, they read the agent's own requirements file.
 _ACTIONS_NEEDING_GUIDELINES = frozenset(
     {
         ActionType.GENERATE_REVIEW,
@@ -63,14 +66,13 @@ _ACTIONS_NEEDING_GUIDELINES = frozenset(
 def _with_guidelines(action_type: str, context: dict[str, Any]) -> dict[str, Any]:
     """Add the university requirements to the context, if the action needs them.
 
-    Retrieved against the thesis rather than pasted whole: the sections that
-    bear on this work, plus the rules that define how to judge it.
+    `app` sends the rubric of the student's guideline set when there is one;
+    otherwise the agent's own requirements file for the thesis type, whole.
     """
     if action_type not in _ACTIONS_NEEDING_GUIDELINES or "guidelines" in context:
         return context
     thesis_type = str(context.get("thesis_type", ThesisType.BACHELOR))
-    guidelines = retrieve_relevant_guidelines(thesis_type, str(context.get("text", "")))
-    return {**context, "guidelines": guidelines}
+    return {**context, "guidelines": load_guidelines(thesis_type)}
 
 
 def _to_json(obj: Any) -> Any:  # noqa: ANN401
@@ -344,8 +346,7 @@ def _credentials(
     """Open the promoter's key, here in the worker that is about to use it.
 
     A key that will not open fails the task at once: retrying cannot fix it,
-    and running on the local model instead would be a silent fallback the
-    promoter did not choose (ADR 0011).
+    and there is no other model to run on (ADR 0022).
     """
     if not (provider and sealed_api_key):
         return None
@@ -363,7 +364,9 @@ def run_action(
     action_type: str,
     student_id: str,
     context: dict[str, Any],
-    model: str = "qwen3:30b-a3b",
+    # Unused: the provider decides the model. Still accepted, because a task
+    # queued by an older `app` carries it.
+    model: str | None = None,
     language: str = "pl",
     provider: str | None = None,
     sealed_api_key: str | None = None,
@@ -386,7 +389,7 @@ def run_action(
         action_type=action_type,
         student_id=student_id,
         task_id=task_id,
-        model=model,
+        model=model_label(credentials),
         # The provider is worth knowing; the key is never logged.
         byok_provider=credentials.provider if credentials else None,
     )
@@ -399,7 +402,7 @@ def run_action(
                     action_type,
                     student_id,
                     _with_guidelines(action_type, context),
-                    model,
+                    model_label(credentials),
                     language,
                 ),
             )

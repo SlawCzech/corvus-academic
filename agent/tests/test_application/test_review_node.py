@@ -174,7 +174,7 @@ def test_auto_tone_prompt_contains_auto_instruction() -> None:
 
     captured_messages: list[Any] = []
 
-    def capture_invoke(messages: list[Any]) -> AIMessage:
+    def capture_invoke(messages: list[Any], **_: Any) -> AIMessage:  # noqa: ANN401
         captured_messages.extend(messages)
         return AIMessage(content=_VALID_RESPONSE)
 
@@ -192,7 +192,7 @@ def test_auto_tone_with_critical_finding_uses_negative_instruction() -> None:
     mock_llm = MagicMock()
     captured_messages: list[Any] = []
 
-    def capture_invoke(messages: list[Any]) -> AIMessage:
+    def capture_invoke(messages: list[Any], **_: Any) -> AIMessage:  # noqa: ANN401
         captured_messages.extend(messages)
         return AIMessage(content=_CRITICAL_RESPONSE)
 
@@ -213,7 +213,7 @@ def test_diplomatic_tone_prompt_tells_llm_to_skip_notable_strength() -> None:
     mock_llm = MagicMock()
     captured_messages: list[Any] = []
 
-    def capture_invoke(messages: list[Any]) -> AIMessage:
+    def capture_invoke(messages: list[Any], **_: Any) -> AIMessage:  # noqa: ANN401
         captured_messages.extend(messages)
         return AIMessage(content=_VALID_RESPONSE)
 
@@ -232,7 +232,7 @@ def test_negative_tone_prompt_forbids_positive_opening() -> None:
     mock_llm = MagicMock()
     captured_messages: list[Any] = []
 
-    def capture_invoke(messages: list[Any]) -> AIMessage:
+    def capture_invoke(messages: list[Any], **_: Any) -> AIMessage:  # noqa: ANN401
         captured_messages.extend(messages)
         return AIMessage(content=_CRITICAL_RESPONSE)
 
@@ -253,7 +253,7 @@ def test_invalid_tone_falls_back_to_auto_without_crashing() -> None:
 
     captured_messages: list[Any] = []
 
-    def capture_invoke(messages: list[Any]) -> AIMessage:
+    def capture_invoke(messages: list[Any], **_: Any) -> AIMessage:  # noqa: ANN401
         captured_messages.extend(messages)
         return AIMessage(content=_VALID_RESPONSE)
 
@@ -275,7 +275,7 @@ def test_commendable_tone_prompt_includes_notable_strength_phrase() -> None:
     mock_llm = MagicMock()
     captured_messages: list[Any] = []
 
-    def capture_invoke(messages: list[Any]) -> AIMessage:
+    def capture_invoke(messages: list[Any], **_: Any) -> AIMessage:  # noqa: ANN401
         captured_messages.extend(messages)
         return AIMessage(content=_VALID_RESPONSE)
 
@@ -294,7 +294,7 @@ def test_commendable_tone_prompt_opening_differs_from_enthusiastic() -> None:
     mock_llm = MagicMock()
     captured_messages: list[Any] = []
 
-    def capture_invoke(messages: list[Any]) -> AIMessage:
+    def capture_invoke(messages: list[Any], **_: Any) -> AIMessage:  # noqa: ANN401
         captured_messages.extend(messages)
         return AIMessage(content=_VALID_RESPONSE)
 
@@ -316,7 +316,7 @@ def test_reserved_tone_prompt_includes_minimalne_wymagania() -> None:
     mock_llm = MagicMock()
     captured_messages: list[Any] = []
 
-    def capture_invoke(messages: list[Any]) -> AIMessage:
+    def capture_invoke(messages: list[Any], **_: Any) -> AIMessage:  # noqa: ANN401
         captured_messages.extend(messages)
         return AIMessage(content=_VALID_RESPONSE)
 
@@ -365,7 +365,7 @@ def test_auto_tone_prompt_includes_commendable_threshold() -> None:
     mock_llm = MagicMock()
     captured_messages: list[Any] = []
 
-    def capture_invoke(messages: list[Any]) -> AIMessage:
+    def capture_invoke(messages: list[Any], **_: Any) -> AIMessage:  # noqa: ANN401
         captured_messages.extend(messages)
         return AIMessage(content=_VALID_RESPONSE)
 
@@ -384,7 +384,7 @@ def test_auto_tone_prompt_includes_reserved_threshold() -> None:
     mock_llm = MagicMock()
     captured_messages: list[Any] = []
 
-    def capture_invoke(messages: list[Any]) -> AIMessage:
+    def capture_invoke(messages: list[Any], **_: Any) -> AIMessage:  # noqa: ANN401
         captured_messages.extend(messages)
         return AIMessage(content=_VALID_RESPONSE)
 

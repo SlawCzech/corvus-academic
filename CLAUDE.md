@@ -18,9 +18,9 @@ Lokalna aplikacja webowa wspomagająca promotorów i recenzentów w analizie stu
 - Analiza pracy w czterech wymiarach:
   - struktura i spójność rozdziałów
   - metodologia i źródła bibliograficzne
-  - zgodność z wymogami uczelnianymi (RAG)
+  - zgodność z wymogami uczelnianymi
   - generowanie szkicu recenzji z oceną punktową
-- Wybór modelu AI: komercyjny (Claude API / OpenAI) na kluczu promotora; lokalny (Ollama) tylko po włączeniu `LOCAL_MODELS_ENABLED`
+- Wybór modelu AI: Claude API albo OpenAI, zawsze na kluczu promotora (ADR 0022)
 - Historia analiz i raportów per użytkownik
 - Panel administracyjny do zarządzania wytycznymi i kluczami API
 - Monitoring kolejki zadań (Flower UI)
@@ -37,7 +37,7 @@ Lokalna aplikacja webowa wspomagająca promotorów i recenzentów w analizie stu
 > dokumentu na platformę mentoringową (studenci, notatki, predefiniowane akcje AI).
 > **Wszystkie sześć faz pivotu jest zrobionych**: konsolidacja serwisów, domena
 > mentoringowa, sześć akcji AI, frontend oparty o studentów, BYOK, RAG nad
-> wytycznymi (pgvector) i CI/CD. Decyzje: [docs/adr/](docs/adr/) · plan i status faz:
+> wytycznymi (później usunięty, ADR 0021) i CI/CD. Decyzje: [docs/adr/](docs/adr/) · plan i status faz:
 > [docs/specs/mentoring-platform-implementation-plan.md](docs/specs/mentoring-platform-implementation-plan.md).
 > Sekcja 9 poniżej (kolejność implementacji) jest **nieaktualna** — zastąpiona tym planem.
 
@@ -61,12 +61,9 @@ agent/src/           — analysis + review: graf LangGraph, węzły, recenzja
 | app | 8000 | FastAPI, Postgres | identity + document + mentoring + guidelines |
 | agent | 8002 | FastAPI, LangGraph | analysis + review |
 | agent-worker | — | Celery | wykonuje graf (ten sam obraz co agent) |
-| ollama | 11434 | Ollama | — |
 | redis | 6379 | Redis | — |
-| postgres | 5432 | PostgreSQL 16 + pgvector + Alembic | — |
+| postgres | 5432 | PostgreSQL 16 + Alembic (obraz z pgvector, ADR 0021) | — |
 | flower | 5555 | Celery Flower | — |
-| jenkins | 8080 | Jenkins | — |
-| sonarqube | 9000 | SonarQube CE | — |
 
 Jedyny podział sieciowy: szybkie synchroniczne CRUD (`app`) vs wolne
 asynchroniczne wywołania LLM (`agent`) — patrz ADR 0002.
@@ -126,7 +123,7 @@ Użytkownik
          idą wyłącznie opisy bibliograficzne, nigdy tekst pracy)
   → model selector
       → promotor wybiera przy akcji: własny klucz (BYOK) do Claude albo
-        OpenAI — po jednym na dostawcę — albo Ollama (schowana, ADR 0016);
+        OpenAI — po jednym na dostawcę; bez dostawcy akcja to 409 (ADR 0022),
         zapisany klucz nie jest używany, dopóki akcja o niego nie poprosi
         klucz jedzie osobnym argumentem taska, zaszyfrowany na czas kolejki
         (ADR 0012), i żyje w ContextVar tylko na czas przebiegu grafu — nigdy
@@ -137,14 +134,15 @@ Użytkownik
 
 ### 3.4 Model selector
 
-Przełączanie modelu przez zmienną środowiskową lub klucz API w UI:
+Model wybiera klucz promotora; serwis nie ma własnego (ADR 0022):
 
 ```python
-# agent/infrastructure/llm_factory.py
-match settings.model_backend:
-    case "ollama":   return ChatOllama(model=settings.ollama_model)
-    case "claude":   return ChatAnthropic(model="claude-sonnet-5-5")
-    case "openai":   return ChatOpenAI(model="gpt-6.1-sol")
+# agent/src/infrastructure/llm_factory.py
+def get_llm(credentials=None) -> BaseChatModel:
+    byok = credentials or current_credentials()   # ContextVar na czas przebiegu
+    if byok is None:
+        raise MissingCredentialsError("this run has no provider key")
+    return _byok_model(byok)   # claude-sonnet-5-5 albo gpt-6.1-sol
 ```
 
 ---
@@ -216,9 +214,7 @@ corvus/
 │   │   │   │                   review_fragment
 │   │   │   └── tasks.py      # Celery: run_action
 │   │   └── infrastructure/
-│   │       ├── llm_factory.py   # BYOK (ContextVar) → Claude/OpenAI, inaczej Ollama
-│   │       ├── embeddings.py    # model embeddingów (lokalny, zawsze)
-│   │       ├── guideline_store.py  # wyszukiwanie chunków (pgvector)
+│   │       ├── llm_factory.py   # BYOK (ContextVar) → Claude/OpenAI, nic poza tym
 │   │       ├── logging.py       # configure_logging — wołane z main.py i celery_app.py
 │   │       ├── task_status.py
 │   │       └── repositories.py
@@ -229,16 +225,12 @@ corvus/
 ├── infra/
 │   ├── docker-compose.yml
 │   ├── docker-compose.override.yml   # lokalne overrides
-│   ├── jenkins/
-│   │   └── Jenkinsfile
-│   ├── sonarqube/
-│   │   └── sonar-project.properties
 │   └── postgres/
 │       └── init.sql
 │
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml            # testy + SonarQube przy PR
+│       ├── ci.yml            # testy, lint, typy i migracje przy PR
 │       └── cd.yml            # build + deploy przy merge do main
 │
 ├── .pre-commit-config.yaml
@@ -332,12 +324,10 @@ Pliki są w repo — poniżej tylko co gdzie leży i dlaczego tak:
 
 | Plik | Co robi |
 |---|---|
-| [.github/workflows/ci.yml](.github/workflows/ci.yml) | PR i push na `main`: `app`, `agent`, `frontend`, `migrations`, `sonarqube` |
+| [.github/workflows/ci.yml](.github/workflows/ci.yml) | PR i push na `main`: `app`, `agent`, `frontend`, `migrations` |
 | [.pre-commit-config.yaml](.pre-commit-config.yaml) | `ruff --fix`, eslint, higiena plików, `detect-private-key` |
 | [.github/workflows/cd.yml](.github/workflows/cd.yml) | po zielonym CI na `main`: obrazy → GHCR → ssh → `infra/deploy/deploy.sh` |
 | [infra/deploy/](infra/deploy/) | produkcja: compose bez portów poza Caddy, backup, setup serwera — [docs/deploy.md](docs/deploy.md) |
-| [infra/jenkins/Jenkinsfile](infra/jenkins/Jenkinsfile) | build → migracje → `compose up -d` → healthcheck (lokalnie; produkcja idzie przez `cd.yml`) |
-| [infra/sonarqube/sonar-project.properties](infra/sonarqube/sonar-project.properties) | trzy pakiety, jeden projekt |
 
 Zasady, które warto znać przed zmianą któregokolwiek z nich:
 
@@ -348,12 +338,11 @@ Zasady, które warto znać przed zmianą któregokolwiek z nich:
 - **Job `migrations` stawia schemat od zera** na obrazie `pgvector/pgvector:pg16`.
   Zwykły `postgres` przeszedłby CI i wywrócił się przy deployu na
   `CREATE EXTENSION vector`.
-- **Produkcja (`corvus.saek.dev`) wdraża się z `cd.yml`, nie z Jenkinsa.**
+- **Produkcja (`corvus.saek.dev`) wdraża się z `cd.yml`.** Jenkinsa i SonarQube
+  nie ma od 2026-11-03: nikt ich nie używał, a CI robi to samo.
   `.env` mieszka tylko na serwerze; `deploy.sh` czeka na healthchecki i sam
-  wraca do poprzedniego obrazu, gdy nowy nie wstanie. Bez lokalnych modeli
-  czatu (`LOCAL_MODELS_ENABLED=false`, ADR 0013), backup bazy codziennie.
-- **Sonar jest pomijany, gdy nie ma `SONAR_TOKEN`** — czerwony krzyżyk na każdym
-  buildzie forka uczy ludzi ignorować czerwone krzyżyki.
+  wraca do poprzedniego obrazu, gdy nowy nie wstanie. Bez modeli lokalnych
+  (ADR 0022), backup bazy codziennie.
 - **Hooki nie odpalają `pytest` ani `pyright`** — 55 s na commit to hook wyłączany
   przez `--no-verify`. Od tego jest CI.
 - **Granic kontekstów w `app` pilnuje `lint-imports` w CI**, z tego samego powodu
@@ -404,13 +393,17 @@ class ThesisAnalysis:
 # agent/src/application/tasks.py
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def run_action(self, action_id, action_type, student_id, context,
-               model="qwen3:30b-a3b", language="pl") -> dict[str, Any]:
+               model=None, language="pl", provider=None,
+               sealed_api_key=None) -> dict[str, Any]:
     task_id = self.request.id
+    credentials = _credentials(task_id, provider, sealed_api_key)
     try:
-        return _run_graph(task_id, _initial_state(
-            action_id, action_type, student_id,
-            _with_guidelines(action_type, context), model, language,
-        ))
+        with use_credentials(credentials):
+            return _run_graph(task_id, _initial_state(
+                action_id, action_type, student_id,
+                _with_guidelines(action_type, context),
+                model_label(credentials), language,
+            ))
     except Exception as exc:
         _record_final_failure(self, task_id, exc)
         raise self.retry(exc=exc)
@@ -447,7 +440,7 @@ class SecretService:
 
 Zasady:
 - `.env` zawsze w `.gitignore`
-- Klucze produkcyjne wyłącznie w GitHub Secrets i Jenkins Credentials
+- Klucze produkcyjne wyłącznie w GitHub Secrets i w `.env` na serwerze
 - Klucze API użytkowników w Postgres jako zaszyfrowany `text`, nigdy plain text
 - Klucz usera (BYOK) odszyfrowywany wyłącznie w żądaniu, które go zaraz użyje,
   i tylko ten jeden, którego dostawcę wybrano dla akcji;
@@ -479,8 +472,7 @@ Po pivocie: katalog wytycznych uczelni i pliki prac z retencją — ✅ 2026-09-
 [ADR 0006](docs/adr/0006-guideline-catalog-and-thesis-file-retention.md) ·
 [plan](docs/specs/guidelines-and-thesis-files-plan.md).
 
-Modele lokalne udostępnia admin (`/admin/models`), promotor wybiera tylko z tej
-listy, a `app` pilnuje tego przy każdej akcji —
+Modele lokalne udostępniał admin, do ADR 0022 —
 [ADR 0007](docs/adr/0007-admin-managed-local-model-allowlist.md).
 Admin i promotor to rozłączne role: admin nie widzi studentów ani prac —
 [ADR 0008](docs/adr/0008-admin-and-promoter-are-separate-roles.md).
@@ -492,14 +484,13 @@ potwierdzane po zakończeniu — padnięty worker wznawia recenzję od ostatnieg
 kroku, a checkpointy znikają, gdy przebieg ma wynik —
 [ADR 0010](docs/adr/0010-graph-checkpoints-and-late-acks.md).
 Promotor trzyma po jednym kluczu na dostawcę (`identity.user_api_keys`) i przy
-każdej akcji wybiera, na czym ona pójdzie; brak wyboru to model lokalny, a
-dostawca bez klucza to 409, nie cichy fallback —
+każdej akcji wybiera, na czym ona pójdzie; brak wyboru i dostawca bez klucza
+to 409, nie cichy fallback —
 [ADR 0011](docs/adr/0011-a-key-per-provider-chosen-per-action.md).
 Klucz w kolejce Celery jest zaszyfrowany — przy late acks wiadomość leży w Redis
 przez cały przebieg i widać ją we Flower —
 [ADR 0012](docs/adr/0012-seal-the-provider-key-for-the-task-queue.md).
-Na produkcji nie ma lokalnych modeli czatu: `LOCAL_MODELS_ENABLED=false`, akcja
-bez dostawcy to 409, embeddingi zostają na lokalnej Ollamie —
+Na produkcji nie ma lokalnych modeli czatu, akcja bez dostawcy to 409 —
 [ADR 0013](docs/adr/0013-a-server-without-local-models.md).
 Fragmenty pracy (rozdział, część literaturowa) to osobny byt niż wersje pracy, bo
 akcje czytają „ostatnią wersję”: część pracy ma rundy, werdykt ustawia promotor,
@@ -510,9 +501,8 @@ Promotor może podać obszar badawczy i ustalony cel z hipotezami. To kontekst, 
 wymagania: węzły oceniające sens pracy dostają je we wspólnym bloku
 (`application/brief.py`), a reguła czytania pojawia się tylko, gdy pola są wypełnione —
 [ADR 0015](docs/adr/0015-research-area-and-aim-on-the-student.md).
-Lokalne modele czatu są domyślnie wyłączone wszędzie, nie tylko na produkcji:
-`LOCAL_MODELS_ENABLED=true` przywraca Ollamę, kod i testy tej ścieżki zostają,
-embeddingi działają dalej, a prompty oceniamy na Claude —
+Lokalne modele czatu były wyłączone przełącznikiem, a prompty oceniamy na
+Claude — zastąpione przez ADR 0022 —
 [ADR 0016](docs/adr/0016-local-chat-models-are-off-by-default.md).
 Jednorazowa recenzja to ukryty student (`is_one_off`): rodzi się zarchiwizowany,
 więc retencja działa sama, ma jedną pracę i trzy akcje, a na listę studentów
@@ -529,19 +519,22 @@ Progi liczbowe z wytycznych porównuje kod i podaje węzłowi wymogów jako fakt
 i jej wagę wystawia model: objętość jest tylko sugerowana, praca projektowa może mieć
 mniej źródeł, a wpis z adresem www może być netografią. Języka pozycji kod nie zgaduje —
 [ADR 0020](docs/adr/0020-code-measures-the-model-judges.md).
+Embeddingów nie ma: agent wkłada swój plik wymogów do promptu w całości, gdy student
+nie ma zestawu wytycznych, a Ollama zniknęła z obu compose'ów. Obraz pgvector
+zostaje, bo stara migracja tworzy rozszerzenie —
+[ADR 0021](docs/adr/0021-requirements-go-into-the-prompt-whole.md).
+Każda akcja idzie na klucz promotora: serwis nie ma własnego modelu, akcja bez
+dostawcy to 409, a lista modeli admina, `LOCAL_MODELS_ENABLED` i parametr `model`
+zniknęły. Węzły czytają całą pracę, a evale chodzą na `claude` albo `openai` —
+[ADR 0022](docs/adr/0022-every-action-runs-on-a-providers-key.md).
 
 ---
 
 ## 10. Zmienne środowiskowe (.env.example)
 
 ```bash
-# Model
-MODEL_BACKEND=ollama                     # ollama | claude | openai
-OLLAMA_MODEL=qwen3:30b-a3b
-OLLAMA_BASE_URL=http://ollama:11434
-
-# Claude API
-ANTHROPIC_API_KEY=                       # uzupełnij lokalnie
+# Model — klucze są promotorów, w ich profilu (ADR 0022)
+ANTHROPIC_EFFORT=medium                  # low | medium | high | xhigh | max
 
 # LangSmith
 LANGCHAIN_TRACING_V2=false              # set to true + add key to enable LangSmith
@@ -563,9 +556,6 @@ JWT_ALGORITHM=HS256
 MAX_UPLOAD_BYTES=26214400                # 25 MB
 RETENTION_SWEEP_INTERVAL_HOURS=24        # 0 = sweep tylko z `make purge-drafts`
 
-# SonarQube
-SONAR_TOKEN=                             # z panelu SonarQube
-SONAR_HOST_URL=http://sonarqube:9000
 ```
 
 ---
@@ -582,5 +572,4 @@ SONAR_HOST_URL=http://sonarqube:9000
 | Ruff | [docs.astral.sh/ruff](https://docs.astral.sh/ruff) |
 | Pyright | [github.com/microsoft/pyright](https://github.com/microsoft/pyright) |
 | DDD (Evans) | _Domain-Driven Design_ — Eric Evans |
-| SonarQube | [docs.sonarsource.com](https://docs.sonarsource.com) |
 | Claude Code | [docs.claude.ai/claude-code](https://docs.anthropic.com/claude-code) |

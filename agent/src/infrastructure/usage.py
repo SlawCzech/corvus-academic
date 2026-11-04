@@ -5,10 +5,9 @@ parallel analyses, a digest per chapter, each turn of the bibliography agent,
 a repair turn — because LangChain passes the run's callbacks down to every
 model invoked inside a node. Nodes stay unaware of it.
 
-What is counted is what the provider reports in ``usage_metadata``; on a
-hosted model that is what the promoter's account is billed for. Thinking
-tokens are part of ``output_tokens``. Embeddings are not counted: they run on
-the local model and cost nothing on anyone's account.
+What is counted is what the provider reports in ``usage_metadata``, which is
+what the promoter's account is billed for. Thinking
+tokens are part of ``output_tokens``.
 """
 
 import threading

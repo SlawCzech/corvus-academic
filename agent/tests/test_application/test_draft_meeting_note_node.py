@@ -89,7 +89,7 @@ def test_empty_note_is_an_error() -> None:
 def test_earlier_notes_are_sent_for_continuity() -> None:
     captured: list[Any] = []
 
-    def _capture(messages: list[Any]) -> AIMessage:
+    def _capture(messages: list[Any], **_: Any) -> AIMessage:  # noqa: ANN401
         captured.extend(messages)
         return AIMessage(content=_VALID_RESPONSE)
 

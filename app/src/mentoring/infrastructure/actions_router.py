@@ -18,7 +18,6 @@ from src.mentoring.application.exceptions import (
     UnsupportedActionError,
 )
 from src.mentoring.domain.action import ActionType
-from src.mentoring.domain.model_policy import ModelNotAllowedError
 from src.mentoring.infrastructure.dependencies import (
     ActionServiceDep,
     CallerDep,
@@ -46,6 +45,13 @@ def _no_key(exc: ProviderKeyMissingError) -> HTTPException:
     )
 
 
+def _no_provider(exc: ProviderRequiredError) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="Pick a provider you have an API key for",
+    )
+
+
 @router.post(
     "/{student_id}/actions",
     response_model=ActionResponse,
@@ -63,8 +69,7 @@ async def trigger_action(
 
     Returns immediately: the work happens in the agent's Celery worker, and
     the caller polls the action's own endpoint for the outcome. The run goes
-    on the provider the promoter picked, with their own key for it, or — with
-    no provider — on the self-hosted model, where the server offers one.
+    on the provider the promoter picked, with their own key for it.
     """
     try:
         action = await svc.trigger(
@@ -73,7 +78,6 @@ async def trigger_action(
             action_type=body.action_type,
             token=token,
             detail=body.detail,
-            model=body.model,
             language=body.language,
             review_tone=body.review_tone,
             provider=body.provider,
@@ -89,20 +93,11 @@ async def trigger_action(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc
-    except ModelNotAllowedError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
-        ) from exc
     except ProviderKeyMissingError as exc:
         # Asked to run on a provider there is no stored key for.
         raise _no_key(exc) from exc
     except ProviderRequiredError as exc:
-        # No provider picked, and this server runs no local models.
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="This server runs no local models — pick a provider "
-            "you have an API key for",
-        ) from exc
+        raise _no_provider(exc) from exc
     except MissingContextError as exc:
         # The student's record does not hold what this action needs yet —
         # no draft uploaded, only one version, no rough notes to write up.
@@ -199,6 +194,9 @@ async def resume_action(
     except ProviderKeyMissingError as exc:
         # The key the review started on has been removed since.
         raise _no_key(exc) from exc
+    except ProviderRequiredError as exc:
+        # Paused on a local model, before ADR 0022: nothing to resume it on.
+        raise _no_provider(exc) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)

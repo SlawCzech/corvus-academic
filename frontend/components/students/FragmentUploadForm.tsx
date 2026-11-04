@@ -77,7 +77,7 @@ function Form({
   const [model, setModel] = useState(initialModel)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { provider, model: effectiveModel, needsKey } = useModelChoice(model)
+  const { provider, needsKey } = useModelChoice(model)
 
   const ready =
     partName.trim() !== "" && (source === "file" ? file !== null : text.trim() !== "")
@@ -99,7 +99,6 @@ function Form({
         try {
           await triggerAction(studentId, "review_fragment", undefined, {
             provider,
-            model: effectiveModel,
             language,
             fragmentId: fragment.id,
           })

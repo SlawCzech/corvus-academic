@@ -7,8 +7,7 @@ the two services share a wire contract, not a codebase — the same reason
 
 from enum import StrEnum
 
-# Providers a user may bring their own key for. Self-hosted Ollama needs no
-# key and is what runs when nobody brought one.
+# Providers a user may bring their own key for; every action runs on one.
 SUPPORTED_PROVIDERS: frozenset[str] = frozenset({"claude", "openai"})
 
 

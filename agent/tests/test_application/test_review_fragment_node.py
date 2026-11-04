@@ -193,22 +193,21 @@ def test_a_later_round_sees_the_previous_feedback_and_text() -> None:
     assert "POPRZEDNIA RUNDA" in sent
 
 
-def test_the_local_model_says_where_the_text_was_cut() -> None:
+def test_the_fragment_is_read_whole() -> None:
     long_text = _TEXT + " " + "a" * 20000 + " KONIEC FRAGMENTU"
 
     _, sent = _run(_reply(), _state(text=long_text))
 
-    assert "KONIEC FRAGMENTU" not in sent
-    assert "you have not seen the rest" in sent
+    assert "KONIEC FRAGMENTU" in sent
 
 
-def test_a_later_round_shares_the_budget_between_the_two_texts() -> None:
+def test_a_later_round_gets_both_texts_whole() -> None:
     state = _state(previous_text="b" * 8000, text=_TEXT + " " + "a" * 8000)
 
     _, sent = _run(_reply(), state)
 
-    assert sent.count("b") < 6500
-    assert sent.count("you have not seen the rest") == 2
+    assert "b" * 8000 in sent
+    assert "a" * 8000 in sent
 
 
 def test_a_hosted_model_reads_it_whole() -> None:

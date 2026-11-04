@@ -102,7 +102,7 @@ def test_summary_is_required() -> None:
 def test_both_versions_reach_the_prompt() -> None:
     captured: list[Any] = []
 
-    def _capture(messages: list[Any]) -> AIMessage:
+    def _capture(messages: list[Any], **_: Any) -> AIMessage:  # noqa: ANN401
         captured.extend(messages)
         return AIMessage(content=_VALID_RESPONSE)
 
@@ -122,7 +122,8 @@ def _sent_to(mock_llm: MagicMock) -> str:
     return str(mock_llm.invoke.call_args.args[0][1].content)
 
 
-def test_the_local_model_compares_the_beginning_of_each_version() -> None:
+def test_the_versions_are_compared_whole() -> None:
+    """What a student adds between versions is rarely on the first pages."""
     mock_llm = MagicMock()
     mock_llm.invoke.return_value = AIMessage(content=_VALID_RESPONSE)
     long_version = "a" * 20000 + " ANKIETA WŚRÓD NAUCZYCIELI"
@@ -130,8 +131,8 @@ def test_the_local_model_compares_the_beginning_of_each_version() -> None:
     with patch("src.application.nodes.check_progress.get_llm", return_value=mock_llm):
         check_progress(_make_state(current=long_version))
 
-    assert "ANKIETA" not in _sent_to(mock_llm)
-    assert "[...text truncated...]" in _sent_to(mock_llm)
+    assert "ANKIETA WŚRÓD NAUCZYCIELI" in _sent_to(mock_llm)
+    assert "truncated" not in _sent_to(mock_llm)
 
 
 def test_a_hosted_model_compares_the_two_versions_whole() -> None:

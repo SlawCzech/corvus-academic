@@ -37,18 +37,16 @@ wygasającego backendu Celery w Redisie.
 (`/students`, `/students/[id]`). Przejściowe endpointy (`POST /extract`, proxy
 `/analysis/*`, `POST/GET /analysis` w agencie) **usunięte**.
 **Zrobione (Faza 4):** BYOK — promotor zapisuje własne klucze (Claude i/lub
-OpenAI, po jednym na dostawcę) w profilu i przy każdej akcji wybiera, czy
-jedzie ona na któryś z nich, czy na lokalną Ollamę; bez wyboru liczy się
-lokalnie ([ADR 0011](adr/0011-a-key-per-provider-chosen-per-action.md)). Klucz jest szyfrowany Fernetem, odszyfrowywany tylko w
+OpenAI, po jednym na dostawcę) w profilu i przy każdej akcji wybiera, na
+którym z nich ona jedzie; bez wyboru akcja to 409
+([ADR 0011](adr/0011-a-key-per-provider-chosen-per-action.md),
+[ADR 0022](adr/0022-every-action-runs-on-a-providers-key.md)). Klucz jest szyfrowany Fernetem, odszyfrowywany tylko w
 żądaniu, które go użyje, i nigdy nie trafia do stanu grafu ani do bazy akcji.
-**Zrobione (Faza 5):** wytyczne uczelniane nie są już wklejane w całości do
-promptu — leżą w `analysis.guideline_chunks` pocięte na sekcje i podsekcje,
-z embeddingami, a akcja dostaje te fragmenty, które dotyczą jej pracy (plus
-zawsze sekcję definiującą wagi błędów). Model `nomic-embed-text` jest pobrany
-i wytyczne zaingestowane: 14 chunków dla pracy licencjackiej, 18 dla
-magisterskiej; zapytanie o formatowanie wyciąga inne sekcje niż o bibliografię.
-Bez zaingestowanych wektorów albo bez modelu embeddingów wszystko działa jak
-wcześniej — cały plik.
+**Zrobione (Faza 5), potem cofnięte (2026-11-03, ADR 0021):** wytyczne szły
+przez embeddingi i pgvector, a akcja dostawała sekcje wyszukane pod swoją pracę.
+Wyszukiwanie działało tylko dla studenta bez zestawu wytycznych, nad plikami po
+kilka KB, więc model z chmury dostaje teraz cały plik, a Ollama zniknęła z
+deployu.
 **Zrobione (Faza 6):** CI/CD — GitHub Actions, Jenkins, pre-commit.
 **Zrobione (2026-09-23, ADR 0006):** wytyczne uczelni są danymi, a nie plikami
 w obrazie agenta — kontekst `guidelines` w `app` (uczelnie → zestawy per typ
@@ -99,12 +97,9 @@ Referencje między kontekstami to gołe UUID bez kluczy obcych.
 | app | 8000 | FastAPI, Postgres | auth/użytkownicy/role/audyt + studenci, wersje pracy, akcje AI |
 | agent | 8002 | FastAPI | HTTP API — przyjmowanie akcji i ich status |
 | agent-worker | — | Celery | worker wykonujący graf LangGraph (ten sam obraz co `agent`) |
-| ollama | 11434 | Ollama | lokalne modele LLM |
 | redis | 6379 | Redis | broker Celery + blacklist refresh tokenów |
-| postgres | 5432 | PostgreSQL 16 + pgvector | schematy identity, mentoring, guidelines, analysis (w tym embeddingi wytycznych) |
+| postgres | 5432 | PostgreSQL 16 + pgvector | schematy identity, mentoring, guidelines, analysis |
 | flower | 5555 | Celery Flower | monitoring kolejki |
-| jenkins | 8080 | Jenkins LTS | CI/CD pipeline (jeszcze nieskonfigurowany — Faza 6) |
-| sonarqube | 9000 | SonarQube CE | analiza jakości kodu (jeszcze nieskonfigurowany — Faza 6) |
 
 `agent` i `agent-worker` współdzielą ten sam obraz Dockera —
 `agent` uruchamia serwer FastAPI (przyjmuje żądania, zapisuje rekord
@@ -188,7 +183,7 @@ app :8000
          │
          ▼
        model selector (llm_factory): klucz wybranego dostawcy (ContextVar,
-       tylko na czas tego przebiegu) → Claude/OpenAI; bez dostawcy → Ollama
+       tylko na czas tego przebiegu) → Claude/OpenAI; bez klucza nic (ADR 0022)
          │
          ▼
        LangGraph — graf zależny od typu akcji (build_action_graph):
@@ -206,12 +201,8 @@ app :8000
        Gdy student ma wybrany zestaw, rubrykę opublikowanej wersji wkłada do
        kontekstu `app` (klucz `guidelines`), a `input_ref` akcji zapisuje
        `guideline_version_id`. W przeciwnym razie wytyczne uczelniane dokłada
-       `agent` (dane statyczne, których jest właścicielem) — nie cały plik,
-       tylko sekcje wyszukane pod tę pracę (pgvector, `nomic-embed-text`,
-       768 wymiarów) plus sekcja definiująca wagi błędów, zawsze.
-       Embeddingi liczy `EMBEDDING_BASE_URL`, który nie musi być tym samym
-       serwerem co modele czatu — serwer czatu bywa bez embeddingów.
-       Brak ingestii albo brak modelu → fallback na cały dokument.
+       `agent` (dane statyczne, których jest właścicielem) — cały plik
+       dla typu pracy, bez wyszukiwania (ADR 0021).
 
        Stan grafu (ActionState) jest wspólny dla wszystkich akcji: to, co
        specyficzne dla akcji, siedzi w `context`, dzięki czemu nowa akcja to
@@ -219,8 +210,8 @@ app :8000
          │
          ▼
        model selector (agent/src/infrastructure/llm_factory.py)
-         ├──► Ollama :11434   (model=qwen3:30b-a3b lub inny lokalny)
-         └──► Claude API      (gdy model wskazuje na Claude)
+         ├──► Claude API      (klucz promotora do Claude)
+         └──► OpenAI API      (klucz promotora do OpenAI)
          │
          ▼
        recenzja z tonem (ReviewTone: auto/enthusiastic/commendable/
@@ -375,8 +366,8 @@ corvus/
 │   └── pyproject.toml
 │
 ├── infra/
-│   ├── docker-compose.yml        # 10 serwisów: frontend, app, agent, agent-worker,
-│   │                                flower, ollama, redis, postgres, jenkins, sonarqube
+│   ├── docker-compose.yml        # 7 serwisów: frontend, app, agent, agent-worker,
+│   │                                flower, redis, postgres
 │   └── docker-compose.override.yml  # lokalne overrides (hot-reload, DEBUG)
 │
 ├── docs/
@@ -477,16 +468,11 @@ bo to jego własne dane statyczne.
 
 ```python
 # agent/src/infrastructure/llm_factory.py
-def get_llm(model: str) -> BaseChatModel:
-    match settings.model_backend:
-        case "claude":
-            return ChatAnthropic(model="claude-sonnet-5-5")
-        case "ollama":
-            return ChatOllama(model=model, base_url=settings.ollama_base_url)
-        case "openai":
-            return ChatOpenAI(model="gpt-6.1-sol")
-        case _:
-            raise ValueError(f"Nieznany MODEL_BACKEND: {settings.model_backend}")
+def get_llm(credentials: ModelCredentials | None = None) -> BaseChatModel:
+    byok = credentials or current_credentials()  # ContextVar na czas przebiegu
+    if byok is None:
+        raise MissingCredentialsError("this run has no provider key")
+    return _byok_model(byok)  # claude-sonnet-5-5 albo gpt-6.1-sol
 ```
 
 ### Tracing — Langfuse, self-hosted
@@ -495,7 +481,7 @@ Każdy przebieg grafu idzie z `config` z [`tracing.run_config`](../agent/src/inf
 nazwa `action:<typ>`, tagi (typ akcji, model), sesja = student. LangGraph podaje ten
 config każdemu węzłowi, a `llm.invoke` w węźle podnosi callback z kontekstu —
 żaden węzeł nie wie, że jest śledzony. W Langfuse widać drzewo
-`action:generate_review` → węzeł → `ChatOllama` z czasem i promptem każdego wywołania.
+`action:generate_review` → węzeł → `ChatAnthropic` z czasem i promptem każdego wywołania.
 
 - Osobny projekt compose ([infra/langfuse/](../infra/langfuse/docker-compose.yml)),
   `make langfuse-up`, UI na `localhost:3100`. Włączany trzema zmiennymi `LANGFUSE_*`
@@ -539,10 +525,7 @@ Pełna referencja: [.env.example](../.env.example).
 
 | Zmienna | Serwis | Opis |
 |---|---|---|
-| `MODEL_BACKEND` | agent | `ollama` \| `claude` \| `openai` |
-| `OLLAMA_MODEL` | agent | domyślny model, np. `qwen3:30b-a3b` |
-| `OLLAMA_BASE_URL` | agent | `http://host.docker.internal:11434` lokalnie |
-| `ANTHROPIC_API_KEY` | agent | klucz Claude API |
+| `ANTHROPIC_EFFORT` | agent | ile Claude myśli: `low` … `max` (klucze są promotorów) |
 | `LANGCHAIN_TRACING_V2` / `LANGCHAIN_API_KEY` / `LANGCHAIN_PROJECT` | agent | LangSmith tracing (opcjonalne) |
 | `ENVIRONMENT` | app | `local` \| `production` — steruje flagą `Secure` na cookie, log levelem |
 | `DATABASE_URL` | app, agent | PostgreSQL connection string |
@@ -552,7 +535,6 @@ Pełna referencja: [.env.example](../.env.example).
 | `FERNET_KEY` | app | szyfrowanie kluczy API użytkowników |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | app | seed pierwszego konta admina (wymagane, min. 12 znaków hasła) |
 | `AGENT_URL` | app | adres serwisu agent (`http://agent:8002`) |
-| `SONAR_TOKEN` / `SONAR_HOST_URL` | CI/CD | jeszcze nieużywane — Faza 6 |
 
 Generowanie kluczy:
 ```bash
@@ -567,8 +549,8 @@ python -c "import secrets; print(secrets.token_hex(32))"
 
 ## CI/CD pipeline
 
-Testy, lint i typy sprawdza GitHub Actions przy każdym PR i pushu na `main`.
-Jenkins tylko wdraża to, co już przeszło.
+Testy, lint i typy sprawdza GitHub Actions przy każdym PR i pushu na `main`;
+po zielonym CI na `main` wdraża `cd.yml` ([deploy.md](deploy.md)).
 
 ```
 git push / PR
@@ -578,19 +560,14 @@ GitHub Actions (.github/workflows/ci.yml)
   ├── app         uv sync --frozen · ruff · pyright src · pytest
   ├── agent       uv sync --frozen · ruff · pyright src · pytest
   ├── frontend    npm ci · eslint · tsc --noEmit · vitest
-  ├── migrations  wszystkie trzy lineage'y na pustej bazie
-  │               (obraz pgvector/pgvector:pg16 — migracja 0004 go wymaga)
-  └── sonarqube   po przejściu trzech pierwszych; pomijany, gdy nie ma
-                  SONAR_TOKEN (serwer jest self-hosted)
+  └── migrations  wszystkie lineage'y na pustej bazie
+                  (obraz pgvector/pgvector:pg16 — migracja 0004 go wymaga)
   │
-  ▼ (merge do main)
+  ▼ (merge do main, CI zielone)
   │
-Jenkins (infra/jenkins/Jenkinsfile)
-  ├── Checkout + .env z Jenkins credentials
-  ├── docker compose build
-  ├── Migracje (identity, mentoring, analysis) PRZED startem kontenerów
-  ├── docker compose up -d --remove-orphans
-  └── Healthcheck /health (raportuje też stan agenta), do 150 s
+GitHub Actions (.github/workflows/cd.yml)
+  ├── obrazy → GHCR, tag = commit
+  └── ssh → infra/deploy/deploy.sh: pull, up -d, healthchecki, rollback
 ```
 
 `pyright` w CI sprawdza **`src`**, nie testy: w testach zostaje ok. 250 błędów

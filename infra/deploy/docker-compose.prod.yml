@@ -4,13 +4,12 @@
 #   - images, not builds — CD builds them once (tagged with the commit) and
 #     the server only pulls; IMAGE_TAG picks the version, which is also how a
 #     deploy rolls back;
-#   - no `ports:` except Caddy's 80/443 — Postgres, Redis, the agent and
-#     Ollama answer only on the internal network. Docker's published ports
+#   - no `ports:` except Caddy's 80/443 — Postgres, Redis and the agent
+#     answer only on the internal network. Docker's published ports
 #     bypass ufw, so "not published" is the only firewall that holds here;
-#   - no Flower, Jenkins or SonarQube — Flower would show every queued task,
-#     and the other two are CI tools;
-#   - Ollama holds only the embedding model (ADR 0013) — chat runs on the
-#     promoters' own keys.
+#   - no Flower — it would show every queued task;
+#   - no Ollama — chat runs on the promoters' own keys (ADR 0013) and
+#     nothing embeds anything (ADR 0021).
 #
 # Used by infra/deploy/deploy.sh; secrets come from /srv/corvus/.env, which
 # never leaves the server (template: infra/deploy/env.production.example).
@@ -48,7 +47,6 @@ services:
     env_file: .env
     environment:
       ENVIRONMENT: production
-      LOCAL_MODELS_ENABLED: "false"
       AGENT_URL: http://agent:8002
       REDIS_URL: redis://redis:6379/0
       DATABASE_URL: postgresql+asyncpg://corvus:${POSTGRES_PASSWORD}@postgres:5432/corvus
@@ -66,9 +64,6 @@ services:
     environment: &agent-env
       REDIS_URL: redis://redis:6379/0
       DATABASE_URL: postgresql+asyncpg://corvus:${POSTGRES_PASSWORD}@postgres:5432/corvus
-      OLLAMA_BASE_URL: http://ollama:11434
-      EMBEDDING_BASE_URL: http://ollama:11434
-      EMBEDDING_MODEL: nomic-embed-text
       LANGCHAIN_TRACING_V2: "false"
     depends_on:
       postgres:
@@ -94,22 +89,6 @@ services:
       start_period: 30s
       retries: 3
     restart: unless-stopped
-
-  ollama:
-    image: ollama/ollama:0.40.2
-    volumes:
-      - ollama_data:/root/.ollama
-    restart: unless-stopped
-
-  # Pulls the embedding model once; a no-op when it is already there.
-  ollama-init:
-    image: ollama/ollama:0.40.2
-    entrypoint: ["ollama", "pull", "nomic-embed-text"]
-    environment:
-      OLLAMA_HOST: http://ollama:11434
-    depends_on:
-      - ollama
-    restart: "no"
 
   redis:
     image: redis:7-alpine
@@ -144,6 +123,5 @@ services:
 volumes:
   caddy_data:
   caddy_config:
-  ollama_data:
   redis_data:
   postgres_data:

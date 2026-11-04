@@ -28,10 +28,6 @@ from ..state import ActionState, ReviewUpdate
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
-# On the local model the review node reads least of the four — it writes from
-# findings. A hosted model has the whole thesis in front of it here too.
-_HEAD_CHARS = 8000
-
 # ---------------------------------------------------------------------------
 # Base system prompt
 # ---------------------------------------------------------------------------
@@ -516,12 +512,8 @@ def generate_review(state: ActionState) -> ReviewUpdate:
         )
 
         # This node writes from the findings the earlier nodes produced; the
-        # text is supplementary, so it reads the least of the four. What it
-        # must not do is infer absence from the part it was not given, hence
-        # the same map-and-rules block every other node gets.
-        document = render_document_block(
-            ctx, head_chars=_HEAD_CHARS, include_bibliography=False
-        )
+        # text is there so it can check them against the work.
+        document = render_document_block(ctx)
 
         meta: dict[str, object] = ctx.get("metadata", {})
         user_message = (
@@ -541,7 +533,7 @@ def generate_review(state: ActionState) -> ReviewUpdate:
             f"{document}"
         )
 
-        llm = get_llm(state["model"])
+        llm = get_llm()
         messages = [
             SystemMessage(content=system_prompt),
             HumanMessage(content=user_message),

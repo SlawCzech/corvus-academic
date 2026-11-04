@@ -1,9 +1,9 @@
 """The shape of every model reply a node accepts.
 
-One Pydantic model per reply. `structured.invoke_structured` turns each into
-a JSON schema for Ollama's constrained decoding and validates every backend's
-reply against it, so a node receives typed data or a precise error — never a
-dict it has to probe with ``.get(...) or []``.
+One Pydantic model per reply. `structured.invoke_structured` sends its JSON
+schema to the provider and validates every reply against it, so a node
+receives typed data or a precise error — never a dict it has to probe with
+``.get(...) or []``.
 
 Tolerance lives here, not in the nodes: enum-like fields are lower-cased
 before they are checked ("Major" is a hosted model's habit, not a defect), and
@@ -47,8 +47,8 @@ class _Reply(BaseModel):
 
 
 def _quote_is_required(schema: dict[str, Any]) -> None:
-    # Present in every reply Ollama decodes, even as "" — an optional key is
-    # one a constrained model is free to never write.
+    # Present in every reply, even as "" — an optional key is one a
+    # constrained model is free to never write.
     schema.setdefault("required", []).append("quote")
 
 
@@ -149,9 +149,9 @@ def review_reply_for(allowed: tuple[str, ...]) -> TypeAdapter[ReviewReply]:
     Which recommendations are possible follows from the findings — a
     CRITICAL one means "return", none means one of the other two — and a
     model left to apply that rule from the prompt broke it (the evals caught
-    a sound thesis returned for revision). As a Literal in the schema,
-    Ollama cannot decode anything else, and any other backend gets the
-    allowed values back in the repair turn.
+    a sound thesis returned for revision). As a Literal in the schema, Claude
+    cannot decode anything else, and a reply that still has another value
+    gets the allowed ones back in the repair turn.
     """
     # Built at runtime, so no static type can describe it.
     recommendation: Any = (

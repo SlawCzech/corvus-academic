@@ -67,7 +67,7 @@ describe("ActionPanel", () => {
     cancelled = false
     paused = false
     resumed = false
-    keys = []
+    keys = ["claude"]
     listed = []
     listGate = Promise.resolve()
     fetchMock.mockImplementation((url: string, init?: RequestInit) => {
@@ -90,7 +90,7 @@ describe("ActionPanel", () => {
       if (url === "/api/settings/api-key/status")
         return json({ configured: keys.length > 0, providers: keys })
       if (url === "/api/models")
-        return json({ backend: "ollama", default: "m", local: [], local_available: true, byok: {}, local_enabled: true })
+        return json({ byok: {} })
       return json({})
     })
     vi.stubGlobal("fetch", fetchMock)
@@ -133,13 +133,13 @@ describe("ActionPanel", () => {
     return JSON.parse(String(trigger?.[1]?.body)) as Record<string, unknown>
   }
 
-  it("runs on the local model when the promoter has no key", async () => {
+  it("waits for a key when the promoter has none", async () => {
+    keys = []
     renderPanel()
     await userEvent.click(screen.getByRole("button", { name: "Zaproponuj temat" }))
-    await userEvent.click(screen.getByTestId("run-action"))
 
-    await waitFor(() => expect(triggerBody().provider).toBeNull())
-    expect(screen.queryByTestId("model-byok")).not.toBeInTheDocument()
+    expect(await screen.findByTestId("model-needs-key")).toBeInTheDocument()
+    expect(screen.getByTestId("run-action")).toBeDisabled()
   })
 
   it("says the run goes on the promoter's key, and sends that provider", async () => {
@@ -153,7 +153,7 @@ describe("ActionPanel", () => {
     await userEvent.click(screen.getByTestId("run-action"))
 
     await waitFor(() => expect(triggerBody().provider).toBe("openai"))
-    expect(triggerBody().model).toBeNull()
+    expect(triggerBody()).not.toHaveProperty("model")
   })
 
   it("stops a running action", async () => {
@@ -281,9 +281,9 @@ describe("ActionPanel", () => {
       if (url === "/api/students/s1/actions" && init?.method === "POST") return json(REVIEWED)
       if (url === "/api/students/s1/actions") return json(listed)
       if (url === "/api/students/s1/actions/a1") return json(REVIEWED)
-      if (url === "/api/settings/api-key/status") return json({ configured: false, providers: [] })
+      if (url === "/api/settings/api-key/status") return json({ configured: true, providers: ["claude"] })
       if (url === "/api/models")
-        return json({ backend: "ollama", default: "m", local: [], local_available: true, byok: {}, local_enabled: true })
+        return json({ byok: {} })
       if (url.startsWith("/api/guidelines/")) return json([])
       return json({})
     })

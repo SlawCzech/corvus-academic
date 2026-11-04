@@ -19,7 +19,6 @@ from src.mentoring.application.dashboard_service import (
     PartOverdue,
 )
 from src.mentoring.application.draft_service import DraftView
-from src.mentoring.application.model_service import AdminCatalog, PromoterCatalog
 from src.mentoring.application.review_service import ReviewView
 from src.mentoring.application.timeline_service import (
     FragmentEntry,
@@ -183,10 +182,9 @@ def note_response(note: MeetingNote) -> MeetingNoteResponse:
 class ActionTriggerRequest(BaseModel):
     action_type: ActionType
     detail: str | None = Field(default=None, max_length=4000)
-    model: str | None = None
-    # Whose account the run goes on: a provider the caller has a key for, or
-    # None for the self-hosted model (`model` then picks which one). Never
-    # guessed from the stored keys — nobody is billed without asking for it.
+    # Whose account the run goes on: a provider the caller has a key for.
+    # Never guessed from the stored keys — nobody is billed without asking
+    # for it. Missing is a 409 (ADR 0022).
     provider: Literal["claude", "openai"] | None = None
     language: str = "pl"
     # Only read by generate_review; ignored by every other action type. An
@@ -223,7 +221,8 @@ class ActionResponse(BaseModel):
     # Set when the promoter can fix the failure: `provider_no_credits`,
     # `provider_key_rejected`, `provider_rate_limited`.
     error_code: str | None = None
-    # The provider whose account ran it; None for the self-hosted model.
+    # The provider whose account ran it; None for a run on a local model,
+    # before ADR 0022.
     provider: str | None = None
     # Tokens spent — {input_tokens, output_tokens, total_tokens, by_model};
     # None before the agent reports any, and for actions older than the count.
@@ -564,80 +563,10 @@ def dashboard_summary_response(summary: DashboardSummary) -> DashboardSummaryRes
 # ---------- model catalog ----------
 
 
-class LocalModelResponse(BaseModel):
-    name: str
-    parameter_size: str | None = None
-
-
 class ModelCatalogResponse(BaseModel):
-    """What a promoter may pick: installed models the admin has enabled.
+    """The model a promoter's key for each provider runs on."""
 
-    ``byok`` maps each provider to the model a stored key runs on; the
-    frontend shows that instead of the local list when the promoter has one.
-    """
-
-    default: str
-    available: list[LocalModelResponse]
-    local_available: bool
     byok: dict[str, str]
-    # False when this server offers no local models at all — every action
-    # then needs one of the promoter's provider keys.
-    local_enabled: bool
-
-
-def model_catalog_response(catalog: PromoterCatalog) -> ModelCatalogResponse:
-    return ModelCatalogResponse(
-        default=catalog.default,
-        available=[
-            LocalModelResponse(name=m.name, parameter_size=m.parameter_size)
-            for m in catalog.available
-        ],
-        local_available=catalog.local_available,
-        byok=catalog.byok,
-        local_enabled=catalog.local_enabled,
-    )
-
-
-class AdminModelResponse(BaseModel):
-    name: str
-    parameter_size: str | None
-    installed: bool
-    enabled: bool
-    is_default: bool
-
-
-class AdminModelCatalogResponse(BaseModel):
-    models: list[AdminModelResponse]
-    local_available: bool
-    server_default: str
-    local_enabled: bool
-
-
-def admin_model_catalog_response(catalog: AdminCatalog) -> AdminModelCatalogResponse:
-    return AdminModelCatalogResponse(
-        models=[
-            AdminModelResponse(
-                name=m.name,
-                parameter_size=m.parameter_size,
-                installed=m.installed,
-                enabled=m.enabled,
-                is_default=m.is_default,
-            )
-            for m in catalog.models
-        ],
-        local_available=catalog.local_available,
-        server_default=catalog.server_default,
-        local_enabled=catalog.local_enabled,
-    )
-
-
-class ModelEnabledRequest(BaseModel):
-    name: str = Field(min_length=1, max_length=200)
-    enabled: bool
-
-
-class ModelDefaultRequest(BaseModel):
-    name: str = Field(min_length=1, max_length=200)
 
 
 class DemoSeedResponse(BaseModel):

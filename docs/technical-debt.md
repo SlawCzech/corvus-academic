@@ -107,8 +107,8 @@ Zostaje:
 - [ ] **Zapis statusu z workera połyka błędy bazy** — `agent/src/infrastructure/task_status.py`
   loguje i idzie dalej, żeby awaria zapisu nie powodowała retry analizy, która się udała
   (kilka minut pracy LLM). Skutek: przy niedostępnej bazie wiersz zostaje nieświeży, a
-  jedynym śladem jest log `task_status_write_failed`. Wymaga alertu na ten event, tak samo
-  jak `token_store_check_failed_fail_open`.
+  jedynym śladem jest log `task_status_write_failed` — od 2026-11-03 `watch.sh` wysyła
+  na niego alert (check „watch” na healthchecks.io, [deploy.md](deploy.md)).
 
 - [x] ~~**Zawieszony worker zostawia akcję w `running` na zawsze**~~ — od 2026-09-30
   (ADR 0010) taski są potwierdzane po zakończeniu, a padnięty worker wznawia
@@ -158,7 +158,7 @@ Zostaje:
 - [ ] **Rotacja nie wykrywa kradzieży** — użycie odwołanego tokenu to zwykłe 401, nie
   unieważnia całej rodziny tokenów. Wymagałoby śledzenia rodzin w Redis.
 
-- [ ] **Fail-open w `RevokedTokenStore`** — jeśli Redis jest niedostępny, `is_revoked()` zwraca `False` (odwołane tokeny, od 2026-10-03 także access tokeny, są akceptowane). Celowy kompromis dostępność vs. bezpieczeństwo — wymaga alertu/monitoringu na log event `token_store_check_failed_fail_open`.
+- [ ] **Fail-open w `RevokedTokenStore`** — jeśli Redis jest niedostępny, `is_revoked()` zwraca `False` (odwołane tokeny, od 2026-10-03 także access tokeny, są akceptowane). Celowy kompromis dostępność vs. bezpieczeństwo; od 2026-11-03 `watch.sh` alarmuje na log event `token_store_check_failed_fail_open`.
 
 ### Funkcjonalność
 
@@ -208,8 +208,8 @@ Zostaje:
   `app` → `agent` to jawny HTTP w sieci compose (TLS między serwisami, przy deployu).
 
 - [ ] **Nie można wybrać modelu u dostawcy** — BYOK używa stałych domyślnych
-  (`claude-sonnet-5-5`, `gpt-6.1-sol`); parametr `model` dotyczy tylko Ollamy, bo to
-  tag lokalnego modelu. Do wystawienia razem z listą modeli per dostawca.
+  (`claude-sonnet-5-5`, `gpt-6.1-sol`); parametru `model` od ADR 0022 nie ma.
+  Do wystawienia razem z listą modeli per dostawca.
 
 - [x] ~~**Brak walidacji klucza przy zapisie**~~ — `PATCH /settings/api-key` pyta
   dostawcę o listę modeli; odrzucony klucz to 422 i nie jest zapisywany (2026-09-30).
@@ -227,26 +227,29 @@ Zostaje:
 
 ---
 
-## RAG nad wytycznymi (Faza 5)
+## RAG nad wytycznymi (Faza 5) — ✅ usunięty 2026-11-03 (ADR 0021)
+
+Wyszukiwanie zniknęło razem z tabelą i kontenerem Ollamy, więc poniższe punkty
+są nieaktualne. Zostają dla historii.
 
 - [x] ~~**Model embeddingów nie jest jeszcze uruchomiony**~~ — `nomic-embed-text`
   pobrany do kontenera `ollama` (2026-09-06), wytyczne zaingestowane (14 + 18 chunków,
   768 wymiarów), retrieval działa na żywo. Serwer czatu tego użytkownika nie obsługuje
   embeddingów, dlatego doszło osobne `EMBEDDING_BASE_URL`.
 
-- [ ] **Krótkie podsekcje szumią w wynikach** — chunki po 50-60 znaków (np. „1.1 Strona
+- [x] ~~**Krótkie podsekcje szumią w wynikach**~~ — nieaktualne (ADR 0021): chunki po 50-60 znaków (np. „1.1 Strona
   tytułowa") potrafią trafić do top-k przy zapytaniu, z którym nie mają wiele wspólnego.
   Do rozważenia: łączenie sąsiednich krótkich podsekcji albo próg minimalnej długości.
 
-- [ ] **Brak indeksu ANN** — kolumna `embedding` jest bezwymiarowa, więc nie da się na
+- [x] ~~**Brak indeksu ANN**~~ — nieaktualne (ADR 0021): kolumna `embedding` jest bezwymiarowa, więc nie da się na
   niej założyć HNSW/IVFFlat. Przy kilkunastu chunkach na typ pracy skan sekwencyjny jest
   szybszy i dokładniejszy; przy większym korpusie trzeba ustalić wymiar i dołożyć indeks.
 
-- [ ] **Zapytanie to pierwsze 2000 znaków pracy** — przybliżenie: nasz „query" to
+- [x] ~~**Zapytanie to pierwsze 2000 znaków pracy**~~ — nieaktualne (ADR 0021): przybliżenie: nasz „query" to
   początek dokumentu (temat, problem, metoda). Lepsze byłoby zapytanie per sekcja
   wymogów albo streszczenie pracy.
 
-- [ ] **Ingestia nie jest wersjonowana** — zmiana pliku wymogów wymaga ręcznego
+- [x] ~~**Ingestia nie jest wersjonowana**~~ — nieaktualne (ADR 0021): zmiana pliku wymogów wymaga ręcznego
   `make ingest-guidelines`; nic nie wykrywa, że wektory są starsze niż plik.
 
 ---
@@ -282,8 +285,7 @@ Zostaje:
   obrazy raz, taguje je commitem i wypycha do GHCR, a serwer je ciągnie. Rollback to
   poprzedni obraz: `deploy.sh` wraca do niego sam, gdy nowy nie wstanie, a ręcznie
   służy do tego ponowne uruchomienie starszego przebiegu Deploy
-  ([deploy.md](deploy.md)). Migracji nie cofa. Jenkins nadal buduje na hoście, ale
-  to już tylko ścieżka lokalna.
+  ([deploy.md](deploy.md)). Migracji nie cofa. Jenkinsa nie ma od 2026-11-03.
 
 - [x] ~~**Brak deploymentu innego niż lokalny compose**~~ — od 2026-10-09 produkcja
   (`corvus.saek.dev`) wdraża się po merge'u do `main` na VPS za Caddy z HTTPS
@@ -292,8 +294,8 @@ Zostaje:
 - [ ] **Brak środowiska staging** — jest tylko lokalny compose i produkcja, więc
   merge do `main` po zielonym CI idzie od razu na serwer.
 
-- [ ] **SonarQube nieskonfigurowany w CI** — kontener `sonarqube` chodzi lokalnie, ale
-  nikt nie ustawił `SONAR_TOKEN`; job w CI się pomija.
+- [x] ~~**SonarQube nieskonfigurowany w CI**~~ — usunięty 2026-11-03 razem z
+  Jenkinsem: nikt nie ustawił `SONAR_TOKEN`, a ruff, pyright i eslint w CI już są.
 
 - [ ] **Brak testów E2E w CI** — pipeline sprawdza jednostki i migracje, nikt nie
   uruchamia prawdziwej akcji przez `docker compose` (wymagałoby modelu w runnerze).
@@ -327,9 +329,8 @@ Zostaje:
   prompt dawał 3 z 7, po strojeniu 20 z 21 (`agent/evals/README.md`).
 - [x] **Pełna recenzja bez evala po zmianie kontekstu** — puszczona 2026-11-01 na
   Claude, poziom sprzed zmian. Na `qwen3` nadal niezmierzona.
-- [ ] **Przypadki graniczne fragmentów są niestabilne na `qwen3`** — `cel-nie-caly` i
-  `runda-druga` przechodziły 2 z 3 powtórzeń, a po strojeniu pod Claude `qwen3` nie
-  był mierzony. Werdykt i tak ustawia promotor.
+- [x] ~~**Przypadki graniczne fragmentów są niestabilne na `qwen3`**~~ — nieaktualne:
+  modeli lokalnych nie ma od ADR 0022.
 - [ ] **Na Claude `obszar-bez-wymagan` przechodzi 2 z 3** — raz obszar zamienił się w
   podpowiedź teorii.
 - [ ] **Poziom magisterki przy fragmentach bez evala** — `review_fragment` dostaje typ
@@ -379,10 +380,12 @@ odłożone:
   (`stop_reason: refusal`); zgłaszamy to wprost, ale nie ponawiamy na innym modelu.
   Wymaga parametru beta, którego przez LangChain nie przetestowano.
 
-- [ ] **Wymuszanie schematu tylko na Ollamie** — na dostawcy zostaje prompt, walidacja
-  i jedna tura naprawcza. W recenzjach z 2026-10-01 dwie z trzech analiz potrzebowały
-  tury naprawczej (brak `severity`); prompty podają teraz kształt JSON-a dosłownie,
-  skutek niezmierzony. Docelowo: structured outputs dostawcy.
+- [~] **Wymuszanie schematu u dostawcy** — od 2026-11-03 odpowiedzi-obiekty idą ze
+  schematem (`response_format` → `output_config.format` u Anthropic, niestrict u
+  OpenAI; `structured.response_format`). Zostaje: lista uwag trzech analiz ma tablicę
+  na wierzchu, więc jedzie bez schematu (OpenAI przyjmuje tylko obiekt, a prompt prosi
+  o listę) — to te analizy najczęściej potrzebowały tury naprawczej. Skutek na żywo
+  niezmierzony: pierwszy przebieg `make eval MODEL=claude` po zmianie.
 
 - [ ] **Uwagi w recenzji nie mają pozycji w dokumencie** — `section` to wolny tekst
   modelu, więc listy uwag nie da się posortować kolejnością rozdziałów (jest po wadze).
@@ -403,4 +406,4 @@ odłożone:
 
 ---
 
-*Ostatnia aktualizacja: 2026-11-03 (sprzątanie długu: CSP, izolacja ekstrakcji, limiter, sesje po zmianie hasła)*
+*Ostatnia aktualizacja: 2026-11-03 (bez embeddingów i modeli lokalnych: ADR 0021, 0022)*

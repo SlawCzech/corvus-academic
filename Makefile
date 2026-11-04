@@ -3,7 +3,7 @@ COMPOSE = docker compose -f infra/docker-compose.yml
 # sets DEBUG=true, which the entrypoints turn into uvicorn --reload.
 COMPOSE_DEV = $(COMPOSE) -f infra/docker-compose.override.yml
 
-.PHONY: help up build down down-volumes logs ps restart migrate ingest-guidelines seed-guidelines seed-demo demo-reset purge-drafts \
+.PHONY: help up build down down-volumes logs ps restart migrate seed-guidelines seed-demo demo-reset purge-drafts \
         dev dev-build eval eval-fragments eval-defence eval-progress eval-maps langfuse-up langfuse-down \
         front-up front-down front-restart front-logs front-dev \
         shell-app shell-agent
@@ -39,9 +39,6 @@ migrate:  ## Run database migrations (all app lineages: identity, mentoring, gui
 	$(COMPOSE) run --rm app alembic -c alembic_identity.ini upgrade head
 	$(COMPOSE) run --rm app alembic -c alembic_mentoring.ini upgrade head
 	$(COMPOSE) run --rm app alembic -c alembic_guidelines.ini upgrade head
-
-ingest-guidelines:  ## Embed the university requirements into the vector store
-	$(COMPOSE) run --rm agent python scripts/ingest_guidelines.py
 
 seed-guidelines:  ## Fill the guideline catalog (UPDATE=1 publishes changed seed data as a new version)
 	$(COMPOSE) run --rm app python scripts/seed_guidelines.py $(if $(UPDATE),--update)
@@ -86,27 +83,28 @@ front-dev:  ## Run the Next.js dev server locally with hot reload (Ctrl+C to sto
 	cd frontend && npm run dev
 
 # ---------- evals: synthetic theses with planted defects (agent/evals) ----------
-# Runs on the host against the host's Ollama, not in a container: an eval is a
-# tool for whoever changes a prompt or a model, and it needs no stack.
+# Runs on the host, not in a container: an eval is a tool for whoever changes
+# a prompt, and it needs no stack. The key comes from the environment
+# (ANTHROPIC_API_KEY or OPENAI_API_KEY), never from .env.
 
-eval:  ## Score a model on the eval cases (MODEL=qwen3:30b-a3b|claude|openai JUDGE=… CASES="a b")
-	cd agent && uv run python -m evals.run --model $(or $(MODEL),qwen3:30b-a3b) \
+eval:  ## Score a model on the eval cases (MODEL=claude|openai JUDGE=… CASES="a b")
+	cd agent && uv run python -m evals.run --model $(or $(MODEL),claude) \
 		$(if $(JUDGE),--judge $(JUDGE)) $(if $(CASES),--cases $(CASES))
 
 eval-fragments:  ## Score review_fragment: tone and direction (MODEL=… JUDGE=… CASES="a b")
-	cd agent && uv run python -m evals.fragments --model $(or $(MODEL),qwen3:30b-a3b) \
+	cd agent && uv run python -m evals.fragments --model $(or $(MODEL),claude) \
 		$(if $(JUDGE),--judge $(JUDGE)) $(if $(CASES),--cases $(CASES))
 
 eval-defence:  ## Score defence_questions: short, general, spoken (MODEL=… JUDGE=… CASES="a b")
-	cd agent && uv run python -m evals.defence --model $(or $(MODEL),qwen3:30b-a3b) \
+	cd agent && uv run python -m evals.defence --model $(or $(MODEL),claude) \
 		$(if $(JUDGE),--judge $(JUDGE)) $(if $(CASES),--cases $(CASES))
 
 eval-progress:  ## Score check_progress: meeting notes as context (MODEL=… JUDGE=… CASES="a b")
-	cd agent && uv run python -m evals.progress --model $(or $(MODEL),qwen3:30b-a3b) \
+	cd agent && uv run python -m evals.progress --model $(or $(MODEL),claude) \
 		$(if $(JUDGE),--judge $(JUDGE)) $(if $(CASES),--cases $(CASES))
 
 eval-trial:  ## Score a trial review's advice and the mail from it (MODEL=… JUDGE=… CASES="a b")
-	cd agent && uv run python -m evals.trial --model $(or $(MODEL),qwen3:30b-a3b) \
+	cd agent && uv run python -m evals.trial --model $(or $(MODEL),claude) \
 		$(if $(JUDGE),--judge $(JUDGE)) $(if $(CASES),--cases $(CASES))
 
 eval-maps:  ## Recompute each eval case's document map with app's outline (after editing a thesis)

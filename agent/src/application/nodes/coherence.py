@@ -48,7 +48,6 @@ class ChapterTask(TypedDict):
     index: int
     title: str
     text: str
-    model: str
     language: str
 
 
@@ -76,7 +75,6 @@ def route_chapters(state: ActionState) -> list[Send] | list[str]:
                 index=i,
                 title=chapter.title,
                 text=chapter.text,
-                model=state["model"],
                 language=state.get("language", "pl"),
             ),
         )
@@ -88,7 +86,7 @@ def digest_chapter(task: ChapterTask) -> DigestUpdate:
     """Record what one chapter says: a summary and its claims, quoted."""
     try:
         reply = invoke_structured(
-            get_llm(task["model"]),
+            get_llm(),
             [
                 SystemMessage(content=prompts.digest_prompt(task["language"])),
                 HumanMessage(content=f"## {task['title']}\n\n{task['text']}"),
@@ -143,7 +141,7 @@ def check_coherence(state: ActionState) -> AnalysisUpdate:
     conclusions = frame(text, document_map, "conclusions")
     try:
         replies = invoke_structured(
-            get_llm(state["model"]),
+            get_llm(),
             [
                 SystemMessage(
                     content=prompts.coherence_prompt(state.get("language", "pl"))

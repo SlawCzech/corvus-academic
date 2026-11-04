@@ -20,7 +20,6 @@ import os
 # As in `run.py`: read at import time, required by the service, unused here.
 os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://eval:eval@localhost/eval")
 os.environ.setdefault("JWT_SECRET", "eval-" + "x" * 40)
-os.environ.setdefault("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
 os.environ.setdefault("CHECKPOINTS_ENABLED", "false")
 
 import argparse
@@ -53,7 +52,6 @@ CASES_DIR = Path(__file__).parent / "progress_cases"
 RESULTS_DIR = Path(__file__).parent / "results"
 
 _PROVIDER_KEYS = {"claude": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY"}
-_LOCAL_JUDGE = "qwen3:30b-a3b"
 
 
 @dataclass(frozen=True)
@@ -208,7 +206,7 @@ def run_case(
     case: ProgressCase,
     model: str,
     judge: Judge,
-    credentials: ModelCredentials | None = None,
+    credentials: ModelCredentials,
 ) -> ProgressResult:
     """Run one case through the real graph and score what comes out."""
     state = _initial_state(
@@ -251,10 +249,10 @@ def render_markdown(results: list[ProgressResult]) -> str:
     return "\n".join(lines)
 
 
-def _credentials(name: str, flag: str) -> ModelCredentials | None:
+def _credentials(name: str, flag: str) -> ModelCredentials:
     env = _PROVIDER_KEYS.get(name)
     if env is None:
-        return None
+        raise SystemExit(f"{flag} must be claude or openai, not {name!r}")
     key = os.environ.get(env, "")
     if not key:
         raise SystemExit(f"{flag} {name} needs {env} in the environment")
@@ -263,17 +261,17 @@ def _credentials(name: str, flag: str) -> ModelCredentials | None:
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Score check_progress.")
-    parser.add_argument("--model", required=True, help="Ollama tag, claude or openai")
-    parser.add_argument("--judge", help=f"default: the provider, else {_LOCAL_JUDGE}")
+    parser.add_argument("--model", required=True, choices=sorted(_PROVIDER_KEYS))
+    parser.add_argument(
+        "--judge", choices=sorted(_PROVIDER_KEYS), help="default: the model"
+    )
     parser.add_argument("--cases", nargs="*", help="case ids (default: all)")
     args = parser.parse_args(argv)
 
     credentials = _credentials(args.model, "--model")
-    judge_name = args.judge or (args.model if credentials else _LOCAL_JUDGE)
+    judge_name = args.judge or args.model
     judge_key = _credentials(judge_name, "--judge")
-    judge_llm = (
-        get_llm(credentials=judge_key) if judge_key is not None else get_llm(judge_name)
-    )
+    judge_llm = get_llm(credentials=judge_key)
     judge = llm_judge(judge_llm)
 
     results: list[ProgressResult] = []

@@ -11,7 +11,7 @@ repos:
     rev: v6.0.0
     hooks:
       - id: check-yaml
-        # Jenkinsfile-style templating is not YAML; compose and workflows are.
+        # Compose files and workflows; nothing else here is YAML.
         files: ^(infra|\.github)/.*\.ya?ml$
       - id: check-toml
       - id: check-merge-conflict

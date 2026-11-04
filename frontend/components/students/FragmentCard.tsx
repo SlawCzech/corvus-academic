@@ -105,7 +105,7 @@ function Summary({
   onChange: () => void
 }) {
   const defaults = useAiDefaults()
-  const { provider, model, needsKey } = useModelChoice(defaults.model)
+  const { provider, needsKey } = useModelChoice(defaults.model)
   const [error, setError] = useState<string | null>(null)
   const review = entry.review
 
@@ -114,7 +114,6 @@ function Summary({
     try {
       await triggerAction(studentId, "review_fragment", undefined, {
         provider,
-        model,
         language: defaults.language,
         fragmentId: entry.id,
       })

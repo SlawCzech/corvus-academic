@@ -1,6 +1,6 @@
 # ADR 0013: A server without local models
 
-- Status: Accepted
+- Status: Accepted; amended by [ADR 0021](0021-requirements-go-into-the-prompt-whole.md) and [ADR 0022](0022-every-action-runs-on-a-providers-key.md)
 - Date: 2026-10-09
 - Amends: [ADR 0004](0004-self-hosted-default-model-with-byok.md) (the local model as the default), [ADR 0007](0007-admin-managed-local-model-allowlist.md) (the allowlist always has a default), [ADR 0011](0011-a-key-per-provider-chosen-per-action.md) (no provider means local)
 

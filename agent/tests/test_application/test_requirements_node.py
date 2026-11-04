@@ -134,7 +134,7 @@ def test_node_passes_guidelines_from_state_to_model_prompt() -> None:
     mock_llm = MagicMock()
     captured_messages: list[Any] = []
 
-    def capture_invoke(messages: list[Any]) -> AIMessage:
+    def capture_invoke(messages: list[Any], **_: Any) -> AIMessage:  # noqa: ANN401
         captured_messages.extend(messages)
         return AIMessage(content=_EMPTY_RESPONSE)
 
@@ -147,13 +147,9 @@ def test_node_passes_guidelines_from_state_to_model_prompt() -> None:
     assert custom_guidelines in human_content
 
 
-def test_the_prompt_carries_the_map_of_what_the_excerpt_omits() -> None:
-    """A chapter past the excerpt must reach the model as present, not absent.
-
-    This is the regression that produced a review declaring four written
-    chapters missing: the node saw a prefix of the thesis and judged the rest
-    by its absence.
-    """
+def test_the_prompt_carries_the_whole_thesis_and_the_counts() -> None:
+    """The node once saw a prefix of the thesis and declared four written
+    chapters missing; now it reads all of it, with the counts code made."""
     mock_llm = MagicMock()
     mock_llm.invoke.return_value = AIMessage(content="[]")
     state = make_state(
@@ -179,9 +175,8 @@ def test_the_prompt_carries_the_map_of_what_the_excerpt_omits() -> None:
         check_requirements(state)
 
     prompt = mock_llm.invoke.call_args[0][0][1].content
-    assert "Metodyka badań" in prompt
+    assert "Wstęp. " * 5000 in prompt
     assert "Bibliography entries counted: 41" in prompt
-    assert "NEVER report a section as missing" in prompt
 
 
 def test_findings_are_tagged_as_requirements() -> None:

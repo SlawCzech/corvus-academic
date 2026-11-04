@@ -16,7 +16,6 @@ from src.application.nodes.coherence import (
 )
 from src.domain.action import ActionType
 from src.domain.analysis import FindingSource
-from src.infrastructure.llm_factory import ModelCredentials, use_credentials
 from tests.factories import make_state
 
 
@@ -139,48 +138,35 @@ def test_subsections_without_chapter_lines_still_split_by_their_number() -> None
     assert [c.title for c in found] == ["1.1. Pojęcia", "2.1. Metoda"]
 
 
-def test_a_long_chapter_is_cut_into_parts_not_truncated() -> None:
+def test_every_chapter_is_read_in_one_piece() -> None:
     text, document_map = _thesis()
-    with patch.object(chapters_module, "_CHUNK_CHARS", 20):
-        found = split_chapters(text, document_map)
-
-    assert any("(część 1/" in c.title for c in found)
-    joined = "".join(c.text for c in found if c.title.startswith("2.1"))
-    assert "39% wskazało płacę" in joined.replace("\n", "")
-
-
-def test_a_hosted_model_reads_every_chapter_in_one_piece() -> None:
-    text, document_map = _thesis()
-    with (
-        patch.object(chapters_module, "_CHUNK_CHARS", 20),
-        use_credentials(ModelCredentials(provider="claude", api_key="k")),
-    ):
-        found = split_chapters(text, document_map)
+    found = split_chapters(text, document_map)
 
     assert not any("(część" in c.title for c in found)
     assert any("39% wskazało płacę" in c.text.replace("\n", "") for c in found)
 
 
-def test_a_hosted_model_reads_the_whole_introduction() -> None:
+def test_the_whole_introduction_is_read() -> None:
     text, document_map = _thesis()
-    with patch.object(chapters_module, "_FRAME_CHARS", 5):
-        rationed = frame(text, document_map, "introduction")
-        with use_credentials(ModelCredentials(provider="claude", api_key="k")):
-            whole = frame(text, document_map, "introduction")
+    intro = frame(text, document_map, "introduction")
 
-    assert len(rationed) == 5
-    assert len(whole) > 5 and whole.startswith(rationed)
+    start = next(
+        int(s["start"])
+        for s in document_map["sections"]
+        if s.get("canonical") == "introduction"
+    )
+    assert intro and text[start:].strip().startswith(intro[:40])
+    assert len(intro) > 40
 
 
-def test_too_many_parts_are_merged_down_to_the_cap() -> None:
+def test_too_many_chapters_are_merged_down_to_the_cap() -> None:
     text, document_map = _thesis()
-    with (
-        patch.object(chapters_module, "_CHUNK_CHARS", 10),
-        patch.object(chapters_module, "_MAX_CHUNKS", 3),
-    ):
+    assert len(split_chapters(text, document_map)) == 2
+    with patch.object(chapters_module, "_MAX_CHUNKS", 1):
         found = split_chapters(text, document_map)
 
-    assert len(found) == 3
+    assert len(found) == 1
+    assert "39% wskazało płacę" in found[0].text
 
 
 def test_frame_takes_the_last_heading_of_its_kind() -> None:
@@ -207,7 +193,6 @@ def test_route_sends_one_digest_per_chapter() -> None:
         "1.1. Pojęcie motywacji",
         "2.1. Metodyka badania",
     ]
-    assert sends[0].arg["model"] == state["model"]
 
 
 def test_route_without_chapters_goes_straight_to_the_check() -> None:
@@ -216,13 +201,13 @@ def test_route_without_chapters_goes_straight_to_the_check() -> None:
 
 def test_digest_failure_is_reported_not_raised() -> None:
     llm = MagicMock()
-    llm.invoke.side_effect = RuntimeError("ollama down")
+    llm.invoke.side_effect = RuntimeError("provider down")
     with patch("src.application.nodes.coherence.get_llm", return_value=llm):
         update = digest_chapter(
-            {"index": 0, "title": "1.1", "text": "x", "model": "m", "language": "pl"}
+            {"index": 0, "title": "1.1", "text": "x", "language": "pl"}
         )
 
-    assert update == {"node_errors": ["digest 1.1: ollama down"]}
+    assert update == {"node_errors": ["digest 1.1: provider down"]}
 
 
 def test_coherence_without_digests_does_nothing() -> None:

@@ -8,7 +8,6 @@ from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-import httpx
 import jwt
 import pytest
 from fastapi.testclient import TestClient
@@ -21,9 +20,9 @@ os.environ.setdefault("JWT_SECRET", "test-secret-key-that-is-long-enough-32ch")
 
 from main import app  # noqa: E402
 from src.domain.action import ActionType, TaskStatus  # noqa: E402
-from src.infrastructure.api.router import get_http_client  # noqa: E402
 from src.infrastructure.database import get_db_session  # noqa: E402
 from src.infrastructure.key_transit import unseal  # noqa: E402
+from src.infrastructure.llm_factory import byok_models  # noqa: E402
 from src.infrastructure.models import AgentTaskModel, Base  # noqa: E402
 from src.infrastructure.repositories import AgentTaskRepository  # noqa: E402
 from src.infrastructure.settings import settings  # noqa: E402
@@ -305,12 +304,12 @@ async def test_failed_task_reports_its_error(
     client: TestClient, db_session: AsyncSession, dispatch: MagicMock
 ) -> None:
     task_id = str(uuid.uuid4())
-    await _store(db_session, task_id, TaskStatus.FAILED, error="Ollama unreachable")
+    await _store(db_session, task_id, TaskStatus.FAILED, error="provider unreachable")
 
     resp = client.get(f"/actions/{task_id}", headers=_auth(PROMOTOR_ID, "promotor"))
 
     assert resp.json()["status"] == "failed"
-    assert resp.json()["error"] == "Ollama unreachable"
+    assert resp.json()["error"] == "provider unreachable"
 
 
 async def test_running_task_is_reported_as_running(
@@ -582,25 +581,11 @@ def test_models_requires_a_token(client: TestClient) -> None:
     assert client.get("/models").status_code in (401, 403)
 
 
-def test_models_lists_ollama_chat_models(client: TestClient) -> None:
-    tags = {"models": [{"name": "gemma4:12b", "details": {"family": "gemma4"}}]}
-
-    async def _fake_client() -> AsyncGenerator[httpx.AsyncClient, None]:
-        transport = httpx.MockTransport(lambda _req: httpx.Response(200, json=tags))
-        async with httpx.AsyncClient(transport=transport) as fake:
-            yield fake
-
-    app.dependency_overrides[get_http_client] = _fake_client
-    try:
-        resp = client.get("/models", headers=_auth(PROMOTOR_ID, "promotor"))
-    finally:
-        app.dependency_overrides.pop(get_http_client, None)
+def test_models_names_the_model_each_provider_runs_on(client: TestClient) -> None:
+    resp = client.get("/models", headers=_auth(PROMOTOR_ID, "promotor"))
 
     assert resp.status_code == 200, resp.text
-    body = resp.json()
-    assert body["local"] == [{"name": "gemma4:12b", "parameter_size": None}]
-    assert body["local_available"] is True
-    assert body["default"] == settings.ollama_model
+    assert resp.json() == {"byok": byok_models()}
 
 
 # ---------- resuming a paused run ----------

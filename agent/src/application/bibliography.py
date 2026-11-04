@@ -17,13 +17,9 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, cast
 
-from src.application.excerpt import within_budget
 from src.application.grounding import normalize
 from src.infrastructure.crossref import Work
 
-# The whole list, up to a point: a bibliography is rarely past 15k characters,
-# and past this the extraction call gets slow for no gain.
-_SECTION_CHARS = 25000
 _URL = re.compile(r"https?://|www\.", re.IGNORECASE)
 _DOI = re.compile(r"10\.\d{4,9}/\S+", re.IGNORECASE)
 # Share of the record's title words the reference must contain.
@@ -68,7 +64,7 @@ def bibliography_section(text: str, document_map: Mapping[str, Any]) -> str:
         if s.get("canonical") and int(s.get("start") or 0) > start
     ]
     end = min(after) if after else len(text)
-    return within_budget(text[start:end].strip(), _SECTION_CHARS)
+    return text[start:end].strip()
 
 
 def is_website(entry: str) -> bool:

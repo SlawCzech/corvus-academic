@@ -35,15 +35,7 @@ class FakeAgentClient(AgentClient):
         self.unavailable = False
         self.next_status = AgentActionStatus("pending", None, None)
         self.models: dict[str, Any] = {
-            "backend": "ollama",
-            "default": "qwen3:30b-a3b",
-            "local": [
-                {"name": "gemma4:12b", "parameter_size": "11.9B"},
-                {"name": "qwen3:30b-a3b", "parameter_size": "30.5B"},
-                {"name": "llama3.1:latest", "parameter_size": "8.0B"},
-            ],
-            "local_available": True,
-            "byok": {"claude": "claude-sonnet-4-20250514", "openai": "gpt-4o"},
+            "byok": {"claude": "claude-sonnet-5-5", "openai": "gpt-6.1-sol"},
         }
 
     async def submit_action(
@@ -53,9 +45,8 @@ class FakeAgentClient(AgentClient):
         student_id: UUID,
         context: dict[str, Any],
         token: str,
-        model: str | None = None,
+        byok: BYOK,
         language: str = "pl",
-        byok: BYOK | None = None,
     ) -> str:
         if self.unavailable:
             raise AgentUnavailableError("connection refused")
@@ -66,7 +57,6 @@ class FakeAgentClient(AgentClient):
                 "student_id": student_id,
                 "context": context,
                 "token": token,
-                "model": model,
                 "language": language,
                 "byok": byok,
             }
@@ -226,3 +216,10 @@ class FakeGuidelineSource:
             ),
             None,
         )
+
+
+async def claude_key(provider: str) -> BYOK | None:
+    """A promoter holding a Claude key and no other."""
+    if provider == "claude":
+        return BYOK(provider="claude", api_key="sk-user-key")
+    return None

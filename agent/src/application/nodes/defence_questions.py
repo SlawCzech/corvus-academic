@@ -22,19 +22,12 @@ from ..state import ActionState
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
-# The committee reads the whole work, and so does a hosted model. The local
-# one gets a slice (see `excerpt.reading_budget`) — enough for it to ask
-# about the argument rather than about the appendices. The map that
-# travels with the slice names the chapters it does not reach, so a question
-# can still be aimed at the results or the conclusions.
-_MAX_TEXT_CHARS = 14000
-
 
 def _user_message(ctx: dict[str, Any]) -> str:
     lines = [render_brief(ctx)]
     if ctx.get("detail"):
         lines.append(f"Supervisor's instructions: {ctx['detail']}")
-    lines.append(render_document_block(ctx, head_chars=_MAX_TEXT_CHARS))
+    lines.append(render_document_block(ctx))
     return "\n\n".join(lines)
 
 
@@ -45,7 +38,7 @@ def defence_questions(state: ActionState) -> ActionState:
         if not str(ctx.get("text", "")).strip():
             raise ValueError("no thesis text to ask questions about")
 
-        llm = get_llm(state["model"])
+        llm = get_llm()
         reply = invoke_structured(
             llm,
             [

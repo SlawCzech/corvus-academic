@@ -6,7 +6,6 @@ import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.application.brief import render_brief
-from src.application.excerpt import reading_budget
 from src.application.prompts import check_progress as prompts
 from src.application.replies import PROGRESS
 from src.application.structured import invoke_structured
@@ -16,18 +15,6 @@ from src.infrastructure.provider_errors import raise_if_provider_error
 from ..state import ActionState
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-
-# On the local model: half the budget per version, so both fit next to each
-# other. A hosted model compares the two versions whole — what a student adds
-# between versions is rarely on the first pages.
-_MAX_TEXT_CHARS = 7000
-
-
-def _slice(text: str) -> str:
-    budget = reading_budget(_MAX_TEXT_CHARS)
-    if budget is None or len(text) <= budget:
-        return text
-    return text[:budget] + "\n\n[...text truncated...]"
 
 
 def _meeting_notes(ctx: dict[str, Any]) -> list[str]:
@@ -48,8 +35,8 @@ def _user_message(ctx: dict[str, Any]) -> str:
     lines = [
         render_brief(ctx),
         *_meeting_notes(ctx),
-        f"Previous version (v{ctx.get('previous_version', '?')}):\n{_slice(previous)}",
-        f"Current version (v{ctx.get('current_version', '?')}):\n{_slice(current)}",
+        f"Previous version (v{ctx.get('previous_version', '?')}):\n{previous}",
+        f"Current version (v{ctx.get('current_version', '?')}):\n{current}",
     ]
     if ctx.get("detail"):
         lines.append(f"Supervisor's instructions: {ctx['detail']}")
@@ -65,7 +52,7 @@ def check_progress(state: ActionState) -> ActionState:
         if not str(ctx.get("current_text", "")).strip():
             raise ValueError("no current version to compare")
 
-        llm = get_llm(state["model"])
+        llm = get_llm()
         reply = invoke_structured(
             llm,
             [

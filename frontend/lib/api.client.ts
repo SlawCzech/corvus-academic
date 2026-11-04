@@ -1,5 +1,4 @@
 import type {
-  AdminModelCatalog,
   AgentAction,
   ActionType,
   Fragment,
@@ -374,12 +373,10 @@ export function fragmentFileUrl(studentId: string, fragmentId: string): string {
 
 export interface ActionOptions {
   /**
-   * Run on the promoter's own key for this provider. Left out, the action
-   * runs on a local model — a stored key is never used unless asked for.
+   * Run on the promoter's own key for this provider. Every action needs one
+   * (ADR 0022); a stored key is never used unless asked for.
    */
   provider?: string
-  /** Ollama model tag override; empty/undefined lets the server pick its default. */
-  model?: string
   language?: string
   /** Only read by generate_review; ignored by every other action type. */
   reviewTone?: string
@@ -402,7 +399,6 @@ export async function triggerAction(
       action_type: actionType,
       detail: detail || null,
       provider: options?.provider || null,
-      model: options?.model || null,
       language: options?.language || "pl",
       review_tone: options?.reviewTone || "auto",
       review_findings_first: options?.reviewFindingsFirst ?? false,
@@ -572,20 +568,3 @@ export async function dismissAccessRequest(id: string): Promise<void> {
 
 // ---------- local models (admin) ----------
 
-export function setModelEnabled(name: string, enabled: boolean): Promise<AdminModelCatalog> {
-  return sendJson(
-    "/api/admin/models",
-    "PATCH",
-    { name, enabled },
-    enabled ? "Nie udało się udostępnić modelu" : "Nie udało się wyłączyć modelu",
-  )
-}
-
-export function setDefaultModel(name: string): Promise<AdminModelCatalog> {
-  return sendJson(
-    "/api/admin/models/default",
-    "PUT",
-    { name },
-    "Nie udało się ustawić modelu domyślnego",
-  )
-}

@@ -7,19 +7,11 @@ import ModelSelect from "../ai/ModelSelect"
 import ReviewToneChoice from "../ai/ReviewToneChoice"
 
 /**
- * The model used to be a free-text Ollama tag and the tone a bare dropdown
- * with no word on what "Powściągliwy" means. Both are now picked from what
- * is actually there, with the meaning spelled out.
+ * The model is one of the promoter's own keys (ADR 0022), and the tone is
+ * picked with the meaning of each option spelled out.
  */
 const CATALOG = {
-  default: "qwen3:30b-a3b",
-  available: [
-    { name: "gemma4:12b", parameter_size: "11.9B" },
-    { name: "qwen3:30b-a3b", parameter_size: "30.5B" },
-  ],
-  local_available: true,
-  local_enabled: true,
-  byok: { claude: "claude-sonnet-4-20250514", openai: "gpt-4o" },
+  byok: { claude: "claude-sonnet-5-5", openai: "gpt-6.1-sol" },
 }
 
 function stubApi(
@@ -58,69 +50,40 @@ function Tone() {
 describe("ModelSelect", () => {
   afterEach(() => vi.unstubAllGlobals())
 
-  describe("on a server without local models", () => {
-    const KEYS_ONLY = { ...CATALOG, available: [], local_enabled: false }
-
-    it("offers only the promoter's keys", async () => {
-      stubApi({ configured: true, providers: ["claude"] }, KEYS_ONLY)
-      render(<Model />)
-
-      expect(await screen.findByRole("option", { name: /Claude \(Anthropic\)/ })).toBeInTheDocument()
-      expect(screen.queryByRole("option", { name: /Domyślny/ })).not.toBeInTheDocument()
-      expect(screen.getByTestId("model-select")).toHaveValue("byok:claude")
-    })
-
-    it("sends a promoter without a key to the profile", async () => {
-      stubApi({ configured: false, providers: [] }, KEYS_ONLY)
-      render(<Model />)
-
-      expect(await screen.findByTestId("model-needs-key")).toHaveTextContent(
-        "Dodaj klucz w profilu",
-      )
-      expect(screen.getByRole("link", { name: "Dodaj klucz w profilu" })).toHaveAttribute(
-        "href",
-        "/profile",
-      )
-    })
-  })
-
-  it("offers the installed models, with the server default first", async () => {
-    stubApi({ configured: false, providers: [] })
+  it("offers only the promoter's keys", async () => {
+    stubApi({ configured: true, providers: ["claude"] })
     render(<Model />)
 
-    const select = await screen.findByTestId("model-select")
-    expect(await screen.findByRole("option", { name: "Domyślny (qwen3:30b-a3b)" })).toBeInTheDocument()
-    expect(screen.getByRole("option", { name: "gemma4:12b · 11.9B" })).toBeInTheDocument()
-    // The default is not listed twice.
-    expect(screen.queryByRole("option", { name: /^qwen3:30b-a3b/ })).not.toBeInTheDocument()
-
-    await userEvent.selectOptions(select, "gemma4:12b")
-    expect(screen.getByTestId("value")).toHaveTextContent("gemma4:12b")
-  })
-
-  it("falls back to the default when a saved model was withdrawn, and says so", async () => {
-    stubApi({ configured: false, providers: [] })
-    render(<Model initial="llama2:7b" />)
-
-    expect(await screen.findByTestId("model-withdrawn")).toHaveTextContent(
-      "Model llama2:7b z Twoich ustawień nie jest już dostępny",
-    )
-    expect(screen.getByTestId("model-select")).toHaveValue("local")
-    expect(screen.queryByRole("option", { name: /llama2/ })).not.toBeInTheDocument()
-  })
-
-  it("starts on the promoter's key when they have one and chose nothing", async () => {
-    stubApi({ configured: true, providers: ["openai"] })
-    render(<Model />)
-
-    expect(await screen.findByRole("option", { name: "OpenAI · gpt-4o" })).toBeInTheDocument()
-    expect(screen.getByTestId("model-select")).toHaveValue("byok:openai")
+    expect(
+      await screen.findByRole("option", { name: "Claude (Anthropic) · claude-sonnet-5-5" }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole("option", { name: /OpenAI/ })).not.toBeInTheDocument()
+    expect(screen.getByTestId("model-select")).toHaveValue("byok:claude")
     expect(screen.getByTestId("model-byok")).toBeInTheDocument()
-    // The other provider is not offered without a key for it.
-    expect(screen.queryByRole("option", { name: /Claude/ })).not.toBeInTheDocument()
   })
 
-  it("offers both keys and the local models, and lets the promoter pick", async () => {
+  it("sends a promoter without a key to the profile", async () => {
+    stubApi({ configured: false, providers: [] })
+    render(<Model />)
+
+    expect(await screen.findByTestId("model-needs-key")).toHaveTextContent(
+      "Dodaj klucz w profilu",
+    )
+    expect(screen.getByRole("link", { name: "Dodaj klucz w profilu" })).toHaveAttribute(
+      "href",
+      "/profile",
+    )
+  })
+
+  it("treats a local model saved before ADR 0022 as no choice", async () => {
+    stubApi({ configured: true, providers: ["openai"] })
+    render(<Model initial="gemma4:12b" />)
+
+    expect(await screen.findByRole("option", { name: "OpenAI · gpt-6.1-sol" })).toBeInTheDocument()
+    expect(screen.getByTestId("model-select")).toHaveValue("byok:openai")
+  })
+
+  it("lets the promoter pick between two keys", async () => {
     stubApi({ configured: true, providers: ["claude", "openai"] })
     render(<Model />)
 
@@ -130,23 +93,16 @@ describe("ModelSelect", () => {
 
     await userEvent.selectOptions(select, "byok:openai")
     expect(screen.getByTestId("value")).toHaveTextContent("byok:openai")
-
-    await userEvent.selectOptions(select, "gemma4:12b")
-    expect(screen.getByTestId("value")).toHaveTextContent("gemma4:12b")
-    expect(screen.queryByTestId("model-byok")).not.toBeInTheDocument()
-
-    await userEvent.selectOptions(select, "local")
-    expect(screen.getByTestId("value")).toHaveTextContent("local")
   })
 
-  it("says so when the chosen key was removed, and falls back to the local model", async () => {
+  it("does not move a removed key's runs onto the other provider", async () => {
     stubApi({ configured: true, providers: ["claude"] })
     render(<Model initial="byok:openai" />)
 
-    expect(await screen.findByTestId("model-key-missing")).toHaveTextContent(
+    expect(await screen.findByTestId("model-needs-key")).toHaveTextContent(
       "Klucz OpenAI z Twoich ustawień został usunięty",
     )
-    expect(screen.getByTestId("model-select")).toHaveValue("local")
+    expect(screen.getByTestId("model-select")).toHaveValue("")
   })
 })
 

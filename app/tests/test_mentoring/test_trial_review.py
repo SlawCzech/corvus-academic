@@ -59,7 +59,7 @@ def _run(
 ) -> Any:  # noqa: ANN401
     return client.post(
         f"/students/{student_id}/actions",
-        json={"action_type": action_type, **body},
+        json={"provider": "claude", "action_type": action_type, **body},
         headers=headers,
     )
 

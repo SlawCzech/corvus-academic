@@ -1,6 +1,6 @@
 # ADR 0011: A key per provider, and the promoter picks per action
 
-- Status: Accepted
+- Status: Accepted; amended by [ADR 0022](0022-every-action-runs-on-a-providers-key.md) (no provider is a 409)
 - Date: 2026-10-01
 - Amends: [ADR 0004](0004-self-hosted-default-model-with-byok.md) (the rule that a stored key takes priority)
 

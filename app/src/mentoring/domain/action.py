@@ -85,7 +85,8 @@ class AgentAction:
     output: dict[str, Any] | None = None
     error: str | None = None
     error_code: str | None = None
-    # Whose account ran it — a BYOK provider — or None for the self-hosted model.
+    # Whose account ran it — a BYOK provider — or None for a run on a local
+    # model, before ADR 0022.
     provider: str | None = None
     # Tokens spent: {input_tokens, output_tokens, total_tokens, by_model}.
     usage: dict[str, Any] | None = None

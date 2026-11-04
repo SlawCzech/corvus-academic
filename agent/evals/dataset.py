@@ -76,9 +76,8 @@ class EvalCase:
     def context(self) -> dict[str, Any]:
         """The action context `app` would assemble for this thesis.
 
-        ``guidelines`` is filled in here, so the task's retrieval step — which
-        needs Postgres and an embedding model — is skipped exactly as it is
-        when `app` sends a guideline set's text along.
+        ``guidelines`` is filled in here, condensed to the case's length, so
+        the task does not load the full requirements file over it.
         """
         context: dict[str, Any] = {
             "text": self.text,

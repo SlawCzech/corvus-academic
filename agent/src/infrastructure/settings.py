@@ -11,21 +11,6 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    model_backend: str = "ollama"
-    ollama_model: str = "qwen3:30b-a3b"
-    ollama_base_url: str = "http://ollama:11434"
-
-    # Guideline retrieval. The embedding model is stored alongside every
-    # chunk, so changing it here only means re-running the ingestion script —
-    # rows produced by another model are ignored, never mixed in.
-    embedding_model: str = "nomic-embed-text"
-    rag_top_k: int = 6
-    # Embeddings have their own base URL because they need not come from the
-    # same server as the chat models: an OpenAI-compatible chat server
-    # (llama.cpp, LM Studio) may refuse embeddings entirely, while the Ollama
-    # this stack ships serves them. Defaults to the compose service.
-    embedding_base_url: str = "http://ollama:11434"
-    anthropic_api_key: str = ""
     # How much Claude thinks before it answers — the dial for latency and
     # cost on a model whose thinking cannot be turned off. `medium` is a
     # starting point, to be settled by the evals (`make eval MODEL=claude`).

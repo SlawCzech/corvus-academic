@@ -110,9 +110,8 @@ class AgentClient:
         student_id: UUID,
         context: dict[str, Any],
         token: str,
-        model: str | None = None,
+        byok: BYOK,
         language: str = "pl",
-        byok: BYOK | None = None,
     ) -> str:
         """Queue an action and return the agent's task id."""
         payload: dict[str, Any] = {
@@ -121,12 +120,8 @@ class AgentClient:
             "student_id": str(student_id),
             "context": context,
             "language": language,
+            "byok": {"provider": byok.provider, "api_key": byok.api_key},
         }
-        if model is not None:
-            payload["model"] = model
-        if byok is not None:
-            payload["byok"] = {"provider": byok.provider, "api_key": byok.api_key}
-
         data = await self._post("/actions", payload, token)
         return str(data["task_id"])
 
@@ -189,7 +184,7 @@ class AgentClient:
         await self._delete(f"/students/{student_id}/actions", token)
 
     async def list_models(self, token: str) -> dict[str, Any]:
-        """The chat models the agent's Ollama has installed, plus BYOK models."""
+        """The model each provider runs on, as the agent reports it."""
         return await self._get("/models", token)
 
     # ---------- transport ----------

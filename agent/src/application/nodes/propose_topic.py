@@ -46,7 +46,7 @@ def propose_topic(state: ActionState) -> ActionState:
     """Propose three thesis topics and put them in the action's output."""
     try:
         ctx = state["context"]
-        llm = get_llm(state["model"])
+        llm = get_llm()
         reply = invoke_structured(
             llm,
             [

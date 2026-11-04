@@ -15,17 +15,13 @@ from ..state import ActionState, AnalysisUpdate
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
-# How much of the thesis this node reads. The map that travels with the
-# excerpt covers what falls outside it — see `excerpt.render_document_block`.
-_HEAD_CHARS = 30000
-
 
 def analyze_structure(state: ActionState) -> AnalysisUpdate:
     """Analyze chapter structure and extend state with structural findings."""
     try:
         ctx = state["context"]
-        llm = get_llm(state["model"])
-        document = render_document_block(ctx, head_chars=_HEAD_CHARS)
+        llm = get_llm()
+        document = render_document_block(ctx)
         messages = [
             SystemMessage(  # type: ignore[attr-defined]
                 content=prompts.get_system_prompt(state.get("language", "pl"))

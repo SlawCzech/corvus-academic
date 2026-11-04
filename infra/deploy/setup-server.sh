@@ -13,7 +13,8 @@
 #   3. firewall: 22, 80, 443 in, nothing else;
 #   4. automatic security updates;
 #   5. Docker (from Docker's own apt repository), gpg, and rclone from rclone.org;
-#   6. /srv/corvus, the backup passphrase, and the daily backup at 03:15.
+#   6. /srv/corvus, the backup passphrase, the daily backup at 03:15 and the
+#      five-minute watch (watch.sh).
 #
 # Before running it: make sure you log in with your key, not a password.
 # After step 2 a password will no longer get you in.
@@ -102,7 +103,7 @@ if ! rclone version 2>/dev/null | head -1 | grep -qvE 'v1\.(5|6)[0-9]\.'; then
     rm -f /tmp/rclone.deb
 fi
 
-# 6. the app's directory, backup passphrase, daily backup
+# 6. the app's directory, backup passphrase, daily backup, watch
 install -d -m 750 -o deploy -g deploy /srv/corvus /srv/corvus/backups
 if [ ! -s /srv/corvus/.backup-passphrase ]; then
     openssl rand -base64 32 > /srv/corvus/.backup-passphrase
@@ -115,6 +116,10 @@ if [ ! -s /srv/corvus/.backup-passphrase ]; then
 fi
 cat > /etc/cron.d/corvus-backup <<'CONF'
 15 3 * * * deploy /srv/corvus/backup.sh >> /srv/corvus/backups/backup.log 2>&1
+CONF
+# Health and the log events a person should hear about, every five minutes.
+cat > /etc/cron.d/corvus-watch <<'CONF'
+*/5 * * * * deploy /srv/corvus/watch.sh >> /srv/corvus/backups/watch.log 2>&1
 CONF
 
 echo "setup: done. From now on: ssh deploy@$(hostname -I | awk '{print $1}')"

@@ -91,7 +91,7 @@ jobs:
       - name: Copy the server-side files
         run: |
           scp infra/deploy/docker-compose.prod.yml infra/deploy/Caddyfile \
-              infra/deploy/deploy.sh infra/deploy/backup.sh corvus:/srv/corvus/
+              infra/deploy/deploy.sh infra/deploy/backup.sh infra/deploy/watch.sh corvus:/srv/corvus/
 
       - name: Log the server in to GHCR for this deploy
         # The job's own token, valid only while this job runs — no long-lived

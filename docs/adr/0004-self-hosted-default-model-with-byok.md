@@ -1,6 +1,6 @@
 # ADR 0004: Self-hosted model as the privacy-preserving default, BYOK as opt-in
 
-- Status: Accepted
+- Status: Superseded by [ADR 0022](0022-every-action-runs-on-a-providers-key.md)
 - Date: 2026-09-05
 
 ## Context

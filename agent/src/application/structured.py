@@ -1,35 +1,39 @@
 """Asking a chat model for JSON of a known shape, and getting it.
 
-Before this, every node did ``llm.invoke`` → ``json.loads`` and hoped. A local
+Before this, every node did ``llm.invoke`` → ``json.loads`` and hoped. A
 model that closed a bracket too early, called a key ``criterion`` instead of
 ``criteria`` or wrote "Major" for "major" cost the whole branch: the node
 logged a parse error and the review went ahead without it.
 
 Three layers, cheapest first:
 
-1. **Constrained decoding** where the backend has it. Ollama takes a JSON
-   schema as ``format`` and samples only tokens that keep the output valid
-   against it — malformed JSON stops being possible rather than unlikely.
-2. **Validation** against a Pydantic model, on every backend. Valid JSON can
-   still be the wrong JSON: a missing key, a severity outside the three.
+1. **The provider's structured outputs.** The reply's JSON schema goes with
+   the request as ``response_format``; LangChain hands it to Anthropic as
+   ``output_config.format`` and to OpenAI as it is. Claude then decodes only
+   tokens that keep the reply valid against it. Only for shapes whose root is
+   an object with named keys: OpenAI takes nothing else at the root, a list
+   of findings stays a list rather than a prompt that says one thing and a
+   schema another, and a map (``dict[str, X]``) would come back empty.
+2. **Validation** against a Pydantic model, always. Valid JSON can still be
+   the wrong JSON — a list of findings is not constrained, and OpenAI's
+   non-strict mode is a strong hint, not a guarantee.
 3. **Repair**: when validation fails, the model is shown its own reply and the
    validation error, and asked once more. Cheaper than failing the branch,
    and the error message is usually all it needed.
 
-The prompts still describe the shape in words. The schema makes it binding on
-Ollama; the words are what a hosted model follows, and what explains to any
-model *why* a field is there.
+The prompts still describe the shape in words: they explain to the model
+*why* a field is there, which a schema does not.
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from typing import Any, cast
 
 import structlog
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage, HumanMessage
-from langchain_ollama import ChatOllama
 from pydantic import TypeAdapter, ValidationError
 
 from src.application.json_output import extract_json, message_text
@@ -46,6 +50,46 @@ _REPAIR_PROMPT = """Your previous reply could not be used:
 
 Reply again with ONLY the corrected JSON — same content, fixed to match the \
 required format. No markdown, no explanation."""
+
+
+_NAME = re.compile(r"[^a-zA-Z0-9_-]")
+
+
+def _has_open_map(node: object) -> bool:
+    """Whether a schema holds an object with keys it does not name.
+
+    ``dict[str, X]`` is such an object. Claude's structured outputs accept
+    only ``additionalProperties: false``, so the SDK closes it — and the
+    model, decoding against a map with no keys, returns it empty.
+    """
+    if isinstance(node, dict):
+        mapping = cast(dict[str, object], node)
+        extra = mapping.get("additionalProperties")
+        if extra is True or isinstance(extra, dict):
+            return True
+        return any(_has_open_map(v) for v in mapping.values())
+    if isinstance(node, list):
+        return any(_has_open_map(v) for v in cast(list[object], node))
+    return False
+
+
+def response_format(shape: TypeAdapter[Any], node: str) -> dict[str, Any] | None:
+    """The schema to send with the request, or None to leave the reply free.
+
+    Not strict on OpenAI: strict mode wants every property required, and the
+    replies have optional keys. Claude's structured outputs have no such mode.
+    """
+    schema = shape.json_schema()
+    if schema.get("type") != "object" or _has_open_map(schema):
+        return None
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": _NAME.sub("_", node),
+            "schema": schema,
+            "strict": False,
+        },
+    }
 
 
 class StructuredOutputError(ValueError):
@@ -76,8 +120,9 @@ def invoke_structured[T](
     like any other failure and report it in state.
     """
     kwargs: dict[str, Any] = {}
-    if isinstance(llm, ChatOllama):
-        kwargs["format"] = shape.json_schema()
+    constrained = response_format(shape, node)
+    if constrained is not None:
+        kwargs["response_format"] = constrained
 
     conversation = list(messages)
     last_error: Exception | None = None

@@ -56,7 +56,7 @@ def test_methodology_is_told_what_the_thesis_is_for(monkeypatch: Any) -> None:  
     capture = _Capture()
     module = "src.application.nodes.methodology"
     monkeypatch.setattr(f"{module}.invoke_structured", capture)
-    monkeypatch.setattr(f"{module}.get_llm", lambda _model: object())
+    monkeypatch.setattr(f"{module}.get_llm", lambda: object())
     state: Any = {
         "model": "m",
         "context": {
@@ -76,7 +76,7 @@ def test_only_coherence_is_asked_to_compare_the_aims(monkeypatch: Any) -> None: 
     capture = _Capture()
     module = "src.application.nodes.coherence"
     monkeypatch.setattr(f"{module}.invoke_structured", capture)
-    monkeypatch.setattr(f"{module}.get_llm", lambda _model: object())
+    monkeypatch.setattr(f"{module}.get_llm", lambda: object())
     digest = {"index": 0, "title": "R1", "summary": "S", "claims": []}
     state: Any = {
         "model": "m",

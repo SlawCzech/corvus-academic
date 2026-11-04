@@ -7,15 +7,13 @@ history of what the AI did for a student has to outlive that.
 
 import asyncio
 import uuid
-from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 from typing import Annotated, Any, cast
 
-import httpx
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.graph import IMPLEMENTED_ACTIONS
@@ -25,10 +23,9 @@ from src.infrastructure.celery_app import celery_app
 from src.infrastructure.checkpoints import delete as delete_checkpoints
 from src.infrastructure.database import get_db_session
 from src.infrastructure.key_transit import seal
-from src.infrastructure.model_catalog import load_model_catalog
+from src.infrastructure.llm_factory import byok_models
 from src.infrastructure.models import AgentTaskModel
 from src.infrastructure.repositories import AgentTaskRepository
-from src.infrastructure.settings import settings
 
 logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
@@ -61,16 +58,10 @@ def get_task_repo(
     return AgentTaskRepository(session)
 
 
-async def get_http_client() -> AsyncGenerator[httpx.AsyncClient]:
-    async with httpx.AsyncClient() as client:
-        yield client
-
-
 # ---------- Annotated aliases — what every endpoint actually types ----------
 
 CurrentUserDep = Annotated[TokenUser, Depends(get_current_user)]
 TaskRepoDep = Annotated[AgentTaskRepository, Depends(get_task_repo)]
-HttpClientDep = Annotated[httpx.AsyncClient, Depends(get_http_client)]
 
 
 # ---------- schemas ----------
@@ -103,9 +94,6 @@ class ActionRequest(BaseModel):
     action_type: str
     student_id: uuid.UUID
     context: dict[str, Any] = {}
-    # No model named → the server's OLLAMA_MODEL, the same default /models
-    # reports; `app` leaves it out when the admin has not picked one.
-    model: str = Field(default_factory=lambda: settings.ollama_model)
     language: str = "pl"
     byok: BYOKConfig | None = None
 
@@ -155,22 +143,9 @@ class ActionStatusResponse(BaseModel):
     usage: dict[str, Any] | None = None
 
 
-class LocalModelResponse(BaseModel):
-    name: str
-    parameter_size: str | None
-
-
 class ModelCatalogResponse(BaseModel):
-    """What the action panel offers: local models, or the promoter's provider.
+    """The model each provider runs on, for the action panel to name."""
 
-    ``byok`` maps each provider to the model a stored key runs on — the
-    ``model`` field of an action does not apply to those.
-    """
-
-    backend: str
-    default: str
-    local: list[LocalModelResponse]
-    local_available: bool
     byok: dict[str, str]
 
 
@@ -194,19 +169,9 @@ def _shown(kwargs: dict[str, Any]) -> str:
     response_model=ModelCatalogResponse,
     dependencies=[Depends(get_current_user)],
 )
-async def list_models(client: HttpClientDep) -> ModelCatalogResponse:
-    """The chat models installed on the Ollama the worker uses."""
-    catalog = await load_model_catalog(client)
-    return ModelCatalogResponse(
-        backend=catalog.backend,
-        default=catalog.default,
-        local=[
-            LocalModelResponse(name=m.name, parameter_size=m.parameter_size)
-            for m in catalog.local
-        ],
-        local_available=catalog.local_available,
-        byok=catalog.byok,
-    )
+async def list_models() -> ModelCatalogResponse:
+    """The model a promoter's key for each provider runs on."""
+    return ModelCatalogResponse(byok=byok_models())
 
 
 @router.post(
@@ -239,7 +204,7 @@ async def submit_action(
     )
     await repo.save(record)
 
-    kwargs: dict[str, Any] = {"model": body.model, "language": body.language}
+    kwargs: dict[str, Any] = {"language": body.language}
     if body.byok is not None:
         # Separate task arguments, never part of the context: the context is
         # what ends up in the graph state and therefore in the stored result.
@@ -274,7 +239,6 @@ async def submit_action(
         action_id=str(body.action_id),
         action_type=body.action_type,
         student_id=str(body.student_id),
-        model=body.model,
         byok_provider=body.byok.provider if body.byok else None,
     )
     return ActionTaskResponse(task_id=task_id)
