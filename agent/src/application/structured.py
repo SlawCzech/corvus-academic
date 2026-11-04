@@ -11,8 +11,9 @@ Three layers, cheapest first:
    the request as ``response_format``; LangChain hands it to Anthropic as
    ``output_config.format`` and to OpenAI as it is. Claude then decodes only
    tokens that keep the reply valid against it. Only for shapes whose root is
-   an object: OpenAI takes nothing else, and a list of findings stays a list
-   rather than a prompt that says one thing and a schema that says another.
+   an object with named keys: OpenAI takes nothing else at the root, a list
+   of findings stays a list rather than a prompt that says one thing and a
+   schema another, and a map (``dict[str, X]``) would come back empty.
 2. **Validation** against a Pydantic model, always. Valid JSON can still be
    the wrong JSON — a list of findings is not constrained, and OpenAI's
    non-strict mode is a strong hint, not a guarantee.
@@ -54,6 +55,24 @@ required format. No markdown, no explanation."""
 _NAME = re.compile(r"[^a-zA-Z0-9_-]")
 
 
+def _has_open_map(node: object) -> bool:
+    """Whether a schema holds an object with keys it does not name.
+
+    ``dict[str, X]`` is such an object. Claude's structured outputs accept
+    only ``additionalProperties: false``, so the SDK closes it — and the
+    model, decoding against a map with no keys, returns it empty.
+    """
+    if isinstance(node, dict):
+        mapping = cast(dict[str, object], node)
+        extra = mapping.get("additionalProperties")
+        if extra is True or isinstance(extra, dict):
+            return True
+        return any(_has_open_map(v) for v in mapping.values())
+    if isinstance(node, list):
+        return any(_has_open_map(v) for v in cast(list[object], node))
+    return False
+
+
 def response_format(shape: TypeAdapter[Any], node: str) -> dict[str, Any] | None:
     """The schema to send with the request, or None to leave the reply free.
 
@@ -61,7 +80,7 @@ def response_format(shape: TypeAdapter[Any], node: str) -> dict[str, Any] | None
     replies have optional keys. Claude's structured outputs have no such mode.
     """
     schema = shape.json_schema()
-    if schema.get("type") != "object":
+    if schema.get("type") != "object" or _has_open_map(schema):
         return None
     return {
         "type": "json_schema",

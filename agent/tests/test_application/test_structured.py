@@ -7,7 +7,7 @@ import pytest
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_openai import ChatOpenAI
-from pydantic import SecretStr
+from pydantic import BaseModel, SecretStr, TypeAdapter
 
 from src.application.replies import FINDINGS, REVIEW, TOPIC_PROPOSAL
 from src.application.structured import (
@@ -118,6 +118,16 @@ def test_a_list_of_findings_is_left_free() -> None:
     invoke_structured(llm, [HumanMessage("x")], FINDINGS, node="t")
 
     assert llm.invoke.call_args.kwargs == {}
+
+
+def test_a_reply_with_a_map_is_left_free() -> None:
+    """Claude closes every object; a map decoded that way comes back empty —
+    that is how the eval's judge once matched nothing at all."""
+
+    class _WithMap(BaseModel):
+        expected: dict[str, list[int]] = {}
+
+    assert response_format(TypeAdapter(_WithMap), "judge") is None
 
 
 def test_claude_receives_the_schema_as_output_config() -> None:
