@@ -18,7 +18,7 @@ Corvus is a working app now, not a learning exercise. A path no one runs is a pa
 - **An action names a provider, always.** `POST /students/{id}/actions` without `provider` is a 409, the shape ADR 0013 gave a server with the switch off. A provider without a stored key stays a 409 too (ADR 0011).
 - **The agent has no model of its own.** `get_llm()` returns the promoter's provider model or raises; `MODEL_BACKEND`, `OLLAMA_*` and the service's `ANTHROPIC_API_KEY` go. `GET /models` reports only the model each provider runs on.
 - **Nodes read the whole thesis.** The reading budgets, the excerpt rules and the chapter splitting existed for a small context; the counts code computes (body length, bibliography entries) still travel with the text.
-- **The allowlist goes.** `model_policy`, `model_service`, `models_router`'s admin routes, the `mentoring.model_settings` table (dropped by migration), `MANAGE_MODELS`, `LOCAL_MODELS_ENABLED`, and the admin's model page in the frontend.
+- **The allowlist goes.** `model_policy`, `model_service`, `models_router`'s admin routes, the ORM model of `mentoring.model_settings` (the table is dropped in the next release, so a rolled-back image still finds it), `MANAGE_MODELS`, `LOCAL_MODELS_ENABLED`, and the admin's model page in the frontend.
 - **Evals run on a provider.** `--model` is `claude` or `openai`; the key comes from the environment, as before.
 
 ## Consequences

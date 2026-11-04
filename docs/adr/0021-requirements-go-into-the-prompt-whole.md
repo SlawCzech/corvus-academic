@@ -16,7 +16,7 @@ What remained was a container, a volume, an ingestion step after every change of
 ## Decision
 
 - **The agent's requirements file goes into the prompt whole**, for the actions that need requirements and have no guideline set from `app`. `retrieve_relevant_guidelines` becomes `load_guidelines`.
-- **Embeddings go.** `embeddings.py`, `guideline_store.py`, `scripts/ingest_guidelines.py`, `make ingest-guidelines`, the `EMBEDDING_*` and `RAG_TOP_K` settings, and `analysis.guideline_chunks` (migration `0008`).
+- **Embeddings go.** `embeddings.py`, `guideline_store.py`, `scripts/ingest_guidelines.py`, `make ingest-guidelines`, the `EMBEDDING_*` and `RAG_TOP_K` settings, and the ORM model of `analysis.guideline_chunks`. The table itself is dropped by a migration in the next release, once no running image reads it: `deploy.sh` rolls back images, not migrations.
 - **Ollama leaves the deployments.** Production ran it only for embeddings; the local compose's container served nothing else either.
 - **The pgvector image and extension stay.** Migration `0004` creates the extension and imports `pgvector`, so a database built from scratch still needs both. Removing them would mean rewriting history for no gain.
 
