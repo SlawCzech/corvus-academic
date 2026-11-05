@@ -17,6 +17,11 @@ set -a
 . ./.env
 set +a
 
+# The compose file refuses to load without IMAGE_TAG (deploy.sh sets it), and
+# cron does not. Without this line every nightly run died before pg_dump, from
+# the first deploy until 2026-11-05, and nothing said so.
+export IMAGE_TAG="${IMAGE_TAG:-$(cat .deployed-tag)}"
+
 PASSPHRASE_FILE=/srv/corvus/.backup-passphrase
 BACKUP_DIR=/srv/corvus/backups
 KEEP_DAYS="${BACKUP_KEEP_DAYS:-14}"
