@@ -52,6 +52,15 @@ const THESIS = {
   purge_due_at: "2027-03-31T10:00:00Z",
 }
 
+const SET = {
+  id: "set1",
+  name: "Prace licencjackie",
+  thesis_type: "bachelor",
+  university: { id: "u1", name: "Uniwersytet Ekonomiczny w Katowicach", short_name: "UE Katowice" },
+  current: { id: "v1", version_no: 1 },
+  has_draft: false,
+}
+
 const NOTHING_FOUND = {
   full_name: null,
   field_of_study: null,
@@ -82,6 +91,7 @@ describe("one-off reviews", () => {
     fetchMock.mockReset()
     fetchMock.mockImplementation((url: string, init?: RequestInit) => {
       if (url === "/api/reviews/title-page") return titlePage()
+      if (url.startsWith("/api/guidelines/sets")) return json([SET])
       if (url === "/api/reviews" && init?.method === "POST") return json(REVIEW, 201)
       if (url === "/api/reviews") return json([REVIEW])
       if (url === "/api/reviews/r1/promote") return json({ ...STUDENT, is_one_off: false })
@@ -122,6 +132,7 @@ describe("one-off reviews", () => {
     )
     await userEvent.type(screen.getByLabelText("Autor pracy"), "Anna Nowak")
     await userEvent.type(screen.getByLabelText("Kierunek"), "Ekonomia")
+    await chooseGuidelines()
     await userEvent.click(screen.getByRole("button", { name: "Dalej" }))
 
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/reviews/r1"))
@@ -132,8 +143,15 @@ describe("one-off reviews", () => {
     expect(form.get("full_name")).toBe("Anna Nowak")
     expect(form.get("thesis_type")).toBe("bachelor")
     expect(form.get("file")).toBeInstanceOf(File)
+    expect(form.get("guideline_set_id")).toBe("set1")
     expect(form.has("current_topic")).toBe(false)
   })
+
+  async function chooseGuidelines(): Promise<void> {
+    const select = screen.getByRole("combobox", { name: "Zestaw wytycznych" })
+    await waitFor(() => expect(select).toBeEnabled())
+    await userEvent.selectOptions(select, "set1")
+  }
 
   async function chooseThesis(container: HTMLElement): Promise<void> {
     await userEvent.click(screen.getByRole("button", { name: "Nowa recenzja" }))
@@ -200,9 +218,24 @@ describe("one-off reviews", () => {
     await userEvent.click(screen.getByRole("button", { name: "Nowa recenzja" }))
     await userEvent.type(screen.getByLabelText("Autor pracy"), "Anna Nowak")
     await userEvent.type(screen.getByLabelText("Kierunek"), "Ekonomia")
+    await chooseGuidelines()
     await userEvent.click(screen.getByRole("button", { name: "Dalej" }))
 
     expect(await screen.findByTestId("review-form-error")).toHaveTextContent("Wybierz plik")
+  })
+
+  it("does not send a form without the university's guidelines", async () => {
+    const container = renderForm()
+
+    await chooseThesis(container)
+    await userEvent.type(screen.getByLabelText("Autor pracy"), "Anna Nowak")
+    await userEvent.type(screen.getByLabelText("Kierunek"), "Ekonomia")
+    await userEvent.click(screen.getByRole("button", { name: "Dalej" }))
+
+    expect(screen.getByRole("combobox", { name: "Zestaw wytycznych" })).toBeInvalid()
+    expect(
+      fetchMock.mock.calls.some(([url, init]) => url === "/api/reviews" && init?.method === "POST"),
+    ).toBe(false)
   })
 
   it("offers only what a reviewer needs", async () => {

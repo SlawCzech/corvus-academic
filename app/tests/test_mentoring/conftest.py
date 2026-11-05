@@ -132,3 +132,47 @@ def login(client: TestClient, email: str, password: str) -> dict[str, str]:
     assert resp.status_code == 200, resp.text
     token: str = resp.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
+
+
+def guideline_set(client: TestClient, thesis_type: str = "bachelor") -> str:
+    """A published guideline set for this thesis type, made once per test.
+
+    Every review a promoter runs is judged against a university's rubric,
+    ADR 0023, so a test that runs one gives its student a set first.
+    """
+    from tests.rubrics import rubric
+
+    admin = login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    listed = client.get(f"/guidelines/sets?thesis_type={thesis_type}", headers=admin)
+    for found in listed.json():
+        if found["current"] is not None:
+            return str(found["id"])
+    universities = client.get("/guidelines/universities", headers=admin).json()
+    university = (
+        universities[0]
+        if universities
+        else client.post(
+            "/guidelines/admin/universities",
+            json={"name": "Uniwersytet Testowy", "short_name": "UT"},
+            headers=admin,
+        ).json()
+    )
+    created = client.post(
+        "/guidelines/admin/sets",
+        json={
+            "university_id": university["id"],
+            "thesis_type": thesis_type,
+            "name": f"Wytyczne {thesis_type}",
+        },
+        headers=admin,
+    ).json()
+    draft = client.post(
+        f"/guidelines/admin/sets/{created['id']}/versions",
+        json={"rubric_md": rubric()},
+        headers=admin,
+    ).json()
+    resp = client.post(
+        f"/guidelines/admin/versions/{draft['id']}/publish", headers=admin
+    )
+    assert resp.status_code == 200, resp.text
+    return str(created["id"])

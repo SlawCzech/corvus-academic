@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SWRConfig } from "swr"
@@ -96,6 +96,44 @@ describe("guideline catalog UI", () => {
     )
   })
 
+  it("shows a rubric by section, with what reads each and Corvus's weights apart", async () => {
+    const rubric = [
+      "# Wymogi",
+      "> Źródło: zarządzenie.",
+      "## Elementy pracy",
+      "### Wstęp",
+      "- cel pracy i",
+      "  pytania badawcze",
+      "## Wymogi formalne",
+      "- objętość **sugerowana**",
+      "## Co praca ma wykazać",
+      "- logiczny tok wywodu",
+      "## Waga uchybień",
+      "### CRITICAL",
+      "- brak wstępu",
+    ].join("\n")
+    fetchMock.mockImplementation((url: string) =>
+      Promise.resolve(
+        url.includes("/sets/")
+          ? json({ ...SET, versions: [VERSION] })
+          : json({ ...VERSION, rubric_md: rubric }),
+      ),
+    )
+
+    withSWR(<GuidelineVersionView versionId="v2" />)
+
+    const elements = await screen.findByTestId("rubric-elements")
+    expect(within(elements).getByRole("heading", { name: "Wstęp" })).toBeInTheDocument()
+    expect(within(elements).getByText("cel pracy i pytania badawcze")).toBeInTheDocument()
+    expect(within(elements).getByText(/Czyta: recenzja/)).toBeInTheDocument()
+    expect(screen.getByText("sugerowana").tagName).toBe("STRONG")
+    expect(within(screen.getByTestId("rubric-severity")).getByText("Jak Corvus waży uchybienia"))
+      .toBeInTheDocument()
+    expect(screen.getByText("Źródło: zarządzenie.")).toBeInTheDocument()
+    expect(screen.queryByText("Wymogi")).not.toBeInTheDocument()
+    expect(screen.queryByText(/##/)).not.toBeInTheDocument()
+  })
+
   it("offers only sets with a version in force, and saves the choice", async () => {
     const draftOnly = { ...SET, id: "set2", name: "Szkic", current: null }
     fetchMock.mockImplementation((url: string, init?: RequestInit) =>
@@ -120,14 +158,15 @@ describe("guideline catalog UI", () => {
     expect(JSON.parse(patch![1].body as string)).toEqual({ guideline_set_id: "set1" })
   })
 
-  it("warns that the built-in requirements are not the university's", async () => {
+  it("asks for a university's set when none is chosen, and offers no default", async () => {
     fetchMock.mockImplementation(() => Promise.resolve(json([SET])))
 
     withSWR(<GuidelinePicker student={STUDENT} onChange={vi.fn()} />)
 
-    expect(await screen.findByTestId("default-guidelines")).toHaveTextContent(
-      "nie wytyczne Twojej uczelni",
+    expect(await screen.findByTestId("missing-guidelines")).toHaveTextContent(
+      "Corvus nie ma własnych wymogów",
     )
+    expect(screen.queryByRole("option", { name: /Domyślne/ })).not.toBeInTheDocument()
   })
 
   it("does not warn once a university's set is chosen", async () => {
@@ -138,7 +177,7 @@ describe("guideline catalog UI", () => {
     )
 
     expect(await screen.findByText(/według wersji 2/)).toBeInTheDocument()
-    expect(screen.queryByTestId("default-guidelines")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("missing-guidelines")).not.toBeInTheDocument()
   })
 
   it("saves the draft's thresholds as numbers, empty ones as null, then publishes", async () => {

@@ -28,6 +28,7 @@ from tests.test_mentoring.conftest import (
     OTHER_PROMOTOR_PASSWORD,
     PROMOTOR_EMAIL,
     PROMOTOR_PASSWORD,
+    guideline_set,
     login,
 )
 from tests.test_mentoring.fakes import FakeAgentClient, docx_bytes
@@ -60,7 +61,13 @@ def _create(
 ) -> Any:  # noqa: ANN401
     return client.post(
         "/reviews",
-        data={**_FIELDS, **fields},
+        data={
+            **_FIELDS,
+            "guideline_set_id": guideline_set(
+                client, fields.get("thesis_type", _FIELDS["thesis_type"])
+            ),
+            **fields,
+        },
         files={"file": ("praca.docx", docx_bytes("Rozdział 1: Wstęp."), _DOCX_TYPE)},
         headers=headers,
     )

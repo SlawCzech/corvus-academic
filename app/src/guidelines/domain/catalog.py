@@ -14,6 +14,8 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
+from src.guidelines.domain.rubric import parse_rubric
+
 
 class ThesisType(StrEnum):
     """Kind of thesis a guideline set applies to.
@@ -182,6 +184,7 @@ class GuidelineVersion:
         self._require_draft()
         if not self.rubric_md.strip():
             raise ValueError("A version cannot be published without a rubric")
+        parse_rubric(self.rubric_md)
         self.status = VersionStatus.PUBLISHED
         self.published_by = by
         self.published_at = at or datetime.now(UTC)

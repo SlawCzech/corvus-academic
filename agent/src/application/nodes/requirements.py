@@ -6,6 +6,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from src.application.excerpt import render_document_block
 from src.application.prompts.scopes import scope_instruction
 from src.application.replies import FINDINGS
+from src.application.rubric import REQUIREMENTS_SECTIONS, render_guidelines
 from src.application.structured import invoke_structured
 from src.application.thresholds import render_threshold_block
 from src.domain.analysis import Finding, FindingSeverity, FindingSource
@@ -69,7 +70,8 @@ def check_requirements(state: ActionState) -> AnalysisUpdate:
         ctx = state["context"]
         llm = get_llm()
         blocks = (
-            f"University requirements:\n{ctx.get('guidelines', '')}",
+            "University requirements:\n"
+            + render_guidelines(ctx, REQUIREMENTS_SECTIONS),
             render_threshold_block(ctx),
             render_document_block(ctx),
         )

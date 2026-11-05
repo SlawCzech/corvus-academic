@@ -7,6 +7,7 @@ from src.application.brief import render_brief
 from src.application.excerpt import render_document_block
 from src.application.prompts import methodology as prompts
 from src.application.replies import FINDINGS
+from src.application.rubric import METHODOLOGY_SECTIONS, render_guidelines
 from src.application.structured import invoke_structured
 from src.domain.analysis import Finding, FindingSeverity, FindingSource
 from src.infrastructure.llm_factory import get_llm
@@ -30,7 +31,8 @@ def analyze_methodology(state: ActionState) -> AnalysisUpdate:
             HumanMessage(
                 content=(
                     f"{render_brief(ctx)}\n\n{document}\n\n"
-                    f"Guidelines:\n{ctx.get('guidelines', '')}"
+                    f"Guidelines:\n"
+                    f"{render_guidelines(ctx, METHODOLOGY_SECTIONS)}"
                 )
             ),
         ]

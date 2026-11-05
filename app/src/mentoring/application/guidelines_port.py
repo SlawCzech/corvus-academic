@@ -18,6 +18,13 @@ class GuidelineRubric:
     rubric_md: str
     thresholds: dict[str, Any] = field(default_factory=dict[str, Any])
     """The numeric requirements, as they travel to `agent`."""
+    sections: dict[str, str] | None = None
+    """The rubric's four sections by key, None for a version published
+    before rubrics had them — that one travels whole."""
+
+    def for_agent(self) -> str | dict[str, str]:
+        """The rubric as `agent` takes it: by section, or the whole text."""
+        return self.sections if self.sections is not None else self.rubric_md
 
 
 class GuidelineSource(Protocol):

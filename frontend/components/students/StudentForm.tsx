@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import GuidelineSetSelect from "@/components/guidelines/GuidelineSetSelect"
 import { createStudent, updateStudent } from "@/lib/api.client"
 import type { Student, ThesisType } from "@/lib/api.types"
 
@@ -28,11 +29,15 @@ export default function StudentForm({ student, onSaved, onCancel }: StudentFormP
   const [thesisType, setThesisType] = useState<ThesisType>(student?.thesis_type ?? "bachelor")
   const [researchArea, setResearchArea] = useState(student?.research_area ?? "")
   const [researchAim, setResearchAim] = useState(student?.research_aim ?? "")
+  const [guidelineSetId, setGuidelineSetId] = useState(student?.guideline_set_id ?? "")
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  const dropsGuidelines =
-    editing && student.guideline_set_id !== null && thesisType !== student.thesis_type
+  // A set is for one kind of thesis: a new kind needs a new set.
+  function chooseThesisType(next: ThesisType): void {
+    setThesisType(next)
+    setGuidelineSetId(next === student?.thesis_type ? (student.guideline_set_id ?? "") : "")
+  }
 
   async function submit(event: React.FormEvent): Promise<void> {
     event.preventDefault()
@@ -45,6 +50,7 @@ export default function StudentForm({ student, onSaved, onCancel }: StudentFormP
       index_number: indexNumber.trim() || null,
       research_area: researchArea.trim() || null,
       research_aim: researchAim.trim() || null,
+      guideline_set_id: guidelineSetId,
     }
     try {
       if (editing) {
@@ -56,6 +62,7 @@ export default function StudentForm({ student, onSaved, onCancel }: StudentFormP
         setIndexNumber("")
         setResearchArea("")
         setResearchAim("")
+        setGuidelineSetId("")
         onSaved(created)
       }
     } catch (err) {
@@ -105,7 +112,7 @@ export default function StudentForm({ student, onSaved, onCancel }: StudentFormP
           <span className="mb-1 block text-[12px] text-muted">Typ pracy</span>
           <select
             value={thesisType}
-            onChange={(e) => setThesisType(e.target.value as ThesisType)}
+            onChange={(e) => chooseThesisType(e.target.value as ThesisType)}
             className={inputClass}
           >
             {THESIS_TYPES.map(({ value, label }) => (
@@ -114,6 +121,15 @@ export default function StudentForm({ student, onSaved, onCancel }: StudentFormP
               </option>
             ))}
           </select>
+        </label>
+        <label className="block sm:col-span-2">
+          <span className="mb-1 block text-[12px] text-muted">Wytyczne uczelni</span>
+          <GuidelineSetSelect
+            thesisType={thesisType}
+            value={guidelineSetId}
+            onChange={setGuidelineSetId}
+            className={inputClass}
+          />
         </label>
         <label className="block sm:col-span-2">
           <span className="mb-1 block text-[12px] text-muted">
@@ -144,12 +160,6 @@ export default function StudentForm({ student, onSaved, onCancel }: StudentFormP
           </span>
         </label>
       </div>
-
-      {dropsGuidelines && (
-        <p className="mt-3 text-[12.5px] text-major-text">
-          Zmiana typu pracy wyczyści wybrany zestaw wytycznych — był dla poprzedniego typu.
-        </p>
-      )}
 
       {error && (
         <p data-testid="student-form-error" className="mt-3 text-[13px] text-critical-text">

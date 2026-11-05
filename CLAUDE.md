@@ -78,7 +78,8 @@ Użytkownik
       ├─ /students/*   — roster + notatki ze spotkań, in-process
       ├─ /students/{id}/actions — akcje AI: kontekst składany w `app`,
       │                  wysyłka do agent POST /actions, polling, akceptacja;
-      │                  rubryka wybranego zestawu wytycznych jedzie w kontekście
+      │                  rubryka wybranego zestawu jedzie w kontekście w czterech
+      │                  sekcjach, bez zestawu recenzje to 409 (ADR 0023)
       ├─ /students/{id}/drafts — upload wersji pracy (plik + tekst), pobranie,
       │                  akceptacja wersji finalnej, retencja (ADR 0006)
       ├─ /students/{id}/fragments, /parts, /timeline — fragmenty pracy w rundach,
@@ -527,6 +528,12 @@ Każda akcja idzie na klucz promotora: serwis nie ma własnego modelu, akcja bez
 dostawcy to 409, a lista modeli admina, `LOCAL_MODELS_ENABLED` i parametr `model`
 zniknęły. Węzły czytają całą pracę, a evale chodzą na `claude` albo `openai` —
 [ADR 0022](docs/adr/0022-every-action-runs-on-a-providers-key.md).
+Domyślnych wymogów nie ma: recenzja, recenzja próbna i ocena metodologii bez zestawu
+wytycznych to 409, a zestaw wybiera się w formularzu studenta i jednorazówki. Rubryka ma
+cztery sekcje (`## Elementy pracy`, `Wymogi formalne`, `Co praca ma wykazać`, `Waga
+uchybień`), bez nich wersja się nie opublikuje; każdy węzeł dostaje tylko swoje, a liczby
+są wyłącznie w progach —
+[ADR 0023](docs/adr/0023-a-rubric-in-four-sections-and-no-default.md).
 
 ---
 

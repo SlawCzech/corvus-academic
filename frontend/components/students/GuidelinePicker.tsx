@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useState } from "react"
 import useSWR from "swr"
+import GuidelineSetSelect from "@/components/guidelines/GuidelineSetSelect"
 import { fetcher, updateStudent } from "@/lib/api.client"
 import type { GuidelineSet, Student } from "@/lib/api.types"
 
@@ -14,8 +15,10 @@ interface Props {
 /**
  * Which university requirements this thesis is judged against.
  *
- * Only sets for the student's own kind of thesis are offered. With none
- * chosen, the review falls back to the agent's built-in requirements.
+ * Only sets for the student's own kind of thesis are offered. There is no
+ * built-in fallback (ADR 0023): a student without a set — one added before
+ * sets were required, or whose thesis type changed — gets a review only
+ * once a set is chosen here.
  */
 export default function GuidelinePicker({ student, onChange }: Props) {
   const { data: sets } = useSWR<GuidelineSet[]>(
@@ -25,14 +28,16 @@ export default function GuidelinePicker({ student, onChange }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  const available = (sets ?? []).filter((s) => s.current !== null)
-  const chosen = available.find((s) => s.id === student.guideline_set_id)
+  const chosen = (Array.isArray(sets) ? sets : []).find(
+    (s) => s.id === student.guideline_set_id && s.current !== null,
+  )
 
   async function choose(setId: string): Promise<void> {
+    if (!setId) return
     setSaving(true)
     setError(null)
     try {
-      onChange(await updateStudent(student.id, { guideline_set_id: setId || null }))
+      onChange(await updateStudent(student.id, { guideline_set_id: setId }))
     } catch (err) {
       setError(err instanceof Error ? err.message : "Nie udało się zapisać wyboru")
     } finally {
@@ -45,24 +50,17 @@ export default function GuidelinePicker({ student, onChange }: Props) {
       <h3 className="mb-3 text-[11.5px] font-semibold uppercase tracking-wide text-muted">
         Wytyczne uczelni
       </h3>
-      <select
-        aria-label="Zestaw wytycznych"
+      <GuidelineSetSelect
+        thesisType={student.thesis_type}
         value={student.guideline_set_id ?? ""}
-        disabled={saving || sets === undefined}
-        onChange={(e) => void choose(e.target.value)}
+        onChange={(setId) => void choose(setId)}
+        disabled={saving}
         className="w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[13.5px] text-foreground focus:border-accent focus:outline-none"
-      >
-        <option value="">Domyślne wymogi Corvusa</option>
-        {available.map((s) => (
-          <option key={s.id} value={s.id}>
-            {s.university.short_name} — {s.name}
-          </option>
-        ))}
-      </select>
+      />
       {!student.guideline_set_id && (
-        <p data-testid="default-guidelines" className="mt-2.5 text-[12.5px] text-major-text">
-          Uwaga: to ogólne wymogi wbudowane w Corvusa, nie wytyczne Twojej uczelni. Recenzja i
-          ocena metodologii nie sprawdzą zgodności z regulaminem uczelni.
+        <p data-testid="missing-guidelines" className="mt-2.5 text-[12.5px] text-major-text">
+          Wybierz wytyczne uczelni. Bez nich recenzja i ocena metodologii się nie
+          uruchomią: Corvus nie ma własnych wymogów.
         </p>
       )}
       {chosen?.current && (

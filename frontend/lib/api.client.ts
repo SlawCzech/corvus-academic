@@ -87,6 +87,8 @@ export interface NewStudent {
   index_number?: string | null
   research_area?: string | null
   research_aim?: string | null
+  /** Required in the form: every thesis is judged by a university's rules. */
+  guideline_set_id?: string
 }
 
 export async function createStudent(student: NewStudent): Promise<Student> {
@@ -164,6 +166,7 @@ export interface NewReview {
   current_topic?: string
   research_area?: string
   research_aim?: string
+  guideline_set_id: string
 }
 
 export async function createReview(review: NewReview, file: File): Promise<Review> {

@@ -525,7 +525,7 @@ class ActionService:
                         student,
                         latest[0] if latest else None,
                         detail,
-                        guidelines=rubric.rubric_md if rubric else None,
+                        guidelines=rubric.for_agent() if rubric else None,
                     ),
                     base_ref | self._draft_ref(latest[:1]) | self._rubric_ref(rubric),
                 )
@@ -550,7 +550,7 @@ class ActionService:
                         latest[0] if latest else None,
                         detail,
                         review_tone,
-                        guidelines=rubric.rubric_md if rubric else None,
+                        guidelines=rubric.for_agent() if rubric else None,
                         thresholds=rubric.thresholds if rubric else None,
                     ),
                     base_ref | self._draft_ref(latest[:1]) | self._rubric_ref(rubric),

@@ -406,46 +406,27 @@ def test_result_payload_keeps_which_analysis_raised_each_finding() -> None:
 # ---------- guidelines ----------
 
 
-def test_review_actions_get_the_university_requirements() -> None:
-    """Guideline text is agent-owned static data, not something `app` ships."""
+def test_the_rubric_from_app_reaches_the_graph_untouched() -> None:
+    """The agent has no requirements of its own to add, ADR 0023."""
     graph = _mock_graph()
+    sections = {"elements": "a", "formal": "b", "merit": "c", "severity": "d"}
 
-    with (
-        patch("src.application.tasks.build_action_graph", return_value=graph),
-        patch(
-            "src.application.tasks.load_guidelines",
-            return_value=_GUIDELINES,
-        ) as load,
-    ):
+    with patch("src.application.tasks.build_action_graph", return_value=graph):
         run_action.apply(
             args=(
                 ACTION_ID,
                 ActionType.EVALUATE_METHODOLOGY,
                 STUDENT_ID,
-                {"text": _TEXT, "thesis_type": "master_article"},
+                {
+                    "text": _TEXT,
+                    "thesis_type": "master_article",
+                    "guidelines": sections,
+                },
             )
         )
 
-    load.assert_called_once_with("master_article")
     call_state: dict[str, Any] = graph.invoke.call_args[0][0]
-    assert call_state["context"]["guidelines"] == _GUIDELINES
-
-
-def test_other_actions_are_not_given_guidelines() -> None:
-    """Proposing a topic has nothing to check against the requirements."""
-    graph = _mock_graph()
-
-    with (
-        patch("src.application.tasks.build_action_graph", return_value=graph),
-        patch("src.application.tasks.load_guidelines") as load,
-    ):
-        run_action.apply(
-            args=(ACTION_ID, ActionType.PROPOSE_TOPIC, STUDENT_ID, {"detail": "x"})
-        )
-
-    load.assert_not_called()
-    call_state: dict[str, Any] = graph.invoke.call_args[0][0]
-    assert "guidelines" not in call_state["context"]
+    assert call_state["context"]["guidelines"] == sections
 
 
 # ---------- the user's own key ----------

@@ -3,6 +3,7 @@
 from uuid import UUID
 
 from src.guidelines.application.catalog import GuidelineCatalog
+from src.guidelines.domain.rubric import RubricShapeError, parse_rubric
 from src.mentoring.application.guidelines_port import GuidelineRubric
 
 
@@ -22,10 +23,16 @@ class CatalogGuidelineSource:
         version = await self._catalog.current_version(set_id)
         if version is None:
             return None
+        try:
+            sections: dict[str, str] | None = parse_rubric(version.rubric_md).to_dict()
+        except RubricShapeError:
+            # Published before rubrics had sections: it still judges, whole.
+            sections = None
         return GuidelineRubric(
             version_id=version.id,
             rubric_md=version.rubric_md,
             thresholds=version.thresholds.to_dict(),
+            sections=sections,
         )
 
     async def first_set_for(self, thesis_type: str) -> UUID | None:

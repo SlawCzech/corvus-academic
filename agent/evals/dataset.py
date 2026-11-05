@@ -23,22 +23,29 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
-from src.application.guidelines import load_guidelines
 from src.domain.analysis import FindingSeverity
 
 CASES_DIR = Path(__file__).parent / "cases"
 
-# The length rule of the real documents, and what it becomes for a condensed
-# thesis. Replaced verbatim, so a change to the document fails loudly (see
-# `condensed_guidelines`) instead of silently judging 8 kB against 80.
-_LENGTH_RULES = {
-    "80,000 – 130,000 characters": "5,000 – 20,000 characters",
-    "Length significantly below 80,000 characters": (
-        "Length significantly below 5,000 characters"
-    ),
+# The rubrics `app` seeds into the catalog — the same files, so an eval judges
+# against what a promoter's student is judged against. Evals run from a
+# checkout of the whole repository (`make eval`), where they sit side by side.
+_RUBRICS_DIR = (
+    Path(__file__).resolve().parents[2] / "app" / "scripts" / "seed_data" / "guidelines"
+)
+
+# Their `## ` headings and the keys `app` sends each section under
+# (`app/src/guidelines/domain/rubric.py`).
+_SECTION_KEYS = {
+    "Elementy pracy": "elements",
+    "Wymogi formalne": "formal",
+    "Co praca ma wykazać": "merit",
+    "Waga uchybień": "severity",
 }
 
-# The bachelor thresholds `app` seeds, with the length scaled the same way.
+# The thresholds `app` seeds for a bachelor thesis, with the length scaled to
+# a condensed case. The rubric names no numbers, so the thresholds are all
+# there is to scale.
 _CONDENSED_THRESHOLDS = {
     "min_sources": 25,
     "min_foreign_sources": 4,
@@ -76,15 +83,15 @@ class EvalCase:
     def context(self) -> dict[str, Any]:
         """The action context `app` would assemble for this thesis.
 
-        ``guidelines`` is filled in here, condensed to the case's length, so
-        the task does not load the full requirements file over it.
+        ``guidelines`` is the seeded rubric, by section, as `app` sends it;
+        ``thresholds`` carry the length scaled to the condensed case.
         """
         context: dict[str, Any] = {
             "text": self.text,
             "metadata": self.metadata,
             "thesis_type": self.thesis_type,
             "review_tone": self.metadata.get("review_tone", "auto"),
-            "guidelines": condensed_guidelines(self.thesis_type),
+            "guidelines": rubric_sections(self.thesis_type),
             "thresholds": _CONDENSED_THRESHOLDS,
         }
         if self.document_map is not None:
@@ -92,18 +99,18 @@ class EvalCase:
         return context
 
 
-def condensed_guidelines(thesis_type: str) -> str:
-    """The real requirements, with the length rule scaled to a condensed thesis."""
-    text = load_guidelines(thesis_type)
-    for original, condensed in _LENGTH_RULES.items():
-        if original in text:
-            text = text.replace(original, condensed)
-    if "80,000" in text:
-        raise ValueError(
-            f"The {thesis_type} requirements mention 80,000 characters in a "
-            "rule this eval does not know how to scale — update _LENGTH_RULES."
-        )
-    return text
+def rubric_sections(thesis_type: str) -> dict[str, str]:
+    """The seeded rubric for a thesis type, split as `app` sends it."""
+    text = (_RUBRICS_DIR / f"{thesis_type}.md").read_text("utf-8")
+    sections: dict[str, list[str]] = {}
+    current: str | None = None
+    for line in text.splitlines():
+        if line.startswith("## "):
+            current = _SECTION_KEYS[line[3:].strip()]
+            sections[current] = []
+        elif current is not None:
+            sections[current].append(line)
+    return {key: "\n".join(lines).strip() for key, lines in sections.items()}
 
 
 def load_case(directory: Path) -> EvalCase:

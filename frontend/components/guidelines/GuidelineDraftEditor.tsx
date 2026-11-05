@@ -10,6 +10,7 @@ import {
 } from "@/lib/api.client"
 import type { GuidelineVersion, Thresholds } from "@/lib/api.types"
 import { THRESHOLD_FIELDS } from "@/components/guidelines/format"
+import { RUBRIC_SECTIONS } from "@/components/guidelines/rubric"
 
 const INPUT =
   "w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[13.5px] text-foreground focus:border-accent focus:outline-none"
@@ -93,6 +94,11 @@ export default function GuidelineDraftEditor({ versionId, onDone }: Props) {
       <label className="mb-1 block text-[12.5px] font-medium text-muted-strong" htmlFor="rubric">
         Rubryka dla modelu (markdown)
       </label>
+      <p className="mb-1.5 text-[12px] text-muted">
+        Dokładnie cztery sekcje, każda raz:{" "}
+        {RUBRIC_SECTIONS.map((s) => `„## ${s.heading}”`).join(", ")}. Bez liczb — te
+        idą w progi niżej. Wersja bez tych sekcji się nie opublikuje.
+      </p>
       <textarea
         id="rubric"
         value={form.rubric}

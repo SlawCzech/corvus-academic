@@ -56,6 +56,7 @@ class ReviewService:
         topic: str | None = None,
         research_area: str | None = None,
         research_aim: str | None = None,
+        guideline_set_id: UUID | None = None,
     ) -> ReviewView:
         """Store a one-off review and its thesis, both or neither.
 
@@ -74,6 +75,7 @@ class ReviewService:
             topic=topic,
             research_area=research_area,
             research_aim=research_aim,
+            guideline_set_id=guideline_set_id,
         )
         try:
             draft = await self._drafts.upload(

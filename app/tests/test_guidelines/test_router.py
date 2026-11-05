@@ -5,6 +5,7 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
+from tests.rubrics import rubric
 from tests.test_mentoring.conftest import (
     ADMIN_EMAIL,
     ADMIN_PASSWORD,
@@ -67,9 +68,9 @@ def test_admin_publishes_and_the_previous_version_is_superseded(
 ) -> None:
     admin = _admin(client)
     guideline_set = _set(client, admin)
-    first = _published(client, admin, guideline_set["id"], "## v1")
+    first = _published(client, admin, guideline_set["id"], rubric("v1"))
 
-    second = _published(client, admin, guideline_set["id"], "## v2")
+    second = _published(client, admin, guideline_set["id"], rubric("v2"))
 
     assert second["version_no"] == 2 and second["status"] == "published"
     history = client.get(f"/guidelines/sets/{guideline_set['id']}", headers=admin)
@@ -80,14 +81,14 @@ def test_admin_publishes_and_the_previous_version_is_superseded(
 def test_a_new_draft_starts_from_the_version_in_force(client: TestClient) -> None:
     admin = _admin(client)
     guideline_set = _set(client, admin)
-    _published(client, admin, guideline_set["id"], "## Wymogi v1")
+    _published(client, admin, guideline_set["id"], rubric("Wymogi v1"))
 
     draft = client.post(
         f"/guidelines/admin/sets/{guideline_set['id']}/versions", json={}, headers=admin
     ).json()
 
     assert draft["status"] == "draft"
-    assert draft["rubric_md"] == "## Wymogi v1"
+    assert draft["rubric_md"] == rubric("Wymogi v1")
     assert draft["thresholds"]["min_sources"] == 25
 
 
@@ -103,7 +104,7 @@ def test_a_second_draft_of_the_same_set_is_a_conflict(client: TestClient) -> Non
 def test_a_published_version_cannot_be_edited(client: TestClient) -> None:
     admin = _admin(client)
     guideline_set = _set(client, admin)
-    published = _published(client, admin, guideline_set["id"], "## v1")
+    published = _published(client, admin, guideline_set["id"], rubric("v1"))
 
     resp = client.patch(
         f"/guidelines/admin/versions/{published['id']}",
@@ -117,7 +118,7 @@ def test_a_published_version_cannot_be_edited(client: TestClient) -> None:
 def test_promotor_reads_the_catalog_but_never_a_draft(client: TestClient) -> None:
     admin = _admin(client)
     guideline_set = _set(client, admin)
-    published = _published(client, admin, guideline_set["id"], "## v1")
+    published = _published(client, admin, guideline_set["id"], rubric("v1"))
     draft = client.post(
         f"/guidelines/admin/sets/{guideline_set['id']}/versions", json={}, headers=admin
     ).json()
@@ -128,7 +129,7 @@ def test_promotor_reads_the_catalog_but_never_a_draft(client: TestClient) -> Non
     assert sets[0]["has_draft"] is False
     assert sets[0]["university"]["short_name"] == "UE Katowice"
     detail = client.get(f"/guidelines/versions/{published['id']}", headers=promotor)
-    assert detail.json()["rubric_md"] == "## v1"
+    assert detail.json()["rubric_md"] == rubric("v1")
     assert (
         client.get(f"/guidelines/versions/{draft['id']}", headers=promotor).status_code
         == 404
@@ -169,7 +170,7 @@ def test_the_original_regulation_is_stored_and_downloadable(
     guideline_set = _set(client, admin)
     draft = client.post(
         f"/guidelines/admin/sets/{guideline_set['id']}/versions",
-        json={"rubric_md": "## v1"},
+        json={"rubric_md": rubric("v1")},
         headers=admin,
     ).json()
     original = docx_bytes("Zarządzenie nr 117/22")
@@ -197,7 +198,7 @@ def test_a_source_that_is_not_pdf_or_docx_is_rejected(client: TestClient) -> Non
     guideline_set = _set(client, admin)
     draft = client.post(
         f"/guidelines/admin/sets/{guideline_set['id']}/versions",
-        json={"rubric_md": "## v1"},
+        json={"rubric_md": rubric("v1")},
         headers=admin,
     ).json()
 
@@ -224,7 +225,7 @@ def test_promotor_picks_a_guideline_set_for_a_student(client: TestClient) -> Non
     """End to end through both contexts: the catalog's set, mentoring's student."""
     admin = _admin(client)
     guideline_set = _set(client, admin)
-    _published(client, admin, guideline_set["id"], "## v1")
+    _published(client, admin, guideline_set["id"], rubric("v1"))
     promotor = _promotor(client)
     student = client.post(
         "/students",
@@ -251,7 +252,39 @@ def test_promotor_picks_a_guideline_set_for_a_student(client: TestClient) -> Non
     assert chosen.status_code == 200, chosen.text
     assert chosen.json()["guideline_set_id"] == guideline_set["id"]
     assert kept.json()["guideline_set_id"] == guideline_set["id"]
-    assert cleared.json()["guideline_set_id"] is None
+    # Changed, never removed: there are no built-in requirements, ADR 0023.
+    assert cleared.status_code == 422
+
+
+def test_a_student_can_be_added_with_a_guideline_set(client: TestClient) -> None:
+    admin = _admin(client)
+    guideline_set = _set(client, admin)
+    _published(client, admin, guideline_set["id"], rubric("v1"))
+    promotor = _promotor(client)
+    body = {"full_name": "Jan", "field_of_study": "Ekonomia"}
+
+    added = client.post(
+        "/students",
+        json={
+            **body,
+            "thesis_type": "bachelor",
+            "guideline_set_id": guideline_set["id"],
+        },
+        headers=promotor,
+    )
+    mismatched = client.post(
+        "/students",
+        json={
+            **body,
+            "thesis_type": "master_article",
+            "guideline_set_id": guideline_set["id"],
+        },
+        headers=promotor,
+    )
+
+    assert added.status_code == 201, added.text
+    assert added.json()["guideline_set_id"] == guideline_set["id"]
+    assert mismatched.status_code == 422
 
 
 def test_a_set_for_another_thesis_type_is_refused_for_a_student(
@@ -259,7 +292,7 @@ def test_a_set_for_another_thesis_type_is_refused_for_a_student(
 ) -> None:
     admin = _admin(client)
     guideline_set = _set(client, admin)
-    _published(client, admin, guideline_set["id"], "## v1")
+    _published(client, admin, guideline_set["id"], rubric("v1"))
     promotor = _promotor(client)
     student = client.post(
         "/students",
@@ -278,3 +311,20 @@ def test_a_set_for_another_thesis_type_is_refused_for_a_student(
     )
 
     assert resp.status_code == 422
+
+
+def test_a_rubric_without_its_sections_does_not_publish(client: TestClient) -> None:
+    admin = _admin(client)
+    guideline_set = _set(client, admin)
+    draft = client.post(
+        f"/guidelines/admin/sets/{guideline_set['id']}/versions",
+        json={"rubric_md": "## 1. Struktura\nWstęp."},
+        headers=admin,
+    ).json()
+
+    resp = client.post(
+        f"/guidelines/admin/versions/{draft['id']}/publish", headers=admin
+    )
+
+    assert resp.status_code == 422
+    assert "Unknown rubric section '1. Struktura'" in resp.json()["detail"]

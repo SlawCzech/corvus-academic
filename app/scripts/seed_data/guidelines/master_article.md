@@ -2,171 +2,160 @@
 
 > Źródło: Zarządzenie Nr 117/22, załącznik Nr 2 — „Wymogi formalne dla prac
 > dyplomowych na studiach stacjonarnych i niestacjonarnych drugiego stopnia”.
-> Dotyczy: prac magisterskich o charakterze teoretycznym lub empirycznym,
-> które przyjmują formę artykułu naukowego (§ 3).
-> Nie dotyczy: prac projektowych (§ 4) — mają inną strukturę i objętość
-> 110 000 – 170 000 znaków.
-> Sekcje 1–3 streszczają zarządzenie (w nawiasach paragraf). Sekcja 4 to
-> interpretacja Corvusa — zarządzenie jej nie zawiera.
+> Dotyczy prac magisterskich teoretycznych lub empirycznych, które przyjmują
+> formę artykułu naukowego (§ 3). Nie dotyczy prac projektowych (§ 4), które
+> mają inną strukturę i objętość. W nawiasach paragraf zarządzenia.
 
----
+## Elementy pracy
 
-## 1. Wymagane elementy pracy (§ 3)
+Praca w formie artykułu zawiera wszystkie poniższe elementy (§ 3 ust. 3).
 
-Praca MUSI zawierać wszystkie poniższe elementy:
+### Strona tytułowa
+### Oświadczenie o samodzielności przygotowania pracy
+### Spis treści
 
-### 1.1 Strona tytułowa
-### 1.2 Oświadczenie o samodzielności przygotowania pracy
-### 1.3 Spis treści
+### Abstrakt
+- cel pracy, zastosowane metody badawcze, wyniki i konkluzje
+- najwyżej 150 słów
 
-### 1.4 Abstrakt — ELEMENT KRYTYCZNY
-- [ ] cel pracy
-- [ ] zastosowane metody badawcze
-- [ ] wyniki
-- [ ] konkluzje
-- [ ] **maksymalnie 150 słów**
+### Słowa kluczowe
+- od 3 do 5 słów kluczowych
 
-### 1.5 Słowa kluczowe — ELEMENT KRYTYCZNY
-- [ ] od 3 do 5 słów kluczowych
+### Wstęp
+- określenie problemu badawczego (teoretycznego i/lub empirycznego)
+- uzasadnienie jego znaczenia i aktualności
+- cele pracy
+- pytanie lub pytania badawcze i/lub hipoteza lub hipotezy badawcze —
+  wystarczy jedno z dwojga
+- zakres pracy: podmiotowy, przedmiotowy, czasowy, przestrzenny
+- opis zastosowanych metod, technik i narzędzi badawczych
+- opis struktury pracy
+- charakterystyka literatury nie jest tu wymagana — należy do przeglądu
+  literatury
 
-### 1.6 Wstęp — ELEMENT KRYTYCZNY
-Musi zawierać wszystkie poniższe elementy:
-- [ ] określenie problemu badawczego (teoretycznego i/lub empirycznego)
-- [ ] uzasadnienie jego znaczenia i aktualności
-- [ ] cele pracy
-- [ ] pytanie/pytania badawcze i/lub hipotezę/hipotezy badawcze
-- [ ] zakres pracy: podmiotowy, przedmiotowy, czasowy, przestrzenny
-- [ ] opis zastosowanych metod, technik i narzędzi badawczych
-- [ ] opis struktury pracy
-- charakterystyka literatury należy do przeglądu literatury, nie do wstępu
-
-### 1.7 Przegląd literatury — ELEMENT KRYTYCZNY
+### Przegląd literatury
 - literatura przedmiotu dotycząca problematyki artykułu
 
-### 1.8 Metodyka badań — ELEMENT KRYTYCZNY
-- [ ] zakres podmiotowy
-- [ ] zakres przedmiotowy
-- [ ] zakres czasowy
-- [ ] zakres przestrzenny
-- [ ] zastosowane metody, narzędzia i techniki badawcze
+### Metodyka badań
+- zakres podmiotowy, przedmiotowy, czasowy i przestrzenny
+- zastosowane metody, narzędzia i techniki badawcze
 
-### 1.9 Wyniki badań — ELEMENT KRYTYCZNY
+### Wyniki badań
 
-### 1.10 Dyskusja — ELEMENT KRYTYCZNY
-- [ ] polemika z dotychczasowymi wynikami badań w podjętej problematyce
-- [ ] własne wnioski zestawione z tymi wynikami
+### Dyskusja
+- polemika z dotychczasowymi wynikami badań w podjętej problematyce
+- własne wnioski zestawione z tymi wynikami
 
-### 1.11 Wnioski — ELEMENT KRYTYCZNY
-- [ ] podsumowanie wyników badań
-- [ ] główne wnioski teoretyczne, metodyczne i empiryczne (empiryczne —
-      jeśli praca zawiera wyniki badań)
-- [ ] odniesienie do hipotezy/hipotez badawczych
-- [ ] ograniczenia badań
-- [ ] rekomendacje i zalecenia dla praktyki gospodarczej (jeśli dotyczy)
-- [ ] kierunki dalszych badań (jeśli zasadne)
+### Wnioski
+- podsumowanie wyników badań
+- główne wnioski teoretyczne, metodyczne i empiryczne (empiryczne — jeśli
+  praca zawiera wyniki badań)
+- odniesienie do pytań albo hipotez badawczych, które praca postawiła
+  (zarządzenie mówi o hipotezach; praca bez hipotez odpowiada na pytania)
+- ograniczenia badań
+- rekomendacje i zalecenia dla praktyki gospodarczej, jeśli dotyczy
+- kierunki dalszych badań, jeśli to zasadne
 
-### 1.12 Spis literatury
+### Spis literatury
 - bibliografia i netografia, zgodnie z załącznikiem Nr 4 do zarządzenia
   (styl APA)
-- uporządkowany alfabetycznie i numerowany (§ 5)
 
-### 1.13 Załączniki — wymagane w pracy empirycznej
-- zgromadzone dane empiryczne i/lub szerszy opis metodyki i innych elementów
-  dokumentujących proces badawczy, wskazanych przez promotora
+### Załączniki — wymagane w pracy empirycznej (§ 3 ust. 4–5)
+- zgromadzone dane empiryczne i/lub szerszy opis metodyki oraz innych
+  elementów dokumentujących proces badawczy, wskazanych przez promotora
 - przygotowane samodzielnie przez studenta
 - w tym samym języku co praca
 
-Nie ma wymogu opublikowania artykułu przed obroną.
+Artykułu nie trzeba publikować przed obroną (§ 3 ust. 6).
 
----
+## Wymogi formalne
 
-## 2. Wymogi formalne i techniczne (§ 5)
+Liczby — minimalną liczbę pozycji, w tym obcojęzycznych, i zakres objętości —
+podają progi tej wersji. Tu jest tylko to, jak je czytać.
 
-### 2.1 Objętość
-- **Sugerowana:** 55 000 – 65 000 znaków ze spacjami
-- do limitu nie wlicza się spisów i załączników, w tym narzędzi badawczych
+### Objętość (§ 5 ust. 5)
+- objętość jest **sugerowana**, nie wymagana
+- do objętości nie wlicza się spisów i załączników, w tym narzędzi badawczych
   (np. kwestionariuszy ankiet)
-- zarządzenie mówi o objętości „sugerowanej” — to nie jest twardy wymóg
 
-### 2.2 Literatura
-- **co najmniej 40 pozycji literaturowych**
-- **w tym co najmniej 8 pozycji literatury obcojęzycznej**
-- netografii nie wlicza się do tej liczby
+### Literatura (§ 5 ust. 7 i 9)
+- do minimalnej liczby pozycji nie wlicza się netografii
 - literatura obcojęzyczna to pozycje w języku innym niż język pracy
-- literatura musi być aktualna i dobrana tak, by umożliwiała rozwiązanie
-  problemu badawczego
 
-### 2.3 Przypisy
-- styl APA (załącznik Nr 4 do zarządzenia)
-- przypisy muszą umożliwiać identyfikację wykorzystanych źródeł (§ 6)
+### Przypisy i spis literatury (§ 5 ust. 10–11, § 6 ust. 2)
+- przypisy w stylu APA (załącznik Nr 4 do zarządzenia)
+- przypisy umożliwiają identyfikację wykorzystanych źródeł
+- spis literatury uporządkowany alfabetycznie i numerowany
 
-### 2.4 Poprawność językowa
+### Język (§ 5 ust. 4)
 - poprawność językowa, ortograficzna, gramatyczna, stylistyczna
   i interpunkcyjna
-- rażące błędy językowe i formalne mogą być podstawą odmowy weryfikacji
-  pracy przez promotora
+- rażące błędy językowe i formalne mogą być podstawą odmowy weryfikacji pracy
+  przez promotora
 
-### 2.5 Układ
-- układ pracy odpowiada elementom z sekcji 1 (§ 3)
+### Układ (§ 5 ust. 3)
+- układ pracy odpowiada elementom wymienionym wyżej
 
----
+## Co praca ma wykazać
 
-## 3. Umiejętności, które praca ma potwierdzać (§ 2)
-
-- samodzielny dobór materiałów źródłowych
-- analiza i synteza dorobku teoretycznego dyscypliny
-- diagnozowanie, formułowanie i ocena problemów w gospodarce lub badanym
+Praca jest pracą naukową i, zależnie od charakteru, potwierdza umiejętności
+(§ 2 ust. 2):
+- samodzielnego doboru materiałów źródłowych
+- analizy i syntezy dorobku teoretycznego dyscypliny
+- diagnozowania, formułowania i oceny problemów w gospodarce lub badanym
   podmiocie
-- identyfikacja i analiza zjawisk ekonomicznych
-- stosowanie warsztatu badawczego i metod pracy naukowej
-- wykorzystanie wiedzy w praktyce i formułowanie rekomendacji
-- logiczny tok wywodu
-- wyciąganie i formułowanie wniosków
-- jasny i precyzyjny język właściwy dla kierunku
+- identyfikacji i analizy zjawisk ekonomicznych oraz prawidłowości w ich
+  obrębie
+- stosowania warsztatu badawczego i metod pracy naukowej
+- wykorzystania wiedzy w praktyce i formułowania rekomendacji
+- logicznego toku wywodu
+- wyciągania i formułowania wniosków
+- jasnego i precyzyjnego języka właściwego dla kierunku
 
----
+Literatura przedmiotu jest aktualna i dobrana tak, by umożliwiała rozwiązanie
+problemu badawczego (§ 5 ust. 8).
 
-## 4. Klasyfikacja wagi uchybień
+## Waga uchybień
 
-> **Interpretacja Corvusa, nie zapis zarządzenia.** Zarządzenie nie definiuje
-> kategorii CRITICAL, MAJOR i MINOR — tak Corvus klasyfikuje to, co znajdzie.
-> Nazwy kategorii zostają po angielsku, bo tak zapisuje je system.
+Interpretacja Corvusa, nie zapis zarządzenia: zarządzenie nie dzieli uchybień
+na kategorie. Nazwy kategorii zostają po angielsku, bo tak zapisuje je system.
 
 ### CRITICAL — blokuje dopuszczenie do obrony
-- brak wymaganego elementu: abstraktu, słów kluczowych, wstępu, przeglądu
-  literatury, metodyki, wyników, dyskusji, wniosków, spisu literatury, strony
-  tytułowej albo oświadczenia
+- brak wymaganego elementu: strony tytułowej, oświadczenia, abstraktu, słów
+  kluczowych, wstępu, przeglądu literatury, metodyki, wyników, dyskusji,
+  wniosków albo spisu literatury
 - abstrakt dłuższy niż 150 słów albo bez celu, metod, wyników lub konkluzji
 - mniej niż 3 albo więcej niż 5 słów kluczowych
-- wstęp bez problemu badawczego, celów albo pytań/hipotez badawczych
-- wnioski bez odniesienia do hipotez, bez ograniczeń badań albo bez
-  podsumowania wyników
-- dyskusja nie odnosi się do dotychczasowych wyników badań
-- metodyka bez określenia zakresów albo opisu metod
-- mniej niż 40 pozycji literaturowych (bez netografii)
-- mniej niż 8 pozycji literatury obcojęzycznej
-- brak przypisów umożliwiających identyfikację źródeł (naruszenie praw
-  autorskich wyklucza dopuszczenie do obrony — § 6)
-- przypisy niezgodne ze stylem APA
+- wstęp bez problemu badawczego, bez celów albo bez pytań lub hipotez
+  badawczych
+- wnioski, które nie odnoszą się do pytań lub hipotez postawionych we wstępie,
+  nie podają ograniczeń badań albo nie podsumowują wyników
+- dyskusja, która nie odnosi się do dotychczasowych wyników badań
+- metodyka bez określenia zakresów albo bez opisu metod
+- liczba pozycji literaturowych (bez netografii) poniżej progu
+- liczba pozycji obcojęzycznych poniżej progu
+- brak przypisów umożliwiających identyfikację źródeł (praca naruszająca
+  prawa autorskie nie może być dopuszczona do obrony — § 6 ust. 4)
 - praca empiryczna bez załączników z danymi
 
-### MAJOR — istotne uchybienie do poprawy
-- abstrakt niekompletny (brak jednego wymaganego elementu)
-- wstęp niekompletny
-- wnioski niekompletne
-- przegląd literatury nie odnosi się do istotnego dorobku
+### MAJOR — istotne uchybienie
+- abstrakt bez jednego z wymaganych elementów
+- wstęp bez jednego lub kilku pozostałych wymaganych elementów
+- wnioski bez wniosków teoretycznych, metodycznych lub empirycznych
+- przegląd literatury, który pomija istotny dorobek
 - dyskusja bez wyraźnej polemiki z dotychczasowymi badaniami
-- literatura na granicy minimum (40–45 pozycji) wątpliwej jakości
-- literatura obcojęzyczna na granicy minimum (8–10 pozycji) o wątpliwym
-  związku z tematem
-- objętość wyraźnie poza sugerowanym zakresem 55 000 – 65 000 znaków
+- liczba pozycji albo pozycji obcojęzycznych niewiele ponad progiem, przy
+  wątpliwej jakości albo wątpliwym związku z tematem
+- przypisy albo spis literatury systematycznie niezgodne ze stylem APA
+- objętość wyraźnie poza sugerowanym zakresem
 - poważne błędy językowe
 - niepełne określenie zakresu badań w metodyce
 - załączniki pracy empirycznej niekompletne albo nieprzygotowane samodzielnie
 
-### MINOR — zalecana poprawa
+### MINOR — drobne uchybienie
 - drobne błędy językowe lub stylistyczne
-- niespójności w formatowaniu spisu literatury (drobne odstępstwa od APA)
+- pojedyncze odstępstwa od stylu APA albo niekonsekwencje w spisie literatury
+- spis literatury nieuporządkowany alfabetycznie albo nienumerowany
 - objętość nieznacznie poza sugerowanym zakresem
 - nieproporcjonalna, ale akceptowalna długość części pracy
 - duży udział netografii

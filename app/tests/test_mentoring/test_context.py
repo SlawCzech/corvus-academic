@@ -4,6 +4,8 @@ import uuid
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
+import pytest
+
 from src.mentoring.application.context import (
     assemble_check_progress_context,
     assemble_evaluate_methodology_context,
@@ -11,8 +13,16 @@ from src.mentoring.application.context import (
     assemble_propose_topic_context,
     notes_between_versions,
 )
+from src.mentoring.application.exceptions import MissingContextError
 from src.mentoring.domain.draft import ThesisDraft
 from src.mentoring.domain.student import MeetingNote, Student, ThesisType
+
+_RUBRIC = {
+    "elements": "Wstęp z celem.",
+    "formal": "Objętość sugerowana.",
+    "merit": "Logiczny tok wywodu.",
+    "severity": "CRITICAL: brak wstępu.",
+}
 
 
 def _student(current_topic: str | None = None) -> Student:
@@ -156,7 +166,9 @@ _LONG_THESIS = "\n".join(
 
 def test_review_context_maps_the_document_the_agent_will_only_see_part_of() -> None:
     """The agent reads an excerpt; without this map it judges the rest absent."""
-    context = assemble_generate_review_context(_student(), _draft(_LONG_THESIS))
+    context = assemble_generate_review_context(
+        _student(), _draft(_LONG_THESIS), guidelines=_RUBRIC
+    )
 
     document_map = context["document_map"]
     assert document_map["total_chars"] == len(_LONG_THESIS)
@@ -164,7 +176,9 @@ def test_review_context_maps_the_document_the_agent_will_only_see_part_of() -> N
 
 
 def test_the_map_locates_a_chapter_past_any_excerpt() -> None:
-    context = assemble_generate_review_context(_student(), _draft(_LONG_THESIS))
+    context = assemble_generate_review_context(
+        _student(), _draft(_LONG_THESIS), guidelines=_RUBRIC
+    )
 
     methodology = next(
         s
@@ -176,7 +190,9 @@ def test_the_map_locates_a_chapter_past_any_excerpt() -> None:
 
 
 def test_sources_are_counted_in_app_not_guessed_by_the_model() -> None:
-    context = assemble_generate_review_context(_student(), _draft(_LONG_THESIS))
+    context = assemble_generate_review_context(
+        _student(), _draft(_LONG_THESIS), guidelines=_RUBRIC
+    )
 
     assert context["document_map"]["bibliography_entries"] == 1
 
@@ -196,10 +212,13 @@ def test_a_chosen_guideline_rubric_travels_in_the_context() -> None:
 def test_thresholds_travel_with_the_review_and_stay_out_of_methodology() -> None:
     """Only the requirements node reads them, and only a review runs it."""
     review = assemble_generate_review_context(
-        _student(), _draft(_LONG_THESIS), thresholds={"min_sources": 25}
+        _student(),
+        _draft(_LONG_THESIS),
+        guidelines=_RUBRIC,
+        thresholds={"min_sources": 25},
     )
     methodology = assemble_evaluate_methodology_context(
-        _student(), _draft(_LONG_THESIS)
+        _student(), _draft(_LONG_THESIS), guidelines=_RUBRIC
     )
 
     assert review["thresholds"] == {"min_sources": 25}
@@ -207,16 +226,27 @@ def test_thresholds_travel_with_the_review_and_stay_out_of_methodology() -> None
 
 
 def test_without_thresholds_the_key_is_absent() -> None:
-    context = assemble_generate_review_context(_student(), _draft(_LONG_THESIS))
+    context = assemble_generate_review_context(
+        _student(), _draft(_LONG_THESIS), guidelines=_RUBRIC
+    )
 
     assert "thresholds" not in context
 
 
-def test_without_a_rubric_the_key_is_absent_so_the_agent_loads_its_own() -> None:
-    """`agent` falls back exactly when `guidelines` is not in the context."""
-    context = assemble_generate_review_context(_student(), _draft(_LONG_THESIS))
+def test_without_a_rubric_the_review_and_methodology_are_refused() -> None:
+    """No built-in requirements to fall back on, ADR 0023."""
+    with pytest.raises(MissingContextError, match="guidelines"):
+        assemble_generate_review_context(_student(), _draft(_LONG_THESIS))
+    with pytest.raises(MissingContextError, match="guidelines"):
+        assemble_evaluate_methodology_context(_student(), _draft(_LONG_THESIS))
 
-    assert "guidelines" not in context
+
+def test_a_rubric_by_section_travels_as_sections() -> None:
+    context = assemble_generate_review_context(
+        _student(), _draft(_LONG_THESIS), guidelines=_RUBRIC
+    )
+
+    assert context["guidelines"] == _RUBRIC
 
 
 def test_a_full_review_carries_what_was_agreed_with_the_student() -> None:
@@ -224,7 +254,9 @@ def test_a_full_review_carries_what_was_agreed_with_the_student() -> None:
     student.research_area = "ekonomia instytucjonalna"
     student.research_aim = "Cel: zbadać X."
 
-    context = assemble_generate_review_context(student, _draft("Tekst pracy."))
+    context = assemble_generate_review_context(
+        student, _draft("Tekst pracy."), guidelines=_RUBRIC
+    )
 
     assert context["research_area"] == "ekonomia instytucjonalna"
     assert context["research_aim"] == "Cel: zbadać X."
@@ -233,7 +265,9 @@ def test_a_full_review_carries_what_was_agreed_with_the_student() -> None:
 def test_methodology_hears_the_field_as_well_as_the_topic() -> None:
     student = _student("Instytucje a wzrost")
 
-    context = assemble_evaluate_methodology_context(student, _draft("Tekst pracy."))
+    context = assemble_evaluate_methodology_context(
+        student, _draft("Tekst pracy."), guidelines=_RUBRIC
+    )
 
     assert context["current_topic"] == "Instytucje a wzrost"
     assert context["field_of_study"] == student.field_of_study

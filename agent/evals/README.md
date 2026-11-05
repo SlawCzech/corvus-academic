@@ -29,8 +29,9 @@ idzie do systemu uczelni. Recenzji próbnej to nie dotyczy.
 | `pokolenie-z` | wnioski sprzeczne z wynikami (39% wskazuje płacę, zakończenie mówi o 70% za czynnikami pozafinansowymi), 23 osoby z jednej firmy uogólnione na pokolenie, rozdział o Taylorze niezwiązany z problemem, hipotezy nigdy niezweryfikowane |
 
 Prace są skrócone (7–12 tys. znaków zamiast 80–130), żeby całość mieściła się
-w wycinku, który czyta węzeł. Wymóg długości w wytycznych jest dlatego
-przeskalowany (`dataset.condensed_guidelines`); reszta to prawdziwy dokument.
+w wycinku, który czyta węzeł. Rubryka to ta sama, którą `app` zasiewa w katalogu
+(`app/scripts/seed_data/guidelines/`), w sekcjach jak z `app`; liczb w niej nie
+ma, więc przeskalowane są tylko progi (`dataset._CONDENSED_THRESHOLDS`).
 
 Każdy przypadek ma `document_map.json` — mapę, którą `app` wysłałby razem z
 tekstem (z niej `check_coherence` tnie pracę na rozdziały). Po edycji pracy:
