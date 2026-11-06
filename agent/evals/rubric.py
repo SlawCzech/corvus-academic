@@ -176,8 +176,11 @@ Report:
   state in any wording. Only real rules — a required part, what a part must
   contain, a formal or substantive requirement. Not formatting, not order.
 - `invented`: rules in the DRAFT's first three sections that the REGULATION
-  does not say. A reasonable restatement is not invented; a requirement that
-  is not in the text is.
+  does not say. Before listing one, search the REGULATION for it: if it says
+  it anywhere, in any wording, it is not invented, even when the KEY leaves
+  it out. A reasonable restatement is not invented, nor is a note that a rule
+  of the regulation does not apply to this kind of thesis. Only a requirement
+  with no basis in the text is.
 - `both_required`: true when the DRAFT, anywhere, treats research questions
   and hypotheses as both required, or makes a missing hypothesis a defect in a
   thesis that has research questions. The regulation asks for one or the
