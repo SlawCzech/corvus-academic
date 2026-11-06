@@ -7,7 +7,7 @@ supersedes one version and publishes another is one transaction.
 
 import uuid
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.guidelines.domain.catalog import (
@@ -63,6 +63,9 @@ def _version(model: GuidelineVersionModel) -> GuidelineVersion:
         created_at=model.created_at,
         published_by=model.published_by,
         published_at=model.published_at,
+        drafting_task_id=model.drafting_task_id,
+        drafting_error=model.drafting_error,
+        draft_notes=list(model.draft_notes or []),
     )
 
 
@@ -81,6 +84,9 @@ def _write_version(model: GuidelineVersionModel, version: GuidelineVersion) -> N
     model.created_by = version.created_by
     model.created_at = version.created_at
     model.published_by = version.published_by
+    model.drafting_task_id = version.drafting_task_id
+    model.drafting_error = version.drafting_error
+    model.draft_notes = list(version.draft_notes) or None
     model.published_at = version.published_at
 
 
@@ -209,3 +215,24 @@ class CatalogRepository:
         )
         current: int | None = result.scalar_one_or_none()
         return (current or 0) + 1
+
+    async def delete_version(self, version_id: uuid.UUID) -> None:
+        """Remove one version's row. Flushes, does not commit."""
+        model = await self._session.get(GuidelineVersionModel, version_id)
+        if model is not None:
+            await self._session.delete(model)
+            await self._session.flush()
+
+    async def delete_set(self, set_id: uuid.UUID) -> None:
+        """Remove a set and, with it, every version. Flushes, does not commit.
+
+        The versions go first and explicitly: the cascade is the database's,
+        and a test database may not enforce foreign keys.
+        """
+        await self._session.execute(
+            delete(GuidelineVersionModel).where(GuidelineVersionModel.set_id == set_id)
+        )
+        model = await self._session.get(GuidelineSetModel, set_id)
+        if model is not None:
+            await self._session.delete(model)
+            await self._session.flush()

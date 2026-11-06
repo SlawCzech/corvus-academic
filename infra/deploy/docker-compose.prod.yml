@@ -77,9 +77,22 @@ services:
 
   agent-worker:
     image: ghcr.io/slawczech/corvus-agent:${IMAGE_TAG}
-    command: celery -A src.infrastructure.celery_app worker --loglevel=info --concurrency=2
+    # Four reviews at once: a full review holds a slot for a few minutes, and
+    # with two slots a handful of promoters before a defence week queued. Each
+    # slot is a process of ~170 MB idle (more while it holds a long thesis);
+    # the VPS has 8 GB.
+    command: celery -A src.infrastructure.celery_app worker --loglevel=info --concurrency=4
     env_file: .env
-    environment: *agent-env
+    environment:
+      <<: *agent-env
+      # SIGTERM from `docker compose` starts a cold shutdown, not a warm one:
+      # running tasks get `worker_soft_shutdown_timeout` to finish, then go
+      # back to the queue at once. A warm shutdown waits for them, Docker
+      # kills it after the grace period, and the killed task sits unacked in
+      # Redis until the visibility timeout (`celery_app.py`).
+      REMAP_SIGTERM: SIGQUIT
+    # Above the soft shutdown's 30 s, with room for the cold shutdown after it.
+    stop_grace_period: 60s
     depends_on:
       agent:
         condition: service_healthy

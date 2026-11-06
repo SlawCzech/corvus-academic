@@ -125,6 +125,8 @@ export interface NewStudent {
   thesis_type: string
   research_area?: string | null
   research_aim?: string | null
+  /** Required in the form: every thesis is judged by a university's rules. */
+  guideline_set_id?: string
 }
 
 export async function createStudent(student: NewStudent): Promise<Student> {
@@ -201,6 +203,7 @@ export interface NewReview {
   current_topic?: string
   research_area?: string
   research_aim?: string
+  guideline_set_id: string
 }
 
 export async function createReview(review: NewReview, file: File): Promise<Review> {
@@ -584,6 +587,53 @@ export async function uploadGuidelineSource(
   })
   if (!res.ok) return fail(res, "Nie udało się wczytać pliku")
   return res.json() as Promise<GuidelineVersion>
+}
+
+/** The university whose guidelines the caller sees first; null clears it. */
+export function setHomeUniversity(
+  universityId: string | null,
+): Promise<{ home_university_id: string | null }> {
+  return sendJson(
+    "/api/users/me/settings",
+    "PATCH",
+    { home_university_id: universityId },
+    "Nie udało się zapisać uczelni",
+  )
+}
+
+/** A correction: the next version, with the rubric and regulation copied. */
+export function correctGuidelineSet(setId: string): Promise<GuidelineVersion> {
+  return sendJson(
+    `/api/admin/guidelines/sets/${setId}/corrections`,
+    "POST",
+    {},
+    "Nie udało się otworzyć poprawki",
+  )
+}
+
+export async function discardGuidelineDraft(versionId: string): Promise<void> {
+  const res = await request(`/api/admin/guidelines/versions/${versionId}`, {
+    method: "DELETE",
+  })
+  if (!res.ok) await fail(res, "Nie udało się odrzucić szkicu")
+}
+
+export async function deleteGuidelineSet(setId: string): Promise<void> {
+  const res = await request(`/api/admin/guidelines/sets/${setId}`, { method: "DELETE" })
+  if (!res.ok) await fail(res, "Nie udało się usunąć zestawu")
+}
+
+/** Have the model draft the rubric from the regulation, on the admin's own key. */
+export function draftGuidelineRubric(
+  versionId: string,
+  provider: string,
+): Promise<GuidelineVersion> {
+  return sendJson(
+    `/api/admin/guidelines/versions/${versionId}/draft-rubric`,
+    "POST",
+    { provider },
+    "Nie udało się zacząć szkicu rubryki",
+  )
 }
 
 export async function publishGuidelineVersion(versionId: string): Promise<GuidelineVersion> {

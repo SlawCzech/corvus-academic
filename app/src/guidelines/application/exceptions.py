@@ -15,3 +15,11 @@ class GuidelineNotFoundError(Exception):
 
 class GuidelineConflictError(Exception):
     """The request clashes with what is already there (a duplicate name)."""
+
+
+class ProviderKeyMissingError(Exception):
+    """The admin asked for a provider they hold no key for (ADR 0025)."""
+
+
+class DrafterUnavailableError(Exception):
+    """The agent could not be reached, or refused to take the draft."""

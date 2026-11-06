@@ -55,6 +55,7 @@ async def create_student(
             thesis_type=body.thesis_type,
             research_area=body.research_area,
             research_aim=body.research_aim,
+            guideline_set_id=body.guideline_set_id,
         )
     except ValueError as exc:
         raise HTTPException(

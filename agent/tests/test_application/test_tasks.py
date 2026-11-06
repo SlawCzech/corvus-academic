@@ -5,9 +5,9 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from celery.exceptions import Retry
+from celery.exceptions import Retry, SoftTimeLimitExceeded
 
-from src.application.tasks import _result_payload, run_action
+from src.application.tasks import _result_payload, resume_action, run_action
 from src.domain.action import ActionErrorCode, ActionType, TaskStatus
 from src.domain.analysis import Finding, FindingSeverity, FindingSource
 from src.infrastructure.celery_app import celery_app
@@ -52,6 +52,20 @@ def progress_writes() -> Any:  # noqa: ANN401
 def usage_writes() -> Any:  # noqa: ANN401
     """And usage writes."""
     with patch("src.application.tasks.record_task_usage") as mock:
+        yield mock
+
+
+@pytest.fixture(autouse=True)
+def stored_status() -> Any:  # noqa: ANN401
+    """The row knows nothing yet, as for a task just sent."""
+    with patch("src.application.tasks.read_task_status", return_value=None) as mock:
+        yield mock
+
+
+@pytest.fixture(autouse=True)
+def deliveries() -> Any:  # noqa: ANN401
+    """Each task arrives for the first time."""
+    with patch("src.application.tasks.count_delivery", return_value=1) as mock:
         yield mock
 
 
@@ -406,46 +420,27 @@ def test_result_payload_keeps_which_analysis_raised_each_finding() -> None:
 # ---------- guidelines ----------
 
 
-def test_review_actions_get_the_university_requirements() -> None:
-    """Guideline text is agent-owned static data, not something `app` ships."""
+def test_the_rubric_from_app_reaches_the_graph_untouched() -> None:
+    """The agent has no requirements of its own to add, ADR 0024."""
     graph = _mock_graph()
+    sections = {"elements": "a", "formal": "b", "merit": "c", "severity": "d"}
 
-    with (
-        patch("src.application.tasks.build_action_graph", return_value=graph),
-        patch(
-            "src.application.tasks.load_guidelines",
-            return_value=_GUIDELINES,
-        ) as load,
-    ):
+    with patch("src.application.tasks.build_action_graph", return_value=graph):
         run_action.apply(
             args=(
                 ACTION_ID,
                 ActionType.EVALUATE_METHODOLOGY,
                 STUDENT_ID,
-                {"text": _TEXT, "thesis_type": "master_article"},
+                {
+                    "text": _TEXT,
+                    "thesis_type": "master_article",
+                    "guidelines": sections,
+                },
             )
         )
 
-    load.assert_called_once_with("master_article")
     call_state: dict[str, Any] = graph.invoke.call_args[0][0]
-    assert call_state["context"]["guidelines"] == _GUIDELINES
-
-
-def test_other_actions_are_not_given_guidelines() -> None:
-    """Proposing a topic has nothing to check against the requirements."""
-    graph = _mock_graph()
-
-    with (
-        patch("src.application.tasks.build_action_graph", return_value=graph),
-        patch("src.application.tasks.load_guidelines") as load,
-    ):
-        run_action.apply(
-            args=(ACTION_ID, ActionType.PROPOSE_TOPIC, STUDENT_ID, {"detail": "x"})
-        )
-
-    load.assert_not_called()
-    call_state: dict[str, Any] = graph.invoke.call_args[0][0]
-    assert "guidelines" not in call_state["context"]
+    assert call_state["context"]["guidelines"] == sections
 
 
 # ---------- the user's own key ----------
@@ -619,3 +614,113 @@ def test_rate_limit_that_outlasts_the_retries_keeps_its_code(
     last = status_writes.call_args_list[-1]
     assert last.args[1] == TaskStatus.FAILED
     assert last.kwargs["error_code"] == ActionErrorCode.PROVIDER_RATE_LIMITED
+
+
+# ---------- deliveries that should not run ----------
+
+
+@pytest.mark.parametrize("status", [TaskStatus.CANCELLED, TaskStatus.FAILED])
+def test_a_task_whose_row_is_finished_does_not_run(
+    status: TaskStatus, stored_status: MagicMock, status_writes: MagicMock
+) -> None:
+    """Cancelled, or given up as abandoned while its message was on its way."""
+    stored_status.return_value = status
+    with patch("src.application.tasks.build_action_graph") as builder:
+        result = run_action.apply(
+            args=(ACTION_ID, ActionType.GENERATE_REVIEW, STUDENT_ID, {}), throw=True
+        )
+
+    assert result.result == {}
+    builder.assert_not_called()
+    status_writes.assert_not_called()
+
+
+def test_a_task_delivered_too_often_fails_without_running(
+    deliveries: MagicMock, status_writes: MagicMock
+) -> None:
+    """The run keeps killing the worker; the next delivery would too."""
+    deliveries.return_value = 5
+    with (
+        patch("src.application.tasks.build_action_graph") as builder,
+        patch("src.application.tasks.delete_checkpoints") as forget,
+    ):
+        run_action.apply(
+            args=(ACTION_ID, ActionType.GENERATE_REVIEW, STUDENT_ID, {}), throw=True
+        )
+
+    builder.assert_not_called()
+    (call,) = status_writes.call_args_list
+    assert call.args[1] == TaskStatus.FAILED
+    assert "administratorowi" in call.kwargs["error"]
+    forget.assert_called_once()
+
+
+def test_a_few_redeliveries_still_run(deliveries: MagicMock) -> None:
+    """Each deploy that lands mid-run hands it back once; that is not a fault."""
+    deliveries.return_value = 4
+    graph = _mock_graph()
+    with patch("src.application.tasks.build_action_graph", return_value=graph):
+        run_action.apply(
+            args=(ACTION_ID, ActionType.GENERATE_REVIEW, STUDENT_ID, {}), throw=True
+        )
+
+    graph.invoke.assert_called_once()
+
+
+def test_deliveries_are_counted_per_attempt(deliveries: MagicMock) -> None:
+    """A retry is a new attempt and starts from zero."""
+    with patch("src.application.tasks.build_action_graph", return_value=_mock_graph()):
+        run_action.apply(
+            args=(ACTION_ID, ActionType.GENERATE_REVIEW, STUDENT_ID, {}),
+            retries=2,
+            throw=True,
+        )
+
+    name, _task_id, attempt = deliveries.call_args.args
+    assert name == "src.application.tasks.run_action"
+    assert attempt == 2
+
+
+def test_without_a_count_the_task_runs(deliveries: MagicMock) -> None:
+    """Redis could not be asked; a lost count must not stop a good run."""
+    deliveries.return_value = None
+    graph = _mock_graph()
+    with patch("src.application.tasks.build_action_graph", return_value=graph):
+        run_action.apply(
+            args=(ACTION_ID, ActionType.GENERATE_REVIEW, STUDENT_ID, {}), throw=True
+        )
+
+    graph.invoke.assert_called_once()
+
+
+def test_a_run_over_the_time_limit_fails_without_retrying(
+    status_writes: MagicMock,
+) -> None:
+    """Whatever held it for half an hour would hold the retry too."""
+    with (
+        patch("src.application.tasks.build_action_graph") as builder,
+        patch("src.application.tasks.delete_checkpoints") as forget,
+    ):
+        builder.side_effect = SoftTimeLimitExceeded()
+        with pytest.raises(SoftTimeLimitExceeded):
+            run_action.apply(
+                args=(ACTION_ID, ActionType.GENERATE_REVIEW, STUDENT_ID, {}),
+                throw=True,
+            )
+
+    last = status_writes.call_args_list[-1]
+    assert last.args[1] == TaskStatus.FAILED
+    assert "30 minut" in last.kwargs["error"]
+    forget.assert_called_once()
+
+
+def test_a_resume_of_a_finished_task_does_not_run(stored_status: MagicMock) -> None:
+    """The promoter cancelled while the resume was queued."""
+    stored_status.return_value = TaskStatus.CANCELLED
+    with patch("src.application.tasks.build_action_graph") as builder:
+        result = resume_action.apply(
+            args=(ActionType.GENERATE_REVIEW, {"selected": [0]}), throw=True
+        )
+
+    assert result.result == {}
+    builder.assert_not_called()

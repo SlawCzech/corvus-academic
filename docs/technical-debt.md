@@ -108,12 +108,17 @@ Zostaje:
   loguje i idzie dalej, żeby awaria zapisu nie powodowała retry analizy, która się udała
   (kilka minut pracy LLM). Skutek: przy niedostępnej bazie wiersz zostaje nieświeży, a
   jedynym śladem jest log `task_status_write_failed` — od 2026-11-03 `watch.sh` wysyła
-  na niego alert (check „watch” na healthchecks.io, [deploy.md](deploy.md)).
+  na niego alert (check „watch” na healthchecks.io, [deploy.md](deploy.md)). Od
+  2026-11-06 taki wiersz nie wisi już w nieskończoność: odpytanie po 90 minutach bez
+  ruchu oznacza akcję jako przerwaną (ADR 0010, drugi addendum). Jeśli wynik był,
+  promotor go nie zobaczy i musi puścić akcję jeszcze raz.
 
 - [x] ~~**Zawieszony worker zostawia akcję w `running` na zawsze**~~ — od 2026-09-30
   (ADR 0010) taski są potwierdzane po zakończeniu, a padnięty worker wznawia
-  przebieg z checkpointu. Zostaje brak limitu ponownych dostarczeń dla taska,
-  który za każdym razem zabija workera. Pierwotny opis: status jest zapisywany
+  przebieg z checkpointu. Od 2026-11-06 jest też limit ponownych dostarczeń
+  (piąte dostarczenie jednej próby kończy task jako `failed`), limit czasu przebiegu
+  (30 minut) i odpuszczanie akcji, która 90 minut stoi w `pending`/`running`
+  (ADR 0010, drugi addendum). Pierwotny opis: status jest zapisywany
   przed i po wywołaniu grafu; jeśli proces zginie w środku (OOM, kill), nic tego nie
   posprząta. Naprawka: timeout na akcję (`updated_at` starsze niż N minut → `failed`)
   albo Celery `task_reject_on_worker_lost` + sprzątanie przy starcie.
@@ -350,8 +355,9 @@ są nieaktualne. Zostają dla historii.
 
 ## Progi z wytycznych (2026-11-02)
 
-- [ ] **Liczby są w dwóch miejscach** — rubryka i progi to osobne pola wersji, admin
-  edytuje je niezależnie, a przy rozjeździe model widzi oba. Nic tego nie wykrywa.
+- [x] ~~**Liczby są w dwóch miejscach**~~ — od 2026-11-05 rubryka nie podaje liczb
+  progów, tylko jak je czytać; liczby są wyłącznie w progach wersji (ADR 0024). Nic
+  tego nie wymusza przy publikacji — to reguła dla admina i szkicu AI.
 - [ ] **Pozycji obcojęzycznych liczy model** — język wpisu to czytanie, więc kod podaje
   tylko próg (ADR 0020). Pewność tej liczby jest taka jak wcześniej.
 - [ ] **Netografia pod numerowanym nagłówkiem** („3. Netografia”) nie kończy literatury.
@@ -406,4 +412,4 @@ odłożone:
 
 ---
 
-*Ostatnia aktualizacja: 2026-11-03 (bez embeddingów i modeli lokalnych: ADR 0021, 0022)*
+*Ostatnia aktualizacja: 2026-11-06 (zawieszone akcje i limit dostarczeń: ADR 0010)*

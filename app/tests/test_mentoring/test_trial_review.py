@@ -8,7 +8,12 @@ from fastapi.testclient import TestClient
 
 from main import app
 from src.mentoring.infrastructure.dependencies import get_agent_client
-from tests.test_mentoring.conftest import PROMOTOR_EMAIL, PROMOTOR_PASSWORD, login
+from tests.test_mentoring.conftest import (
+    PROMOTOR_EMAIL,
+    PROMOTOR_PASSWORD,
+    guideline_set,
+    login,
+)
 from tests.test_mentoring.fakes import FakeAgentClient, docx_bytes
 
 _DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -36,6 +41,7 @@ def _student_with_two_versions(
             "full_name": "Jan Kowalski",
             "field_of_study": "Ekonomia",
             "thesis_type": "bachelor",
+            "guideline_set_id": guideline_set(client),
         },
         headers=headers,
     ).json()
@@ -194,3 +200,16 @@ def test_a_one_off_review_takes_no_mail(
 
     assert resp.status_code == 409
     assert agent.submitted == []
+
+
+def test_a_review_gets_the_rubric_by_section(
+    client: TestClient, headers: dict[str, str], agent: FakeAgentClient
+) -> None:
+    """Through the real catalog: a published rubric is split for the nodes."""
+    student_id, _ = _student_with_two_versions(client, headers)
+
+    resp = _run(client, headers, student_id, "trial_review")
+
+    assert resp.status_code == 202, resp.text
+    guidelines = agent.submitted[-1]["context"]["guidelines"]
+    assert set(guidelines) == {"elements", "formal", "merit", "severity"}

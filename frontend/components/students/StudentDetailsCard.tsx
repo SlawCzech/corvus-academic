@@ -6,6 +6,7 @@ import type { Student } from "@/lib/api.types"
 
 const THESIS_TYPE_LABELS: Record<Student["thesis_type"], string> = {
   bachelor: "Licencjacka",
+  master: "Magisterska",
   master_article: "Magisterska (artykuł)",
 }
 

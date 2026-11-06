@@ -135,12 +135,14 @@ class StudentService:
         created_at: datetime | None = None,
         research_area: str | None = None,
         research_aim: str | None = None,
+        guideline_set_id: UUID | None = None,
     ) -> Student:
         """Add a student to the caller's roster.
 
         The domain entity is built first so its validation runs before
         anything reaches the database. ``created_at`` is for seeding a
-        history; a student added through the API is dated now.
+        history; a student added through the API is dated now. A guideline
+        set given here is checked like one picked later.
         """
         added = created_at or datetime.now(UTC)
         student = Student(
@@ -154,6 +156,9 @@ class StudentService:
             created_at=added,
             updated_at=added,
         )
+        if guideline_set_id is not None:
+            await self._check_guideline_set(student, guideline_set_id)
+            student.guideline_set_id = guideline_set_id
         model = _to_orm(student)
         await self._students.save(model)
         return to_domain(model)
@@ -167,6 +172,7 @@ class StudentService:
         topic: str | None = None,
         research_area: str | None = None,
         research_aim: str | None = None,
+        guideline_set_id: UUID | None = None,
     ) -> Student:
         """Write a one-off review's row, uncommitted: its thesis commits both."""
         student = Student.one_off(
@@ -180,6 +186,9 @@ class StudentService:
         )
         if topic and topic.strip():
             student.set_topic(topic, student.created_at)
+        if guideline_set_id is not None:
+            await self._check_guideline_set(student, guideline_set_id)
+            student.guideline_set_id = guideline_set_id
         model = _to_orm(student)
         await self._students.add(model)
         return to_domain(model)
@@ -251,9 +260,10 @@ class StudentService:
         all: with them, ``None`` clears it. ``clear_topic`` reopens the topic.
         ``topic_set_at`` dates the topic when seeding a history.
 
-        Raises ValueError for a blank name, field or topic, and
-        for a guideline set that does not exist, has nothing published, or is
-        for another kind of thesis than the student's (after this change).
+        Raises ValueError for a blank name, field or topic, for
+        a guideline set sent as null, and for one that does not exist, has
+        nothing published, or is for another kind of thesis than the
+        student's (after this change).
         """
         model = await self._require_model(caller, student_id)
         student = to_domain(model)
@@ -271,8 +281,10 @@ class StudentService:
             student.set_topic(current_topic, topic_set_at)
         # Checked against the thesis type as it is after this change.
         if set_guidelines:
-            if guideline_set_id is not None:
-                await self._check_guideline_set(student, guideline_set_id)
+            if guideline_set_id is None:
+                # No built-in requirements to fall back on, ADR 0024.
+                raise ValueError("A guideline set can be changed, not removed")
+            await self._check_guideline_set(student, guideline_set_id)
             student.guideline_set_id = guideline_set_id
         if status is not None:
             student.change_status(status)

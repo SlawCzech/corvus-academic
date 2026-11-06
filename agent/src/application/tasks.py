@@ -6,18 +6,18 @@ from uuid import UUID
 
 import structlog
 from celery import Task, shared_task
+from celery.exceptions import SoftTimeLimitExceeded
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.runnables import RunnableConfig
 from langgraph.types import Command
 
 from src.application.graph import CompiledActionGraph, build_action_graph
-from src.application.guidelines import load_guidelines
 from src.application.nodes.promoter_review import PROMOTER_REVIEWS_FINDINGS
 from src.application.state import ActionState
-from src.domain.action import ActionType, TaskStatus
-from src.domain.analysis import ThesisType
+from src.domain.action import TaskStatus
 from src.infrastructure.checkpoints import delete as delete_checkpoints
 from src.infrastructure.checkpoints import open_checkpointer
+from src.infrastructure.deliveries import count_delivery
 from src.infrastructure.key_transit import KeyUnsealError, unseal
 from src.infrastructure.llm_factory import (
     ModelCredentials,
@@ -26,6 +26,7 @@ from src.infrastructure.llm_factory import (
 )
 from src.infrastructure.provider_errors import classify as classify_provider_error
 from src.infrastructure.task_status import (
+    read_task_status,
     record_task_progress,
     record_task_status,
     record_task_usage,
@@ -52,27 +53,21 @@ _RESULT_KEYS = (
 )
 
 
-# Actions judged against university requirements. Without a guideline set from
-# `app`, they read the agent's own requirements file.
-_ACTIONS_NEEDING_GUIDELINES = frozenset(
-    {
-        ActionType.GENERATE_REVIEW,
-        ActionType.TRIAL_REVIEW,
-        ActionType.EVALUATE_METHODOLOGY,
-    }
+# How many times one attempt of a task may be delivered before the worker
+# stops taking it. One is the normal case; every deploy that lands mid-run
+# hands the run back once more (a cold shutdown, see the composes). Past
+# this, the run is what keeps killing the worker (`deliveries`).
+_MAX_DELIVERIES = 4
+
+# Shown to the promoter as is, like any error without a code.
+_KILLS_WORKER = (
+    "Przebieg tej akcji kilka razy z rzędu przerwał pracę serwera, więc nie "
+    "jest już ponawiany. Zgłoś to administratorowi."
 )
-
-
-def _with_guidelines(action_type: str, context: dict[str, Any]) -> dict[str, Any]:
-    """Add the university requirements to the context, if the action needs them.
-
-    `app` sends the rubric of the student's guideline set when there is one;
-    otherwise the agent's own requirements file for the thesis type, whole.
-    """
-    if action_type not in _ACTIONS_NEEDING_GUIDELINES or "guidelines" in context:
-        return context
-    thesis_type = str(context.get("thesis_type", ThesisType.BACHELOR))
-    return {**context, "guidelines": load_guidelines(thesis_type)}
+_TIMED_OUT = (
+    "Akcja trwała dłużej niż 30 minut i została przerwana. Uruchom ją ponownie; "
+    "jeśli to się powtórzy, zgłoś to administratorowi."
+)
 
 
 def _to_json(obj: Any) -> Any:  # noqa: ANN401
@@ -318,6 +313,30 @@ def _record_final_failure(task: Task, task_id: str | None, exc: Exception) -> No
             delete_checkpoints([task_id])
 
 
+def _may_run(task: Task, task_id: str | None) -> bool:  # type: ignore[type-arg]
+    """Whether this delivery of the task should run at all.
+
+    Not when its row is already finished: the promoter cancelled it, or the
+    status poll gave it up as abandoned while the message was still on its
+    way (`api.router.get_action_status`). Not when this attempt has been
+    delivered too often: the run is what kills the worker, and it would kill
+    the next one too. That one is failed here, with its checkpoints.
+    """
+    if not task_id:
+        return True
+    status = read_task_status(task_id)
+    if status is not None and TaskStatus(status).is_terminal:
+        logger.info("task_skipped_finished", task_id=task_id, status=status)
+        return False
+    deliveries = count_delivery(task.name, task_id, task.request.retries)
+    if deliveries is not None and deliveries > _MAX_DELIVERIES:
+        logger.error("task_delivered_too_often", task_id=task_id, times=deliveries)
+        record_task_status(task_id, TaskStatus.FAILED, error=_KILLS_WORKER)
+        delete_checkpoints([task_id])
+        return False
+    return True
+
+
 def _fail_or_retry(task: Task, task_id: str | None, exc: Exception) -> NoReturn:  # type: ignore[type-arg]
     """Retry a failed run, unless retrying cannot help.
 
@@ -327,6 +346,12 @@ def _fail_or_retry(task: Task, task_id: str | None, exc: Exception) -> NoReturn:
     long as the provider asked; the checkpoints mean the retry picks up
     after the last finished step.
     """
+    if isinstance(exc, SoftTimeLimitExceeded):
+        # Whatever held it for half an hour would hold the retry too.
+        record_task_status(task_id, TaskStatus.FAILED, error=_TIMED_OUT)
+        if task_id:
+            delete_checkpoints([task_id])
+        raise exc
     problem = classify_provider_error(exc)
     if problem is not None and not problem.retryable:
         record_task_status(
@@ -382,6 +407,8 @@ def run_action(
     which is what gets serialised into the stored result.
     """
     task_id: str | None = self.request.id
+    if not _may_run(self, task_id):
+        return {}
     credentials = _credentials(task_id, provider, sealed_api_key)
     logger.info(
         "run_action.started",
@@ -401,7 +428,7 @@ def run_action(
                     action_id,
                     action_type,
                     student_id,
-                    _with_guidelines(action_type, context),
+                    context,
                     model_label(credentials),
                     language,
                 ),
@@ -428,6 +455,8 @@ def resume_action(
     promoter brought one, comes again: it was never stored.
     """
     task_id: str | None = self.request.id
+    if not _may_run(self, task_id):
+        return {}
     credentials = _credentials(task_id, provider, sealed_api_key)
     logger.info("resume_action.started", task_id=task_id, action_type=action_type)
     try:

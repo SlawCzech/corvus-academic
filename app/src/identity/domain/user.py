@@ -23,6 +23,9 @@ class Permission(StrEnum):
     SUBMIT_ANALYSIS = "submit_analysis"
     MANAGE_STUDENTS = "manage_students"
     MANAGE_GUIDELINES = "manage_guidelines"
+    # Keep one's own provider keys: a promoter for actions, an admin for
+    # rubrics drafted from a regulation (ADR 0025).
+    HOLD_PROVIDER_KEYS = "hold_provider_keys"
 
 
 # Two roles that do not overlap: an admin runs the platform (accounts, the
@@ -34,9 +37,16 @@ _ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
         {
             Permission.MANAGE_USERS,
             Permission.MANAGE_GUIDELINES,
+            Permission.HOLD_PROVIDER_KEYS,
         }
     ),
-    Role.PROMOTOR: frozenset({Permission.SUBMIT_ANALYSIS, Permission.MANAGE_STUDENTS}),
+    Role.PROMOTOR: frozenset(
+        {
+            Permission.SUBMIT_ANALYSIS,
+            Permission.MANAGE_STUDENTS,
+            Permission.HOLD_PROVIDER_KEYS,
+        }
+    ),
 }
 
 

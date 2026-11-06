@@ -15,6 +15,7 @@ from src.application.replies import (
     TRIAL_RECOMMENDATIONS,
     review_reply_for,
 )
+from src.application.rubric import REVIEW_SECTIONS, render_guidelines
 from src.application.scoring import score_bands, within_band
 from src.application.structured import invoke_structured
 from src.domain.action import ActionType
@@ -524,7 +525,7 @@ def generate_review(state: ActionState) -> ReviewUpdate:
             f"Type: {meta.get('thesis_type', 'bachelor')}\n"
             f"Field: {meta.get('field_of_study', 'Unknown')}\n"
             f"{render_research(ctx)}\n"
-            f"Guidelines:\n{ctx.get('guidelines', '')}\n\n"
+            f"Guidelines:\n{render_guidelines(ctx, REVIEW_SECTIONS)}\n\n"
             f"Accumulated findings:\n{findings_summary or 'None'}\n\n"
             f"Allowed recommendation (decided by the findings): "
             f"{' | '.join(allowed)}\n"

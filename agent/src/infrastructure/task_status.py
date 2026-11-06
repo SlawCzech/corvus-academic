@@ -64,6 +64,32 @@ async def _write_usage(task_id: str, usage: Usage) -> bool:
         await engine.dispose()
 
 
+async def _read_status(task_id: str) -> str | None:
+    engine = create_async_engine(settings.database_url, poolclass=NullPool)
+    try:
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        async with factory() as session:
+            model = await AgentTaskRepository(session).find_by_task_id(task_id)
+            return model.status if model is not None else None
+    finally:
+        await engine.dispose()
+
+
+def read_task_status(task_id: str | None) -> str | None:
+    """The task's status as its row has it; None when unknown.
+
+    A failed read is unknown too: the caller goes ahead as if the row said
+    nothing, rather than drop a task because the database blinked.
+    """
+    if not task_id:
+        return None
+    try:
+        return asyncio.run(_read_status(task_id))
+    except Exception as exc:
+        logger.warning("task_status_read_failed", task_id=task_id, error=str(exc))
+        return None
+
+
 def record_task_usage(task_id: str | None, usage: Usage | None) -> None:
     """Add the tokens one run spent to its task, swallowing any failure.
 

@@ -82,12 +82,15 @@ def require_admin(user: Annotated[User, Depends(get_current_user)]) -> User:
     return user
 
 
-def require_ai_user(user: Annotated[User, Depends(get_current_user)]) -> User:
-    """FastAPI dependency — assert the caller runs AI actions (a promoter)."""
-    if not user.can(Permission.SUBMIT_ANALYSIS):
+def require_key_holder(user: Annotated[User, Depends(get_current_user)]) -> User:
+    """FastAPI dependency — assert the caller keeps their own provider keys.
+
+    A promoter, for actions; an admin, for rubrics drafted from a regulation.
+    """
+    if not user.can(Permission.HOLD_PROVIDER_KEYS):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only promoters run AI actions",
+            detail="Only users who run the model keep provider keys",
         )
     return user
 

@@ -12,7 +12,7 @@ from src.identity.domain.user import User
 from src.identity.infrastructure.dependencies import (
     ApiKeyRepoDep,
     KeyCheckerDep,
-    require_ai_user,
+    require_key_holder,
 )
 from src.identity.infrastructure.schemas import (
     ApiKeyRequest,
@@ -26,7 +26,7 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/settings", tags=["settings"])
 
 # A provider key only pays for AI actions, and only promoters run those.
-AiUserDep = Annotated[User, Depends(require_ai_user)]
+AiUserDep = Annotated[User, Depends(require_key_holder)]
 
 
 async def _status(repo: ApiKeyRepoDep, user: User) -> ApiKeyStatusResponse:

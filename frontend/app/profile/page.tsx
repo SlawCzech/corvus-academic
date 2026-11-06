@@ -3,12 +3,15 @@ import { decodeToken } from "@/lib/auth"
 import ApiKeySection from "@/components/ApiKeySection"
 import ProfileAiDefaults from "@/components/ProfileAiDefaults"
 import ChangePasswordForm from "@/components/ChangePasswordForm"
+import HomeUniversitySection from "@/components/HomeUniversitySection"
 
 export default async function ProfilePage() {
   const cookieStore = await cookies()
   const token = cookieStore.get("access_token")?.value ?? ""
   const payload = decodeToken(token)
-  // BYOK and AI defaults only matter to someone who runs AI actions.
+  // Both roles keep their own provider keys: a promoter for actions, an admin
+  // for rubrics drafted from a regulation (ADR 0025). AI defaults are the
+  // promoter's alone.
   const isPromoter = payload?.role !== "admin"
 
   return (
@@ -32,21 +35,31 @@ export default async function ProfilePage() {
       </section>
 
       {isPromoter && (
-        <>
-          <section className="mb-10">
-            <h2 className="mb-4 text-[15px] font-semibold text-foreground">
-              Własny klucz API
-            </h2>
-            <ApiKeySection />
-          </section>
+        <section className="mb-10">
+          <h2 className="mb-4 text-[15px] font-semibold text-foreground">Moja uczelnia</h2>
+          <HomeUniversitySection />
+        </section>
+      )}
 
-          <section className="mb-10">
-            <h2 className="mb-4 text-[15px] font-semibold text-foreground">
-              Domyślne ustawienia AI
-            </h2>
-            <ProfileAiDefaults />
-          </section>
-        </>
+      <section className="mb-10">
+        <h2 className="mb-4 text-[15px] font-semibold text-foreground">
+          Własny klucz API
+        </h2>
+        {!isPromoter && (
+          <p className="mb-3 text-[13px] text-muted">
+            Na tym kluczu Corvus pisze rubryki z regulaminów uczelni.
+          </p>
+        )}
+        <ApiKeySection />
+      </section>
+
+      {isPromoter && (
+        <section className="mb-10">
+          <h2 className="mb-4 text-[15px] font-semibold text-foreground">
+            Domyślne ustawienia AI
+          </h2>
+          <ProfileAiDefaults />
+        </section>
       )}
 
       <section>

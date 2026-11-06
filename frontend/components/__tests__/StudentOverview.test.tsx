@@ -28,7 +28,16 @@ const STUDENT = {
   created_at: "2026-03-01T10:00:00Z",
   updated_at: "2026-03-01T10:00:00Z",
   closed_at: null,
-  guideline_set_id: null,
+  guideline_set_id: "set1",
+}
+
+const SET = {
+  id: "set1",
+  name: "Prace magisterskie",
+  thesis_type: "master_article",
+  university: { id: "u1", name: "UE Katowice", short_name: "UE Katowice" },
+  current: { id: "v1", version_no: 1 },
+  has_draft: false,
 }
 
 type Call = {
@@ -84,6 +93,7 @@ describe("StudentDetail — overview", () => {
         }
         if (url.endsWith("/actions") || url.endsWith("/meeting-notes") || url.endsWith("/drafts"))
           return json([])
+        if (url.includes("/guidelines/sets")) return json([SET])
         if (url.includes("/guidelines/")) return json([])
         return json(student)
       }),
@@ -143,6 +153,9 @@ describe("StudentDetail — overview", () => {
     const name = within(form).getByLabelText("Imię i nazwisko")
     await userEvent.clear(name)
     await userEvent.type(name, "Julia Nowak")
+    await waitFor(() =>
+      expect(within(form).getByRole("combobox", { name: "Zestaw wytycznych" })).toHaveValue("set1"),
+    )
     await userEvent.click(within(form).getByRole("button", { name: "Zapisz" }))
 
     await waitFor(() =>
@@ -155,6 +168,7 @@ describe("StudentDetail — overview", () => {
         thesis_type: "master_article",
         research_area: null,
         research_aim: null,
+        guideline_set_id: "set1",
       },
     ])
   })

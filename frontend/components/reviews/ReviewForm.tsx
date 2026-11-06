@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react"
 import FileUpload from "@/components/FileUpload"
+import GuidelineSetSelect from "@/components/guidelines/GuidelineSetSelect"
 import { createReview, readTitlePage } from "@/lib/api.client"
 import type { Review, ThesisType } from "@/lib/api.types"
 
@@ -23,6 +24,7 @@ export default function ReviewForm({ onCreated, onCancel }: ReviewFormProps) {
   const [topic, setTopic] = useState("")
   const [researchArea, setResearchArea] = useState("")
   const [researchAim, setResearchAim] = useState("")
+  const [guidelineSetId, setGuidelineSetId] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [suggested, setSuggested] = useState(false)
@@ -43,7 +45,10 @@ export default function ReviewForm({ onCreated, onCancel }: ReviewFormProps) {
       if (page.full_name) setFullName((v) => v || (page.full_name ?? ""))
       if (page.field_of_study) setFieldOfStudy((v) => v || (page.field_of_study ?? ""))
       if (page.current_topic) setTopic((v) => v || (page.current_topic ?? ""))
-      if (page.thesis_type && !typeChosen.current) setThesisType(page.thesis_type)
+      if (page.thesis_type && !typeChosen.current && page.thesis_type !== thesisType) {
+        setThesisType(page.thesis_type)
+        setGuidelineSetId("")
+      }
       setSuggested(Boolean(page.full_name || page.field_of_study || page.current_topic))
     } catch {
       // A hint that did not arrive: the form is still there to fill in, and
@@ -69,6 +74,7 @@ export default function ReviewForm({ onCreated, onCancel }: ReviewFormProps) {
             current_topic: topic.trim(),
             research_area: researchArea.trim(),
             research_aim: researchAim.trim(),
+            guideline_set_id: guidelineSetId,
           },
           file,
         ),
@@ -127,10 +133,12 @@ export default function ReviewForm({ onCreated, onCancel }: ReviewFormProps) {
             onChange={(e) => {
               typeChosen.current = true
               setThesisType(e.target.value as ThesisType)
+              setGuidelineSetId("")
             }}
             className={inputClass}
           >
             <option value="bachelor">Licencjacka</option>
+            <option value="master">Magisterska</option>
             <option value="master_article">Magisterska (artykuł)</option>
           </select>
         </label>
@@ -140,6 +148,16 @@ export default function ReviewForm({ onCreated, onCancel }: ReviewFormProps) {
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             className={inputClass}
+          />
+        </label>
+        <label className="block sm:col-span-2">
+          <span className="mb-1 block text-[12px] text-muted">Wytyczne uczelni</span>
+          <GuidelineSetSelect
+            thesisType={thesisType}
+            value={guidelineSetId}
+            onChange={setGuidelineSetId}
+            className={inputClass}
+            autoSelect
           />
         </label>
         <label className="block sm:col-span-2">

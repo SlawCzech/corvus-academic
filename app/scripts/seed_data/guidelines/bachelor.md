@@ -2,150 +2,142 @@
 
 > Źródło: Zarządzenie Nr 117/22, załącznik Nr 1 — „Wymogi formalne dla prac
 > dyplomowych na studiach stacjonarnych i niestacjonarnych pierwszego stopnia”.
-> Dotyczy: prac licencjackich i inżynierskich — teoretycznych, empirycznych
-> i projektowych.
-> Sekcje 1–4 streszczają zarządzenie (w nawiasach paragraf). Sekcja 5 to
-> interpretacja Corvusa — zarządzenie jej nie zawiera.
+> Dotyczy prac licencjackich i inżynierskich: teoretycznych, empirycznych
+> i projektowych. W nawiasach paragraf zarządzenia.
 
----
+## Elementy pracy
 
-## 1. Wymagane elementy pracy (§ 3)
+Praca zawiera wszystkie poniższe elementy (§ 3 ust. 2).
 
-Praca MUSI zawierać wszystkie poniższe elementy:
+### Strona tytułowa
+### Oświadczenie o samodzielności przygotowania pracy
+### Spis treści
 
-### 1.1 Strona tytułowa
-### 1.2 Oświadczenie o samodzielności przygotowania pracy
-### 1.3 Spis treści
+### Wstęp
+- określenie problemu badawczego (teoretycznego i/lub empirycznego)
+- uzasadnienie jego znaczenia i aktualności
+- cele pracy (główny i/lub szczegółowe)
+- pytanie lub pytania badawcze albo hipoteza lub hipotezy badawcze —
+  wystarczy jedno z dwojga
+- zakres pracy: podmiotowy, przedmiotowy, czasowy, przestrzenny
+- opis zastosowanych metod, technik i narzędzi badawczych
+- opis struktury pracy
+- ogólna charakterystyka wykorzystanej literatury
 
-### 1.4 Wstęp — ELEMENT KRYTYCZNY
-Musi zawierać wszystkie poniższe elementy:
-- [ ] określenie problemu badawczego (teoretycznego i/lub empirycznego)
-- [ ] uzasadnienie jego znaczenia i aktualności
-- [ ] cele pracy (główny i/lub szczegółowe)
-- [ ] pytanie/pytania badawcze LUB hipotezę/hipotezy badawcze
-- [ ] zakres pracy: podmiotowy, przedmiotowy, czasowy, przestrzenny
-- [ ] opis zastosowanych metod, technik i narzędzi badawczych
-- [ ] opis struktury pracy
-- [ ] ogólną charakterystykę wykorzystanej literatury
-
-### 1.5 Tekst główny
+### Tekst główny
 - podział na rozdziały i podrozdziały
 - przegląd literatury przedmiotu i dyskusja naukowa
-- w pracach empirycznych i/lub projektowych: opis zastosowanych metod
-  i narzędzi badawczych oraz opis rozwiązania (projekt, model, symulacja,
-  prototyp, aplikacja, sposób wdrożenia — § 1)
+- w pracy empirycznej lub projektowej: opis zastosowanych metod i narzędzi
+  badawczych oraz opis rozwiązania — projektu, modelu, symulacji, prototypu,
+  aplikacji albo sposobu wdrożenia (§ 1 ust. 4)
 
-### 1.6 Zakończenie — ELEMENT KRYTYCZNY
-Musi zawierać wszystkie poniższe elementy:
-- [ ] ustosunkowanie się do problemu badawczego przyjętego we wstępie
-- [ ] odniesienie do celu pracy
-- [ ] odniesienie do hipotezy/hipotez badawczych
-- [ ] wnioski podsumowujące wyniki badań
+### Zakończenie
+- ustosunkowanie się do problemu badawczego postawionego we wstępie
+- odniesienie do celu pracy
+- odniesienie do pytań albo hipotez badawczych, które praca postawiła
+  (zarządzenie mówi o hipotezach; praca bez hipotez odpowiada na pytania)
+- wnioski podsumowujące wyniki badań
 
-### 1.7 Wykaz źródeł
+### Wykaz źródeł
 - zgodny z załącznikiem Nr 3 do zarządzenia (styl APA)
-- uporządkowany alfabetycznie i numerowany (§ 4)
 
-### 1.8 Spisy rysunków, tabel i załączników
+### Spisy rysunków, tabel i załączników
 
-### 1.9 Załączniki (opcjonalne)
-- załączniki, które nie są integralną częścią pracy (np. kody programu, spisy
+### Załączniki (opcjonalne)
+- załączniki, które nie są integralną częścią pracy (np. kod programu, spis
   plików źródłowych, opis wdrożenia), zapisuje się w formie elektronicznej
+  (§ 3 ust. 4)
 
----
+## Wymogi formalne
 
-## 2. Wymogi formalne i techniczne (§ 4)
+Liczby — minimalną liczbę pozycji, w tym obcojęzycznych, i zakres objętości —
+podają progi tej wersji. Tu jest tylko to, jak je czytać.
 
-### 2.1 Objętość
-- **Sugerowana:** 80 000 – 130 000 znaków ze spacjami
-- do limitu nie wlicza się załączników, w tym narzędzi badawczych
+### Objętość (§ 4 ust. 5)
+- objętość jest **sugerowana**, nie wymagana
+- do objętości nie wlicza się załączników, w tym narzędzi badawczych
   (np. kwestionariuszy ankiet)
 - w pracy projektowej rozdział teoretyczny może być krótszy na rzecz opisu
   rozwiązania
-- zarządzenie mówi o objętości „sugerowanej” — to nie jest twardy wymóg
 
-### 2.2 Literatura
-- **co najmniej 25 pozycji literaturowych**
-- **w tym co najmniej 4 pozycje literatury obcojęzycznej**
-- netografii nie wlicza się do tej liczby
+### Literatura (§ 4 ust. 6 i 8)
+- do minimalnej liczby pozycji nie wlicza się netografii
 - literatura obcojęzyczna to pozycje w języku innym niż język pracy
-- w pracach projektowych liczba pozycji może być mniejsza na rzecz
-  materiałów projektowych (materiały wewnętrzne, szkoleniowe, prezentacje,
-  tutoriale)
-- literatura musi być aktualna i dobrana tak, by umożliwiała rozwiązanie
-  problemu badawczego
+- w pracy projektowej liczba pozycji może być mniejsza na rzecz materiałów
+  projektowych (materiały wewnętrzne, szkoleniowe, prezentacje, tutoriale)
 
-### 2.3 Przypisy
-- styl APA (załącznik Nr 3 do zarządzenia)
-- przypisy muszą umożliwiać identyfikację wykorzystanych źródeł (§ 5)
+### Przypisy i wykaz źródeł (§ 4 ust. 9–10, § 5 ust. 2)
+- przypisy w stylu APA (załącznik Nr 3 do zarządzenia)
+- przypisy umożliwiają identyfikację wykorzystanych źródeł
+- wykaz źródeł uporządkowany alfabetycznie i numerowany
 
-### 2.4 Poprawność językowa
+### Język (§ 4 ust. 4)
 - poprawność językowa, ortograficzna, gramatyczna, stylistyczna
   i interpunkcyjna
-- rażące błędy językowe i formalne mogą być podstawą odmowy weryfikacji
-  pracy przez promotora
+- rażące błędy językowe i formalne mogą być podstawą odmowy weryfikacji pracy
+  przez promotora
 
-### 2.5 Układ
-- układ pracy odpowiada elementom z sekcji 1 (§ 3)
+### Układ (§ 4 ust. 3)
+- układ pracy odpowiada elementom wymienionym wyżej
 
----
-
-## 3. Praca zespołowa (§ 1)
-
+### Praca zespołowa (§ 1 ust. 7–8)
 - tylko w szczególnych przypadkach, za zgodą Dziekana Kolegium Studiów,
-  maksymalnie dwuosobowy zespół
-- wyraźnie wyodrębnione części autoryzowane przez członków zespołu
-- informacja o autorstwie w spisie treści i we wstępie
-- minimalny wkład każdego autora: 40%
+  zespół najwyżej dwuosobowy
+- części autoryzowane przez członków zespołu są wyraźnie wyodrębnione,
+  a autorstwo podane w spisie treści i we wstępie
+- wkład każdego autora wynosi co najmniej 40%
 
----
+## Co praca ma wykazać
 
-## 4. Umiejętności, które praca ma potwierdzać (§ 2)
-
-- samodzielny dobór materiałów źródłowych
-- analiza i synteza dorobku teoretycznego dyscypliny
-- diagnozowanie, formułowanie i ocena problemów w gospodarce lub badanym
+Praca, zależnie od charakteru, potwierdza umiejętności (§ 2 ust. 2):
+- samodzielnego doboru materiałów źródłowych
+- analizy i syntezy dorobku teoretycznego dyscypliny
+- diagnozowania, formułowania i oceny problemów w gospodarce lub badanym
   podmiocie
-- identyfikacja i analiza zjawisk ekonomicznych
-- stosowanie warsztatu badawczego i metod pracy naukowej
-- wykorzystanie wiedzy w praktyce i formułowanie rekomendacji
-- logiczny tok wywodu
-- wyciąganie i formułowanie wniosków
-- jasny i precyzyjny język właściwy dla kierunku
+- identyfikacji i analizy zjawisk ekonomicznych oraz prawidłowości w ich
+  obrębie
+- stosowania warsztatu badawczego i metod pracy naukowej
+- wykorzystania wiedzy w praktyce i formułowania rekomendacji
+- logicznego toku wywodu
+- wyciągania i formułowania wniosków
+- jasnego i precyzyjnego języka właściwego dla kierunku
 
----
+Literatura przedmiotu jest aktualna i dobrana tak, by umożliwiała rozwiązanie
+problemu badawczego (§ 4 ust. 7).
 
-## 5. Klasyfikacja wagi uchybień
+## Waga uchybień
 
-> **Interpretacja Corvusa, nie zapis zarządzenia.** Zarządzenie nie definiuje
-> kategorii CRITICAL, MAJOR i MINOR — tak Corvus klasyfikuje to, co znajdzie.
-> Nazwy kategorii zostają po angielsku, bo tak zapisuje je system.
+Interpretacja Corvusa, nie zapis zarządzenia: zarządzenie nie dzieli uchybień
+na kategorie. Nazwy kategorii zostają po angielsku, bo tak zapisuje je system.
 
 ### CRITICAL — blokuje dopuszczenie do obrony
 - brak wymaganego elementu: strony tytułowej, oświadczenia, wstępu,
   zakończenia albo wykazu źródeł
-- wstęp bez problemu badawczego, celów albo pytań/hipotez badawczych
-- zakończenie bez odniesienia do problemu badawczego albo hipotez
-- mniej niż 25 pozycji literaturowych (bez netografii) — nie dotyczy prac
-  projektowych, w których zmniejszenie uzasadniają materiały projektowe
-- mniej niż 4 pozycje literatury obcojęzycznej
-- brak przypisów umożliwiających identyfikację źródeł (naruszenie praw
-  autorskich wyklucza dopuszczenie do obrony — § 5)
-- przypisy niezgodne ze stylem APA
+- wstęp bez problemu badawczego, bez celów albo bez pytań lub hipotez
+  badawczych
+- zakończenie, które nie odnosi się do problemu badawczego albo do pytań lub
+  hipotez postawionych we wstępie
+- liczba pozycji literaturowych (bez netografii) poniżej progu — nie dotyczy
+  pracy projektowej, w której mniejszą liczbę uzasadniają materiały projektowe
+- liczba pozycji obcojęzycznych poniżej progu
+- brak przypisów umożliwiających identyfikację źródeł (praca naruszająca
+  prawa autorskie nie może być dopuszczona do obrony — § 5 ust. 4)
 
-### MAJOR — istotne uchybienie do poprawy
-- wstęp niekompletny (brak jednego lub kilku wymaganych elementów)
-- zakończenie niekompletne
+### MAJOR — istotne uchybienie
+- wstęp bez jednego lub kilku pozostałych wymaganych elementów
+- zakończenie bez odniesienia do celu albo bez wniosków
 - literatura nieaktualna albo niedobrana do problemu badawczego
-- literatura na granicy minimum (25–30 pozycji) wątpliwej jakości
-- objętość wyraźnie poza sugerowanym zakresem 80 000 – 130 000 znaków
+- liczba pozycji niewiele ponad progiem, przy wątpliwej jakości źródeł
+- przypisy albo wykaz źródeł systematycznie niezgodne ze stylem APA
+- objętość wyraźnie poza sugerowanym zakresem
 - poważne błędy językowe
-- brak spisów rysunków lub tabel, gdy praca je zawiera
+- brak spisu rysunków albo tabel, gdy praca je zawiera
 - praca zespołowa bez wyraźnego przypisania autorstwa części
 
-### MINOR — zalecana poprawa
+### MINOR — drobne uchybienie
 - drobne błędy językowe lub stylistyczne
-- niespójności w formatowaniu wykazu źródeł (drobne odstępstwa od APA)
+- pojedyncze odstępstwa od stylu APA albo niekonsekwencje w wykazie źródeł
+- wykaz źródeł nieuporządkowany alfabetycznie albo nienumerowany
 - objętość nieznacznie poza sugerowanym zakresem
 - nieproporcjonalna, ale akceptowalna długość rozdziałów
 - duży udział netografii
