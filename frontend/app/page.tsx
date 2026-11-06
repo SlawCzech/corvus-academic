@@ -20,7 +20,8 @@ export default async function Home() {
         <DataAndKeys />
       </main>
       <footer className="mx-auto flex w-full max-w-[1280px] items-center justify-between gap-4 border-t border-line px-4 py-8 text-[13px] text-muted sm:px-8 lg:px-16">
-        <span>Corvus</span>
+        {/* The year of the request: pages render per request (the CSP nonce). */}
+        <span>© {new Date().getFullYear()} Corvus</span>
         <LegalLinks />
       </footer>
     </>
