@@ -1,17 +1,27 @@
 "use client"
 
 import Link from "next/link"
+import { useState } from "react"
 import useSWR from "swr"
+import { useHomeUniversity } from "@/hooks/useHomeUniversity"
 import { fetcher } from "@/lib/api.client"
 import type { GuidelineSet } from "@/lib/api.types"
 import { THESIS_TYPE_LABELS, formatDate } from "@/components/guidelines/format"
 
-/** The catalog as a promoter sees it: every set with a version in force. */
+/**
+ * The catalog as a promoter sees it: every set with a version in force —
+ * their own university's, when they have set one, and the rest on request.
+ */
 export default function GuidelinesPage() {
   const { data: sets, error } = useSWR<GuidelineSet[]>("/api/guidelines/sets", fetcher)
+  const home = useHomeUniversity()
+  const [showAll, setShowAll] = useState(false)
 
+  const published = (sets ?? []).filter((s) => s.current !== null)
+  const own = home ? published.filter((s) => s.university.id === home) : published
+  const narrowed = Boolean(home) && !showAll && own.length > 0
   const byUniversity = new Map<string, GuidelineSet[]>()
-  for (const set of (sets ?? []).filter((s) => s.current !== null)) {
+  for (const set of narrowed ? own : published) {
     const key = set.university.name
     byUniversity.set(key, [...(byUniversity.get(key) ?? []), set])
   }
@@ -31,6 +41,16 @@ export default function GuidelinesPage() {
       )}
       {sets && byUniversity.size === 0 && (
         <p className="text-[13.5px] text-muted">Katalog jest jeszcze pusty.</p>
+      )}
+
+      {narrowed && published.length > own.length && (
+        <button
+          type="button"
+          onClick={() => setShowAll(true)}
+          className="mb-6 text-[13px] text-accent hover:underline"
+        >
+          Pokaż też inne uczelnie
+        </button>
       )}
 
       {[...byUniversity.entries()].map(([university, universitySets]) => (

@@ -6,6 +6,8 @@ import GuidelineVersionView from "../guidelines/GuidelineVersionView"
 import GuidelineAdmin from "../guidelines/GuidelineAdmin"
 import GuidelineDraftEditor from "../guidelines/GuidelineDraftEditor"
 import GuidelinePicker from "../students/GuidelinePicker"
+import GuidelineSetSelect from "../guidelines/GuidelineSetSelect"
+import HomeUniversitySection from "../HomeUniversitySection"
 import type { GuidelineSet, GuidelineVersion, Student } from "@/lib/api.types"
 
 const UE = { id: "u1", name: "Uniwersytet Ekonomiczny w Katowicach", short_name: "UE Katowice" }
@@ -403,6 +405,76 @@ describe("guideline catalog UI", () => {
           ),
         ).toBe(true),
       )
+    })
+  })
+
+  describe("the promoter's own university first", () => {
+    const UEP = { id: "u2", name: "Uniwersytet Ekonomiczny w Poznaniu", short_name: "UEP" }
+    const POZNAN = { ...SET, id: "set2", name: "Prace licencjackie UEP", university: UEP }
+
+    function catalog(home: string | null) {
+      return (url: string, init?: RequestInit): Promise<Response> => {
+        if (url === "/api/users/me/settings")
+          return Promise.resolve(
+            json(init?.method ? JSON.parse(init.body as string) : { home_university_id: home }),
+          )
+        if (url === "/api/guidelines/universities") return Promise.resolve(json([UE, UEP]))
+        return Promise.resolve(json([SET, POZNAN]))
+      }
+    }
+
+    it("offers the home university's sets, and the rest under 'Inna uczelnia…'", async () => {
+      fetchMock.mockImplementation(catalog("u2"))
+      const onChange = vi.fn()
+
+      withSWR(<GuidelineSetSelect thesisType="bachelor" value="" onChange={onChange} />)
+
+      const select = await screen.findByRole("combobox", { name: "Zestaw wytycznych" })
+      await waitFor(() => expect(select).toBeEnabled())
+      const names = () => within(select).getAllByRole("option").map((o) => o.textContent)
+      expect(names()).toEqual([
+        "Wybierz wytyczne uczelni",
+        "UEP — Prace licencjackie UEP",
+        "Inna uczelnia…",
+      ])
+
+      await userEvent.selectOptions(select, "Inna uczelnia…")
+
+      expect(names()).toContain("UE Katowice — Prace licencjackie")
+      expect(onChange).not.toHaveBeenCalled()
+    })
+
+    it("picks the only set of the home university on its own", async () => {
+      fetchMock.mockImplementation(catalog("u2"))
+      const onChange = vi.fn()
+
+      withSWR(<GuidelineSetSelect thesisType="bachelor" value="" onChange={onChange} autoSelect />)
+
+      await waitFor(() => expect(onChange).toHaveBeenCalledWith("set2"))
+    })
+
+    it("shows everything to a promoter without a home university", async () => {
+      fetchMock.mockImplementation(catalog(null))
+
+      withSWR(<GuidelineSetSelect thesisType="bachelor" value="" onChange={vi.fn()} autoSelect />)
+
+      const select = await screen.findByRole("combobox", { name: "Zestaw wytycznych" })
+      await waitFor(() => expect(within(select).getAllByRole("option")).toHaveLength(3))
+      expect(within(select).queryByText("Inna uczelnia…")).not.toBeInTheDocument()
+    })
+
+    it("saves the home university from the profile", async () => {
+      fetchMock.mockImplementation(catalog(null))
+
+      withSWR(<HomeUniversitySection />)
+
+      const select = await screen.findByRole("combobox", { name: "Moja uczelnia" })
+      await waitFor(() => expect(select).toBeEnabled())
+      await userEvent.selectOptions(select, "u2")
+
+      expect(await screen.findByText("Zapisano")).toBeInTheDocument()
+      const patch = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH")
+      expect(JSON.parse(patch![1].body as string)).toEqual({ home_university_id: "u2" })
     })
   })
 })

@@ -157,6 +157,7 @@ export default function ReviewForm({ onCreated, onCancel }: ReviewFormProps) {
             value={guidelineSetId}
             onChange={setGuidelineSetId}
             className={inputClass}
+            autoSelect
           />
         </label>
         <label className="block sm:col-span-2">

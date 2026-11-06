@@ -552,6 +552,18 @@ export async function uploadGuidelineSource(
   return res.json() as Promise<GuidelineVersion>
 }
 
+/** The university whose guidelines the caller sees first; null clears it. */
+export function setHomeUniversity(
+  universityId: string | null,
+): Promise<{ home_university_id: string | null }> {
+  return sendJson(
+    "/api/users/me/settings",
+    "PATCH",
+    { home_university_id: universityId },
+    "Nie udało się zapisać uczelni",
+  )
+}
+
 /** A correction: the next version, with the rubric and regulation copied. */
 export function correctGuidelineSet(setId: string): Promise<GuidelineVersion> {
   return sendJson(

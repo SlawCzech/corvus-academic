@@ -3,6 +3,7 @@ import { decodeToken } from "@/lib/auth"
 import ApiKeySection from "@/components/ApiKeySection"
 import ProfileAiDefaults from "@/components/ProfileAiDefaults"
 import ChangePasswordForm from "@/components/ChangePasswordForm"
+import HomeUniversitySection from "@/components/HomeUniversitySection"
 
 export default async function ProfilePage() {
   const cookieStore = await cookies()
@@ -32,6 +33,13 @@ export default async function ProfilePage() {
           </div>
         </dl>
       </section>
+
+      {isPromoter && (
+        <section className="mb-10">
+          <h2 className="mb-4 text-[15px] font-semibold text-foreground">Moja uczelnia</h2>
+          <HomeUniversitySection />
+        </section>
+      )}
 
       <section className="mb-10">
         <h2 className="mb-4 text-[15px] font-semibold text-foreground">

@@ -661,3 +661,49 @@ def test_internal_endpoints_are_gone(client: TestClient) -> None:
     introspect = client.post("/internal/token/introspect", json={"token": "x"})
     assert introspect.status_code == 404
     assert client.get(f"/internal/users/{uuid.uuid4()}").status_code == 404
+
+
+# ---------- home university ----------
+
+
+def test_a_promoter_sets_and_clears_their_home_university(client: TestClient) -> None:
+    headers = {
+        "Authorization": f"Bearer {_login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)}"
+    }
+    university = str(uuid.uuid4())
+
+    before = client.get("/users/me/settings", headers=headers).json()
+    saved = client.patch(
+        "/users/me/settings", json={"home_university_id": university}, headers=headers
+    )
+    after = client.get("/users/me/settings", headers=headers).json()
+    cleared = client.patch(
+        "/users/me/settings", json={"home_university_id": None}, headers=headers
+    )
+
+    assert before == {"home_university_id": None}
+    assert saved.status_code == 200
+    assert after == {"home_university_id": university}
+    assert cleared.json() == {"home_university_id": None}
+
+
+def test_an_admin_can_give_a_new_account_its_university(client: TestClient) -> None:
+    admin = {"Authorization": f"Bearer {_login(client, ADMIN_EMAIL, ADMIN_PASSWORD)}"}
+    university = str(uuid.uuid4())
+
+    resp = client.post(
+        "/users",
+        json={
+            "email": "nowy@example.com",
+            "password": "dlugie-haslo-123",
+            "home_university_id": university,
+        },
+        headers=admin,
+    )
+    token = _login(client, "nowy@example.com", "dlugie-haslo-123")
+
+    assert resp.status_code == 201, resp.text
+    settings = client.get(
+        "/users/me/settings", headers={"Authorization": f"Bearer {token}"}
+    ).json()
+    assert settings == {"home_university_id": university}

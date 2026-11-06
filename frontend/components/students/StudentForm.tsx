@@ -130,6 +130,7 @@ export default function StudentForm({ student, onSaved, onCancel }: StudentFormP
             value={guidelineSetId}
             onChange={setGuidelineSetId}
             className={inputClass}
+            autoSelect
           />
         </label>
         <label className="block sm:col-span-2">

@@ -42,7 +42,9 @@ class UserService:
     def __init__(self, repo: UserRepository) -> None:
         self._repo = repo
 
-    async def register(self, registration: UserRegistration) -> User:
+    async def register(
+        self, registration: UserRegistration, home_university_id: UUID | None = None
+    ) -> User:
         """Persist a new user. Raises ValueError on duplicate email."""
         existing = await self._repo.find_by_email(registration.email)
         if existing is not None:
@@ -53,9 +55,21 @@ class UserService:
             role=str(registration.role),
             hashed_password=registration.hashed_password,
             created_at=datetime.now(UTC),
+            home_university_id=home_university_id,
         )
         await self._repo.save(model)
         return _to_domain(model)
+
+    async def home_university(self, user_id: UUID) -> UUID | None:
+        """The university whose guidelines the user sees first, if set."""
+        model = await self._repo.find_by_id(user_id)
+        return model.home_university_id if model else None
+
+    async def set_home_university(
+        self, user_id: UUID, university_id: UUID | None
+    ) -> None:
+        """Set it, or clear it with None."""
+        await self._repo.update_home_university(user_id, university_id)
 
     async def authenticate(self, email: str, password: str) -> User | None:
         """Return User if credentials match, otherwise None."""

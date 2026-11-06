@@ -541,6 +541,10 @@ Rubrykę pisze model: admin wskazuje uczelnię i typ pracy i wgrywa regulamin, a
 a admin sprawdza z oryginałem i publikuje. Admin trzyma własny klucz dostawcy
 (`HOLD_PROVIDER_KEYS`), dalej bez dostępu do studentów —
 [ADR 0024](docs/adr/0024-the-model-drafts-the-rubric-from-the-regulation.md).
+Promotor ma opcjonalną „Moją uczelnię” (`identity.users.home_university_id`, bez FK):
+pickery wytycznych pokazują najpierw jej zestawy, resztę pod „Inna uczelnia…”, a jedyny
+pasujący zestaw wybiera się sam —
+[ADR 0025](docs/adr/0025-a-promoters-home-university.md).
 
 ---
 
