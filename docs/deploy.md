@@ -225,6 +225,10 @@ zanonimizowane albo za zgodą autora.
   brak workera nie cofał deployu, więc skrypt czyta body. Log skryptu:
   `/srv/corvus/backups/watch.log`. Na serwerze postawionym przed 2026-11-03 cron
   trzeba dopisać ręcznie (`/etc/cron.d/corvus-watch`, jak w `setup-server.sh`).
+- **Worker** ma cztery procesy, a jeden przebieg najwyżej 30 minut. Przy deployu
+  dostaje 60 s: krótkie akcje się kończą, długie wracają do kolejki i nowy worker
+  podejmuje je od ostatniego kroku. Akcja, która 90 minut stoi bez ruchu, przy
+  najbliższym odpytaniu zmienia się w `failed` (ADR 0010).
 
 ## Odtworzenie z kopii
 

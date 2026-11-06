@@ -17,7 +17,7 @@ from pydantic import BaseModel, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.graph import IMPLEMENTED_ACTIONS
-from src.domain.action import SUPPORTED_PROVIDERS, TaskStatus
+from src.domain.action import SUPPORTED_PROVIDERS, TaskStatus, is_abandoned
 from src.infrastructure.api.auth import Role, TokenUser, verify_access_token
 from src.infrastructure.celery_app import celery_app
 from src.infrastructure.checkpoints import delete as delete_checkpoints
@@ -34,6 +34,9 @@ _bearer = HTTPBearer()
 
 _ACTION_TASK = "src.application.tasks.run_action"
 _RESUME_TASK = "src.application.tasks.resume_action"
+
+# Shown to the promoter as is, like any error without a code.
+_ABANDONED = "Przebieg akcji został przerwany i nie wrócił. Uruchom akcję ponownie."
 
 # ---------- dependencies ----------
 
@@ -266,8 +269,19 @@ async def get_action_status(
     user: CurrentUserDep,
     repo: TaskRepoDep,
 ) -> ActionStatusResponse:
-    """Poll one action — ADMIN sees any, others only their own."""
-    return _status_response(await _require_task(repo, user, task_id))
+    """Poll one action — ADMIN sees any, others only their own.
+
+    A task that stopped moving long ago is failed here, where someone is
+    waiting for it: its worker died with the run, or the final status write
+    was lost (`task_status`). Otherwise it would show as running forever. If
+    its message ever reaches a worker after all, the worker leaves a finished
+    row alone (`tasks._may_run`).
+    """
+    record = await _require_task(repo, user, task_id)
+    if is_abandoned(record.status, record.updated_at, datetime.now(UTC)):
+        logger.warning("action_abandoned", task_id=task_id, status=record.status)
+        await repo.update_status(task_id, TaskStatus.FAILED, error=_ABANDONED)
+    return _status_response(record)
 
 
 @router.post("/actions/{task_id}/resume", response_model=ActionStatusResponse)

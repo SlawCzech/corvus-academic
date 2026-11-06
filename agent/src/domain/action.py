@@ -5,6 +5,7 @@ the two services share a wire contract, not a codebase — the same reason
 `api/auth.py` keeps its own copy of `Role`.
 """
 
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 
 # Providers a user may bring their own key for; every action runs on one.
@@ -66,3 +67,24 @@ class ActionErrorCode(StrEnum):
     PROVIDER_KEY_REJECTED = "provider_key_rejected"
     # Too many requests for the account's tier, and the retries ran out.
     PROVIDER_RATE_LIMITED = "provider_rate_limited"
+
+
+# A pending or running task whose row has not moved for this long is not
+# coming back. A run touches its row at every finished node, no node outlives
+# the worker's 30-minute time limit, and a dead worker's task is redelivered
+# within the 45-minute visibility timeout (`infrastructure/celery_app.py`);
+# the rest is room for a redelivered task to wait its turn in the queue.
+ABANDONED_AFTER = timedelta(minutes=90)
+
+
+def is_abandoned(status: str, updated_at: datetime, now: datetime) -> bool:
+    """Whether a task that should be moving has stopped for good.
+
+    Only pending and running count: a run paused for the promoter waits for
+    them as long as it takes, and a finished one has nothing left to do.
+    """
+    if status not in (TaskStatus.PENDING, TaskStatus.RUNNING):
+        return False
+    if updated_at.tzinfo is None:  # SQLite in tests forgets the zone
+        updated_at = updated_at.replace(tzinfo=UTC)
+    return now - updated_at > ABANDONED_AFTER

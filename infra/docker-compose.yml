@@ -69,6 +69,11 @@ services:
     command: celery -A src.infrastructure.celery_app worker --loglevel=info
     env_file:
       - ../.env
+    # As in production: a restart hands running tasks back to the queue
+    # instead of leaving them unacked (infra/deploy/docker-compose.prod.yml).
+    environment:
+      REMAP_SIGTERM: SIGQUIT
+    stop_grace_period: 60s
     depends_on:
       agent:
         condition: service_healthy
