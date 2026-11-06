@@ -260,6 +260,11 @@ Corvus processes unpublished student work. Before running it with real theses:
 - Tracing (LangSmith, Langfuse) records prompts. Use it with synthetic theses only.
 - Check your university's rules on using AI in assessment. Corvus produces drafts; the
   grade and the review are the supervisor's responsibility.
+- Whoever runs an instance holds students' data for the supervisors: the terms of service
+  at `/terms` carry a data processing agreement (art. 28 GDPR), and a supervisor reaches
+  no student data before accepting them. Thesis files go 14 days after the final version
+  is accepted and 30 days after supervision ends
+  ([ADR 0027](docs/adr/0027-corvus-is-the-promoters-processor.md)).
 
 ## How it was built
 

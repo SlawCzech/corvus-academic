@@ -142,7 +142,7 @@ def test_accepting_a_version_starts_the_fragments_clock() -> None:
 
     due = _POLICY.fragment_purge_due_at(student, _fragment(student))
 
-    assert due == _T0 + timedelta(days=30)
+    assert due == _T0 + timedelta(days=14)
 
 
 def test_closing_a_student_starts_it_too() -> None:
@@ -151,7 +151,7 @@ def test_closing_a_student_starts_it_too() -> None:
 
     due = _POLICY.fragment_purge_due_at(student, _fragment(student))
 
-    assert due == _T0 + timedelta(days=150)
+    assert due == _T0 + timedelta(days=30)
 
 
 def test_a_purged_fragment_is_never_due_again() -> None:
@@ -175,7 +175,7 @@ async def test_sweep_purges_the_text_and_file_and_keeps_the_feedback(
     await env.fragment_rows.update(model)
     await env.students.update(PROMOTOR, student.id, status=StudentStatus.GRADUATED)
 
-    now = datetime.now(UTC) + timedelta(days=151)
+    now = datetime.now(UTC) + timedelta(days=31)
     purged = await env.retention.sweep(now)
 
     assert purged == 1

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { fetcher } from "@/lib/api.client"
+import { acceptTerms, fetcher } from "@/lib/api.client"
 
 /**
  * The session used to die silently: a fifteen-minute access token expired
@@ -73,5 +73,67 @@ describe("api client session renewal", () => {
       (call) => call[0] === "/api/auth/refresh",
     )
     expect(refreshes).toHaveLength(1)
+  })
+})
+
+/**
+ * A promoter who has not accepted the terms in force gets a 403 from every
+ * route with student data; the client turns it into the terms page.
+ */
+describe("api client terms gate", () => {
+  const fetchMock = vi.fn()
+  const assign = vi.fn()
+
+  beforeEach(() => {
+    vi.stubGlobal("fetch", fetchMock)
+    vi.stubGlobal("window", {
+      location: { assign, pathname: "/students/s1", search: "?tab=notes" },
+    })
+    fetchMock.mockReset()
+    assign.mockReset()
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  function json(body: unknown, status = 200): Response {
+    return new Response(JSON.stringify(body), { status })
+  }
+
+  it("sends the promoter to the terms and back to the page after", async () => {
+    fetchMock.mockResolvedValueOnce(json({ detail: "terms_not_accepted" }, 403))
+
+    await expect(fetcher("/api/students/s1")).rejects.toThrow()
+
+    expect(assign).toHaveBeenCalledWith(
+      `/terms/accept?next=${encodeURIComponent("/students/s1?tab=notes")}`,
+    )
+  })
+
+  it("leaves any other 403 to the page", async () => {
+    fetchMock.mockResolvedValueOnce(json({ detail: "Admin role required" }, 403))
+
+    await expect(fetcher("/api/admin/users")).rejects.toThrow("Admin role required")
+
+    expect(assign).not.toHaveBeenCalled()
+  })
+
+  it("accepts the version the promoter read", async () => {
+    fetchMock.mockResolvedValueOnce(json({ current_version: "v1", accepted_at: "now" }))
+
+    await acceptTerms("v1")
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe("/api/users/me/terms")
+    expect(JSON.parse(init.body as string)).toEqual({ version: "v1" })
+  })
+
+  it("says why an acceptance was refused", async () => {
+    fetchMock.mockResolvedValueOnce(
+      json({ detail: "Regulamin zmienił się w międzyczasie. Odśwież stronę." }, 409),
+    )
+
+    await expect(acceptTerms("old")).rejects.toThrow("Odśwież stronę")
   })
 })

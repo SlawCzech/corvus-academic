@@ -24,7 +24,6 @@ _STUDENT: dict[str, Any] = {
     "full_name": "Jan Kowalski",
     "field_of_study": "Ekonomia",
     "thesis_type": "bachelor",
-    "index_number": "123456",
 }
 
 
@@ -235,7 +234,6 @@ def test_update_edits_details(client: TestClient) -> None:
             "full_name": "Anna Nowak",
             "field_of_study": "Finanse",
             "thesis_type": "master_article",
-            "index_number": "12345",
         },
         headers=headers,
     )
@@ -244,27 +242,33 @@ def test_update_edits_details(client: TestClient) -> None:
     assert body["full_name"] == "Anna Nowak"
     assert body["field_of_study"] == "Finanse"
     assert body["thesis_type"] == "master_article"
-    assert body["index_number"] == "12345"
+    assert "index_number" not in body
 
 
-def test_null_clears_topic_and_index_number(client: TestClient) -> None:
+def test_null_clears_topic(client: TestClient) -> None:
     headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
     created = _create_student(client, headers)
     url = f"/students/{created['id']}"
-    client.patch(
-        url, json={"current_topic": "Temat", "index_number": "1"}, headers=headers
-    )
+    client.patch(url, json={"current_topic": "Temat"}, headers=headers)
 
     kept = client.patch(url, json={"full_name": "Anna Nowak"}, headers=headers)
-    cleared = client.patch(
-        url, json={"current_topic": None, "index_number": None}, headers=headers
-    )
+    cleared = client.patch(url, json={"current_topic": None}, headers=headers)
 
     assert kept.json()["current_topic"] == "Temat"
-    assert kept.json()["index_number"] == "1"
     assert cleared.json()["current_topic"] is None
     assert cleared.json()["current_topic_set_at"] is None
-    assert cleared.json()["index_number"] is None
+
+
+def test_an_index_number_from_an_old_client_is_ignored(client: TestClient) -> None:
+    """Corvus does not keep it; a tab opened before the change still works."""
+    headers = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+
+    resp = client.post(
+        "/students", json={**_STUDENT, "index_number": "123456"}, headers=headers
+    )
+
+    assert resp.status_code == 201, resp.text
+    assert "index_number" not in resp.json()
 
 
 def test_update_rejects_blank_name(client: TestClient) -> None:

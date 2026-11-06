@@ -23,10 +23,14 @@ class RetentionPolicy:
     ``after_close`` — every version survives this long after the student is
     marked graduated or archived. Corvus is a working tool, not the archive;
     the official copy lives in the university's own system.
+
+    Both were shortened on 2026-11-06 (from 30 and 150 days): what Corvus
+    does not hold, it cannot lose, and the terms of service promise these
+    numbers (`frontend/content/legal`).
     """
 
-    non_final_grace: timedelta = timedelta(days=30)
-    after_close: timedelta = timedelta(days=150)
+    non_final_grace: timedelta = timedelta(days=14)
+    after_close: timedelta = timedelta(days=30)
 
     def purge_due_at(self, student: Student, draft: ThesisDraft) -> datetime | None:
         """When this version is due to be purged, or None if it is not."""

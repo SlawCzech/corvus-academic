@@ -37,7 +37,6 @@ export default function StudentDetailsCard({ student, onChange }: Props) {
   const rows: [string, string][] = [
     ["Imię i nazwisko", student.full_name],
     ["Kierunek", student.field_of_study],
-    ["Nr indeksu", student.index_number ?? "—"],
     ["Typ pracy", THESIS_TYPE_LABELS[student.thesis_type]],
     ["Obszar badawczy", student.research_area ?? "—"],
     ["Cel i hipotezy", student.research_aim ?? "—"],

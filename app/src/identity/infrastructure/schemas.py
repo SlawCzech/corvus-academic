@@ -155,3 +155,15 @@ class AccessRequestResponse(BaseModel):
 
 def access_request_response(req: AccessRequestModel) -> AccessRequestResponse:
     return AccessRequestResponse(id=req.id, email=req.email, created_at=req.created_at)
+
+
+class TermsStatusResponse(BaseModel):
+    # The version in force, and when the caller accepted it (None: not yet).
+    current_version: str
+    accepted_at: datetime | None
+
+
+class AcceptTermsRequest(BaseModel):
+    # The version the promoter read. A different one than in force is a 409:
+    # they accepted a text that has since changed.
+    version: str = Field(min_length=1, max_length=20)

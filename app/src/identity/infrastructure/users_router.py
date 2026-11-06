@@ -12,20 +12,24 @@ from src.identity.application.user_service import (
     UserService,
     WrongPasswordError,
 )
+from src.identity.domain.terms import CURRENT_TERMS_VERSION
 from src.identity.domain.user import Role, UserRegistration
 from src.identity.infrastructure.dependencies import (
     AdminDep,
     CurrentUserDep,
     SessionUserDep,
+    TermsRepoDep,
     TokenStoreDep,
     UserServiceDep,
 )
 from src.identity.infrastructure.limiter import login_rate_limit
 from src.identity.infrastructure.schemas import (
+    AcceptTermsRequest,
     ChangePasswordRequest,
     LoginResponse,
     RegisterRequest,
     TemporaryPasswordResponse,
+    TermsStatusResponse,
     UserResponse,
     UserSettings,
     user_response,
@@ -74,6 +78,38 @@ async def list_users(_admin: AdminDep, svc: UserServiceDep) -> list[UserResponse
 def get_me(user: SessionUserDep) -> UserResponse:
     """Return the current user's profile, a temporary password or not."""
     return user_response(user)
+
+
+@router.get("/me/terms", response_model=TermsStatusResponse)
+async def get_my_terms(
+    user: CurrentUserDep, terms: TermsRepoDep
+) -> TermsStatusResponse:
+    """The terms in force, and whether the caller has accepted them."""
+    return TermsStatusResponse(
+        current_version=CURRENT_TERMS_VERSION,
+        accepted_at=await terms.accepted_at(user.id, CURRENT_TERMS_VERSION),
+    )
+
+
+@router.post("/me/terms", response_model=TermsStatusResponse)
+async def accept_my_terms(
+    body: AcceptTermsRequest, user: CurrentUserDep, terms: TermsRepoDep
+) -> TermsStatusResponse:
+    """Accept the terms in force. Accepting again keeps the first date.
+
+    The body names the version the promoter read: if the text changed while
+    the page was open, that is a 409, not an acceptance of a text they did
+    not see.
+    """
+    if body.version != CURRENT_TERMS_VERSION:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Regulamin zmienił się w międzyczasie. Odśwież stronę.",
+        )
+    accepted = await terms.record(user.id, CURRENT_TERMS_VERSION)
+    return TermsStatusResponse(
+        current_version=CURRENT_TERMS_VERSION, accepted_at=accepted
+    )
 
 
 @router.get("/me/settings", response_model=UserSettings)

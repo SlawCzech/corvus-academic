@@ -44,15 +44,6 @@ def test_student_rejects_blank_field_of_study() -> None:
         _student(field_of_study="")
 
 
-def test_student_rejects_blank_index_number_when_given() -> None:
-    with pytest.raises(ValueError, match="index_number"):
-        _student(index_number="  ")
-
-
-def test_student_allows_missing_index_number() -> None:
-    assert _student().index_number is None
-
-
 def test_student_defaults_to_active() -> None:
     assert _student().status is StudentStatus.ACTIVE
 
@@ -110,14 +101,6 @@ def test_update_details_with_a_blank_field_changes_nothing() -> None:
     with pytest.raises(ValueError, match="field_of_study"):
         student.update_details(full_name="Anna Nowak", field_of_study="  ")
     assert student.full_name == "Jan Kowalski"
-
-
-def test_index_number_can_be_set_and_cleared() -> None:
-    student = _student()
-    student.set_index_number(" 12345 ")
-    assert student.index_number == "12345"
-    student.set_index_number(None)
-    assert student.index_number is None
 
 
 def test_changing_thesis_type_drops_the_guideline_set() -> None:

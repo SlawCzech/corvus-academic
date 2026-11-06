@@ -57,7 +57,6 @@ class Student:
     full_name: str
     field_of_study: str
     thesis_type: ThesisType
-    index_number: str | None = None
     current_topic: str | None = None
     current_topic_set_at: datetime | None = None
     status: StudentStatus = StudentStatus.ACTIVE
@@ -83,8 +82,6 @@ class Student:
     def __post_init__(self) -> None:
         self.full_name = _require_text(self.full_name, "full_name")
         self.field_of_study = _require_text(self.field_of_study, "field_of_study")
-        if self.index_number is not None:
-            self.index_number = _require_text(self.index_number, "index_number")
         self.research_area = _optional_text(self.research_area)
         self.research_aim = _optional_text(self.research_aim)
 
@@ -151,14 +148,6 @@ class Student:
             self.full_name = name
         if field_ is not None:
             self.field_of_study = field_
-
-    def set_index_number(self, index_number: str | None) -> None:
-        """Set the index number, or clear it with ``None``."""
-        self.index_number = (
-            _require_text(index_number, "index_number")
-            if index_number is not None
-            else None
-        )
 
     def set_research_area(self, area: str | None) -> None:
         """Set the research area, or clear it with ``None`` or blank text."""

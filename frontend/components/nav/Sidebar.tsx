@@ -197,6 +197,14 @@ export default function Sidebar({ email, role }: SidebarProps) {
             <IconLogout size={16} stroke={1.75} />
           </LogoutButton>
         </div>
+        <div className="mt-2.5 flex gap-3 whitespace-nowrap px-2 text-[11px] text-[#8a97ab]">
+          <Link href="/terms" className="hover:text-white hover:underline">
+            Regulamin
+          </Link>
+          <Link href="/privacy" className="hover:text-white hover:underline">
+            Prywatność
+          </Link>
+        </div>
       </div>
     </aside>
   )

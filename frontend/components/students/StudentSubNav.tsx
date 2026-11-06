@@ -64,7 +64,6 @@ export default function StudentSubNav({
         </span>
         <span className="mt-0.5 block text-[12px] text-muted">
           {student.field_of_study}
-          {student.index_number ? ` · nr ${student.index_number}` : ""}
         </span>
         <div className="mt-2.5">
           <StatusSelect student={student} onChange={onStudentChange} />

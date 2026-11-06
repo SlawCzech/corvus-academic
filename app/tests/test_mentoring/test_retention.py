@@ -100,9 +100,9 @@ def test_nothing_is_due_for_an_active_student_without_acceptance() -> None:
 
 @pytest.mark.parametrize(
     ("days_after", "purged_versions"),
-    [(29, []), (30, [1]), (31, [1])],
+    [(13, []), (14, [1]), (15, [1])],
 )
-def test_non_final_versions_go_thirty_days_after_acceptance(
+def test_non_final_versions_go_fourteen_days_after_acceptance(
     days_after: int, purged_versions: list[int]
 ) -> None:
     student = _student()
@@ -116,9 +116,9 @@ def test_non_final_versions_go_thirty_days_after_acceptance(
 
 @pytest.mark.parametrize(
     ("days_after", "purged_versions"),
-    [(149, []), (150, [1, 2])],
+    [(29, []), (30, [1, 2])],
 )
-def test_every_version_goes_150_days_after_supervision_ends(
+def test_every_version_goes_30_days_after_supervision_ends(
     days_after: int, purged_versions: list[int]
 ) -> None:
     student = _student()
@@ -136,8 +136,8 @@ def test_the_earlier_of_the_two_rules_wins() -> None:
     student.accept_draft(v2.id, at=_T0)
     student.change_status(StudentStatus.GRADUATED, at=_T0)
 
-    assert _POLICY.purge_due_at(student, v1) == _T0 + timedelta(days=30)
-    assert _POLICY.purge_due_at(student, v2) == _T0 + timedelta(days=150)
+    assert _POLICY.purge_due_at(student, v1) == _T0 + timedelta(days=14)
+    assert _POLICY.purge_due_at(student, v2) == _T0 + timedelta(days=30)
 
 
 def test_a_cleared_acceptance_cancels_the_countdown() -> None:

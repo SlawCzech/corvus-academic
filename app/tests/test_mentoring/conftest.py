@@ -18,10 +18,15 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from main import app
 from src.guidelines.infrastructure.orm import Base as GuidelinesBase
 from src.identity.application.key_check import KeyCheck, KeyVerdict
+from src.identity.domain.terms import CURRENT_TERMS_VERSION
 from src.identity.infrastructure.dependencies import get_key_checker
 from src.identity.infrastructure.limiter import login_rate_limit
 from src.identity.infrastructure.models import Base as IdentityBase
-from src.identity.infrastructure.models import UserApiKeyModel, UserModel
+from src.identity.infrastructure.models import (
+    TermsAcceptanceModel,
+    UserApiKeyModel,
+    UserModel,
+)
 from src.identity.infrastructure.secrets import get_secret_service
 from src.mentoring.infrastructure.orm import Base as MentoringBase
 from src.shared.database import get_db_session
@@ -86,6 +91,10 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
         # Every action runs on a provider's key (ADR 0022): both promoters
         # start with one for Claude, as a promoter who can run anything does.
         for user_id in (PROMOTOR_UUID, OTHER_PROMOTOR_UUID):
+            # And have accepted the terms in force, as anyone past the gate has.
+            session.add(
+                TermsAcceptanceModel(user_id=user_id, version=CURRENT_TERMS_VERSION)
+            )
             session.add(
                 UserApiKeyModel(
                     user_id=user_id,

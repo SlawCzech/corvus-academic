@@ -205,9 +205,15 @@ Potem `https://corvus.saek.dev`, zaloguj się adminem (`ADMIN_EMAIL` /
 
 ### 9. Konta testerów
 
+Najpierw w `/srv/corvus/.env` wpisz `OPERATOR_NAME` (w cudzysłowie, bo ze spacją) i
+`OPERATOR_EMAIL`: to dane
+usługodawcy w regulaminie (`/terms`) i polityce prywatności (`/privacy`). Bez nich
+obie strony pokazują puste miejsce. Po zmianie: `docker compose ... up -d frontend`.
+
 Admin → **Użytkownicy** → dodaj konto z rolą `promotor`. Hasło przekaż testerowi
 innym kanałem niż e-mail z loginem. Tester po zalogowaniu:
 
+0. akceptuje regulamin — bez tego nie zobaczy żadnego studenta (ADR 0027),
 1. **Profil** → dodaje swój klucz API do Claude albo OpenAI (bez klucza akcje AI
    się nie uruchomią, ADR 0013),
 2. **Studenci** → „Wczytaj przykładowych studentów”: siedmioro fikcyjnych

@@ -43,7 +43,6 @@ def to_domain(model: StudentModel) -> Student:
         full_name=model.full_name,
         field_of_study=model.field_of_study,
         thesis_type=ThesisType(model.thesis_type),
-        index_number=model.index_number,
         current_topic=model.current_topic,
         current_topic_set_at=model.current_topic_set_at,
         status=StudentStatus(model.status),
@@ -70,7 +69,6 @@ def _to_orm(student: Student) -> StudentModel:
         id=student.id,
         promotor_id=student.promotor_id,
         full_name=student.full_name,
-        index_number=student.index_number,
         field_of_study=student.field_of_study,
         thesis_type=str(student.thesis_type),
         current_topic=student.current_topic,
@@ -134,7 +132,6 @@ class StudentService:
         full_name: str,
         field_of_study: str,
         thesis_type: ThesisType,
-        index_number: str | None = None,
         created_at: datetime | None = None,
         research_area: str | None = None,
         research_aim: str | None = None,
@@ -154,7 +151,6 @@ class StudentService:
             full_name=full_name,
             field_of_study=field_of_study,
             thesis_type=thesis_type,
-            index_number=index_number,
             research_area=research_area,
             research_aim=research_aim,
             created_at=added,
@@ -248,8 +244,6 @@ class StudentService:
         full_name: str | None = None,
         field_of_study: str | None = None,
         thesis_type: ThesisType | None = None,
-        index_number: str | None = None,
-        set_index_number: bool = False,
         clear_topic: bool = False,
         topic_set_at: datetime | None = None,
         research_area: str | None = None,
@@ -266,7 +260,7 @@ class StudentService:
         all: with them, ``None`` clears it. ``clear_topic`` reopens the topic.
         ``topic_set_at`` dates the topic when seeding a history.
 
-        Raises ValueError for a blank name, field, index number or topic, for
+        Raises ValueError for a blank name, field or topic, for
         a guideline set sent as null, and for one that does not exist, has
         nothing published, or is for another kind of thesis than the
         student's (after this change).
@@ -275,8 +269,6 @@ class StudentService:
         student = to_domain(model)
 
         student.update_details(full_name=full_name, field_of_study=field_of_study)
-        if set_index_number:
-            student.set_index_number(index_number)
         if set_research_area:
             student.set_research_area(research_area)
         if set_research_aim:
@@ -299,7 +291,6 @@ class StudentService:
 
         model.full_name = student.full_name
         model.field_of_study = student.field_of_study
-        model.index_number = student.index_number
         model.research_area = student.research_area
         model.research_aim = student.research_aim
         model.thesis_type = str(student.thesis_type)

@@ -554,6 +554,12 @@ Promotor ma opcjonalną „Moją uczelnię” (`identity.users.home_university_i
 pickery wytycznych pokazują najpierw jej zestawy, resztę pod „Inna uczelnia…”, a jedyny
 pasujący zestaw wybiera się sam —
 [ADR 0026](docs/adr/0026-a-promoters-home-university.md).
+Usługodawca jest podmiotem przetwarzającym promotora: regulamin (`/terms`) zawiera
+umowę powierzenia, a bez akceptacji bieżącej wersji cały router mentoringu daje 403
+`terms_not_accepted`. Bez numeru indeksu, retencja plików 14/30 dni, logi logowań
+90 dni; usługodawcę dokumenty biorą z `OPERATOR_NAME`/`OPERATOR_EMAIL` —
+[ADR 0027](docs/adr/0027-corvus-is-the-promoters-processor.md) ·
+[rejestr czynności](docs/gdpr-register.md).
 
 ---
 

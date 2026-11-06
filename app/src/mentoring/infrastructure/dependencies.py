@@ -6,6 +6,7 @@ instead of ``caller: Caller = Depends(get_caller)``. Same wiring everywhere,
 and never two endpoints resolving the same dependency two different ways.
 
 This is also the one file in ``mentoring`` that imports from ``identity``
+(apart from ``router.py``, which puts the terms gate in front of every route)
 (``User``, ``Permission``, ``get_current_user``) — mentoring needs to know
 who is asking; identity never imports anything back. The same goes for
 ``guidelines``: the catalog is wired in here, behind mentoring's own

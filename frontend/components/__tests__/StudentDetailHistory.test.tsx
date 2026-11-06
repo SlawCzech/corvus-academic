@@ -20,7 +20,6 @@ const STUDENT = {
   full_name: "Julia Krzemień",
   field_of_study: "Zarządzanie",
   thesis_type: "master_article",
-  index_number: "159293",
   current_topic: "Wpływ FOMO na zakupy impulsywne",
   status: "active",
   created_at: "2026-03-01T10:00:00Z",

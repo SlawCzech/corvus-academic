@@ -59,7 +59,7 @@ export default function DeleteStudentConfirm({ student, onDeleted, onCancel }: P
       {student.status === "active" && (
         <p className="mt-2 text-[13px] text-muted-strong">
           Jeśli opieka się po prostu skończyła, zmień status na „Obroniony” albo „Archiwalny” — dane
-          zostaną, a pliki prac usunie retencja po pięciu miesiącach.
+          zostaną, a pliki prac usunie retencja po 30 dniach.
         </p>
       )}
       <label className="mt-3.5 block">

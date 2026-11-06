@@ -43,8 +43,33 @@ async function renewSession(): Promise<boolean> {
  * model calls. A token that expires while the page waits used to surface as
  * "Nie znaleziono studenta" — a 401 that the UI could only read as "gone".
  */
+// The `detail` of `app`'s 403 for a promoter who has not accepted the terms
+// in force (`app/src/identity/domain/terms.py`).
+const TERMS_NOT_ACCEPTED = "terms_not_accepted"
+
+/**
+ * Send a promoter who has not accepted the terms to them, and back after.
+ *
+ * Every screen with student data loads it through here, so this one check
+ * covers them all: the first call that meets the gate turns the page into
+ * the terms. The response is cloned, so a caller still reads its body.
+ */
+async function toTermsIfAsked(res: Response): Promise<void> {
+  if (res.status !== 403 || typeof window === "undefined") return
+  const body = (await res
+    .clone()
+    .json()
+    .catch(() => null)) as { detail?: string } | null
+  if (body?.detail !== TERMS_NOT_ACCEPTED) return
+  const next = encodeURIComponent(window.location.pathname + window.location.search)
+  // A full load on purpose, as for an expired session below: a plain module.
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+  window.location.assign(`/terms/accept?next=${next}`)
+}
+
 export async function request(url: string, init?: RequestInit): Promise<Response> {
   const res = await fetch(url, init)
+  await toTermsIfAsked(res)
   if (res.status !== 401) return res
   if (!(await renewSession())) {
     // The refresh token is gone or rejected too: there is no session left to
@@ -54,7 +79,9 @@ export async function request(url: string, init?: RequestInit): Promise<Response
     if (typeof window !== "undefined") window.location.assign("/login")
     return res
   }
-  return fetch(url, init)
+  const retried = await fetch(url, init)
+  await toTermsIfAsked(retried)
+  return retried
 }
 
 /** Turn a failed response into an Error carrying the API's own explanation. */
@@ -78,13 +105,24 @@ async function getJson<T>(url: string, notFound: string): Promise<T> {
 export const fetcher = <T>(url: string): Promise<T> =>
   getJson<T>(url, "Nie udało się pobrać danych")
 
+// ---------- terms of service ----------
+
+/** Accept the terms in force; `version` is the text the promoter read. */
+export async function acceptTerms(version: string): Promise<void> {
+  const res = await request("/api/users/me/terms", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ version }),
+  })
+  if (!res.ok) return fail(res, "Nie udało się zapisać akceptacji regulaminu")
+}
+
 // ---------- students ----------
 
 export interface NewStudent {
   full_name: string
   field_of_study: string
   thesis_type: string
-  index_number?: string | null
   research_area?: string | null
   research_aim?: string | null
   /** Required in the form: every thesis is judged by a university's rules. */
@@ -110,7 +148,6 @@ export interface StudentChanges {
   full_name?: string
   field_of_study?: string
   thesis_type?: ThesisType
-  index_number?: string | null
   research_area?: string | null
   research_aim?: string | null
   current_topic?: string | null

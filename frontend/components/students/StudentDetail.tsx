@@ -360,8 +360,13 @@ export default function StudentDetail({
                 onChange={(e) => setNoteText(e.target.value)}
                 rows={3}
                 placeholder="Co ustaliliście na spotkaniu?"
+                aria-describedby="note-hint"
                 className="w-full rounded-lg border border-line bg-surface px-3.5 py-2 text-[14px] text-foreground focus:border-accent focus:outline-none"
               />
+              <p id="note-hint" className="mt-1.5 text-[12px] text-muted">
+                Bez informacji o zdrowiu studenta i innych danych wrażliwych — notatki idą do
+                modelu jako kontekst akcji.
+              </p>
               <button
                 type="submit"
                 className="mt-3 h-9 rounded-lg border border-line px-4 text-[13px] font-medium text-foreground hover:bg-surface-alt transition-colors"

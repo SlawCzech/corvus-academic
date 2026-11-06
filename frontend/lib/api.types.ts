@@ -29,7 +29,6 @@ export interface Student {
   id: string
   promotor_id: string
   full_name: string
-  index_number: string | null
   field_of_study: string
   thesis_type: ThesisType
   current_topic: string | null

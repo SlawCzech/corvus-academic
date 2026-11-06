@@ -6,8 +6,9 @@ this is only the seam ``main.py`` imports, so splitting those files further
 never touches the one line that wires this bounded context into the app.
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from src.identity.infrastructure.dependencies import require_current_terms
 from src.mentoring.infrastructure.actions_router import router as actions_router
 from src.mentoring.infrastructure.dashboard_router import router as dashboard_router
 from src.mentoring.infrastructure.drafts_router import router as drafts_router
@@ -16,7 +17,9 @@ from src.mentoring.infrastructure.models_router import router as models_router
 from src.mentoring.infrastructure.reviews_router import router as reviews_router
 from src.mentoring.infrastructure.students_router import router as students_router
 
-router = APIRouter()
+# Every endpoint here reaches student data, which a promoter may only hand
+# over once they have accepted the terms — the data processing agreement.
+router = APIRouter(dependencies=[Depends(require_current_terms)])
 router.include_router(students_router)
 router.include_router(actions_router)
 router.include_router(drafts_router)

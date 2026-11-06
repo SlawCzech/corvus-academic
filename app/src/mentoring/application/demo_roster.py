@@ -49,7 +49,6 @@ class DemoEvent:
 @dataclass(frozen=True)
 class DemoStudent:
     full_name: str
-    index_number: str
     field_of_study: str
     thesis_type: ThesisType
     topic: str | None
@@ -111,7 +110,6 @@ class DemoRoster:
             seed.full_name,
             seed.field_of_study,
             seed.thesis_type,
-            seed.index_number,
             created_at=started,
             research_area=seed.research_area,
             research_aim=seed.research_aim,
