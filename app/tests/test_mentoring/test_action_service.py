@@ -890,7 +890,7 @@ async def test_progress_check_sends_only_the_notes_between_the_versions(
 
 
 async def test_review_context_carries_the_student_as_metadata(env: _Fixture) -> None:
-    """The review nodes expect author/title/field, which live on the student."""
+    """The review nodes expect author form/title/field, from the student."""
     student = await _student(env)
     await env.students.update(PROMOTOR, student.id, current_topic="Instytucje a wzrost")
     await env.drafts.upload(
@@ -907,7 +907,9 @@ async def test_review_context_carries_the_student_as_metadata(env: _Fixture) -> 
     )
 
     metadata = env.agent.submitted[0]["context"]["metadata"]
-    assert metadata["author"] == "Jan Kowalski"
+    # The form, never the name (ADR 0023).
+    assert metadata["author_form"] == "Autor"
+    assert "author" not in metadata
     assert metadata["title"] == "Instytucje a wzrost"
     assert metadata["field_of_study"] == "Ekonomia"
     # Guidelines are agent-owned static data — `app` does not ship them.
@@ -1051,3 +1053,51 @@ async def test_the_tokens_an_action_spent_are_kept_with_it(env: _Fixture) -> Non
     env.agent.unavailable = True
     stored = (await env.actions.list_actions(PROMOTOR, student.id, TOKEN))[0]
     assert stored.usage == usage
+
+
+async def test_no_name_or_album_number_reaches_the_agent(env: _Fixture) -> None:
+    """The student, the promoter and the album number stay in Corvus (ADR 0023).
+
+    Checked on the review, whose context carries the most: the text with its
+    title page and statement, the metadata, the map.
+    """
+    student = await _student(env)
+    thesis = (
+        "UNIWERSYTET EKONOMICZNY W KRAKOWIE\n"
+        "JAN KOWALSKI\n"
+        "Nr albumu: 212345\n"
+        "Instytucje a wzrost\n"
+        "Promotor: dr hab. Adam Wiśniewski, prof. UEK\n"
+        "Oświadczenie\n"
+        "Ja, Jan Kowalski, oświadczam, że pracę napisałem samodzielnie.\n"
+        "Spis treści\n"
+        "Wstęp\n"
+        "Dziękuję panu Wiśniewskiemu. Kontakt: jan.kowalski@student.uek.pl\n"
+        "Rozdział 1\n"
+        "Treść rozdziału, w którym Kowalskiego nie ma.\n"
+    )
+    await env.drafts.upload(
+        PROMOTOR,
+        student.id,
+        filename="praca.docx",
+        data=docx_bytes(*thesis.splitlines()),
+    )
+
+    await env.actions.trigger(
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.GENERATE_REVIEW,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
+        detail="Jan prosił o uwagi do rozdziału 1",
+    )
+
+    sent = repr(env.agent.submitted[0]["context"])
+    for leak in ("Kowalsk", "KOWALSK", "Wiśniewsk", "212345", "uek.pl", "Jan "):
+        assert leak not in sent, leak
+    context = env.agent.submitted[0]["context"]
+    assert "[autor]" in context["text"] and "[promotor]" in context["text"]
+    # The title page and the statement keep their shape for the checks.
+    assert "Oświadczenie" in context["text"]
+    assert context["document_map"]["total_chars"] == len(context["text"])

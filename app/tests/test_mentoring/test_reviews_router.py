@@ -286,7 +286,7 @@ def test_a_reviewers_actions_run(
     assert resp.status_code == 202, resp.text
 
 
-def test_the_review_is_told_who_wrote_the_thesis(
+def test_the_review_is_told_how_to_refer_to_the_author(
     client: TestClient, headers: dict[str, str], agent: FakeAgentClient
 ) -> None:
     review_id = _new_review(client, headers)
@@ -297,7 +297,7 @@ def test_the_review_is_told_who_wrote_the_thesis(
         headers=headers,
     )
 
-    assert agent.submitted[0]["context"]["metadata"]["author"] == "Anna Nowak"
+    assert agent.submitted[0]["context"]["metadata"]["author_form"] == "Autorka"
 
 
 @pytest.mark.parametrize(

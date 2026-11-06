@@ -10,10 +10,11 @@ context whole at dispatch, so a Celery worker's job never depends on `app`
 being up, and no node needs a database.
 """
 
-from collections.abc import Mapping, Sequence
-from typing import Any
+from collections.abc import Callable, Mapping, Sequence
+from typing import Any, cast
 
 from src.document.outline import outline_payload
+from src.document.pseudonymize import author_form, pseudonymizer_for
 from src.mentoring.application.exceptions import MissingContextError
 from src.mentoring.domain.action import AgentAction
 from src.mentoring.domain.draft import ThesisDraft
@@ -53,12 +54,49 @@ def _research(student: Student) -> dict[str, Any]:
 def _thesis_metadata(student: Student) -> dict[str, Any]:
     """The metadata block the review nodes expect."""
     return {
-        "author": student.full_name,
+        # Not the name: it would be the one thing the pseudonymizer cannot
+        # take back out (ADR 0023), and the review only needs the form.
+        "author_form": author_form(student.full_name),
         "title": student.current_topic or "",
         "year": student.created_at.year,
         "field_of_study": student.field_of_study,
         "thesis_type": str(student.thesis_type),
     }
+
+
+# The thesis texts a context can carry, and what is not about the student.
+_THESIS_KEYS = ("text", "current_text", "previous_text")
+_NOT_ABOUT_THE_STUDENT = frozenset({"guidelines", "thresholds"})
+
+
+def _swap_all(value: object, swap: Callable[[str], str]) -> object:
+    if isinstance(value, str):
+        return swap(value)
+    if isinstance(value, Mapping):
+        return {
+            k: v if k in _NOT_ABOUT_THE_STUDENT else _swap_all(v, swap)
+            for k, v in cast(Mapping[str, object], value).items()
+        }
+    if isinstance(value, list):
+        return [_swap_all(v, swap) for v in cast(list[object], value)]
+    return value
+
+
+def pseudonymize_context(student: Student, context: dict[str, Any]) -> dict[str, Any]:
+    """The context with the student, the promoter and the album number out.
+
+    Every string goes through it, the meeting notes and the detail too: a
+    promoter writes the student's name there as well. The document map is
+    drawn again, because its offsets are into the text and a marker is not as
+    long as the name it stands for (ADR 0023).
+    """
+    theses = [t for k in _THESIS_KEYS if isinstance(t := context.get(k), str)]
+    swapped = cast(
+        dict[str, Any], _swap_all(context, pseudonymizer_for(student.full_name, theses))
+    )
+    if "document_map" in swapped:
+        swapped["document_map"] = outline_payload(swapped["text"])
+    return swapped
 
 
 def assemble_propose_topic_context(

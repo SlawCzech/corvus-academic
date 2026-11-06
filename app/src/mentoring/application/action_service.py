@@ -31,6 +31,7 @@ from src.mentoring.application.context import (
     assemble_review_fragment_context,
     assemble_verify_bibliography_context,
     notes_between_versions,
+    pseudonymize_context,
 )
 from src.mentoring.application.draft_service import to_domain as draft_to_domain
 from src.mentoring.application.exceptions import (
@@ -184,6 +185,8 @@ class ActionService:
         context, input_ref = await self._assemble(
             caller, student, action_type, detail, review_tone, fragment_id
         )
+        # The one way out to a provider, so the one place names come out.
+        context = pseudonymize_context(student, context)
         if review_findings_first and action_type in REVIEW_ACTIONS:
             context["promoter_reviews_findings"] = True
 

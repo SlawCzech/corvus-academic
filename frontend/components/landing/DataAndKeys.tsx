@@ -2,12 +2,12 @@ import Link from "next/link";
 
 const POINTS = [
   {
-    title: "Twój klucz",
-    text: "Akcje działają na kluczu promotora do Claude albo OpenAI, wybieranym przy każdej akcji. Corvus nie ma własnego modelu.",
+    title: "Praca bez nazwisk",
+    text: "Zanim tekst pracy trafi do dostawcy, Corvus zamienia imię i nazwisko studenta, promotora, numer albumu i adresy email na znaczniki — na stronie tytułowej, w oświadczeniu, w treści i w notatkach. Do katalogów bibliotek idą tylko opisy pozycji.",
   },
   {
-    title: "Co wychodzi na zewnątrz",
-    text: "Uruchomiona akcja wysyła tekst pracy do wybranego dostawcy. Sprawdzanie bibliografii wysyła tylko opisy pozycji.",
+    title: "Twój klucz",
+    text: "Akcje działają na kluczu promotora do Claude albo OpenAI, wybieranym przy każdej akcji. Corvus nie ma własnego modelu.",
   },
   {
     title: "Przechowywanie",

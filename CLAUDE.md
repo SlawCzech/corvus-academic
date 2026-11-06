@@ -79,6 +79,8 @@ Użytkownik
       ├─ /students/{id}/actions — akcje AI: kontekst składany w `app`,
       │                  wysyłka do agent POST /actions, polling, akceptacja;
       │                  rubryka wybranego zestawu wytycznych jedzie w kontekście
+      │                  bez nazwisk: autor, promotor, nr albumu i maile to znaczniki
+      │                  (`[autor]`…) w każdym tekście, mapa liczona od nowa (ADR 0023)
       ├─ /students/{id}/drafts — upload wersji pracy (plik + tekst), pobranie,
       │                  akceptacja wersji finalnej, retencja (ADR 0006)
       ├─ /students/{id}/fragments, /parts, /timeline — fragmenty pracy w rundach,
@@ -527,6 +529,11 @@ Każda akcja idzie na klucz promotora: serwis nie ma własnego modelu, akcja bez
 dostawcy to 409, a lista modeli admina, `LOCAL_MODELS_ENABLED` i parametr `model`
 zniknęły. Węzły czytają całą pracę, a evale chodzą na `claude` albo `openai` —
 [ADR 0022](docs/adr/0022-every-action-runs-on-a-providers-key.md).
+Zanim kontekst akcji wyjdzie do dostawcy, `app` zamienia autora, promotora, numer
+albumu i maile na znaczniki (`[autor]`, `[promotor]`…) w każdym tekście, a mapę
+dokumentu liczy od nowa. Strona tytułowa i oświadczenie zostają w kształcie, recenzja
+dostaje formę „Autor/Autorka” zamiast nazwiska —
+[ADR 0023](docs/adr/0023-names-stay-in-corvus.md).
 
 ---
 
