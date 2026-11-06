@@ -20,11 +20,12 @@ from src.guidelines.domain.rubric import parse_rubric
 from src.guidelines.infrastructure.dependencies import get_drafting_service
 from src.guidelines.infrastructure.orm import SourceFileModel
 from src.guidelines.infrastructure.repositories import CatalogRepository
+from src.mentoring.infrastructure.dependencies import get_agent_client
 from src.shared.database import get_db_session
 from src.shared.sql_file_store import SqlFileStore
 from tests.rubrics import rubric
 from tests.test_mentoring.conftest import ADMIN_EMAIL, ADMIN_PASSWORD, login
-from tests.test_mentoring.fakes import docx_bytes
+from tests.test_mentoring.fakes import FakeAgentClient, docx_bytes
 
 _DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
@@ -223,9 +224,12 @@ def test_a_finished_draft_fills_the_version_and_can_be_published(
     assert version["thresholds"]["max_body_chars"] == 130000
     sections = parse_rubric(version["rubric_md"])
     assert sections.elements == "### Wstęp\n- cel pracy (§ 3 ust. 2)"
-    assert "Załącznik nr 3 nie został dołączony." in version["rubric_md"]
-    assert "Zarządzenie.docx" in version["rubric_md"]
+    # What to check sits beside the rubric, never in what a model is given.
+    assert version["draft_notes"] == ["Załącznik nr 3 nie został dołączony."]
+    assert "Załącznik" not in version["rubric_md"]
+    assert version["rubric_md"].startswith("## Elementy pracy")
     assert published.status_code == 200, published.text
+    assert published.json()["draft_notes"] == []
 
 
 def test_a_failed_run_says_why_and_leaves_the_draft_as_it_was(
@@ -275,7 +279,7 @@ def test_thresholds_that_contradict_each_other_become_a_doubt(
     ).json()
 
     assert version["thresholds"]["min_sources"] is None
-    assert "Progi z regulaminu nie dały się zapisać" in version["rubric_md"]
+    assert any("Progi z regulaminu" in note for note in version["draft_notes"])
 
 
 def test_without_a_key_for_the_provider_nothing_is_sent(
@@ -344,3 +348,161 @@ def test_a_promoter_cannot_draft(
     promotor = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
 
     assert _start(client, promotor, version_id).status_code == 403
+
+
+def test_a_length_in_pages_lands_in_the_page_thresholds(
+    client: TestClient, admin: dict[str, str], drafter: FakeDrafter
+) -> None:
+    version_id = _draft_with_source(client, admin)
+    _start(client, admin, version_id)
+    pages = {
+        **_OUTPUT,
+        "thresholds": {"min_sources": 15, "min_pages": 40, "max_pages": 60},
+    }
+    drafter.answer = DraftingStatus(status="completed", output=pages, error=None)
+
+    version = client.get(
+        f"/guidelines/admin/versions/{version_id}", headers=admin
+    ).json()
+
+    assert version["thresholds"]["min_pages"] == 40
+    assert version["thresholds"]["max_pages"] == 60
+    assert version["thresholds"]["min_body_chars"] is None
+
+
+# ---------- correcting, discarding, starting again ----------
+
+
+def _published(client: TestClient, admin: dict[str, str]) -> tuple[str, str]:
+    """A set with a published version that has its regulation; (set, version)."""
+    version_id = _draft_with_source(client, admin)
+    client.patch(
+        f"/guidelines/admin/versions/{version_id}",
+        json={"rubric_md": rubric("v1"), "thresholds": {"min_sources": 25}},
+        headers=admin,
+    )
+    published = client.post(
+        f"/guidelines/admin/versions/{version_id}/publish", headers=admin
+    ).json()
+    return str(published["set_id"]), version_id
+
+
+def test_a_correction_starts_from_the_published_version_and_its_regulation(
+    client: TestClient, admin: dict[str, str]
+) -> None:
+    set_id, published_id = _published(client, admin)
+
+    resp = client.post(f"/guidelines/admin/sets/{set_id}/corrections", headers=admin)
+    corrected = client.patch(
+        f"/guidelines/admin/versions/{resp.json()['id']}",
+        json={"rubric_md": rubric("v2")},
+        headers=admin,
+    )
+
+    assert resp.status_code == 201, resp.text
+    draft = resp.json()
+    assert draft["version_no"] == 2
+    assert draft["rubric_md"] == rubric("v1")
+    assert draft["thresholds"]["min_sources"] == 25
+    assert draft["source"]["filename"] == "Zarządzenie.docx"
+    assert corrected.status_code == 200
+    # The published version is untouched, and keeps its own original.
+    old = client.get(f"/guidelines/versions/{published_id}", headers=admin).json()
+    assert old["rubric_md"] == rubric("v1")
+    assert (
+        client.get(
+            f"/guidelines/versions/{published_id}/source", headers=admin
+        ).status_code
+        == 200
+    )
+
+
+def test_a_discarded_draft_goes_and_the_published_version_stays(
+    client: TestClient, admin: dict[str, str]
+) -> None:
+    set_id, published_id = _published(client, admin)
+    draft = client.post(
+        f"/guidelines/admin/sets/{set_id}/corrections", headers=admin
+    ).json()
+
+    resp = client.delete(f"/guidelines/admin/versions/{draft['id']}", headers=admin)
+
+    assert resp.status_code == 204
+    detail = client.get(f"/guidelines/sets/{set_id}", headers=admin).json()
+    assert [v["id"] for v in detail["versions"]] == [published_id]
+    assert (
+        client.get(
+            f"/guidelines/versions/{published_id}/source", headers=admin
+        ).status_code
+        == 200
+    )
+    again = client.post(f"/guidelines/admin/sets/{set_id}/corrections", headers=admin)
+    assert again.status_code == 201
+
+
+def test_a_published_version_cannot_be_discarded(
+    client: TestClient, admin: dict[str, str]
+) -> None:
+    _, published_id = _published(client, admin)
+
+    resp = client.delete(f"/guidelines/admin/versions/{published_id}", headers=admin)
+
+    assert resp.status_code == 409
+
+
+def test_a_deleted_set_is_gone_and_its_students_must_pick_again(
+    client: TestClient, admin: dict[str, str]
+) -> None:
+    from tests.test_mentoring.conftest import PROMOTOR_EMAIL, PROMOTOR_PASSWORD
+
+    set_id, published_id = _published(client, admin)
+    promotor = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    student = client.post(
+        "/students",
+        json={
+            "full_name": "Jan",
+            "field_of_study": "Ekonomia",
+            "thesis_type": "bachelor",
+            "guideline_set_id": set_id,
+        },
+        headers=promotor,
+    ).json()
+    client.post(
+        f"/students/{student['id']}/drafts",
+        files={"file": ("praca.docx", docx_bytes("Tekst pracy."), _DOCX_TYPE)},
+        headers=promotor,
+    )
+
+    resp = client.delete(f"/guidelines/admin/sets/{set_id}", headers=admin)
+    app.dependency_overrides[get_agent_client] = FakeAgentClient
+    try:
+        review = client.post(
+            f"/students/{student['id']}/actions",
+            json={"provider": "claude", "action_type": "trial_review"},
+            headers=promotor,
+        )
+    finally:
+        app.dependency_overrides.pop(get_agent_client, None)
+
+    assert resp.status_code == 204
+    assert client.get(f"/guidelines/sets/{set_id}", headers=admin).status_code == 404
+    assert (
+        client.get(f"/guidelines/versions/{published_id}", headers=admin).status_code
+        == 404
+    )
+    assert review.status_code == 409
+    assert "guidelines" in review.json()["detail"]
+
+
+def test_a_promoter_cannot_delete_a_set(
+    client: TestClient, admin: dict[str, str]
+) -> None:
+    from tests.test_mentoring.conftest import PROMOTOR_EMAIL, PROMOTOR_PASSWORD
+
+    set_id, _ = _published(client, admin)
+    promotor = login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+
+    assert (
+        client.delete(f"/guidelines/admin/sets/{set_id}", headers=promotor).status_code
+        == 403
+    )

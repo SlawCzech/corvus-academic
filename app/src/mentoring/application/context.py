@@ -35,7 +35,10 @@ def _document_map(draft: ThesisDraft) -> dict[str, Any]:
     exists on page 18 as never written. Computed here, over the full text,
     with no model involved.
     """
-    return outline_payload(draft.content)
+    # Pages only for a PDF: a Word file's page count is whatever the last
+    # program to save it wrote, if anything.
+    pages = draft.pages if draft.format == "pdf" and draft.pages > 0 else None
+    return {**outline_payload(draft.content), "pages": pages}
 
 
 def _research(student: Student) -> dict[str, Any]:

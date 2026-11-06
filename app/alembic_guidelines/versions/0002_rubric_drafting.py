@@ -5,7 +5,8 @@ Revises: 0001_guidelines
 Create Date: 2026-11-06 00:00:00.000000
 
 A draft version remembers the agent's task drafting its rubric from the
-attached regulation, and why the last attempt failed (ADR 0024).
+attached regulation, why the last attempt failed, and what the model asks
+the admin to check (ADR 0024).
 
 """
 
@@ -13,6 +14,7 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision: str = "0002_guidelines"
 down_revision: str | Sequence[str] | None = "0001_guidelines"
@@ -34,9 +36,15 @@ def upgrade() -> None:
         sa.Column("drafting_error", sa.Text(), nullable=True),
         schema=_SCHEMA,
     )
+    op.add_column(
+        "guideline_versions",
+        sa.Column("draft_notes", postgresql.JSONB(), nullable=True),
+        schema=_SCHEMA,
+    )
 
 
 def downgrade() -> None:
-    """Drop both columns."""
+    """Drop the three columns."""
+    op.drop_column("guideline_versions", "draft_notes", schema=_SCHEMA)
     op.drop_column("guideline_versions", "drafting_error", schema=_SCHEMA)
     op.drop_column("guideline_versions", "drafting_task_id", schema=_SCHEMA)

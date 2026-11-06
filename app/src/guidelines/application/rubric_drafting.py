@@ -13,7 +13,6 @@ the admin's editor reads the draft — takes the result in once it is there.
 
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from typing import Any, Protocol, cast
 from uuid import UUID
 
@@ -194,11 +193,11 @@ class RubricDraftingService:
         self, version: GuidelineVersion, output: Mapping[str, Any] | None
     ) -> None:
         try:
-            rubric_md, thresholds = _rubric_from(version, output or {})
+            rubric_md, thresholds, notes = _rubric_from(output or {})
         except ValueError as exc:
             version.fail_drafting(f"The model's rubric could not be used: {exc}")
             return
-        version.finish_drafting(rubric_md, thresholds)
+        version.finish_drafting(rubric_md, thresholds, notes)
 
     async def _require_version(self, version_id: UUID) -> GuidelineVersion:
         version = await self._repo.get_version(version_id)
@@ -207,39 +206,29 @@ class RubricDraftingService:
         return version
 
 
-def _rubric_from(
-    version: GuidelineVersion, output: Mapping[str, Any]
-) -> tuple[str, Thresholds]:
-    """The rubric's markdown and thresholds from the model's reply.
+def _rubric_from(output: Mapping[str, Any]) -> tuple[str, Thresholds, list[str]]:
+    """The rubric's markdown, thresholds and notes from the model's reply.
 
-    The preamble says where the draft came from and lists the model's doubts:
-    what the admin is to check before publishing. Raises ValueError when the
-    sections do not make a valid rubric.
+    The rubric is the four sections and nothing else: what the model asks
+    the admin to check goes beside it, as notes, so nothing of the drafting
+    can be published by mistake. Raises ValueError when the sections do not
+    make a valid rubric.
     """
-    source = version.source.filename if version.source else "regulaminu"
-    today = datetime.now(UTC).date().isoformat()
-    preamble = [
-        f"> Szkic Corvusa z pliku „{source}”, {today}. Sprawdź każdą regułę "
-        "z oryginałem przed publikacją; tę notkę możesz usunąć."
-    ]
     raw_doubts: Any = output.get("doubts")
     listed = cast(list[Any], raw_doubts) if isinstance(raw_doubts, list) else []
-    doubts = [str(d).strip() for d in listed if str(d).strip()]
+    notes = [str(d).strip() for d in listed if str(d).strip()]
     raw: Any = output.get("thresholds")
     numbers = cast(dict[str, Any], raw) if isinstance(raw, dict) else None
     try:
         thresholds = Thresholds.from_dict(numbers)
     except (TypeError, ValueError) as exc:
         thresholds = Thresholds()
-        doubts.append(f"Progi z regulaminu nie dały się zapisać ({exc}); wpisz je.")
-    if doubts:
-        preamble.append(">\n> Do sprawdzenia:")
-        preamble.extend(f"> - {d}" for d in doubts)
+        notes.append(f"Progi z regulaminu nie dały się zapisać ({exc}); wpisz je.")
 
-    parts = ["\n".join(preamble)]
-    for section in RubricSection:
-        body = str(output.get(str(section)) or "").strip()
-        parts.append(f"## {HEADINGS[section]}\n\n{body}")
+    parts = [
+        f"## {HEADINGS[section]}\n\n{str(output.get(str(section)) or '').strip()}"
+        for section in RubricSection
+    ]
     rubric_md = "\n\n".join(parts) + "\n"
     parse_rubric(rubric_md)
-    return rubric_md, thresholds
+    return rubric_md, thresholds, notes

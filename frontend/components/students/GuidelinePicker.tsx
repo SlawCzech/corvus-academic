@@ -57,10 +57,11 @@ export default function GuidelinePicker({ student, onChange }: Props) {
         disabled={saving}
         className="w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[13.5px] text-foreground focus:border-accent focus:outline-none"
       />
-      {!student.guideline_set_id && (
+      {(!student.guideline_set_id || (Array.isArray(sets) && !chosen)) && (
         <p data-testid="missing-guidelines" className="mt-2.5 text-[12.5px] text-major-text">
-          Wybierz wytyczne uczelni. Bez nich recenzja i ocena metodologii się nie
-          uruchomią: Corvus nie ma własnych wymogów.
+          {student.guideline_set_id
+            ? "Wybrany zestaw wytycznych został usunięty. Wybierz inny, zanim pójdzie recenzja."
+            : "Wybierz wytyczne uczelni. Bez nich recenzja i ocena metodologii się nie uruchomią: Corvus nie ma własnych wymogów."}
         </p>
       )}
       {chosen?.current && (

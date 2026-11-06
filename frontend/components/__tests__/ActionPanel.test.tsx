@@ -87,7 +87,17 @@ describe("ActionPanel", () => {
         return json(RUNNING)
       }
       if (url === "/api/students/s1/actions") return listGate.then(() => json(listed))
-      if (url.startsWith("/api/guidelines/")) return json([])
+      if (url.startsWith("/api/guidelines/"))
+        return json([
+          {
+            id: "g1",
+            name: "Prace licencjackie",
+            thesis_type: "bachelor",
+            university: { id: "u1", name: "UE Katowice", short_name: "UE" },
+            current: { id: "v1", version_no: 1 },
+            has_draft: false,
+          },
+        ])
       if (url === "/api/settings/api-key/status")
         return json({ configured: keys.length > 0, providers: keys })
       if (url === "/api/models")
@@ -303,7 +313,17 @@ describe("ActionPanel", () => {
       if (url === "/api/settings/api-key/status") return json({ configured: true, providers: ["claude"] })
       if (url === "/api/models")
         return json({ byok: {} })
-      if (url.startsWith("/api/guidelines/")) return json([])
+      if (url.startsWith("/api/guidelines/"))
+        return json([
+          {
+            id: "g1",
+            name: "Prace licencjackie",
+            thesis_type: "bachelor",
+            university: { id: "u1", name: "UE Katowice", short_name: "UE" },
+            current: { id: "v1", version_no: 1 },
+            has_draft: false,
+          },
+        ])
       return json({})
     })
     render(

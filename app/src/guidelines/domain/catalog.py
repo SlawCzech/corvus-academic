@@ -90,6 +90,10 @@ class Thresholds:
     min_foreign_sources: int | None = None
     min_body_chars: int | None = None
     max_body_chars: int | None = None
+    # A length some regulations give in pages instead (UE Poznań). Code can
+    # count the pages of a PDF only; a Word file does not know its own.
+    min_pages: int | None = None
+    max_pages: int | None = None
 
     def __post_init__(self) -> None:
         for name, value in self.to_dict().items():
@@ -107,6 +111,12 @@ class Thresholds:
             and self.min_body_chars > self.max_body_chars
         ):
             raise ValueError("min_body_chars must not exceed max_body_chars")
+        if (
+            self.min_pages is not None
+            and self.max_pages is not None
+            and self.min_pages > self.max_pages
+        ):
+            raise ValueError("min_pages must not exceed max_pages")
 
     def to_dict(self) -> dict[str, int | None]:
         return {
@@ -114,6 +124,8 @@ class Thresholds:
             "min_foreign_sources": self.min_foreign_sources,
             "min_body_chars": self.min_body_chars,
             "max_body_chars": self.max_body_chars,
+            "min_pages": self.min_pages,
+            "max_pages": self.max_pages,
         }
 
     @classmethod
@@ -124,6 +136,8 @@ class Thresholds:
             min_foreign_sources=data.get("min_foreign_sources"),
             min_body_chars=data.get("min_body_chars"),
             max_body_chars=data.get("max_body_chars"),
+            min_pages=data.get("min_pages"),
+            max_pages=data.get("max_pages"),
         )
 
 
@@ -157,6 +171,9 @@ class GuidelineVersion:
     # it runs (ADR 0024); the reason the last attempt failed, until the next.
     drafting_task_id: str | None = None
     drafting_error: str | None = None
+    # What the model asks the admin to check in its draft. Shown beside the
+    # draft, never part of the rubric a model is given.
+    draft_notes: list[str] = field(default_factory=list[str])
 
     def __post_init__(self) -> None:
         if self.version_no < 1:
@@ -211,17 +228,25 @@ class GuidelineVersion:
             raise ValueError("Attach the regulation before drafting a rubric from it")
         return self.source.file_id
 
+    def require_discardable(self) -> None:
+        """Only a draft the model is not writing can be thrown away."""
+        self._require_draft()
+        self._require_not_drafting()
+
     def start_drafting(self, task_id: str) -> None:
         """Hand the source to the model; the draft waits for its rubric."""
         self.require_draftable()
         self.drafting_task_id = task_id
         self.drafting_error = None
 
-    def finish_drafting(self, rubric_md: str, thresholds: Thresholds) -> None:
+    def finish_drafting(
+        self, rubric_md: str, thresholds: Thresholds, notes: list[str] | None = None
+    ) -> None:
         """Take the model's rubric and thresholds; the draft is editable again."""
         if not self.is_drafting:
             raise VersionNotEditableError("This version is not being drafted")
         self.drafting_task_id = None
+        self.draft_notes = list(notes or [])
         self.edit(rubric_md=rubric_md, thresholds=thresholds)
 
     def fail_drafting(self, error: str) -> None:

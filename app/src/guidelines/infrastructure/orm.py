@@ -113,3 +113,4 @@ class GuidelineVersionModel(Base):
     # A rubric being drafted from the source by the agent, ADR 0024.
     drafting_task_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     drafting_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    draft_notes: Mapped[list[str] | None] = mapped_column(_JSON, nullable=True)

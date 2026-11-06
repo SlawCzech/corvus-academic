@@ -272,3 +272,18 @@ def test_methodology_hears_the_field_as_well_as_the_topic() -> None:
     assert context["current_topic"] == "Instytucje a wzrost"
     assert context["field_of_study"] == student.field_of_study
     assert context["research_aim"] is None
+
+
+def test_the_map_counts_the_pages_of_a_pdf_only() -> None:
+    """A Word file's page count is what the last program to save it wrote."""
+    pdf = assemble_generate_review_context(
+        _student(), _draft("Tekst pracy."), guidelines=_RUBRIC
+    )
+    docx = assemble_generate_review_context(
+        _student(),
+        replace(_draft("Tekst pracy."), format="docx", filename="praca.docx"),
+        guidelines=_RUBRIC,
+    )
+
+    assert pdf["document_map"]["pages"] == 40
+    assert docx["document_map"]["pages"] is None

@@ -43,7 +43,7 @@ heading.
 the list of references, language, layout, team work and the like, each under \
 its own "### " heading with "- " bullets. The numbers that are thresholds — \
 the minimum number of sources, the minimum of foreign-language sources, the \
-length range in characters — go into "thresholds", NOT into this text: here say only how to \
+length range — go into "thresholds", NOT into this text: here say only how to \
 read them (whether a length is suggested or required, what does not count \
 towards the minimum, which theses may have fewer sources). Start this section \
 with one sentence saying that the numbers are in the version's thresholds. \
@@ -80,14 +80,13 @@ regulation's own words for what it requires and what it only suggests or \
 recommends.
 
 "thresholds" — an object with "min_sources", "min_foreign_sources", \
-"min_body_chars" and "max_body_chars" as integers, or null for a number the \
-regulation does not set. A length given in thousands of characters becomes \
-characters (80 tysięcy → 80000). A length given in pages, words or any \
-unit other than characters is NOT converted: leave both length thresholds \
-null, write the range in "formal" under the length heading, in the \
-regulation's unit, and add a doubt saying that Corvus measures length in \
-characters and will not check this one. Count only what the regulation \
-states; never assume a usual value.
+"min_body_chars", "max_body_chars", "min_pages" and "max_pages" as integers, \
+or null for a number the regulation does not set. A length in characters \
+goes into the *_body_chars keys (80 tysięcy → 80000), a length in pages into \
+the *_pages keys; never convert one into the other, and leave a length in \
+any other unit (words) out of the thresholds, in the text. A regulation that \
+gives a length in pages: add a doubt that Corvus counts pages only in a PDF. \
+Count only what the regulation states; never assume a usual value.
 
 "doubts" — a list of short sentences, in the rubric's language, about what \
 the administrator should check: a passage you could read two ways, a rule \

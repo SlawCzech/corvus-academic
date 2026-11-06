@@ -100,9 +100,9 @@ def test_a_usual_masters_thesis_is_not_asked_for_as_an_article() -> None:
     assert "not a research article" in sent
 
 
-def test_a_length_in_pages_is_left_out_of_the_thresholds() -> None:
-    """Code measures characters; a page count converted by the model is a guess."""
+def test_a_length_in_pages_stays_in_pages() -> None:
+    """A page count turned into characters by the model would be a guess."""
     system = get_system_prompt(None)
 
-    assert "pages" in system
-    assert "NOT converted" in system
+    assert "min_pages" in system
+    assert "never convert one into the other" in system

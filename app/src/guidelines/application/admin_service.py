@@ -108,6 +108,61 @@ class GuidelineAdminService:
         await self._repo.commit()
         return draft
 
+    async def correct(self, set_id: UUID, by: UUID) -> GuidelineVersion:
+        """A new draft from the version in force, its regulation copied too.
+
+        A published version never changes — a review records the version it
+        was judged against — so a correction is the next version. The source
+        is copied, not shared, so discarding the draft cannot take the
+        published version's original with it.
+        """
+        draft = await self.create_draft(set_id, by)
+        current = await self._repo.published_version(set_id)
+        if current is None or current.source is None or current.source.file_id is None:
+            return draft
+        stored = await self._files.get(current.source.file_id)
+        if stored is None:
+            return draft
+        meta, data = stored
+        return await self.attach_source(
+            draft.id, meta.filename, data, meta.content_type
+        )
+
+    async def discard_draft(self, version_id: UUID) -> None:
+        """Throw a draft away, with its copy of the regulation.
+
+        Raises VersionNotEditableError for a version that is not a draft or
+        is being drafted by the model.
+        """
+        version = await self._require_version(version_id)
+        version.require_discardable()
+        await self._repo.delete_version(version.id)
+        if version.source is not None and version.source.file_id is not None:
+            await self._files.delete(version.source.file_id)
+        await self._repo.commit()
+        logger.info("guideline_draft_discarded", version_id=str(version_id))
+
+    async def delete_set(self, set_id: UUID) -> None:
+        """Delete a set with every version and original, to start again.
+
+        Students who had it chosen are left without a set, and their reviews
+        wait until the promoter picks another (ADR 0023). Actions already run
+        keep the id of the version they were judged against.
+        """
+        if await self._repo.get_set(set_id) is None:
+            raise GuidelineNotFoundError(str(set_id))
+        versions = await self._repo.list_versions(set_id)
+        files = [
+            v.source.file_id
+            for v in versions
+            if v.source is not None and v.source.file_id is not None
+        ]
+        await self._repo.delete_set(set_id)
+        for file_id in files:
+            await self._files.delete(file_id)
+        await self._repo.commit()
+        logger.info("guideline_set_deleted", set_id=str(set_id), versions=len(versions))
+
     async def edit_draft(
         self,
         version_id: UUID,

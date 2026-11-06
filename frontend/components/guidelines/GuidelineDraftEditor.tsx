@@ -5,6 +5,7 @@ import useSWR, { useSWRConfig } from "swr"
 import ModelSelect, { useModelChoice } from "@/components/ai/ModelSelect"
 import RubricView from "@/components/guidelines/RubricView"
 import {
+  discardGuidelineDraft,
   draftGuidelineRubric,
   fetcher,
   publishGuidelineVersion,
@@ -55,6 +56,7 @@ export default function GuidelineDraftEditor({ versionId, onDone }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [preview, setPreview] = useState(true)
+  const [confirmDiscard, setConfirmDiscard] = useState(false)
   const [model, setModel] = useState("")
   const { provider, needsKey } = useModelChoice(model)
   // A draft that has just come in replaces whatever the form held.
@@ -217,6 +219,21 @@ export default function GuidelineDraftEditor({ versionId, onDone }: Props) {
             ))}
           </div>
         </div>
+        {(loaded.draft_notes ?? []).length > 0 && !drafting && (
+          <div
+            data-testid="draft-notes"
+            className="mb-3 rounded-lg border border-major-text/30 bg-major-bg/40 p-4"
+          >
+            <p className="mb-1.5 text-[12.5px] font-semibold text-major-text">
+              Do sprawdzenia (nie trafia do rubryki)
+            </p>
+            <ul className="list-disc space-y-1 pl-5 text-[13px] text-foreground">
+              {(loaded.draft_notes ?? []).map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
+          </div>
+        )}
         {preview ? (
           form.rubric.trim() ? (
             <RubricView rubric={form.rubric} />
@@ -300,6 +317,24 @@ export default function GuidelineDraftEditor({ versionId, onDone }: Props) {
           className="h-9 rounded-lg bg-accent px-4 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
         >
           Opublikuj
+        </button>
+        <button
+          type="button"
+          data-testid="discard-draft"
+          disabled={locked}
+          onClick={() =>
+            void run(async () => {
+              if (!confirmDiscard) {
+                setConfirmDiscard(true)
+                return
+              }
+              await discardGuidelineDraft(versionId)
+              onDone()
+            })
+          }
+          className="h-9 rounded-lg px-3 text-[13px] font-medium text-critical-text hover:bg-surface-alt transition-colors disabled:opacity-50"
+        >
+          {confirmDiscard ? "Na pewno odrzucić szkic?" : "Odrzuć szkic"}
         </button>
         <button type="button" onClick={onDone} className="text-[13px] text-muted hover:underline">
           Zamknij

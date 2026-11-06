@@ -6,8 +6,10 @@ import useSWR from "swr"
 import ModelSelect, { useModelChoice } from "@/components/ai/ModelSelect"
 import GuidelineDraftEditor from "@/components/guidelines/GuidelineDraftEditor"
 import {
+  correctGuidelineSet,
   createGuidelineDraft,
   createGuidelineSet,
+  deleteGuidelineSet,
   createUniversity,
   draftGuidelineRubric,
   fetcher,
@@ -20,6 +22,14 @@ const INPUT =
   "rounded-lg border border-line bg-surface px-3 py-1.5 text-[13.5px] text-foreground focus:border-accent focus:outline-none"
 const BUTTON =
   "h-9 rounded-lg border border-line px-4 text-[13px] font-medium text-foreground hover:bg-surface-alt transition-colors"
+
+function groupByUniversity(sets: GuidelineSet[]): [string, GuidelineSet[]][] {
+  const groups = new Map<string, GuidelineSet[]>()
+  for (const set of sets) {
+    groups.set(set.university.name, [...(groups.get(set.university.name) ?? []), set])
+  }
+  return [...groups.entries()]
+}
 
 /**
  * The catalog as an admin manages it. New guidelines start from the
@@ -47,6 +57,7 @@ export default function GuidelineAdmin() {
   const [model, setModel] = useState("")
   const { provider, needsKey } = useModelChoice(model)
   const [busy, setBusy] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
   /** A set, its first draft, the regulation on it, and the model reading it. */
   async function startFromRegulation(): Promise<void> {
@@ -82,9 +93,24 @@ export default function GuidelineAdmin() {
       if (draft) setEditing(draft.id)
       return
     }
-    const draft = await createGuidelineDraft(set.id)
+    // A published set is corrected with its regulation copied; one that never
+    // got that far starts from a blank draft.
+    const draft = set.current
+      ? await correctGuidelineSet(set.id)
+      : await createGuidelineDraft(set.id)
     await mutateSets()
     setEditing(draft.id)
+  }
+
+  async function remove(set: GuidelineSet): Promise<void> {
+    if (confirmDelete !== set.id) {
+      setConfirmDelete(set.id)
+      return
+    }
+    await deleteGuidelineSet(set.id)
+    setConfirmDelete(null)
+    if (editing) setEditing(null)
+    await mutateSets()
   }
 
   return (
@@ -187,40 +213,70 @@ export default function GuidelineAdmin() {
         </button>
       </form>
 
-      <section className="mb-8 rounded-xl border border-line bg-surface">
-        {(sets ?? []).length === 0 && (
-          <p className="p-5 text-[13.5px] text-muted">
-            Brak zestawów. Dodaj uczelnię i zestaw poniżej albo uruchom{" "}
-            <code>make seed-guidelines</code>.
-          </p>
-        )}
-        {(sets ?? []).map((set, i) => (
-          <div
-            key={set.id}
-            className={`flex items-center justify-between gap-4 px-5 py-3.5 text-[13.5px] ${
-              i > 0 ? "border-t border-line/60" : ""
-            }`}
-          >
-            <span>
-              <span className="block font-medium text-foreground">{set.name}</span>
-              <span className="text-[12.5px] text-muted">
-                {set.university.short_name} ·{" "}
-                {THESIS_TYPE_LABELS[set.thesis_type] ?? set.thesis_type} ·{" "}
-                {set.current ? (
-                  <Link href={`/guidelines/${set.current.id}`} className="text-accent hover:underline">
-                    wersja {set.current.version_no} obowiązuje
-                  </Link>
-                ) : (
-                  "nic jeszcze nie opublikowano"
-                )}
-              </span>
-            </span>
-            <button type="button" className={BUTTON} onClick={() => void run(() => openDraft(set))}>
-              {set.has_draft ? "Edytuj szkic" : "Nowa wersja"}
-            </button>
+      {(sets ?? []).length === 0 && (
+        <p className="mb-8 text-[13.5px] text-muted">
+          Brak zestawów. Dodaj pierwsze wytyczne z regulaminu powyżej.
+        </p>
+      )}
+      {groupByUniversity(sets ?? []).map(([university, universitySets]) => (
+        <section key={university} className="mb-6">
+          <h2 className="mb-2 text-[14px] font-semibold text-foreground">{university}</h2>
+          <div className="rounded-xl border border-line bg-surface">
+            {universitySets.map((set, i) => (
+              <div
+                key={set.id}
+                data-testid={`set-${set.id}`}
+                className={`flex items-center justify-between gap-4 px-5 py-3.5 text-[13.5px] ${
+                  i > 0 ? "border-t border-line/60" : ""
+                }`}
+              >
+                <span>
+                  <span className="block font-medium text-foreground">{set.name}</span>
+                  <span className="text-[12.5px] text-muted">
+                    {THESIS_TYPE_LABELS[set.thesis_type] ?? set.thesis_type} ·{" "}
+                    {set.current ? (
+                      <Link
+                        href={`/guidelines/${set.current.id}`}
+                        className="text-accent hover:underline"
+                      >
+                        wersja {set.current.version_no} obowiązuje
+                      </Link>
+                    ) : (
+                      "nic jeszcze nie opublikowano"
+                    )}
+                    {set.has_draft && " · jest szkic"}
+                  </span>
+                </span>
+                <span className="flex shrink-0 items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    className={BUTTON}
+                    onClick={() => void run(() => openDraft(set))}
+                  >
+                    {set.has_draft ? "Edytuj szkic" : set.current ? "Popraw" : "Nowy szkic"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    data-testid={`delete-set-${set.id}`}
+                    className="h-9 rounded-lg px-3 text-[13px] font-medium text-critical-text hover:bg-surface-alt transition-colors"
+                    onClick={() => void run(() => remove(set))}
+                  >
+                    {confirmDelete === set.id ? "Na pewno usunąć?" : "Usuń zestaw"}
+                  </button>
+                </span>
+              </div>
+            ))}
           </div>
-        ))}
-      </section>
+        </section>
+      ))}
+      {confirmDelete && (
+        <p className="-mt-3 mb-6 text-[12.5px] text-major-text">
+          Usunięcie zabiera wszystkie wersje i oryginał. Studenci z tym zestawem będą
+          musieli dostać inny, zanim pójdzie dla nich recenzja.
+        </p>
+      )}
 
       <div className="max-w-md">
         <form

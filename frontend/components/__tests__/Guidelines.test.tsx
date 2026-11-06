@@ -203,6 +203,8 @@ describe("guideline catalog UI", () => {
       min_foreign_sources: 4,
       min_body_chars: null,
       max_body_chars: null,
+      min_pages: null,
+      max_pages: null,
     })
     expect(
       fetchMock.mock.calls.some(
@@ -341,6 +343,66 @@ describe("guideline catalog UI", () => {
         thesis_type: "master_article",
         name: "Magisterskie",
       })
+    })
+  })
+
+  describe("correcting and starting again", () => {
+    it("shows the model's notes beside the draft, not in it, and discards on a second click", async () => {
+      fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+        if (init?.method === "DELETE") return Promise.resolve(new Response(null, { status: 204 }))
+        if (url === "/api/admin/guidelines/versions/v2")
+          return Promise.resolve(
+            json({ ...VERSION, status: "draft", draft_notes: ["Brak załącznika nr 3."] }),
+          )
+        return Promise.resolve(json({ configured: true, providers: ["claude"], byok: {} }))
+      })
+      const onDone = vi.fn()
+
+      withSWR(<GuidelineDraftEditor versionId="v2" onDone={onDone} />)
+
+      expect(await screen.findByTestId("draft-notes")).toHaveTextContent("Brak załącznika nr 3.")
+      await userEvent.click(screen.getByTestId("discard-draft"))
+      expect(fetchMock.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(false)
+      await userEvent.click(screen.getByRole("button", { name: "Na pewno odrzucić szkic?" }))
+
+      await waitFor(() => expect(onDone).toHaveBeenCalled())
+      expect(
+        fetchMock.mock.calls.some(
+          ([url, init]) => url === "/api/admin/guidelines/versions/v2" && init?.method === "DELETE",
+        ),
+      ).toBe(true)
+    })
+
+    it("corrects a published set as a new version and deletes a set on a second click", async () => {
+      fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+        if (url === "/api/guidelines/sets") return Promise.resolve(json([SET]))
+        if (url === "/api/guidelines/universities") return Promise.resolve(json([UE]))
+        if (url.endsWith("/corrections"))
+          return Promise.resolve(json({ ...VERSION, id: "v3", version_no: 3, status: "draft" }, 201))
+        if (init?.method === "DELETE") return Promise.resolve(new Response(null, { status: 204 }))
+        return Promise.resolve(json({ ...VERSION, id: "v3", status: "draft", byok: {}, providers: [] }))
+      })
+
+      withSWR(<GuidelineAdmin />)
+
+      const row = await screen.findByTestId("set-set1")
+      await userEvent.click(within(row).getByRole("button", { name: "Popraw" }))
+      await waitFor(() =>
+        expect(
+          fetchMock.mock.calls.some(([url]) => url === "/api/admin/guidelines/sets/set1/corrections"),
+        ).toBe(true),
+      )
+
+      await userEvent.click(within(row).getByRole("button", { name: "Usuń zestaw" }))
+      expect(fetchMock.mock.calls.some(([, init]) => init?.method === "DELETE")).toBe(false)
+      await userEvent.click(within(row).getByRole("button", { name: "Na pewno usunąć?" }))
+      await waitFor(() =>
+        expect(
+          fetchMock.mock.calls.some(
+            ([url, init]) => url === "/api/admin/guidelines/sets/set1" && init?.method === "DELETE",
+          ),
+        ).toBe(true),
+      )
     })
   })
 })

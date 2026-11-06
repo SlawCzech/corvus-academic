@@ -255,3 +255,45 @@ async def publish_version(
     """Publish a draft; the version in force becomes superseded."""
     await _guarded(svc.publish(version_id, admin.id))
     return version_response(await catalog.get_version(version_id, True))
+
+
+@router.post(
+    "/admin/sets/{set_id}/corrections",
+    response_model=VersionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def correct_set(
+    set_id: uuid.UUID,
+    admin: GuidelineAdminDep,
+    svc: AdminServiceDep,
+    catalog: CatalogDep,
+) -> VersionResponse:
+    """Open a correction: the next version, starting from the one in force.
+
+    The rubric, thresholds and original regulation are copied; a published
+    version itself never changes.
+    """
+    draft = await _guarded(svc.correct(set_id, admin.id))
+    return version_response(await catalog.get_version(draft.id, True))
+
+
+@router.delete("/admin/versions/{version_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def discard_draft(
+    version_id: uuid.UUID,
+    _admin: GuidelineAdminDep,
+    svc: AdminServiceDep,
+) -> Response:
+    """Throw a draft away; a published version answers 409."""
+    await _guarded(svc.discard_draft(version_id))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete("/admin/sets/{set_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_set(
+    set_id: uuid.UUID,
+    _admin: GuidelineAdminDep,
+    svc: AdminServiceDep,
+) -> Response:
+    """Delete a set with every version, to start again from the regulation."""
+    await _guarded(svc.delete_set(set_id))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -36,7 +36,7 @@ export default function GuidelineVersionView({ versionId }: { versionId: string 
     return <p className="text-[13px] text-muted">Wczytywanie…</p>
   }
 
-  const thresholds = THRESHOLD_FIELDS.filter(({ key }) => version.thresholds[key] !== null)
+  const thresholds = THRESHOLD_FIELDS.filter(({ key }) => version.thresholds[key] != null)
 
   return (
     <div>

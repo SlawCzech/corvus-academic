@@ -552,6 +552,28 @@ export async function uploadGuidelineSource(
   return res.json() as Promise<GuidelineVersion>
 }
 
+/** A correction: the next version, with the rubric and regulation copied. */
+export function correctGuidelineSet(setId: string): Promise<GuidelineVersion> {
+  return sendJson(
+    `/api/admin/guidelines/sets/${setId}/corrections`,
+    "POST",
+    {},
+    "Nie udało się otworzyć poprawki",
+  )
+}
+
+export async function discardGuidelineDraft(versionId: string): Promise<void> {
+  const res = await request(`/api/admin/guidelines/versions/${versionId}`, {
+    method: "DELETE",
+  })
+  if (!res.ok) await fail(res, "Nie udało się odrzucić szkicu")
+}
+
+export async function deleteGuidelineSet(setId: string): Promise<void> {
+  const res = await request(`/api/admin/guidelines/sets/${setId}`, { method: "DELETE" })
+  if (!res.ok) await fail(res, "Nie udało się usunąć zestawu")
+}
+
 /** Have the model draft the rubric from the regulation, on the admin's own key. */
 export function draftGuidelineRubric(
   versionId: string,

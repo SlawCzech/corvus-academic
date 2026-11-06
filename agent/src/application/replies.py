@@ -303,6 +303,8 @@ class RubricThresholdsReply(_Reply):
     min_foreign_sources: int | None = None
     min_body_chars: int | None = None
     max_body_chars: int | None = None
+    min_pages: int | None = None
+    max_pages: int | None = None
 
 
 class RubricDraftReply(_Reply):

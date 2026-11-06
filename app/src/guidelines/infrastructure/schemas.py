@@ -32,6 +32,8 @@ class ThresholdsBody(BaseModel):
     min_foreign_sources: int | None = Field(default=None, ge=0)
     min_body_chars: int | None = Field(default=None, ge=0)
     max_body_chars: int | None = Field(default=None, ge=0)
+    min_pages: int | None = Field(default=None, ge=0)
+    max_pages: int | None = Field(default=None, ge=0)
 
     def to_domain(self) -> Thresholds:
         return Thresholds(**self.model_dump())
@@ -90,6 +92,8 @@ class VersionResponse(VersionSummaryResponse):
     # last attempt failed, until the next one.
     drafting: bool = False
     drafting_error: str | None = None
+    # What the model asks the admin to check in a drafted rubric.
+    draft_notes: list[str] = []
 
 
 class DraftRubricRequest(BaseModel):
@@ -177,4 +181,5 @@ def version_response(detail: VersionDetail) -> VersionResponse:
         published_by=v.published_by,
         drafting=v.is_drafting,
         drafting_error=v.drafting_error or None,
+        draft_notes=list(v.draft_notes) if v.is_draft else [],
     )
