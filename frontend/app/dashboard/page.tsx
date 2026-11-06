@@ -17,6 +17,30 @@ import { timeAgo } from "@/components/students/format"
 import { fetcher } from "@/lib/api.client"
 import type { DashboardSummary } from "@/lib/api.types"
 
+// A queue longer than this folds behind "Pokaż wszystkie": the oldest come
+// first, and those are the ones that need an answer.
+const QUEUE_SHOWN = 5
+
+/** The first QUEUE_SHOWN items, or all of them once the promoter asks. */
+function useFolded<T>(items: T[]): { shown: T[]; hidden: number; unfold: () => void } {
+  const [open, setOpen] = useState(false)
+  const shown = open ? items : items.slice(0, QUEUE_SHOWN)
+  return { shown, hidden: items.length - shown.length, unfold: () => setOpen(true) }
+}
+
+function ShowAll({ hidden, total, onClick }: { hidden: number; total: number; onClick: () => void }) {
+  if (hidden <= 0) return null
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mt-2 text-[12.5px] text-muted hover:text-accent"
+    >
+      Pokaż wszystkie ({total})
+    </button>
+  )
+}
+
 function formatDay(day: string): string {
   return new Date(`${day}T12:00:00`).toLocaleDateString("pl-PL")
 }
@@ -49,6 +73,8 @@ export default function DashboardPage() {
   )
   const [showForm, setShowForm] = useState(false)
   const [showInProgress, setShowInProgress] = useState(false)
+  const feedback = useFolded(summary?.awaiting_feedback ?? [])
+  const overdue = useFolded(summary?.overdue_parts ?? [])
 
   return (
     <main className="px-12 py-10">
@@ -187,7 +213,7 @@ export default function DashboardPage() {
           <h2 className="mb-2 text-[13px] font-semibold text-foreground">
             Czeka na feedback
           </h2>
-          {summary.awaiting_feedback.map((item) => (
+          {feedback.shown.map((item) => (
             <Link
               key={item.fragment_id}
               href={`/students/${item.student_id}?section=timeline`}
@@ -200,6 +226,11 @@ export default function DashboardPage() {
               <span className="text-muted">{formatDay(item.received_on)}</span>
             </Link>
           ))}
+          <ShowAll
+            hidden={feedback.hidden}
+            total={summary.awaiting_feedback.length}
+            onClick={feedback.unfold}
+          />
         </div>
       )}
 
@@ -209,7 +240,7 @@ export default function DashboardPage() {
           className="mb-4 rounded-xl border border-line bg-surface p-5"
         >
           <h2 className="mb-2 text-[13px] font-semibold text-foreground">Po terminie</h2>
-          {summary.overdue_parts.map((item) => (
+          {overdue.shown.map((item) => (
             <Link
               key={item.part_id}
               href={`/students/${item.student_id}?section=timeline`}
@@ -222,6 +253,11 @@ export default function DashboardPage() {
               <span className="text-muted">{formatDay(item.due_on)}</span>
             </Link>
           ))}
+          <ShowAll
+            hidden={overdue.hidden}
+            total={summary.overdue_parts.length}
+            onClick={overdue.unfold}
+          />
         </div>
       )}
 

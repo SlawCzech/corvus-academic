@@ -58,6 +58,9 @@ class User:
     email: str
     role: Role
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    # Set when an admin hands out a temporary password: until the user picks
+    # their own, the only thing their session can do is change it.
+    must_change_password: bool = False
 
     def can(self, permission: Permission) -> bool:
         """Return True if this user's role grants the given permission."""

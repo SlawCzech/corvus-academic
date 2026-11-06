@@ -51,6 +51,10 @@ def create_access_token(user: User) -> str:
         "iat": now.timestamp(),
         "exp": now + timedelta(minutes=settings.access_token_expire_minutes),
     }
+    if user.must_change_password:
+        # In the token, so no request has to ask the database; the frontend
+        # reads it too, to keep the user on the password page.
+        payload["pwc"] = True
     return jwt.encode(  # pyright: ignore[reportUnknownMemberType]
         payload, settings.jwt_secret, algorithm=settings.jwt_algorithm
     )
@@ -108,6 +112,7 @@ def decode_access_token(token: str) -> AccessClaims:
                 id=UUID(str(payload["sub"])),
                 email=str(payload["email"]),
                 role=Role(str(payload["role"])),
+                must_change_password=payload.get("pwc") is True,
             ),
             jti=str(payload["jti"]),
             issued_at=float(payload["iat"]),

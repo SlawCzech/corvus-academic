@@ -3,6 +3,11 @@ import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import ChangePasswordForm from "../ChangePasswordForm"
 
+const { replace, refresh } = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }))
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace, refresh }),
+}))
+
 /** The backend's refusal reaches the form in its own words. */
 async function submit() {
   const user = userEvent.setup()
@@ -44,5 +49,19 @@ describe("ChangePasswordForm", () => {
     respondWith(500, {})
     await submit()
     expect(await screen.findByText("Zmiana hasła nie powiodła się.")).toBeInTheDocument()
+  })
+
+  it("asks for the temporary password and moves on once it is replaced", async () => {
+    respondWith(200, { ok: true })
+    const user = userEvent.setup()
+    const { container } = render(<ChangePasswordForm temporaryThen="/dashboard" />)
+    expect(screen.getByText("Hasło tymczasowe")).toBeInTheDocument()
+    const [current, next, confirm] = container.querySelectorAll("input")
+    await user.type(current, "temporary-pass")
+    await user.type(next, "my-own-password")
+    await user.type(confirm, "my-own-password")
+    await user.click(screen.getByRole("button", { name: "Ustaw hasło" }))
+    await vi.waitFor(() => expect(replace).toHaveBeenCalledWith("/dashboard"))
+    expect(refresh).toHaveBeenCalled()
   })
 })
