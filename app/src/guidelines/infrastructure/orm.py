@@ -110,3 +110,6 @@ class GuidelineVersionModel(Base):
         Uuid(as_uuid=True), nullable=True
     )
     published_at: Mapped[datetime | None] = mapped_column(UtcDateTime(), nullable=True)
+    # A rubric being drafted from the source by the agent, ADR 0024.
+    drafting_task_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    drafting_error: Mapped[str | None] = mapped_column(Text, nullable=True)

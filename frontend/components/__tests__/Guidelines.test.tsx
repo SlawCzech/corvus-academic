@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SWRConfig } from "swr"
 import GuidelineVersionView from "../guidelines/GuidelineVersionView"
+import GuidelineAdmin from "../guidelines/GuidelineAdmin"
 import GuidelineDraftEditor from "../guidelines/GuidelineDraftEditor"
 import GuidelinePicker from "../students/GuidelinePicker"
 import type { GuidelineSet, GuidelineVersion, Student } from "@/lib/api.types"
@@ -209,5 +210,137 @@ describe("guideline catalog UI", () => {
           url === "/api/admin/guidelines/versions/v2/publish" && init?.method === "POST",
       ),
     ).toBe(true)
+  })
+
+  describe("a rubric drafted from the regulation", () => {
+    const drafted = [
+      "> Szkic Corvusa z pliku „Zarządzenie.pdf”.",
+      "## Elementy pracy",
+      "### Wstęp",
+      "- cel pracy (§ 3)",
+      "## Wymogi formalne",
+      "- objętość sugerowana",
+      "## Co praca ma wykazać",
+      "- logiczny tok wywodu",
+      "## Waga uchybień",
+      "- brak wstępu",
+    ].join("\n")
+
+    function backend(state: { drafting: boolean; rubric: string }) {
+      const draft = {
+        ...VERSION,
+        status: "draft" as const,
+        published_at: null,
+        rubric_md: "",
+        thresholds: { min_sources: null, min_foreign_sources: null, min_body_chars: null, max_body_chars: null },
+      }
+      return (url: string, init?: RequestInit): Promise<Response> => {
+        if (url === "/api/settings/api-key/status")
+          return Promise.resolve(json({ configured: true, providers: ["claude"] }))
+        if (url === "/api/models") return Promise.resolve(json({ byok: { claude: "claude-sonnet-5-5" } }))
+        if (url.endsWith("/draft-rubric")) {
+          state.drafting = true
+          return Promise.resolve(json({ ...draft, drafting: true }, 202))
+        }
+        if (url === "/api/admin/guidelines/versions/v2" && !init?.method) {
+          return Promise.resolve(
+            json({
+              ...draft,
+              drafting: state.drafting,
+              rubric_md: state.rubric,
+              thresholds: state.rubric ? { ...draft.thresholds, min_sources: 25 } : draft.thresholds,
+            }),
+          )
+        }
+        return Promise.resolve(json(draft))
+      }
+    }
+
+    it("starts the draft on the admin's key and shows the rubric once it is in", async () => {
+      const state = { drafting: false, rubric: "" }
+      fetchMock.mockImplementation(backend(state))
+
+      withSWR(<GuidelineDraftEditor versionId="v2" onDone={vi.fn()} />)
+
+      const start = await screen.findByTestId("draft-rubric")
+      await waitFor(() => expect(start).toBeEnabled())
+      await userEvent.click(start)
+
+      expect(await screen.findByTestId("drafting")).toBeInTheDocument()
+      const post = fetchMock.mock.calls.find(([url]) => String(url).endsWith("/draft-rubric"))
+      expect(JSON.parse(post![1].body as string)).toEqual({ provider: "claude" })
+      expect(screen.getByRole("button", { name: "Opublikuj" })).toBeDisabled()
+
+      state.drafting = false
+      state.rubric = drafted
+      expect(await screen.findByTestId("rubric-elements", {}, { timeout: 5000 })).toHaveTextContent(
+        "cel pracy (§ 3)",
+      )
+      expect(screen.getByLabelText("Minimalna liczba źródeł")).toHaveValue(25)
+      expect(screen.queryByTestId("drafting")).not.toBeInTheDocument()
+    }, 10000)
+
+    it("says why a draft failed", async () => {
+      fetchMock.mockImplementation((url: string) =>
+        Promise.resolve(
+          url === "/api/admin/guidelines/versions/v2"
+            ? json({ ...VERSION, status: "draft", drafting: false, drafting_error: "no credits" })
+            : json({ configured: true, providers: ["claude"], byok: {} }),
+        ),
+      )
+
+      withSWR(<GuidelineDraftEditor versionId="v2" onDone={vi.fn()} />)
+
+      expect(await screen.findByRole("alert")).toHaveTextContent("Szkic się nie udał: no credits")
+    })
+
+    it("builds new guidelines from a university, a kind of thesis and a file", async () => {
+      fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+        if (url === "/api/settings/api-key/status")
+          return Promise.resolve(json({ configured: true, providers: ["claude"] }))
+        if (url === "/api/models") return Promise.resolve(json({ byok: {} }))
+        if (url === "/api/guidelines/universities") return Promise.resolve(json([UE]))
+        if (url === "/api/guidelines/sets") return Promise.resolve(json([]))
+        if (url === "/api/admin/guidelines/sets" && init?.method === "POST")
+          return Promise.resolve(json({ ...SET, id: "set9", versions: [] }, 201))
+        if (url === "/api/admin/guidelines/sets/set9/versions")
+          return Promise.resolve(json({ ...VERSION, id: "v9", status: "draft" }, 201))
+        return Promise.resolve(json({ ...VERSION, id: "v9", status: "draft", drafting: true }))
+      })
+
+      const { container } = withSWR(<GuidelineAdmin />)
+
+      const form = await screen.findByTestId("new-guidelines")
+      await waitFor(() => expect(within(form).getAllByRole("option").length).toBeGreaterThan(3))
+      await userEvent.selectOptions(within(form).getByLabelText("Uczelnia"), UE.id)
+      await userEvent.selectOptions(within(form).getByLabelText("Typ pracy"), "master_article")
+      await userEvent.type(within(form).getByLabelText("Nazwa zestawu"), "Magisterskie")
+      const file = container.querySelector('input[aria-label="Regulamin"]') as HTMLInputElement
+      await userEvent.upload(file, new File(["x"], "Zarządzenie.pdf", { type: "application/pdf" }))
+      const start = within(form).getByTestId("start-from-regulation")
+      await waitFor(() => expect(start).toBeEnabled())
+      await userEvent.click(start)
+
+      await waitFor(() =>
+        expect(
+          fetchMock.mock.calls.some(([url]) => url === "/api/admin/guidelines/versions/v9/draft-rubric"),
+        ).toBe(true),
+      )
+      const order = fetchMock.mock.calls
+        .filter(([, init]) => init?.method === "POST" || init?.method === "PUT")
+        .map(([url]) => url)
+      expect(order).toEqual([
+        "/api/admin/guidelines/sets",
+        "/api/admin/guidelines/sets/set9/versions",
+        "/api/admin/guidelines/versions/v9/source",
+        "/api/admin/guidelines/versions/v9/draft-rubric",
+      ])
+      const created = fetchMock.mock.calls.find(([url]) => url === "/api/admin/guidelines/sets")
+      expect(JSON.parse(created![1].body as string)).toMatchObject({
+        university_id: UE.id,
+        thesis_type: "master_article",
+        name: "Magisterskie",
+      })
+    })
   })
 })

@@ -531,16 +531,18 @@ def test_a_key_that_could_not_be_checked_is_stored_unverified(
     }
 
 
-def test_admin_has_no_api_key_settings(client: TestClient) -> None:
-    """An admin runs no AI actions, so there is nothing for a key to pay for."""
+def test_an_admin_keeps_a_key_for_drafting_rubrics(client: TestClient) -> None:
+    """The admin's model runs draft the guideline catalog's rubrics, ADR 0024."""
     headers = {"Authorization": f"Bearer {_login(client, ADMIN_EMAIL, ADMIN_PASSWORD)}"}
     resp = client.patch(
         "/settings/api-key",
         json={"api_key": "sk-ant-test-key", "provider": "claude"},
         headers=headers,
     )
-    assert resp.status_code == 403
-    assert client.get("/settings/api-key/status", headers=headers).status_code == 403
+
+    assert resp.status_code == 200, resp.text
+    status_now = client.get("/settings/api-key/status", headers=headers).json()
+    assert status_now["providers"] == ["claude"]
 
 
 def test_unsupported_provider_is_rejected(client: TestClient) -> None:

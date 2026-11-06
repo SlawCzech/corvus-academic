@@ -63,6 +63,8 @@ def _version(model: GuidelineVersionModel) -> GuidelineVersion:
         created_at=model.created_at,
         published_by=model.published_by,
         published_at=model.published_at,
+        drafting_task_id=model.drafting_task_id,
+        drafting_error=model.drafting_error,
     )
 
 
@@ -81,6 +83,8 @@ def _write_version(model: GuidelineVersionModel, version: GuidelineVersion) -> N
     model.created_by = version.created_by
     model.created_at = version.created_at
     model.published_by = version.published_by
+    model.drafting_task_id = version.drafting_task_id
+    model.drafting_error = version.drafting_error
     model.published_at = version.published_at
 
 

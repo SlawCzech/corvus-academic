@@ -114,6 +114,8 @@ Użytkownik
       → draft_student_email:  [Szkic maila z najnowszej recenzji próbnej]
         (czyta tekst recenzji i uwagi, nie pracę; bez punktów, ocen i obrony;
          Corvus nic nie wysyła, promotor kopiuje, ADR 0019)
+      → draft_rubric:         [Rubryka z regulaminu uczelni] (bez studenta, klucz
+                              admina; wynik wpada do szkicu wersji, ADR 0024)
       → review_fragment:      [Podsumowanie i łagodny feedback do fragmentu]
         (praca w toku: bez punktów i ocen, nie wytyka tego, czego jeszcze nie ma;
          kolejna runda dostaje poprzedni feedback; bez rubryki wytycznych)
@@ -534,6 +536,11 @@ cztery sekcje (`## Elementy pracy`, `Wymogi formalne`, `Co praca ma wykazać`, `
 uchybień`), bez nich wersja się nie opublikuje; każdy węzeł dostaje tylko swoje, a liczby
 są wyłącznie w progach —
 [ADR 0023](docs/adr/0023-a-rubric-in-four-sections-and-no-default.md).
+Rubrykę pisze model: admin wskazuje uczelnię i typ pracy i wgrywa regulamin, akcja
+`draft_rubric` (bez studenta) oddaje cztery sekcje, progi i wątpliwości do szkicu wersji,
+a admin sprawdza z oryginałem i publikuje. Admin trzyma własny klucz dostawcy
+(`HOLD_PROVIDER_KEYS`), dalej bez dostępu do studentów —
+[ADR 0024](docs/adr/0024-the-model-drafts-the-rubric-from-the-regulation.md).
 
 ---
 

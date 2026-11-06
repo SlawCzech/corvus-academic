@@ -195,3 +195,19 @@ Na Claude, 2026-11-01, po trzy powtórzenia: `dryf-od-celu`, `cel-nie-caly` i
 brak). Pełna
 recenzja po zmianach z ADR 0015: recall 0,83–1,00, 0 fałszywych alarmów,
 rekomendacje 3/3, 8–13 duplikatów, ok. 85 s; poziom sprzed zmian.
+
+## Rubryka z regulaminu (`make eval-rubric`)
+
+`evals/rubric.py` (ADR 0024): model pisze rubrykę z załącznika 1 i 2 do zarządzenia
+117/22 (pliki z `app/scripts/seed_data/guidelines/`), a kluczem są rubryki napisane z
+nich ręcznie. Kod sprawdza kształt (cztery sekcje, bez `#`/`##`, nagłówki CRITICAL,
+MAJOR, MINOR), odnośniki do paragrafów, progi co do liczby i to, że żadnej liczby progu
+nie ma w tekście. Sędzia wypisuje reguły pominięte i wymyślone oraz to, czy pytania i
+hipotezy stały się wymagane naraz. Przechodzi szkic bez błędów kształtu i liczb, bez
+wymysłów i z najwyżej dwiema pominiętymi regułami. Jak w `app`, każdy szkic dostaje
+rubrykę drugiego zestawu jako wzór kształtu.
+
+```bash
+ANTHROPIC_API_KEY=… make eval-rubric MODEL=claude
+```
+

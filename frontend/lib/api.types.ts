@@ -419,6 +419,10 @@ export interface GuidelineVersion extends GuidelineVersionSummary {
   source: GuidelineSource | null
   created_by: string
   published_by: string | null
+  /** The model is drafting the rubric from the source (ADR 0024). */
+  drafting?: boolean
+  /** Why the last draft failed, until the next one. */
+  drafting_error?: string | null
 }
 
 export interface GuidelineSet {

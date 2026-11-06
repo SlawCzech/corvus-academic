@@ -552,6 +552,19 @@ export async function uploadGuidelineSource(
   return res.json() as Promise<GuidelineVersion>
 }
 
+/** Have the model draft the rubric from the regulation, on the admin's own key. */
+export function draftGuidelineRubric(
+  versionId: string,
+  provider: string,
+): Promise<GuidelineVersion> {
+  return sendJson(
+    `/api/admin/guidelines/versions/${versionId}/draft-rubric`,
+    "POST",
+    { provider },
+    "Nie udało się zacząć szkicu rubryki",
+  )
+}
+
 export async function publishGuidelineVersion(versionId: string): Promise<GuidelineVersion> {
   const res = await request(`/api/admin/guidelines/versions/${versionId}/publish`, {
     method: "POST",

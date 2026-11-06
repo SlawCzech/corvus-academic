@@ -30,7 +30,7 @@ CASES_DIR = Path(__file__).parent / "cases"
 # The rubrics `app` seeds into the catalog — the same files, so an eval judges
 # against what a promoter's student is judged against. Evals run from a
 # checkout of the whole repository (`make eval`), where they sit side by side.
-_RUBRICS_DIR = (
+RUBRICS_DIR = (
     Path(__file__).resolve().parents[2] / "app" / "scripts" / "seed_data" / "guidelines"
 )
 
@@ -101,7 +101,7 @@ class EvalCase:
 
 def rubric_sections(thesis_type: str) -> dict[str, str]:
     """The seeded rubric for a thesis type, split as `app` sends it."""
-    text = (_RUBRICS_DIR / f"{thesis_type}.md").read_text("utf-8")
+    text = (RUBRICS_DIR / f"{thesis_type}.md").read_text("utf-8")
     sections: dict[str, list[str]] = {}
     current: str | None = None
     for line in text.splitlines():

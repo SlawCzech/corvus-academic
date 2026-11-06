@@ -12,18 +12,24 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query, Response, UploadFile, status
 
 from src.guidelines.application.exceptions import (
+    DrafterUnavailableError,
     GuidelineConflictError,
     GuidelineNotFoundError,
+    ProviderKeyMissingError,
 )
 from src.guidelines.domain.catalog import ThesisType, VersionNotEditableError
 from src.guidelines.infrastructure.dependencies import (
     AdminServiceDep,
+    BearerTokenDep,
     CatalogDep,
+    DraftingServiceDep,
     GuidelineAdminDep,
+    KeyLoaderDep,
     ReaderDep,
 )
 from src.guidelines.infrastructure.schemas import (
     DraftCreateRequest,
+    DraftRubricRequest,
     DraftUpdateRequest,
     SetCreateRequest,
     SetDetailResponse,
@@ -47,6 +53,12 @@ async def _guarded[T](call: Awaitable[T]) -> T:
         return await call
     except GuidelineNotFoundError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Not found: {exc}") from exc
+    except ProviderKeyMissingError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+    except DrafterUnavailableError as exc:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE, "The drafting service is not available"
+        ) from exc
     except (GuidelineConflictError, VersionNotEditableError) as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
     except ValueError as exc:
@@ -194,6 +206,42 @@ async def upload_source(
             version_id, file.filename or "", data, file.content_type or ""
         )
     )
+    return version_response(await catalog.get_version(version_id, True))
+
+
+@router.post(
+    "/admin/versions/{version_id}/draft-rubric",
+    response_model=VersionResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def draft_rubric(
+    version_id: uuid.UUID,
+    body: DraftRubricRequest,
+    _admin: GuidelineAdminDep,
+    drafting: DraftingServiceDep,
+    keys: KeyLoaderDep,
+    token: BearerTokenDep,
+    catalog: CatalogDep,
+) -> VersionResponse:
+    """Have the model draft the rubric from the attached regulation (ADR 0024).
+
+    Runs on the admin's own key for the provider. The draft fills in when
+    `GET /admin/versions/{id}` finds the run finished.
+    """
+    await _guarded(drafting.start(version_id, body.provider, keys, token))
+    return version_response(await catalog.get_version(version_id, True))
+
+
+@router.get("/admin/versions/{version_id}", response_model=VersionResponse)
+async def read_draft(
+    version_id: uuid.UUID,
+    _admin: GuidelineAdminDep,
+    drafting: DraftingServiceDep,
+    token: BearerTokenDep,
+    catalog: CatalogDep,
+) -> VersionResponse:
+    """A version as the admin edits it, with a drafted rubric taken in."""
+    await _guarded(drafting.refresh(version_id, token))
     return version_response(await catalog.get_version(version_id, True))
 
 

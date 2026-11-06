@@ -4,7 +4,7 @@ COMPOSE = docker compose -f infra/docker-compose.yml
 COMPOSE_DEV = $(COMPOSE) -f infra/docker-compose.override.yml
 
 .PHONY: help up build down down-volumes logs ps restart migrate seed-guidelines seed-demo demo-reset purge-drafts \
-        dev dev-build eval eval-fragments eval-defence eval-progress eval-maps langfuse-up langfuse-down \
+        dev dev-build eval eval-fragments eval-defence eval-progress eval-rubric eval-maps langfuse-up langfuse-down \
         front-up front-down front-restart front-logs front-dev \
         shell-app shell-agent
 
@@ -97,6 +97,10 @@ eval-fragments:  ## Score review_fragment: tone and direction (MODEL=… JUDGE=�
 
 eval-defence:  ## Score defence_questions: short, general, spoken (MODEL=… JUDGE=… CASES="a b")
 	cd agent && uv run python -m evals.defence --model $(or $(MODEL),claude) \
+		$(if $(JUDGE),--judge $(JUDGE)) $(if $(CASES),--cases $(CASES))
+
+eval-rubric:  ## Score draft_rubric against UE Katowice's rubrics (MODEL=… JUDGE=… CASES="bachelor")
+	cd agent && uv run python -m evals.rubric --model $(or $(MODEL),claude) \
 		$(if $(JUDGE),--judge $(JUDGE)) $(if $(CASES),--cases $(CASES))
 
 eval-progress:  ## Score check_progress: meeting notes as context (MODEL=… JUDGE=… CASES="a b")

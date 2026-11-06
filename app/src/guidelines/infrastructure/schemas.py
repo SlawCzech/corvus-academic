@@ -86,6 +86,16 @@ class VersionResponse(VersionSummaryResponse):
     source: SourceResponse | None
     created_by: uuid.UUID
     published_by: uuid.UUID | None
+    # The rubric is being drafted from the source (ADR 0024); and why the
+    # last attempt failed, until the next one.
+    drafting: bool = False
+    drafting_error: str | None = None
+
+
+class DraftRubricRequest(BaseModel):
+    """Which of the admin's provider keys the draft runs on."""
+
+    provider: str = Field(min_length=1, max_length=20)
 
 
 class SetResponse(BaseModel):
@@ -165,4 +175,6 @@ def version_response(detail: VersionDetail) -> VersionResponse:
         else None,
         created_by=v.created_by,
         published_by=v.published_by,
+        drafting=v.is_drafting,
+        drafting_error=v.drafting_error or None,
     )
