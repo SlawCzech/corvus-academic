@@ -23,7 +23,6 @@ function student(id: string, name: string, status: string, topic: string | null)
     id,
     promotor_id: "p1",
     full_name: name,
-    index_number: null,
     field_of_study: "Ekonomia",
     thesis_type: "bachelor",
     current_topic: topic,

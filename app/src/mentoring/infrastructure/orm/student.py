@@ -36,7 +36,6 @@ class StudentModel(Base):
     )
     promotor_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    index_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
     field_of_study: Mapped[str] = mapped_column(String(255), nullable=False)
     thesis_type: Mapped[str] = mapped_column(String(50), nullable=False)
     current_topic: Mapped[str | None] = mapped_column(Text, nullable=True)

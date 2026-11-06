@@ -461,7 +461,7 @@ def test_a_promoted_review_takes_notes_and_versions(
 # ---------- retention and delete ----------
 
 
-async def test_retention_empties_it_after_150_days_and_keeps_it_listed(
+async def test_retention_empties_it_after_30_days_and_keeps_it_listed(
     client: TestClient, headers: dict[str, str], db_session: AsyncSession
 ) -> None:
     review_id = _new_review(client, headers)
@@ -473,8 +473,8 @@ async def test_retention_empties_it_after_150_days_and_keeps_it_listed(
     )
 
     now = datetime.now(UTC)
-    assert await sweep.sweep(now + timedelta(days=149)) == 0
-    assert await sweep.sweep(now + timedelta(days=151)) == 1
+    assert await sweep.sweep(now + timedelta(days=29)) == 0
+    assert await sweep.sweep(now + timedelta(days=31)) == 1
 
     listed = client.get("/reviews", headers=headers).json()
     assert [r["id"] for r in listed] == [review_id]

@@ -2,6 +2,7 @@
 
 import uuid
 from collections.abc import AsyncGenerator
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -103,6 +104,32 @@ async def test_save_login_event(session: AsyncSession) -> None:
     events = await repo.find_by_user(user.id)
     assert len(events) == 1
     assert events[0].success is True
+
+
+async def test_saving_a_login_event_drops_those_past_90_days(
+    session: AsyncSession,
+) -> None:
+    repo = LoginEventRepository(session)
+
+    def event(age: timedelta) -> LoginEventModel:
+        return LoginEventModel(
+            id=uuid.uuid4(),
+            user_id=None,
+            email="someone@example.com",
+            success=False,
+            ip_address="127.0.0.1",
+            created_at=datetime.now(UTC) - age,
+        )
+
+    session.add(event(timedelta(days=91)))
+    session.add(event(timedelta(days=89)))
+    await session.commit()
+
+    await repo.save(event(timedelta(0)))
+
+    ages = [datetime.now(UTC) - e.created_at for e in await repo.find_all()]
+    assert len(ages) == 2
+    assert all(age < timedelta(days=90) for age in ages)
 
 
 async def test_find_all_login_events_filtered(session: AsyncSession) -> None:

@@ -16,12 +16,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.identity.application.auth import decode_access_token
 from src.identity.application.key_check import KeyChecker
 from src.identity.application.user_service import UserService
+from src.identity.domain.terms import CURRENT_TERMS_VERSION, TERMS_NOT_ACCEPTED
 from src.identity.domain.user import Permission, User
 from src.identity.infrastructure.key_checker import HttpKeyChecker
 from src.identity.infrastructure.repositories import (
     AccessRequestRepository,
     ApiKeyRepository,
     LoginEventRepository,
+    TermsAcceptanceRepository,
     UserRepository,
 )
 from src.identity.infrastructure.token_store import RevokedTokenStore
@@ -114,6 +116,32 @@ def get_access_request_repo(
     return AccessRequestRepository(session)
 
 
+def get_terms_repo(
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> TermsAcceptanceRepository:
+    return TermsAcceptanceRepository(session)
+
+
+async def require_current_terms(
+    user: Annotated[User, Depends(get_current_user)],
+    terms: Annotated[TermsAcceptanceRepository, Depends(get_terms_repo)],
+) -> User:
+    """FastAPI dependency — a promoter has accepted the current terms.
+
+    The terms carry the data processing agreement, so a promoter who has not
+    accepted them cannot reach student data at all. An admin never sees it
+    (ADR 0008) and is not asked. The 403's detail is a code the frontend
+    turns into a redirect to the terms.
+    """
+    if not user.can(Permission.MANAGE_STUDENTS):
+        return user
+    if await terms.accepted_at(user.id, CURRENT_TERMS_VERSION) is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=TERMS_NOT_ACCEPTED
+        )
+    return user
+
+
 def get_user_service(
     repo: Annotated[UserRepository, Depends(get_user_repo)],
 ) -> UserService:
@@ -137,5 +165,6 @@ AccessRequestRepoDep = Annotated[
     AccessRequestRepository, Depends(get_access_request_repo)
 ]
 UserServiceDep = Annotated[UserService, Depends(get_user_service)]
+TermsRepoDep = Annotated[TermsAcceptanceRepository, Depends(get_terms_repo)]
 TokenStoreDep = Annotated[RevokedTokenStore, Depends(get_token_store)]
 KeyCheckerDep = Annotated[KeyChecker, Depends(get_key_checker)]

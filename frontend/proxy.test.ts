@@ -94,6 +94,13 @@ describe("proxy", () => {
     expect(proxy(makeRequest("/students", token)).headers.get("location")).toBeNull()
   })
 
+  it("asks for a session to accept the terms, not to read them", () => {
+    expect(proxy(makeRequest("/terms/accept")).headers.get("location")).toContain("/login")
+    for (const path of ["/terms", "/privacy"]) {
+      expect(proxy(makeRequest(path)).headers.get("location")).toBeNull()
+    }
+  })
+
   it("lets anyone onto the landing page and the login form", () => {
     for (const path of ["/", "/login"]) {
       expect(proxy(makeRequest(path)).headers.get("location")).toBeNull()

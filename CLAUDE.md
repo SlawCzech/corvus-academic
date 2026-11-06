@@ -534,6 +534,12 @@ albumu i maile na znaczniki (`[autor]`, `[promotor]`…) w każdym tekście, a m
 dokumentu liczy od nowa. Strona tytułowa i oświadczenie zostają w kształcie, recenzja
 dostaje formę „Autor/Autorka” zamiast nazwiska —
 [ADR 0023](docs/adr/0023-names-stay-in-corvus.md).
+Usługodawca jest podmiotem przetwarzającym promotora: regulamin (`/terms`) zawiera
+umowę powierzenia, a bez akceptacji bieżącej wersji cały router mentoringu daje 403
+`terms_not_accepted`. Bez numeru indeksu, retencja plików 14/30 dni, logi logowań
+90 dni; usługodawcę dokumenty biorą z `OPERATOR_NAME`/`OPERATOR_EMAIL` —
+[ADR 0027](docs/adr/0027-corvus-is-the-promoters-processor.md) ·
+[rejestr czynności](docs/gdpr-register.md).
 
 ---
 

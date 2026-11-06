@@ -58,6 +58,8 @@ functions and applied by one daily sweep in `app`:
 - every version loses its file and text 150 days (about five months) after the
   student is marked `graduated` or `archived`.
 
+(Shortened to 14 and 30 days on 2026-11-06, ADR 0027.)
+
 A purged version keeps its row (number, date, filename, hash, size) so the
 action history still says which version each result was about.
 

@@ -24,7 +24,6 @@ export default function StudentForm({ student, onSaved, onCancel }: StudentFormP
   const editing = student !== undefined
   const [fullName, setFullName] = useState(student?.full_name ?? "")
   const [fieldOfStudy, setFieldOfStudy] = useState(student?.field_of_study ?? "")
-  const [indexNumber, setIndexNumber] = useState(student?.index_number ?? "")
   const [thesisType, setThesisType] = useState<ThesisType>(student?.thesis_type ?? "bachelor")
   const [researchArea, setResearchArea] = useState(student?.research_area ?? "")
   const [researchAim, setResearchAim] = useState(student?.research_aim ?? "")
@@ -42,7 +41,6 @@ export default function StudentForm({ student, onSaved, onCancel }: StudentFormP
       full_name: fullName,
       field_of_study: fieldOfStudy,
       thesis_type: thesisType,
-      index_number: indexNumber.trim() || null,
       research_area: researchArea.trim() || null,
       research_aim: researchAim.trim() || null,
     }
@@ -53,7 +51,6 @@ export default function StudentForm({ student, onSaved, onCancel }: StudentFormP
         const created = await createStudent(details)
         setFullName("")
         setFieldOfStudy("")
-        setIndexNumber("")
         setResearchArea("")
         setResearchAim("")
         onSaved(created)
@@ -90,14 +87,6 @@ export default function StudentForm({ student, onSaved, onCancel }: StudentFormP
             required
             value={fieldOfStudy}
             onChange={(e) => setFieldOfStudy(e.target.value)}
-            className={inputClass}
-          />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-[12px] text-muted">Nr indeksu (opcjonalnie)</span>
-          <input
-            value={indexNumber}
-            onChange={(e) => setIndexNumber(e.target.value)}
             className={inputClass}
           />
         </label>

@@ -81,7 +81,6 @@ def load(
         students.append(
             DemoStudent(
                 full_name=raw["full_name"],
-                index_number=raw["index_number"],
                 field_of_study=raw["field_of_study"],
                 thesis_type=ThesisType(raw["thesis_type"]),
                 topic=raw.get("topic"),

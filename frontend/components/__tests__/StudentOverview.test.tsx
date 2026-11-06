@@ -20,7 +20,6 @@ const STUDENT = {
   full_name: "Julia Krzemień",
   field_of_study: "Zarządzanie",
   thesis_type: "master_article",
-  index_number: "159293",
   current_topic: null,
   current_topic_set_at: null,
   research_area: null,
@@ -144,7 +143,6 @@ describe("StudentDetail — overview", () => {
     const name = within(form).getByLabelText("Imię i nazwisko")
     await userEvent.clear(name)
     await userEvent.type(name, "Julia Nowak")
-    await userEvent.clear(within(form).getByLabelText(/Nr indeksu/))
     await userEvent.click(within(form).getByRole("button", { name: "Zapisz" }))
 
     await waitFor(() =>
@@ -155,7 +153,6 @@ describe("StudentDetail — overview", () => {
         full_name: "Julia Nowak",
         field_of_study: "Zarządzanie",
         thesis_type: "master_article",
-        index_number: null,
         research_area: null,
         research_aim: null,
       },

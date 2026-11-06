@@ -53,7 +53,6 @@ async def create_student(
             full_name=body.full_name,
             field_of_study=body.field_of_study,
             thesis_type=body.thesis_type,
-            index_number=body.index_number,
             research_area=body.research_area,
             research_aim=body.research_aim,
         )
@@ -127,8 +126,8 @@ async def update_student(
     """Edit the student's details, topic, lifecycle status and/or guideline set.
 
     Manual topic entry here; the same field is also written by accepting a
-    `propose_topic` action. `index_number`, `current_topic`, `research_area`,
-    `research_aim` and `guideline_set_id` sent as null are cleared.
+    `propose_topic` action. `current_topic`, `research_area`, `research_aim`
+    and `guideline_set_id` sent as null are cleared.
     """
     given = body.model_fields_set
     try:
@@ -138,8 +137,6 @@ async def update_student(
             full_name=body.full_name,
             field_of_study=body.field_of_study,
             thesis_type=body.thesis_type,
-            index_number=body.index_number,
-            set_index_number="index_number" in given,
             research_area=body.research_area,
             set_research_area="research_area" in given,
             research_aim=body.research_aim,

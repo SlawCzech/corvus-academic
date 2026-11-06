@@ -8,7 +8,6 @@ const STUDENT = {
   id: "s1",
   full_name: "Jan Kowalski",
   field_of_study: "Ekonomia",
-  index_number: null,
   thesis_type: "bachelor",
   guideline_set_id: null,
   research_area: "ekonomia instytucjonalna",

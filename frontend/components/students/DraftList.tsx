@@ -68,8 +68,8 @@ export default function DraftList({ studentId, drafts, onChange }: DraftListProp
   return (
     <div>
       <p className="mb-3 text-[12.5px] text-muted">
-        Po zaakceptowaniu wersji finalnej pozostałe są usuwane po 30 dniach. Po
-        zakończeniu opieki nad studentem wszystkie wersje są usuwane po 150 dniach.
+        Po zaakceptowaniu wersji finalnej pozostałe są usuwane po 14 dniach. Po
+        zakończeniu opieki nad studentem wszystkie wersje są usuwane po 30 dniach.
         Zostaje ślad: numer, data, nazwa pliku i liczba znaków.
       </p>
       {error && (

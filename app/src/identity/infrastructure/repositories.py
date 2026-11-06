@@ -1,7 +1,7 @@
 """Async repositories for persisting identity domain data."""
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.identity.infrastructure.models import (
     AccessRequestModel,
     LoginEventModel,
+    TermsAcceptanceModel,
     UserApiKeyModel,
     UserModel,
 )
@@ -109,15 +110,30 @@ class ApiKeyRepository:
         return True
 
 
+# How long a login event is kept: an address and a browser per attempt are
+# worth having while someone may still ask about a break-in, not for ever.
+# The privacy policy promises this number (`frontend/content/legal`).
+LOGIN_EVENT_RETENTION = timedelta(days=90)
+
+
 class LoginEventRepository:
-    """Async append-only store for login audit events."""
+    """Async append-only store for login audit events, kept for 90 days."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
     async def save(self, model: LoginEventModel) -> None:
-        """Persist a login event."""
+        """Persist a login event, and drop the ones past their time.
+
+        Pruning rides on the write: every login is a moment the table is
+        touched anyway, and a server nobody logs into keeps nothing new.
+        """
         self._session.add(model)
+        await self._session.execute(
+            delete(LoginEventModel).where(
+                LoginEventModel.created_at < datetime.now(UTC) - LOGIN_EVENT_RETENTION
+            )
+        )
         await self._session.commit()
 
     async def find_by_user(self, user_id: uuid.UUID) -> list[LoginEventModel]:
@@ -170,3 +186,27 @@ class AccessRequestRepository:
         await self._session.delete(model)
         await self._session.commit()
         return True
+
+
+class TermsAcceptanceRepository:
+    """Who accepted which version of the terms, and when."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def accepted_at(self, user_id: uuid.UUID, version: str) -> datetime | None:
+        """When the user accepted this version, or None if they have not."""
+        model = await self._session.get(TermsAcceptanceModel, (user_id, version))
+        return model.accepted_at if model is not None else None
+
+    async def record(self, user_id: uuid.UUID, version: str) -> datetime:
+        """Record an acceptance; accepting again keeps the first date."""
+        existing = await self.accepted_at(user_id, version)
+        if existing is not None:
+            return existing
+        model = TermsAcceptanceModel(
+            user_id=user_id, version=version, accepted_at=datetime.now(UTC)
+        )
+        self._session.add(model)
+        await self._session.commit()
+        return model.accepted_at

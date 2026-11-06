@@ -171,7 +171,7 @@ export default function ReviewForm({ onCreated, onCancel }: ReviewFormProps) {
       </div>
 
       <p className="mt-3 text-[12.5px] text-muted">
-        Tekst i plik pracy zostaną usunięte po 150 dniach. Wyniki AI zostają, dopóki sam ich nie
+        Tekst i plik pracy zostaną usunięte po 30 dniach. Wyniki AI zostają, dopóki sam ich nie
         usuniesz.
       </p>
 

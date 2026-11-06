@@ -106,3 +106,26 @@ class AccessRequestModel(Base):
         nullable=False,
         default=lambda: datetime.now(UTC),
     )
+
+
+class TermsAcceptanceModel(Base):
+    """One promoter's acceptance of one version of the terms of service.
+
+    Kept per version, so the history says which text someone agreed to, not
+    only that they agreed to something. Goes with the account.
+    """
+
+    __tablename__ = "terms_acceptances"
+    __table_args__ = {"schema": _SCHEMA}
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey(f"{_SCHEMA}.users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    version: Mapped[str] = mapped_column(String(20), primary_key=True)
+    accepted_at: Mapped[datetime] = mapped_column(
+        UtcDateTime(),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+    )

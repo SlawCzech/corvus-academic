@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AuthTabs from "@/components/AuthTabs";
+import { LegalLinks } from "@/components/legal/LegalPage";
 import Logo from "@/components/Logo";
 
 interface LoginPageProps {
@@ -20,6 +21,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <Logo size="sm" />
         </Link>
         <AuthTabs initialTab={initialTab} />
+        <LegalLinks className="mt-10 justify-center" />
       </div>
     </div>
   );

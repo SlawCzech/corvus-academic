@@ -29,7 +29,6 @@ const STUDENT = {
   id: "r1",
   promotor_id: "p1",
   full_name: "Anna Nowak",
-  index_number: null,
   field_of_study: "Ekonomia",
   thesis_type: "bachelor",
   current_topic: null,

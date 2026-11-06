@@ -144,8 +144,6 @@ async def test_update_edits_the_students_details(service: StudentService) -> Non
         full_name="Anna Nowak",
         field_of_study="Finanse",
         thesis_type=ThesisType.MASTER_ARTICLE,
-        index_number="12345",
-        set_index_number=True,
     )
 
     stored = await service.get(PROMOTOR, student.id)
@@ -153,24 +151,6 @@ async def test_update_edits_the_students_details(service: StudentService) -> Non
     assert stored.full_name == "Anna Nowak"
     assert stored.field_of_study == "Finanse"
     assert stored.thesis_type is ThesisType.MASTER_ARTICLE
-    assert stored.index_number == "12345"
-
-
-async def test_update_clears_index_number_only_when_asked(
-    service: StudentService,
-) -> None:
-    student = await _add(service)
-    await service.update(
-        PROMOTOR, student.id, index_number="12345", set_index_number=True
-    )
-
-    kept = await service.update(PROMOTOR, student.id, full_name="Anna Nowak")
-    cleared = await service.update(
-        PROMOTOR, student.id, index_number=None, set_index_number=True
-    )
-
-    assert kept.index_number == "12345"
-    assert cleared.index_number is None
 
 
 async def test_update_clears_the_topic(service: StudentService) -> None:

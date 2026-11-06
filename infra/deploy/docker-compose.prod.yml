@@ -37,6 +37,9 @@ services:
     image: ghcr.io/slawczech/corvus-frontend:${IMAGE_TAG:?IMAGE_TAG is set by deploy.sh}
     environment:
       APP_URL: http://app:8000
+      # Named in the terms of service and the privacy policy (/terms, /privacy).
+      OPERATOR_NAME: ${OPERATOR_NAME:-}
+      OPERATOR_EMAIL: ${OPERATOR_EMAIL:-}
     depends_on:
       app:
         condition: service_healthy
