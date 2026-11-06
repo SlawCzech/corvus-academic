@@ -104,14 +104,14 @@ Zostaje:
   Schemat bez zmian; obejścia w `retention.py`, `timeline_service.py` i testach
   usunięte.
 
-- [ ] **Zapis statusu z workera połyka błędy bazy** — `agent/src/infrastructure/task_status.py`
+- [~] **Zapis statusu z workera połyka błędy bazy** — `agent/src/infrastructure/task_status.py`
   loguje i idzie dalej, żeby awaria zapisu nie powodowała retry analizy, która się udała
-  (kilka minut pracy LLM). Skutek: przy niedostępnej bazie wiersz zostaje nieświeży, a
-  jedynym śladem jest log `task_status_write_failed` — od 2026-11-03 `watch.sh` wysyła
-  na niego alert (check „watch” na healthchecks.io, [deploy.md](deploy.md)). Od
-  2026-11-06 taki wiersz nie wisi już w nieskończoność: odpytanie po 90 minutach bez
-  ruchu oznacza akcję jako przerwaną (ADR 0010, drugi addendum). Jeśli wynik był,
-  promotor go nie zobaczy i musi puścić akcję jeszcze raz.
+  (kilka minut pracy LLM). Od 2026-11-06 status z wynikiem (wszystko poza `running`)
+  przy niedostępnej bazie jest zapisywany ponownie po 2, 5, 15 i 30 s — ok. minuty,
+  tyle co restart Postgresa. Błąd, który nie jest brakiem połączenia (np. odrzucony
+  wiersz), nie czeka. Zostaje: dłuższa awaria nadal gubi wynik (checkpointy znikają
+  zaraz po zapisie), wiersz po 90 min dostaje `failed` (ADR 0010), a śladem jest log
+  `task_status_write_failed`, na który `watch.sh` wysyła alert ([deploy.md](deploy.md)).
 
 - [x] ~~**Zawieszony worker zostawia akcję w `running` na zawsze**~~ — od 2026-09-30
   (ADR 0010) taski są potwierdzane po zakończeniu, a padnięty worker wznawia
