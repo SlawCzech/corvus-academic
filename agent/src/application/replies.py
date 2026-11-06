@@ -291,3 +291,31 @@ class VerdictsReply(_Reply):
 
 
 VERDICTS = TypeAdapter(VerdictsReply)
+
+
+# ---------- a rubric drafted from a regulation ----------
+
+
+class RubricThresholdsReply(_Reply):
+    """The numbers the regulation sets, or None for what it does not."""
+
+    min_sources: int | None = None
+    min_foreign_sources: int | None = None
+    min_body_chars: int | None = None
+    max_body_chars: int | None = None
+    min_pages: int | None = None
+    max_pages: int | None = None
+
+
+class RubricDraftReply(_Reply):
+    """The four sections of a rubric, the thresholds, and what to check."""
+
+    elements: Text
+    formal: Text
+    merit: Text
+    severity: Text
+    thresholds: RubricThresholdsReply = Field(default_factory=RubricThresholdsReply)
+    doubts: list[str] = Field(default_factory=list[str])
+
+
+RUBRIC_DRAFT = TypeAdapter(RubricDraftReply)

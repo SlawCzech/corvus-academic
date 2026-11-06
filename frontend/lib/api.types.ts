@@ -22,7 +22,7 @@ export interface Score {
   max_points: number
 }
 
-export type ThesisType = "bachelor" | "master_article"
+export type ThesisType = "bachelor" | "master" | "master_article"
 export type StudentStatus = "active" | "graduated" | "archived"
 
 export interface Student {
@@ -391,6 +391,8 @@ export interface Thresholds {
   min_foreign_sources: number | null
   min_body_chars: number | null
   max_body_chars: number | null
+  min_pages?: number | null
+  max_pages?: number | null
 }
 
 export interface GuidelineVersionSummary {
@@ -419,6 +421,12 @@ export interface GuidelineVersion extends GuidelineVersionSummary {
   source: GuidelineSource | null
   created_by: string
   published_by: string | null
+  /** The model is drafting the rubric from the source (ADR 0025). */
+  drafting?: boolean
+  /** Why the last draft failed, until the next one. */
+  drafting_error?: string | null
+  /** What the model asks the admin to check; a draft's only. */
+  draft_notes?: string[]
 }
 
 export interface GuidelineSet {

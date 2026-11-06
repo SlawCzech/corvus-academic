@@ -36,7 +36,10 @@ def _document_map(draft: ThesisDraft) -> dict[str, Any]:
     exists on page 18 as never written. Computed here, over the full text,
     with no model involved.
     """
-    return outline_payload(draft.content)
+    # Pages only for a PDF: a Word file's page count is whatever the last
+    # program to save it wrote, if anything.
+    pages = draft.pages if draft.format == "pdf" and draft.pages > 0 else None
+    return {**outline_payload(draft.content), "pages": pages}
 
 
 def _research(student: Student) -> dict[str, Any]:
@@ -95,7 +98,9 @@ def pseudonymize_context(student: Student, context: dict[str, Any]) -> dict[str,
         dict[str, Any], _swap_all(context, pseudonymizer_for(student.full_name, theses))
     )
     if "document_map" in swapped:
-        swapped["document_map"] = outline_payload(swapped["text"])
+        # Counted again over the new text; the page count is the file's own.
+        pages = cast(dict[str, Any], swapped["document_map"]).get("pages")
+        swapped["document_map"] = {**outline_payload(swapped["text"]), "pages": pages}
     return swapped
 
 
@@ -119,20 +124,33 @@ def assemble_propose_topic_context(
     }
 
 
-def _with_guidelines(context: dict[str, Any], guidelines: str | None) -> dict[str, Any]:
-    """Add the rubric of the student's guideline set, when there is one.
+Guidelines = str | Mapping[str, str]
+"""A rubric as it travels to `agent`: its four sections by key, or — for a
+version published before rubrics had sections — the whole text."""
 
-    The key is left out rather than set to None: `agent` loads its own
-    requirements exactly when the context carries no `guidelines`.
+
+def _with_guidelines(
+    context: dict[str, Any], guidelines: Guidelines | None
+) -> dict[str, Any]:
+    """Add the rubric of the student's guideline set.
+
+    There are no built-in requirements to fall back on (ADR 0024): an action
+    judged against a university's rules needs the promoter to have said
+    which university's.
     """
-    return context if guidelines is None else {**context, "guidelines": guidelines}
+    if guidelines is None:
+        raise MissingContextError(
+            "Choose the university guidelines for this student first"
+        )
+    rubric = guidelines if isinstance(guidelines, str) else dict(guidelines)
+    return {**context, "guidelines": rubric}
 
 
 def assemble_evaluate_methodology_context(
     student: Student,
     latest_draft: ThesisDraft | None,
     detail: str | None = None,
-    guidelines: str | None = None,
+    guidelines: Guidelines | None = None,
 ) -> dict[str, Any]:
     """Build the context for a methodology review of the current version."""
     if latest_draft is None:
@@ -334,15 +352,15 @@ def assemble_generate_review_context(
     latest_draft: ThesisDraft | None,
     detail: str | None = None,
     review_tone: str = "auto",
-    guidelines: str | None = None,
+    guidelines: Guidelines | None = None,
     thresholds: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the context for the full four-node review.
 
     `guidelines` is the rubric of the guideline set the promoter chose for
-    this student. Without one, `agent` falls back to its own requirements for
-    the thesis type. `thresholds` come from the same set: the requirements
-    node compares them with the document map, ADR 0020.
+    this student; without one the review is refused. `thresholds` come from
+    the same set: the requirements node compares them with the document map,
+    ADR 0020.
     """
     if latest_draft is None:
         raise MissingContextError("There is no thesis to review yet")

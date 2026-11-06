@@ -168,6 +168,22 @@ def test_submit_action_sends_its_context(
     assert sent[3] == _ACTION_BODY["context"]
 
 
+def test_a_rubric_draft_needs_no_student(
+    client: TestClient, dispatch: MagicMock
+) -> None:
+    """An admin's draft for the guideline catalog belongs to no student."""
+    body = {
+        "action_id": "aaaaaaaa-0000-0000-0000-000000000009",
+        "action_type": "draft_rubric",
+        "context": {"regulation": "§ 1.", "thesis_type": "bachelor"},
+    }
+
+    resp = client.post("/actions", json=body, headers=_auth(ADMIN_ID, "admin"))
+
+    assert resp.status_code == 202, resp.text
+    assert dispatch.call_args.kwargs["args"][2] == ""
+
+
 def test_unknown_action_type_is_rejected(
     client: TestClient, dispatch: MagicMock
 ) -> None:

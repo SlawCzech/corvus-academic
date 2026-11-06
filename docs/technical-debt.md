@@ -355,8 +355,9 @@ są nieaktualne. Zostają dla historii.
 
 ## Progi z wytycznych (2026-11-02)
 
-- [ ] **Liczby są w dwóch miejscach** — rubryka i progi to osobne pola wersji, admin
-  edytuje je niezależnie, a przy rozjeździe model widzi oba. Nic tego nie wykrywa.
+- [x] ~~**Liczby są w dwóch miejscach**~~ — od 2026-11-05 rubryka nie podaje liczb
+  progów, tylko jak je czytać; liczby są wyłącznie w progach wersji (ADR 0024). Nic
+  tego nie wymusza przy publikacji — to reguła dla admina i szkicu AI.
 - [ ] **Pozycji obcojęzycznych liczy model** — język wpisu to czytanie, więc kod podaje
   tylko próg (ADR 0020). Pewność tej liczby jest taka jak wcześniej.
 - [ ] **Netografia pod numerowanym nagłówkiem** („3. Netografia”) nie kończy literatury.

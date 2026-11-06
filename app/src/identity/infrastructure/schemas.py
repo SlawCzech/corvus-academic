@@ -39,6 +39,8 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     role: str = "promotor"
+    # Optional: a promoter can set it later in their profile.
+    home_university_id: uuid.UUID | None = None
 
     @field_validator("role")
     @classmethod
@@ -47,6 +49,12 @@ class RegisterRequest(BaseModel):
         if v not in allowed:
             raise ValueError(f"role must be one of {sorted(allowed)}, got {v!r}")
         return v
+
+
+class UserSettings(BaseModel):
+    """What a user sets for themselves: the university they work at."""
+
+    home_university_id: uuid.UUID | None = None
 
 
 class UserResponse(BaseModel):

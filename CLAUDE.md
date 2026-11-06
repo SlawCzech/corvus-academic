@@ -81,6 +81,7 @@ Użytkownik
       │                  rubryka wybranego zestawu wytycznych jedzie w kontekście
       │                  bez nazwisk: autor, promotor, nr albumu i maile to znaczniki
       │                  (`[autor]`…) w każdym tekście, mapa liczona od nowa (ADR 0023)
+      │                  w czterech sekcjach; bez zestawu recenzje to 409 (ADR 0024)
       ├─ /students/{id}/drafts — upload wersji pracy (plik + tekst), pobranie,
       │                  akceptacja wersji finalnej, retencja (ADR 0006)
       ├─ /students/{id}/fragments, /parts, /timeline — fragmenty pracy w rundach,
@@ -115,6 +116,8 @@ Użytkownik
       → draft_student_email:  [Szkic maila z najnowszej recenzji próbnej]
         (czyta tekst recenzji i uwagi, nie pracę; bez punktów, ocen i obrony;
          Corvus nic nie wysyła, promotor kopiuje, ADR 0019)
+      → draft_rubric:         [Rubryka z regulaminu uczelni] (bez studenta, klucz
+                              admina; wynik wpada do szkicu wersji, ADR 0025)
       → review_fragment:      [Podsumowanie i łagodny feedback do fragmentu]
         (praca w toku: bez punktów i ocen, nie wytyka tego, czego jeszcze nie ma;
          kolejna runda dostaje poprzedni feedback; bez rubryki wytycznych)
@@ -534,6 +537,21 @@ albumu i maile na znaczniki (`[autor]`, `[promotor]`…) w każdym tekście, a m
 dokumentu liczy od nowa. Strona tytułowa i oświadczenie zostają w kształcie, recenzja
 dostaje formę „Autor/Autorka” zamiast nazwiska —
 [ADR 0023](docs/adr/0023-names-stay-in-corvus.md).
+Domyślnych wymogów nie ma: recenzja, recenzja próbna i ocena metodologii bez zestawu
+wytycznych to 409, a zestaw wybiera się w formularzu studenta i jednorazówki. Rubryka ma
+cztery sekcje (`## Elementy pracy`, `Wymogi formalne`, `Co praca ma wykazać`, `Waga
+uchybień`), bez nich wersja się nie opublikuje; każdy węzeł dostaje tylko swoje, a liczby
+są wyłącznie w progach —
+[ADR 0024](docs/adr/0024-a-rubric-in-four-sections-and-no-default.md).
+Rubrykę pisze model: admin wskazuje uczelnię i typ pracy i wgrywa regulamin, akcja
+`draft_rubric` (bez studenta) oddaje cztery sekcje, progi i wątpliwości do szkicu wersji,
+a admin sprawdza z oryginałem i publikuje. Admin trzyma własny klucz dostawcy
+(`HOLD_PROVIDER_KEYS`), dalej bez dostępu do studentów —
+[ADR 0025](docs/adr/0025-the-model-drafts-the-rubric-from-the-regulation.md).
+Promotor ma opcjonalną „Moją uczelnię” (`identity.users.home_university_id`, bez FK):
+pickery wytycznych pokazują najpierw jej zestawy, resztę pod „Inna uczelnia…”, a jedyny
+pasujący zestaw wybiera się sam —
+[ADR 0026](docs/adr/0026-a-promoters-home-university.md).
 
 ---
 

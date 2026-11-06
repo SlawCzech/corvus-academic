@@ -42,7 +42,7 @@ def _context_lines(ctx: dict[str, Any]) -> list[str]:
         f"This part of the thesis: {ctx.get('part_name') or 'unnamed'}",
         f"Round: {ctx.get('round_number', 1)}",
     ]
-    if ctx.get("thesis_type") == ThesisType.MASTER_ARTICLE:
+    if ctx.get("thesis_type") in (ThesisType.MASTER, ThesisType.MASTER_ARTICLE):
         lines.append(_MASTER_LEVEL)
     others = cast(list[dict[str, str]], ctx.get("other_parts") or [])
     if others:

@@ -6,15 +6,16 @@ import ActionPanel from "../students/ActionPanel"
 import type { Student } from "@/lib/api.types"
 
 /**
- * A review started by mistake — say, before the university's guidelines were
- * picked — can be stopped, and the guidelines it will use are in view before
- * it starts.
+ * A review started by mistake can be stopped, and the guidelines it will use
+ * are in view before it starts — without them it does not start at all.
  */
 const STUDENT = {
   id: "s1",
   thesis_type: "bachelor",
-  guideline_set_id: null,
+  guideline_set_id: "g1",
 } as unknown as Student
+
+const WITHOUT_GUIDELINES = { ...STUDENT, guideline_set_id: null } as Student
 
 const RUNNING = {
   id: "a1",
@@ -86,7 +87,17 @@ describe("ActionPanel", () => {
         return json(RUNNING)
       }
       if (url === "/api/students/s1/actions") return listGate.then(() => json(listed))
-      if (url.startsWith("/api/guidelines/")) return json([])
+      if (url.startsWith("/api/guidelines/"))
+        return json([
+          {
+            id: "g1",
+            name: "Prace licencjackie",
+            thesis_type: "bachelor",
+            university: { id: "u1", name: "UE Katowice", short_name: "UE" },
+            current: { id: "v1", version_no: 1 },
+            has_draft: false,
+          },
+        ])
       if (url === "/api/settings/api-key/status")
         return json({ configured: keys.length > 0, providers: keys })
       if (url === "/api/models")
@@ -101,21 +112,39 @@ describe("ActionPanel", () => {
     fetchMock.mockReset()
   })
 
-  function renderPanel(): void {
+  function renderPanel(student: Student = STUDENT): void {
     render(
       <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
-        <ActionPanel student={STUDENT} />
+        <ActionPanel student={student} />
       </SWRConfig>,
     )
   }
 
-  it("shows the guidelines a review will use, and warns about the defaults", async () => {
+  it("shows the guidelines a review will use", async () => {
     renderPanel()
 
     await userEvent.click(screen.getByRole("button", { name: "Recenzja finalna" }))
 
     expect(screen.getByRole("combobox", { name: "Zestaw wytycznych" })).toBeInTheDocument()
-    expect(screen.getByTestId("default-guidelines")).toBeInTheDocument()
+    expect(screen.queryByTestId("missing-guidelines")).not.toBeInTheDocument()
+    expect(screen.getByTestId("run-action")).toBeEnabled()
+  })
+
+  it("does not start a review before the university's guidelines are chosen", async () => {
+    renderPanel(WITHOUT_GUIDELINES)
+
+    await userEvent.click(screen.getByRole("button", { name: "Recenzja finalna" }))
+
+    expect(screen.getByTestId("missing-guidelines")).toBeInTheDocument()
+    expect(screen.getByTestId("run-action")).toBeDisabled()
+  })
+
+  it("starts an action that judges nothing against the guidelines without them", async () => {
+    renderPanel(WITHOUT_GUIDELINES)
+
+    await userEvent.click(screen.getByRole("button", { name: "Zaproponuj temat" }))
+
+    await waitFor(() => expect(screen.getByTestId("run-action")).toBeEnabled())
   })
 
   it("does not show guidelines for an action that does not use them", async () => {
@@ -284,7 +313,17 @@ describe("ActionPanel", () => {
       if (url === "/api/settings/api-key/status") return json({ configured: true, providers: ["claude"] })
       if (url === "/api/models")
         return json({ byok: {} })
-      if (url.startsWith("/api/guidelines/")) return json([])
+      if (url.startsWith("/api/guidelines/"))
+        return json([
+          {
+            id: "g1",
+            name: "Prace licencjackie",
+            thesis_type: "bachelor",
+            university: { id: "u1", name: "UE Katowice", short_name: "UE" },
+            current: { id: "v1", version_no: 1 },
+            has_draft: false,
+          },
+        ])
       return json({})
     })
     render(

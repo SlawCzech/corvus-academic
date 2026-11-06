@@ -95,7 +95,9 @@ class ActionRequest(BaseModel):
 
     action_id: uuid.UUID
     action_type: str
-    student_id: uuid.UUID
+    # None for the one action that has no student, a rubric drafted for the
+    # guideline catalog.
+    student_id: uuid.UUID | None = None
     context: dict[str, Any] = {}
     language: str = "pl"
     byok: BYOKConfig | None = None
@@ -221,7 +223,7 @@ async def submit_action(
             args=[
                 str(body.action_id),
                 body.action_type,
-                str(body.student_id),
+                str(body.student_id) if body.student_id else "",
                 body.context,
             ],
             kwargs=kwargs,
@@ -241,7 +243,7 @@ async def submit_action(
         task_id=task_id,
         action_id=str(body.action_id),
         action_type=body.action_type,
-        student_id=str(body.student_id),
+        student_id=str(body.student_id) if body.student_id else None,
         byok_provider=body.byok.provider if body.byok else None,
     )
     return ActionTaskResponse(task_id=task_id)

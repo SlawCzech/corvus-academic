@@ -76,6 +76,35 @@ def _length(
     return f"- Length of the body: {body:,} characters, against {wanted}: {standing}."
 
 
+def _pages(
+    minimum: int | None, maximum: int | None, document_map: Mapping[str, Any]
+) -> str:
+    """A length in pages: counted only in a PDF, and only as a whole file."""
+    wanted = (
+        f"{minimum or 0}–{maximum}"
+        if maximum is not None
+        else f"at least {minimum or 0}"
+    )
+    pages = document_map.get("pages")
+    if not isinstance(pages, int) or pages <= 0:
+        return (
+            f"- Length: {wanted} pages. Code cannot count the pages of this file "
+            "(a Word document does not know its own page count): do not estimate "
+            "them and do not report the length."
+        )
+    if minimum is not None and pages < minimum:
+        standing = "below the range"
+    elif maximum is not None and pages > maximum:
+        standing = "above the range"
+    else:
+        standing = "within the range"
+    return (
+        f"- Length: {pages} pages in the file, title page, contents, bibliography "
+        f"and annexes included, against {wanted}: {standing}. Annexes and "
+        "front matter may not count towards the regulation's length."
+    )
+
+
 def _mapping(value: object) -> Mapping[str, Any]:
     return cast(Mapping[str, Any], value) if isinstance(value, dict) else {}
 
@@ -89,6 +118,8 @@ def render_threshold_block(ctx: Mapping[str, Any]) -> str:
     min_foreign = thresholds.get("min_foreign_sources")
     min_body = thresholds.get("min_body_chars")
     max_body = thresholds.get("max_body_chars")
+    min_pages = thresholds.get("min_pages")
+    max_pages = thresholds.get("max_pages")
 
     lines: list[str] = []
     if min_sources is not None:
@@ -97,6 +128,8 @@ def render_threshold_block(ctx: Mapping[str, Any]) -> str:
         lines.append(_foreign_sources(min_foreign))
     if min_body is not None or max_body is not None:
         lines.append(_length(min_body, max_body, document_map))
+    if min_pages is not None or max_pages is not None:
+        lines.append(_pages(min_pages, max_pages, document_map))
     if not lines:
         return ""
     return "\n".join(

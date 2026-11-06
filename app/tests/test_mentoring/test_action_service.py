@@ -24,6 +24,7 @@ from src.mentoring.application.exceptions import (
     ProviderRequiredError,
     StudentNotFoundError,
 )
+from src.mentoring.application.guidelines_port import GuidelineRubric
 from src.mentoring.application.student_service import Caller, StudentService
 from src.mentoring.domain.action import ActionStatus, ActionType
 from src.mentoring.domain.student import Student, ThesisType
@@ -98,12 +99,20 @@ async def env() -> AsyncGenerator[_Fixture, None]:
     await engine.dispose()
 
 
-async def _student(env: _Fixture, caller: Caller = PROMOTOR) -> Student:
+async def _student(
+    env: _Fixture, caller: Caller = PROMOTOR, *, with_guidelines: bool = False
+) -> Student:
+    """A student; with guidelines, one a review can be run for (ADR 0024)."""
+    set_id: uuid.UUID | None = None
+    if with_guidelines:
+        set_id = uuid.uuid4()
+        env.guidelines.publish(set_id, "bachelor", "## Wymogi")
     return await env.students.create(
         caller,
         full_name="Jan Kowalski",
         field_of_study="Ekonomia",
         thesis_type=ThesisType.BACHELOR,
+        guideline_set_id=set_id,
     )
 
 
@@ -158,7 +167,7 @@ async def test_trigger_passes_review_tone_to_the_review_context(
     env: _Fixture,
 ) -> None:
     """`review_tone` only means anything to generate_review's own context."""
-    student = await _student(env)
+    student = await _student(env, with_guidelines=True)
     await env.drafts.upload(
         PROMOTOR, student.id, filename="praca.docx", data=docx_bytes()
     )
@@ -178,7 +187,7 @@ async def test_trigger_passes_review_tone_to_the_review_context(
 
 
 async def test_trigger_defaults_review_tone_to_auto(env: _Fixture) -> None:
-    student = await _student(env)
+    student = await _student(env, with_guidelines=True)
     await env.drafts.upload(
         PROMOTOR, student.id, filename="praca.docx", data=docx_bytes()
     )
@@ -253,23 +262,30 @@ async def test_both_reviews_carry_the_thresholds_of_the_set(
     assert env.agent.submitted[0]["context"]["thresholds"] == {"min_sources": 25}
 
 
-async def test_without_a_guideline_set_the_agent_uses_its_own(env: _Fixture) -> None:
+async def test_without_a_guideline_set_a_review_is_refused(env: _Fixture) -> None:
+    """No built-in requirements to fall back on, ADR 0024."""
     student = await _student(env)
     await env.drafts.upload(
         PROMOTOR, student.id, filename="praca.docx", data=docx_bytes()
     )
 
-    await env.actions.trigger(
-        PROMOTOR,
-        student.id,
-        action_type=ActionType.EVALUATE_METHODOLOGY,
-        token=TOKEN,
-        provider="claude",
-        keys=claude_key,
-    )
+    with pytest.raises(MissingContextError, match="guidelines"):
+        await env.actions.trigger(
+            PROMOTOR,
+            student.id,
+            action_type=ActionType.EVALUATE_METHODOLOGY,
+            token=TOKEN,
+            provider="claude",
+            keys=claude_key,
+        )
 
-    assert "guidelines" not in env.agent.submitted[0]["context"]
-    assert "guideline_version_id" not in await _input_ref(env, student.id)
+    assert env.agent.submitted == []
+
+
+async def test_a_student_can_be_added_with_a_guideline_set(env: _Fixture) -> None:
+    student = await _student(env, with_guidelines=True)
+
+    assert student.guideline_set_id is not None
 
 
 async def test_a_guideline_set_for_another_thesis_type_is_refused(
@@ -294,21 +310,18 @@ async def test_an_unknown_guideline_set_is_refused(env: _Fixture) -> None:
         )
 
 
-async def test_the_guideline_choice_can_be_cleared(env: _Fixture) -> None:
-    student = await _student(env)
-    set_id = uuid.uuid4()
-    env.guidelines.publish(set_id, "bachelor", "## v1")
-    await env.students.update(
-        PROMOTOR, student.id, guideline_set_id=set_id, set_guidelines=True
-    )
+async def test_the_guideline_choice_can_be_changed_but_not_removed(
+    env: _Fixture,
+) -> None:
+    student = await _student(env, with_guidelines=True)
 
-    cleared = await env.students.update(
-        PROMOTOR, student.id, guideline_set_id=None, set_guidelines=True
-    )
+    with pytest.raises(ValueError, match="not removed"):
+        await env.students.update(
+            PROMOTOR, student.id, guideline_set_id=None, set_guidelines=True
+        )
     kept = await env.students.update(PROMOTOR, student.id, current_topic="Temat")
 
-    assert cleared.guideline_set_id is None
-    assert kept.guideline_set_id is None
+    assert kept.guideline_set_id == student.guideline_set_id
 
 
 async def test_a_new_thesis_type_drops_the_guideline_choice(env: _Fixture) -> None:
@@ -891,7 +904,7 @@ async def test_progress_check_sends_only_the_notes_between_the_versions(
 
 async def test_review_context_carries_the_student_as_metadata(env: _Fixture) -> None:
     """The review nodes expect author form/title/field, from the student."""
-    student = await _student(env)
+    student = await _student(env, with_guidelines=True)
     await env.students.update(PROMOTOR, student.id, current_topic="Instytucje a wzrost")
     await env.drafts.upload(
         PROMOTOR, student.id, filename="praca.docx", data=docx_bytes("Treść pracy")
@@ -912,8 +925,8 @@ async def test_review_context_carries_the_student_as_metadata(env: _Fixture) -> 
     assert "author" not in metadata
     assert metadata["title"] == "Instytucje a wzrost"
     assert metadata["field_of_study"] == "Ekonomia"
-    # Guidelines are agent-owned static data — `app` does not ship them.
-    assert "guidelines" not in env.agent.submitted[0]["context"]
+    # The rubric is the student's guideline set's, ADR 0024.
+    assert env.agent.submitted[0]["context"]["guidelines"] == "## Wymogi"
 
 
 # ---------- the promoter's own key ----------
@@ -1055,13 +1068,42 @@ async def test_the_tokens_an_action_spent_are_kept_with_it(env: _Fixture) -> Non
     assert stored.usage == usage
 
 
+async def test_a_rubric_with_sections_travels_by_section(env: _Fixture) -> None:
+    """The adapter splits the rubric; the fake hands the split over as given."""
+    student = await _student(env)
+    set_id = uuid.uuid4()
+    version_id = env.guidelines.publish(set_id, "bachelor", "## Wymogi")
+    sections = {"elements": "a", "formal": "b", "merit": "c", "severity": "d"}
+    env.guidelines.sets[set_id] = (
+        "bachelor",
+        GuidelineRubric(version_id, "## Wymogi", {}, sections),
+    )
+    await env.students.update(
+        PROMOTOR, student.id, guideline_set_id=set_id, set_guidelines=True
+    )
+    await env.drafts.upload(
+        PROMOTOR, student.id, filename="praca.docx", data=docx_bytes()
+    )
+
+    await env.actions.trigger(
+        PROMOTOR,
+        student.id,
+        action_type=ActionType.TRIAL_REVIEW,
+        token=TOKEN,
+        provider="claude",
+        keys=claude_key,
+    )
+
+    assert env.agent.submitted[0]["context"]["guidelines"] == sections
+
+
 async def test_no_name_or_album_number_reaches_the_agent(env: _Fixture) -> None:
     """The student, the promoter and the album number stay in Corvus (ADR 0023).
 
     Checked on the review, whose context carries the most: the text with its
     title page and statement, the metadata, the map.
     """
-    student = await _student(env)
+    student = await _student(env, with_guidelines=True)
     thesis = (
         "UNIWERSYTET EKONOMICZNY W KRAKOWIE\n"
         "JAN KOWALSKI\n"

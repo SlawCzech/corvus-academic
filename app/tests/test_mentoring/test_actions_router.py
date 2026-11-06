@@ -14,6 +14,7 @@ from tests.test_mentoring.conftest import (
     OTHER_PROMOTOR_PASSWORD,
     PROMOTOR_EMAIL,
     PROMOTOR_PASSWORD,
+    guideline_set,
     login,
 )
 from tests.test_mentoring.fakes import (
@@ -41,7 +42,8 @@ def agent() -> Generator[FakeAgentClient, None, None]:
 
 
 def _new_student(client: TestClient, headers: dict[str, str]) -> str:
-    resp = client.post("/students", json=_STUDENT, headers=headers)
+    body = {**_STUDENT, "guideline_set_id": guideline_set(client)}
+    resp = client.post("/students", json=body, headers=headers)
     assert resp.status_code == 201, resp.text
     return str(resp.json()["id"])
 

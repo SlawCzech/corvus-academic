@@ -12,18 +12,24 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query, Response, UploadFile, status
 
 from src.guidelines.application.exceptions import (
+    DrafterUnavailableError,
     GuidelineConflictError,
     GuidelineNotFoundError,
+    ProviderKeyMissingError,
 )
 from src.guidelines.domain.catalog import ThesisType, VersionNotEditableError
 from src.guidelines.infrastructure.dependencies import (
     AdminServiceDep,
+    BearerTokenDep,
     CatalogDep,
+    DraftingServiceDep,
     GuidelineAdminDep,
+    KeyLoaderDep,
     ReaderDep,
 )
 from src.guidelines.infrastructure.schemas import (
     DraftCreateRequest,
+    DraftRubricRequest,
     DraftUpdateRequest,
     SetCreateRequest,
     SetDetailResponse,
@@ -47,6 +53,12 @@ async def _guarded[T](call: Awaitable[T]) -> T:
         return await call
     except GuidelineNotFoundError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Not found: {exc}") from exc
+    except ProviderKeyMissingError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+    except DrafterUnavailableError as exc:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE, "The drafting service is not available"
+        ) from exc
     except (GuidelineConflictError, VersionNotEditableError) as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
     except ValueError as exc:
@@ -197,6 +209,42 @@ async def upload_source(
     return version_response(await catalog.get_version(version_id, True))
 
 
+@router.post(
+    "/admin/versions/{version_id}/draft-rubric",
+    response_model=VersionResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def draft_rubric(
+    version_id: uuid.UUID,
+    body: DraftRubricRequest,
+    _admin: GuidelineAdminDep,
+    drafting: DraftingServiceDep,
+    keys: KeyLoaderDep,
+    token: BearerTokenDep,
+    catalog: CatalogDep,
+) -> VersionResponse:
+    """Have the model draft the rubric from the attached regulation (ADR 0025).
+
+    Runs on the admin's own key for the provider. The draft fills in when
+    `GET /admin/versions/{id}` finds the run finished.
+    """
+    await _guarded(drafting.start(version_id, body.provider, keys, token))
+    return version_response(await catalog.get_version(version_id, True))
+
+
+@router.get("/admin/versions/{version_id}", response_model=VersionResponse)
+async def read_draft(
+    version_id: uuid.UUID,
+    _admin: GuidelineAdminDep,
+    drafting: DraftingServiceDep,
+    token: BearerTokenDep,
+    catalog: CatalogDep,
+) -> VersionResponse:
+    """A version as the admin edits it, with a drafted rubric taken in."""
+    await _guarded(drafting.refresh(version_id, token))
+    return version_response(await catalog.get_version(version_id, True))
+
+
 @router.post("/admin/versions/{version_id}/publish", response_model=VersionResponse)
 async def publish_version(
     version_id: uuid.UUID,
@@ -207,3 +255,45 @@ async def publish_version(
     """Publish a draft; the version in force becomes superseded."""
     await _guarded(svc.publish(version_id, admin.id))
     return version_response(await catalog.get_version(version_id, True))
+
+
+@router.post(
+    "/admin/sets/{set_id}/corrections",
+    response_model=VersionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def correct_set(
+    set_id: uuid.UUID,
+    admin: GuidelineAdminDep,
+    svc: AdminServiceDep,
+    catalog: CatalogDep,
+) -> VersionResponse:
+    """Open a correction: the next version, starting from the one in force.
+
+    The rubric, thresholds and original regulation are copied; a published
+    version itself never changes.
+    """
+    draft = await _guarded(svc.correct(set_id, admin.id))
+    return version_response(await catalog.get_version(draft.id, True))
+
+
+@router.delete("/admin/versions/{version_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def discard_draft(
+    version_id: uuid.UUID,
+    _admin: GuidelineAdminDep,
+    svc: AdminServiceDep,
+) -> Response:
+    """Throw a draft away; a published version answers 409."""
+    await _guarded(svc.discard_draft(version_id))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete("/admin/sets/{set_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_set(
+    set_id: uuid.UUID,
+    _admin: GuidelineAdminDep,
+    svc: AdminServiceDep,
+) -> Response:
+    """Delete a set with every version, to start again from the regulation."""
+    await _guarded(svc.delete_set(set_id))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

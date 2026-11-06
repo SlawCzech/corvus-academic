@@ -192,6 +192,14 @@ cd /srv/corvus && export IMAGE_TAG=$(cat .deployed-tag)
 docker compose -f docker-compose.prod.yml run --rm app python scripts/seed_guidelines.py
 ```
 
+Gdy zmienią się rubryki w `app/scripts/seed_data/guidelines/`, po deployu opublikuj je
+jako nowe wersje (poprzednie zostają jako zastąpione):
+
+```bash
+cd /srv/corvus && export IMAGE_TAG=$(cat .deployed-tag)
+docker compose -f docker-compose.prod.yml run --rm app python scripts/seed_guidelines.py --update
+```
+
 Potem `https://corvus.saek.dev`, zaloguj się adminem (`ADMIN_EMAIL` /
 `ADMIN_PASSWORD`) i **zrób pierwszy backup ręcznie**: `/srv/corvus/backup.sh`.
 

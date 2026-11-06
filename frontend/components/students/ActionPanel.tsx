@@ -250,6 +250,8 @@ function ActionPanelInner({
     shown?.status === "completed" && !shown.accepted && spec?.acceptable
   const showTone = selectedType === "generate_review"
   const showGuidelines = selectedType !== null && USES_GUIDELINES.includes(selectedType)
+  // No built-in requirements to judge by (ADR 0024): the picker below says so.
+  const missingGuidelines = showGuidelines && !student.guideline_set_id
 
   async function start(): Promise<void> {
     if (!selectedType) return
@@ -443,7 +445,7 @@ function ActionPanelInner({
             <button
               type="button"
               onClick={() => void start()}
-              disabled={running || needsKey}
+              disabled={running || needsKey || missingGuidelines}
               data-testid="run-action"
               className="h-9 rounded-lg bg-accent px-4 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
             >

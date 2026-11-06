@@ -25,6 +25,8 @@ class ActionType(StrEnum):
     TRIAL_REVIEW = "trial_review"
     VERIFY_BIBLIOGRAPHY = "verify_bibliography"
     REVIEW_FRAGMENT = "review_fragment"
+    # The one action with no student: an admin's rubric from a regulation.
+    DRAFT_RUBRIC = "draft_rubric"
 
 
 class TaskStatus(StrEnum):
