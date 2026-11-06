@@ -205,7 +205,8 @@ Potem `https://corvus.saek.dev`, zaloguj się adminem (`ADMIN_EMAIL` /
 
 ### 9. Konta testerów
 
-Najpierw w `/srv/corvus/.env` wpisz `OPERATOR_NAME` i `OPERATOR_EMAIL`: to dane
+Najpierw w `/srv/corvus/.env` wpisz `OPERATOR_NAME` (w cudzysłowie, bo ze spacją) i
+`OPERATOR_EMAIL`: to dane
 usługodawcy w regulaminie (`/terms`) i polityce prywatności (`/privacy`). Bez nich
 obie strony pokazują puste miejsce. Po zmianie: `docker compose ... up -d frontend`.
 

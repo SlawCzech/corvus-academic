@@ -6,12 +6,13 @@
 
 ## Zanim wypchniesz gałąź
 
-- [ ] **Alias pocztowy.** Cloudflare → `saek.dev` → Email → Email Routing:
+- [x] **Alias pocztowy.** Cloudflare → `saek.dev` → Email → Email Routing:
       włącz routing (Cloudflare doda rekordy MX/TXT), dodaj adres docelowy (Twoja
       skrzynka, potwierdź mailem), utwórz regułę `rodo@saek.dev` → ta skrzynka.
       Wyślij testowy mail na alias.
 - [ ] **Dane usługodawcy na serwerze** — w `/srv/corvus/.env`:
-      `OPERATOR_NAME=<prawdziwe imię i nazwisko>`,
+      `OPERATOR_NAME="Imię Nazwisko"` (**w cudzysłowie** — bez niego bash
+      w `backup.sh`, `watch.sh` i `deploy.sh` potknie się na spacji),
       `OPERATOR_EMAIL=rodo@saek.dev`. Bez restartu: deploy i tak stawia frontend od nowa.
 - [ ] **Przeczytaj `/terms` i `/privacy`** (lokalnie albo w podglądzie PR-a), najlepiej
       z kimś, kto zna RODO. To projekty napisane z kodu, nie porada prawna.
