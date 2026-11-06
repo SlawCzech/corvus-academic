@@ -4,7 +4,8 @@ import { useState } from "react"
 import useSWR from "swr"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { request } from "@/lib/api.client"
+import { fetcher as apiFetcher, request } from "@/lib/api.client"
+import type { University } from "@/lib/api.types"
 import { z } from "zod"
 
 interface User {
@@ -21,6 +22,7 @@ const createSchema = z.object({
   email: z.string().email("Nieprawidłowy email"),
   password: z.string().min(8, "Minimum 8 znaków"),
   role: z.enum(["promotor", "admin"]),
+  home_university_id: z.string().optional(),
 })
 
 type CreateForm = z.infer<typeof createSchema>
@@ -160,6 +162,10 @@ function CreateUserModal({
   onClose: () => void
 }) {
   const [serverError, setServerError] = useState<string | null>(null)
+  const { data: universities } = useSWR<University[]>(
+    "/api/guidelines/universities",
+    apiFetcher,
+  )
   const {
     register,
     handleSubmit,
@@ -174,7 +180,10 @@ function CreateUserModal({
     const res = await request("/api/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        ...data,
+        home_university_id: data.home_university_id || null,
+      }),
     })
     if (!res.ok) {
       const body = (await res.json()) as { detail?: string }
@@ -236,6 +245,27 @@ function CreateUserModal({
             >
               <option value="promotor">Promotor</option>
               <option value="admin">Administrator</option>
+            </select>
+          </div>
+
+          <div>
+            <label
+              htmlFor="new-user-university"
+              className="mb-1 block text-[13px] font-medium text-muted-strong"
+            >
+              Uczelnia (opcjonalnie)
+            </label>
+            <select
+              id="new-user-university"
+              {...register("home_university_id")}
+              className="w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[14px] focus:border-accent focus:outline-none"
+            >
+              <option value="">Promotor wybierze sam w profilu</option>
+              {(universities ?? []).map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
             </select>
           </div>
 

@@ -2,6 +2,7 @@ import type { GuidelineVersionStatus, Thresholds } from "@/lib/api.types"
 
 export const THESIS_TYPE_LABELS: Record<string, string> = {
   bachelor: "Licencjacka",
+  master: "Magisterska",
   master_article: "Magisterska (artykuł)",
 }
 
@@ -23,6 +24,8 @@ export const THRESHOLD_FIELDS: { key: keyof Thresholds; label: string }[] = [
   { key: "min_foreign_sources", label: "W tym obcojęzycznych, minimum" },
   { key: "min_body_chars", label: "Objętość pracy, minimum (znaki)" },
   { key: "max_body_chars", label: "Objętość pracy, maksimum (znaki)" },
+  { key: "min_pages", label: "Objętość pracy, minimum (strony)" },
+  { key: "max_pages", label: "Objętość pracy, maksimum (strony)" },
 ]
 
 export function formatDate(iso: string): string {

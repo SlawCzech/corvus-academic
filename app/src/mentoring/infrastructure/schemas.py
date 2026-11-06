@@ -45,6 +45,7 @@ class StudentCreateRequest(BaseModel):
     index_number: str | None = Field(default=None, max_length=50)
     research_area: str | None = Field(default=None, max_length=255)
     research_aim: str | None = Field(default=None, max_length=4000)
+    guideline_set_id: uuid.UUID | None = None
 
 
 class StudentUpdateRequest(BaseModel):

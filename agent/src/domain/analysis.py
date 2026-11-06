@@ -45,6 +45,9 @@ class ThesisType(StrEnum):
     """Type of thesis being evaluated."""
 
     BACHELOR = "bachelor"
+    # A master's thesis in the usual form: chapters, a conclusion.
+    MASTER = "master"
+    # A master's thesis written as a research article (UE Katowice).
     MASTER_ARTICLE = "master_article"
 
 

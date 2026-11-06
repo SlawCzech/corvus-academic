@@ -14,6 +14,8 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
+from src.guidelines.domain.rubric import parse_rubric
+
 
 class ThesisType(StrEnum):
     """Kind of thesis a guideline set applies to.
@@ -24,6 +26,9 @@ class ThesisType(StrEnum):
     """
 
     BACHELOR = "bachelor"
+    # A master's thesis in the usual form: chapters, a conclusion.
+    MASTER = "master"
+    # A master's thesis written as a research article (UE Katowice).
     MASTER_ARTICLE = "master_article"
 
 
@@ -85,6 +90,10 @@ class Thresholds:
     min_foreign_sources: int | None = None
     min_body_chars: int | None = None
     max_body_chars: int | None = None
+    # A length some regulations give in pages instead (UE Poznań). Code can
+    # count the pages of a PDF only; a Word file does not know its own.
+    min_pages: int | None = None
+    max_pages: int | None = None
 
     def __post_init__(self) -> None:
         for name, value in self.to_dict().items():
@@ -102,6 +111,12 @@ class Thresholds:
             and self.min_body_chars > self.max_body_chars
         ):
             raise ValueError("min_body_chars must not exceed max_body_chars")
+        if (
+            self.min_pages is not None
+            and self.max_pages is not None
+            and self.min_pages > self.max_pages
+        ):
+            raise ValueError("min_pages must not exceed max_pages")
 
     def to_dict(self) -> dict[str, int | None]:
         return {
@@ -109,6 +124,8 @@ class Thresholds:
             "min_foreign_sources": self.min_foreign_sources,
             "min_body_chars": self.min_body_chars,
             "max_body_chars": self.max_body_chars,
+            "min_pages": self.min_pages,
+            "max_pages": self.max_pages,
         }
 
     @classmethod
@@ -119,6 +136,8 @@ class Thresholds:
             min_foreign_sources=data.get("min_foreign_sources"),
             min_body_chars=data.get("min_body_chars"),
             max_body_chars=data.get("max_body_chars"),
+            min_pages=data.get("min_pages"),
+            max_pages=data.get("max_pages"),
         )
 
 
@@ -148,10 +167,21 @@ class GuidelineVersion:
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     published_by: UUID | None = None
     published_at: datetime | None = None
+    # The agent's task drafting this version's rubric from its source, while
+    # it runs (ADR 0025); the reason the last attempt failed, until the next.
+    drafting_task_id: str | None = None
+    drafting_error: str | None = None
+    # What the model asks the admin to check in its draft. Shown beside the
+    # draft, never part of the rubric a model is given.
+    draft_notes: list[str] = field(default_factory=list[str])
 
     def __post_init__(self) -> None:
         if self.version_no < 1:
             raise ValueError("version_no must start at 1")
+
+    @property
+    def is_drafting(self) -> bool:
+        return self.drafting_task_id is not None
 
     @property
     def is_draft(self) -> bool:
@@ -165,6 +195,7 @@ class GuidelineVersion:
     ) -> None:
         """Change a draft. Omitted fields are left as they are."""
         self._require_draft()
+        self._require_not_drafting()
         if rubric_md is not None:
             self.rubric_md = rubric_md
         if thresholds is not None:
@@ -175,16 +206,53 @@ class GuidelineVersion:
     def attach_source(self, source: SourceDocument) -> None:
         """Record the regulation this draft was read from."""
         self._require_draft()
+        self._require_not_drafting()
         self.source = source
 
     def publish(self, by: UUID, at: datetime | None = None) -> None:
         """Freeze the draft and make it the version actions are judged against."""
         self._require_draft()
+        self._require_not_drafting()
         if not self.rubric_md.strip():
             raise ValueError("A version cannot be published without a rubric")
+        parse_rubric(self.rubric_md)
         self.status = VersionStatus.PUBLISHED
         self.published_by = by
         self.published_at = at or datetime.now(UTC)
+
+    def require_draftable(self) -> UUID:
+        """The source file a rubric can be drafted from, or why there is none."""
+        self._require_draft()
+        self._require_not_drafting()
+        if self.source is None or self.source.file_id is None:
+            raise ValueError("Attach the regulation before drafting a rubric from it")
+        return self.source.file_id
+
+    def require_discardable(self) -> None:
+        """Only a draft the model is not writing can be thrown away."""
+        self._require_draft()
+        self._require_not_drafting()
+
+    def start_drafting(self, task_id: str) -> None:
+        """Hand the source to the model; the draft waits for its rubric."""
+        self.require_draftable()
+        self.drafting_task_id = task_id
+        self.drafting_error = None
+
+    def finish_drafting(
+        self, rubric_md: str, thresholds: Thresholds, notes: list[str] | None = None
+    ) -> None:
+        """Take the model's rubric and thresholds; the draft is editable again."""
+        if not self.is_drafting:
+            raise VersionNotEditableError("This version is not being drafted")
+        self.drafting_task_id = None
+        self.draft_notes = list(notes or [])
+        self.edit(rubric_md=rubric_md, thresholds=thresholds)
+
+    def fail_drafting(self, error: str) -> None:
+        """Give up on this attempt; the draft keeps what it had."""
+        self.drafting_task_id = None
+        self.drafting_error = error
 
     def supersede(self) -> None:
         """Step aside for a newer published version. Only a published one can."""
@@ -193,6 +261,12 @@ class GuidelineVersion:
                 f"Only a published version can be superseded (is {self.status})"
             )
         self.status = VersionStatus.SUPERSEDED
+
+    def _require_not_drafting(self) -> None:
+        if self.is_drafting:
+            raise VersionNotEditableError(
+                "The rubric is being drafted from the regulation; wait for it"
+            )
 
     def _require_draft(self) -> None:
         if not self.is_draft:

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import StudentDetailsCard from "../students/StudentDetailsCard"
@@ -10,10 +10,19 @@ const STUDENT = {
   field_of_study: "Ekonomia",
   index_number: null,
   thesis_type: "bachelor",
-  guideline_set_id: null,
+  guideline_set_id: "set1",
   research_area: "ekonomia instytucjonalna",
   research_aim: null,
 } as Student
+
+const SET = {
+  id: "set1",
+  name: "Prace licencjackie",
+  thesis_type: "bachelor",
+  university: { id: "u1", name: "UE Katowice", short_name: "UE Katowice" },
+  current: { id: "v1", version_no: 1 },
+  has_draft: false,
+}
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -28,9 +37,10 @@ describe("StudentDetailsCard", () => {
   })
 
   it("sends a filled aim and clears an emptied area", async () => {
-    const fetchMock = vi.fn(
-      async (_url: string, init?: RequestInit) =>
-        new Response(init?.body as string, { status: 200 }),
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) =>
+      url.startsWith("/api/guidelines/sets")
+        ? new Response(JSON.stringify([SET]), { status: 200 })
+        : new Response(init?.body as string, { status: 200 }),
     )
     vi.stubGlobal("fetch", fetchMock)
     const user = userEvent.setup()
@@ -39,9 +49,13 @@ describe("StudentDetailsCard", () => {
     await user.click(screen.getByRole("button", { name: "Edytuj" }))
     await user.clear(screen.getByLabelText("Obszar badawczy (opcjonalnie)"))
     await user.type(screen.getByLabelText("Cel i hipotezy (opcjonalnie)", { exact: false }), "Cel: X")
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Zestaw wytycznych" })).toHaveValue("set1"),
+    )
     await user.click(screen.getByRole("button", { name: "Zapisz" }))
 
-    const body = JSON.parse(fetchMock.mock.calls[0][1]?.body as string) as Record<string, unknown>
+    const patch = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH")
+    const body = JSON.parse(patch![1]?.body as string) as Record<string, unknown>
     expect(body.research_area).toBeNull()
     expect(body.research_aim).toBe("Cel: X")
   })

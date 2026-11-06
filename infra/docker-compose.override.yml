@@ -31,6 +31,8 @@ services:
       - ../app/main.py:/app/main.py
       - ../app/alembic_identity:/app/alembic_identity
       - ../app/alembic_mentoring:/app/alembic_mentoring
+      - ../app/alembic_guidelines:/app/alembic_guidelines
+      - ../app/scripts:/app/scripts
     environment:
       - DEBUG=true
     # entrypoint.sh: alembic upgrade head → seed_admin → uvicorn :8000

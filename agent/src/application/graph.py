@@ -33,6 +33,7 @@ from .nodes.coherence import (
 )
 from .nodes.defence_questions import defence_questions
 from .nodes.draft_meeting_note import draft_meeting_note
+from .nodes.draft_rubric import draft_rubric
 from .nodes.draft_student_email import draft_student_email
 from .nodes.methodology import analyze_methodology
 from .nodes.promoter_review import promoter_review
@@ -232,5 +233,7 @@ def build_action_graph(
             return _build_single_node_graph(
                 "review_fragment", review_fragment, checkpointer
             )
+        case ActionType.DRAFT_RUBRIC:
+            return _build_single_node_graph("draft_rubric", draft_rubric, checkpointer)
         case _:
             raise ValueError(f"No graph for action type: {action_type!r}")

@@ -1,6 +1,8 @@
 """Unit tests for the guideline catalog's domain rules."""
 
+import re
 import uuid
+from pathlib import Path
 
 import pytest
 
@@ -12,18 +14,20 @@ from src.guidelines.domain.catalog import (
     VersionNotEditableError,
     VersionStatus,
 )
+from src.guidelines.domain.rubric import RubricShapeError, parse_rubric
 from src.mentoring.domain.student import ThesisType as MentoringThesisType
+from tests.rubrics import rubric
 
 _ADMIN = uuid.uuid4()
 
 
-def _draft(rubric: str = "## 1. Structure") -> GuidelineVersion:
+def _draft(rubric_md: str = rubric()) -> GuidelineVersion:
     return GuidelineVersion(
         id=uuid.uuid4(),
         set_id=uuid.uuid4(),
         version_no=1,
         created_by=_ADMIN,
-        rubric_md=rubric,
+        rubric_md=rubric_md,
     )
 
 
@@ -35,7 +39,7 @@ def test_thesis_types_match_mentoring() -> None:
 def test_a_draft_can_be_edited_and_published() -> None:
     version = _draft()
 
-    version.edit(rubric_md="## 1. New", thresholds=Thresholds(min_sources=25))
+    version.edit(rubric_md=rubric("v2"), thresholds=Thresholds(min_sources=25))
     version.publish(by=_ADMIN)
 
     assert version.status is VersionStatus.PUBLISHED
@@ -58,7 +62,7 @@ def test_a_published_version_refuses_every_change() -> None:
 
 def test_an_empty_rubric_cannot_be_published() -> None:
     with pytest.raises(ValueError, match="without a rubric"):
-        _draft(rubric="   ").publish(by=_ADMIN)
+        _draft(rubric_md="   ").publish(by=_ADMIN)
 
 
 def test_only_a_published_version_can_be_superseded() -> None:
@@ -90,3 +94,38 @@ def test_thresholds_round_trip_through_a_dict() -> None:
 
     assert Thresholds.from_dict(thresholds.to_dict()) == thresholds
     assert Thresholds.from_dict(None) == Thresholds()
+
+
+def test_a_rubric_without_the_four_sections_cannot_be_published() -> None:
+    with pytest.raises(RubricShapeError, match="missing sections: Waga uchybień"):
+        _draft(rubric_md=rubric().split("## Waga uchybień")[0]).publish(by=_ADMIN)
+
+
+def test_a_rubric_with_a_section_of_its_own_cannot_be_published() -> None:
+    with pytest.raises(RubricShapeError, match="Unknown rubric section 'Inne'"):
+        _draft(rubric_md=rubric() + "\n## Inne\nCoś.\n").publish(by=_ADMIN)
+
+
+def test_a_rubric_splits_into_its_sections_without_the_title() -> None:
+    sections = parse_rubric(rubric("v3"))
+
+    assert sections.elements == "Wstęp z celem (v3)."
+    assert sections.severity == "CRITICAL: brak wstępu (v3)."
+    assert "Wymogi v3" not in "".join(sections.to_dict().values())
+
+
+def test_an_empty_section_is_named() -> None:
+    text = rubric().replace("Logiczny tok wywodu (v1).", "")
+
+    with pytest.raises(RubricShapeError, match="empty: Co praca ma wykazać"):
+        parse_rubric(text)
+
+
+@pytest.mark.parametrize("name", ["bachelor.md", "master_article.md"])
+def test_the_seeded_rubrics_have_the_four_sections(name: str) -> None:
+    seed = Path(__file__).parents[2] / "scripts" / "seed_data" / "guidelines" / name
+
+    sections = parse_rubric(seed.read_text("utf-8"))
+
+    # The numbers live in the thresholds alone.
+    assert not re.search(r"\b\d{2,3} ?000\b", "".join(sections.to_dict().values()))

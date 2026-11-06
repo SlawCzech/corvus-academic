@@ -11,11 +11,9 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.types import Command
 
 from src.application.graph import CompiledActionGraph, build_action_graph
-from src.application.guidelines import load_guidelines
 from src.application.nodes.promoter_review import PROMOTER_REVIEWS_FINDINGS
 from src.application.state import ActionState
-from src.domain.action import ActionType, TaskStatus
-from src.domain.analysis import ThesisType
+from src.domain.action import TaskStatus
 from src.infrastructure.checkpoints import delete as delete_checkpoints
 from src.infrastructure.checkpoints import open_checkpointer
 from src.infrastructure.key_transit import KeyUnsealError, unseal
@@ -50,29 +48,6 @@ _RESULT_KEYS = (
     "status",
     "error",
 )
-
-
-# Actions judged against university requirements. Without a guideline set from
-# `app`, they read the agent's own requirements file.
-_ACTIONS_NEEDING_GUIDELINES = frozenset(
-    {
-        ActionType.GENERATE_REVIEW,
-        ActionType.TRIAL_REVIEW,
-        ActionType.EVALUATE_METHODOLOGY,
-    }
-)
-
-
-def _with_guidelines(action_type: str, context: dict[str, Any]) -> dict[str, Any]:
-    """Add the university requirements to the context, if the action needs them.
-
-    `app` sends the rubric of the student's guideline set when there is one;
-    otherwise the agent's own requirements file for the thesis type, whole.
-    """
-    if action_type not in _ACTIONS_NEEDING_GUIDELINES or "guidelines" in context:
-        return context
-    thesis_type = str(context.get("thesis_type", ThesisType.BACHELOR))
-    return {**context, "guidelines": load_guidelines(thesis_type)}
 
 
 def _to_json(obj: Any) -> Any:  # noqa: ANN401
@@ -401,7 +376,7 @@ def run_action(
                     action_id,
                     action_type,
                     student_id,
-                    _with_guidelines(action_type, context),
+                    context,
                     model_label(credentials),
                     language,
                 ),

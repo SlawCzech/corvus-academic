@@ -36,6 +36,11 @@ class UserModel(Base):
         nullable=False,
         default=lambda: datetime.now(UTC),
     )
+    # The university whose guidelines a promoter sees first. A plain id: the
+    # catalog is another context, and identity never imports it.
+    home_university_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), nullable=True
+    )
 
 
 class UserApiKeyModel(Base):

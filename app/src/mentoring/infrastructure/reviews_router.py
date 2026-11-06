@@ -40,6 +40,7 @@ async def create_review(
     current_topic: Annotated[str | None, Form()] = None,
     research_area: Annotated[str | None, Form(max_length=255)] = None,
     research_aim: Annotated[str | None, Form(max_length=4000)] = None,
+    guideline_set_id: Annotated[uuid.UUID | None, Form()] = None,
 ) -> ReviewResponse:
     """Store a thesis to review once, with no student on the roster.
 
@@ -58,6 +59,7 @@ async def create_review(
             topic=current_topic,
             research_area=research_area,
             research_aim=research_aim,
+            guideline_set_id=guideline_set_id,
         )
     except ValueError as exc:
         raise HTTPException(

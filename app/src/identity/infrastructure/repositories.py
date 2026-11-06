@@ -64,6 +64,16 @@ class UserRepository:
         user.hashed_password = hashed
         await self._session.commit()
 
+    async def update_home_university(
+        self, user_id: uuid.UUID, university_id: uuid.UUID | None
+    ) -> None:
+        """Set or clear the user's home university and commit."""
+        user = await self._session.get(UserModel, user_id)
+        if user is None:
+            return
+        user.home_university_id = university_id
+        await self._session.commit()
+
 
 class ApiKeyRepository:
     """Async store for users' own provider keys — one per user and provider."""

@@ -112,3 +112,29 @@ def test_the_rule_leaves_the_severity_to_the_model() -> None:
 
     assert "They are not findings." in block
     assert "a suggested length is not a hard limit" in block
+
+
+@pytest.mark.parametrize(
+    ("pages", "standing"),
+    [(35, "below the range"), (50, "within the range"), (70, "above the range")],
+)
+def test_pages_of_a_pdf_against_the_range(pages: int, standing: str) -> None:
+    block = render_threshold_block(
+        {
+            "thresholds": {"min_pages": 40, "max_pages": 60},
+            "document_map": {"pages": pages},
+        }
+    )
+
+    assert f"{pages} pages in the file" in block
+    assert standing in block
+    assert "annexes" in block
+
+
+def test_a_file_whose_pages_are_unknown_is_not_estimated() -> None:
+    block = render_threshold_block(
+        {"thresholds": {"min_pages": 40}, "document_map": {"pages": None}}
+    )
+
+    assert "cannot count the pages" in block
+    assert "do not estimate" in block

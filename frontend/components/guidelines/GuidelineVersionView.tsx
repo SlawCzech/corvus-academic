@@ -4,6 +4,7 @@ import Link from "next/link"
 import useSWR from "swr"
 import { fetcher, guidelineSourceUrl } from "@/lib/api.client"
 import type { GuidelineSetDetail, GuidelineVersion } from "@/lib/api.types"
+import RubricView from "@/components/guidelines/RubricView"
 import {
   THESIS_TYPE_LABELS,
   THRESHOLD_FIELDS,
@@ -14,8 +15,9 @@ import {
 
 /**
  * One version of a guideline set, as a promoter reads it: what it applies to,
- * the numbers it sets, the rubric the model is given, the original regulation
- * to check it against, and the versions before it.
+ * the numbers it sets (the only place they live), the rubric by section with
+ * which action reads which, the original regulation to check it against, and
+ * the versions before it.
  */
 export default function GuidelineVersionView({ versionId }: { versionId: string }) {
   const { data: version, error } = useSWR<GuidelineVersion>(
@@ -34,7 +36,7 @@ export default function GuidelineVersionView({ versionId }: { versionId: string 
     return <p className="text-[13px] text-muted">Wczytywanie…</p>
   }
 
-  const thresholds = THRESHOLD_FIELDS.filter(({ key }) => version.thresholds[key] !== null)
+  const thresholds = THRESHOLD_FIELDS.filter(({ key }) => version.thresholds[key] != null)
 
   return (
     <div>
@@ -110,22 +112,9 @@ export default function GuidelineVersionView({ versionId }: { versionId: string 
         </section>
       </div>
 
-      <section className="mb-6 rounded-xl border border-line bg-surface p-5">
-        <h2 className="mb-1 text-[11.5px] font-semibold uppercase tracking-wide text-muted">
-          Rubryka dla modelu
-        </h2>
-        <p className="mb-4 text-[12.5px] text-muted">
-          Tak Corvus odczytuje zarządzenie. Tę treść dostaje model przy recenzji i ocenie
-          metodologii. Fragmenty oznaczone jako interpretacja Corvusa nie pochodzą z
-          zarządzenia.
-        </p>
-        <pre
-          data-testid="rubric"
-          className="whitespace-pre-wrap font-sans text-[13.5px] leading-relaxed text-foreground"
-        >
-          {version.rubric_md}
-        </pre>
-      </section>
+      <div className="mb-6">
+        <RubricView rubric={version.rubric_md} />
+      </div>
 
       {set && set.versions.length > 1 && (
         <section className="rounded-xl border border-line bg-surface p-5">

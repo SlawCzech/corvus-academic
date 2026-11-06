@@ -19,6 +19,7 @@ from src.identity.infrastructure.schemas import (
     LoginResponse,
     RegisterRequest,
     UserResponse,
+    UserSettings,
     user_response,
 )
 from src.identity.infrastructure.session import REFRESH_TTL, start_session
@@ -45,7 +46,7 @@ async def create_user(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc
     try:
-        user = await svc.register(registration)
+        user = await svc.register(registration, body.home_university_id)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
@@ -63,6 +64,25 @@ async def list_users(_admin: AdminDep, svc: UserServiceDep) -> list[UserResponse
 def get_me(user: CurrentUserDep) -> UserResponse:
     """Return the current user's profile."""
     return user_response(user)
+
+
+@router.get("/me/settings", response_model=UserSettings)
+async def read_settings(user: CurrentUserDep, svc: UserServiceDep) -> UserSettings:
+    """The caller's own settings: the university whose guidelines come first."""
+    return UserSettings(home_university_id=await svc.home_university(user.id))
+
+
+@router.patch("/me/settings", response_model=UserSettings)
+async def update_settings(
+    body: UserSettings, user: CurrentUserDep, svc: UserServiceDep
+) -> UserSettings:
+    """Set the caller's home university, or clear it with null.
+
+    Not checked against the catalog, which identity does not know: an id
+    that names no university only means no set is shown first.
+    """
+    await svc.set_home_university(user.id, body.home_university_id)
+    return UserSettings(home_university_id=body.home_university_id)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
