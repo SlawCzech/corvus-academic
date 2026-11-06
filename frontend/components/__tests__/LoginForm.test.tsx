@@ -29,7 +29,7 @@ describe("LoginForm", () => {
     await user.type(screen.getByTestId("email-input"), "notanemail")
     await user.click(screen.getByTestId("submit-button"))
     expect(await screen.findByTestId("email-error")).toHaveTextContent(
-      /valid email/i,
+      /poprawny adres email/i,
     )
   })
 
@@ -40,7 +40,7 @@ describe("LoginForm", () => {
     await user.type(screen.getByTestId("password-input"), "short")
     await user.click(screen.getByTestId("submit-button"))
     expect(await screen.findByTestId("password-error")).toHaveTextContent(
-      /8 characters/i,
+      /8 znaków/i,
     )
   })
 
@@ -72,7 +72,7 @@ describe("LoginForm", () => {
     await user.type(screen.getByTestId("password-input"), "wrongpassword")
     await user.click(screen.getByTestId("submit-button"))
     expect(await screen.findByTestId("server-error")).toHaveTextContent(
-      /invalid email or password/i,
+      /nieprawidłowy email lub hasło/i,
     )
     expect(mockPush).not.toHaveBeenCalled()
   })
