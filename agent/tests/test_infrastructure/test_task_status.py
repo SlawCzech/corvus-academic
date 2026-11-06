@@ -6,11 +6,14 @@ time must not be retried just because the status write failed.
 
 import asyncio
 import uuid
+from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
+import pytest
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
@@ -38,9 +41,56 @@ def test_writes_through_to_the_repository() -> None:
     assert write.call_args.args[2] == {"summary": "x"}
 
 
-def test_database_failure_does_not_propagate() -> None:
+@pytest.fixture
+def sleeps() -> Iterator[MagicMock]:
+    with patch("src.infrastructure.task_status.time.sleep") as sleep:
+        yield sleep
+
+
+def test_database_failure_does_not_propagate(sleeps: MagicMock) -> None:
     with patch("src.infrastructure.task_status._write", side_effect=OSError("db down")):
         record_task_status("task-1", TaskStatus.COMPLETED)  # must not raise
+
+
+def test_an_outcome_is_written_again_once_the_db_is_back(sleeps: MagicMock) -> None:
+    down = OperationalError("UPDATE", {}, ConnectionRefusedError("refused"))
+    with patch(
+        "src.infrastructure.task_status._write", side_effect=[down, OSError(), True]
+    ) as write:
+        record_task_status("task-1", TaskStatus.COMPLETED, result={"summary": "x"})
+
+    assert write.call_count == 3
+    assert all(c.args[2] == {"summary": "x"} for c in write.call_args_list)
+    assert [c.args[0] for c in sleeps.call_args_list] == [2.0, 5.0]
+
+
+def test_an_outcome_gives_up_after_the_last_attempt(sleeps: MagicMock) -> None:
+    with patch(
+        "src.infrastructure.task_status._write", side_effect=OSError("db down")
+    ) as write:
+        record_task_status("task-1", TaskStatus.FAILED, error="boom")
+
+    assert write.call_count == 5
+    assert sum(c.args[0] for c in sleeps.call_args_list) == 52.0
+
+
+def test_running_is_tried_once(sleeps: MagicMock) -> None:
+    with patch(
+        "src.infrastructure.task_status._write", side_effect=OSError("db down")
+    ) as write:
+        record_task_status("task-1", TaskStatus.RUNNING)
+
+    assert write.call_count == 1
+    sleeps.assert_not_called()
+
+
+def test_a_write_the_database_refuses_is_not_retried(sleeps: MagicMock) -> None:
+    refused = IntegrityError("UPDATE", {}, ValueError("bad row"))
+    with patch("src.infrastructure.task_status._write", side_effect=refused) as write:
+        record_task_status("task-1", TaskStatus.COMPLETED)
+
+    assert write.call_count == 1
+    sleeps.assert_not_called()
 
 
 def test_missing_row_does_not_propagate() -> None:
