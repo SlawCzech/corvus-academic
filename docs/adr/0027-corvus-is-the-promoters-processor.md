@@ -22,6 +22,6 @@ Corvus was going to serve 10–20 promoters, not three testers who know the oper
 - Every promoter accepts once on the first visit after the deploy; until then their screens show the terms.
 - The documents describe what the code does: retention periods, the 60-day backup lifecycle, the security measures. Changing any of them means changing the text and bumping the version.
 - Notes and AI results still stay until the promoter deletes the student; the terms say so. Deleted data lives on in encrypted backups for up to 60 days.
-- The `index_number` column is emptied by mentoring migration 0013 and dropped in a later release, so a rollback to the previous image still finds it.
+- The `index_number` column is emptied by mentoring migration 0013 and dropped by 0014 in the next release, so a rollback to the previous image still finds it.
 - The documents are drafts written from the code, not legal advice; the operator should have someone read them.
 - The register of processing categories (art. 30(2)) is in [docs/gdpr-register.md](../gdpr-register.md).
