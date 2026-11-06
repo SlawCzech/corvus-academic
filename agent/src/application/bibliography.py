@@ -24,6 +24,11 @@ _URL = re.compile(r"https?://|www\.", re.IGNORECASE)
 _DOI = re.compile(r"10\.\d{4,9}/\S+", re.IGNORECASE)
 # Share of the record's title words the reference must contain.
 _TITLE_MATCH = 0.8
+# Share of the reference's main-title words the record's title must contain.
+# Lower: a record may give a shorter main title than the reference does.
+_TITLE_COVER = 0.5
+# What `app` puts in place of a person's name before a context leaves (ADR 0023).
+_MARKERS = ("[autor]", "[promotor]")
 
 VERIFIED = "verified"
 MISMATCH = "mismatch"
@@ -78,12 +83,27 @@ def doi_in(entry: str) -> str:
     return found.group(0).rstrip(".,;") if found else ""
 
 
-def _title_matches(work: Work, entry: str) -> bool:
-    words = [w for w in normalize(work.title).split() if len(w) >= 3]
+def _share_in(words_of: str, text: str) -> float | None:
+    """The share of `words_of`'s words (three letters or more) found in `text`."""
+    words = [w for w in normalize(words_of).split() if len(w) >= 3]
     if not words:
+        return None
+    flat = f" {normalize(text)} "
+    return sum(f" {w} " in flat for w in words) / len(words)
+
+
+def _title_matches(work: Work, entry: str, title: str) -> bool:
+    """The record's title is in the entry — and, when the title is known, the
+    other way round too.
+
+    One way only, a short title matches by accident: "Autor o Autora" is in
+    any self-citation that reads "[autor] … w posiadaniu autora".
+    """
+    share = _share_in(work.title, entry)
+    if share is None or share < _TITLE_MATCH:
         return False
-    flat = f" {normalize(entry)} "
-    return sum(f" {w} " in flat for w in words) / len(words) >= _TITLE_MATCH
+    cover = _share_in(search_title(title), work.title) if title else None
+    return cover is None or cover >= _TITLE_COVER
 
 
 def _fold(text: str) -> str:
@@ -96,6 +116,16 @@ def _author_matches(work: Work, entry: str) -> bool:
     if not work.authors or not work.authors[0]:
         return True  # institutional or anonymous record: nothing to compare
     return normalize(_fold(work.authors[0])) in normalize(_fold(entry))
+
+
+def hidden_author(authors: str, entry: str) -> str:
+    """The marker standing for the first author, or "" for a real name.
+
+    Such an entry cannot be checked: the name never leaves Corvus, so no
+    record can be compared with it, and an author-less one would pass.
+    """
+    first = (first_surname(authors) or entry).strip().lower()
+    return next((m for m in _MARKERS if first.startswith(m)), "")
 
 
 def first_surname(authors: str) -> str:
@@ -114,12 +144,17 @@ def _same_year(work: Work, year: int | None) -> bool:
 
 
 def match(
-    entry: str, year: int | None, works: Sequence[Work], source: str = "Crossref"
+    entry: str,
+    year: int | None,
+    works: Sequence[Work],
+    source: str = "Crossref",
+    title: str = "",
 ) -> Check:
     """Settle a reference from a source's candidates, or leave it unresolved.
 
     `source` is named in the note when the record is not in Crossref: a DOI
     says where a work was found, a book in a library catalogue has none.
+    `title`, when the extraction gave one, must be covered by the record's.
 
     Every candidate is looked at, not the first whose title fits: for a
     well-known book the best-scoring records are its reviews — same title,
@@ -133,7 +168,9 @@ def match(
     reference that gives another has it wrong.
     """
     same_work = [
-        w for w in works if _title_matches(w, entry) and _author_matches(w, entry)
+        w
+        for w in works
+        if _title_matches(w, entry, title) and _author_matches(w, entry)
     ]
     found_in = "" if source == "Crossref" else f"Katalog: {source}."
     for work in same_work:

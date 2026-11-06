@@ -17,6 +17,7 @@ from src.application.bibliography import (
     bibliography_section,
     doi_in,
     first_surname,
+    hidden_author,
     is_website,
     match,
     search_title,
@@ -163,6 +164,47 @@ def test_a_reference_is_searched_by_surname_and_main_title() -> None:
 def test_an_unrelated_record_leaves_the_entry_open() -> None:
     assert match(_FAKE_ENTRY, 2019, [_LAIBSON]).status == UNRESOLVED
     assert match(_FAKE_ENTRY, 2019, []).status == UNRESOLVED
+
+
+# A self-citation after pseudonymisation (ADR 0023), and what Crossref
+# answered for it: an author-less chapter whose two title words both occur in
+# the entry — "[autor]" and "autora".
+_SELF_ENTRY = (
+    "[autor], J. P. (2025). O wyższości folwarku nad innymi formami "
+    "gospodarowania [maszynopis w posiadaniu autora]."
+)
+_SELF_TITLE = "O wyższości folwarku nad innymi formami gospodarowania"
+_AUTOR_O_AUTORA = Work(
+    doi="10.1632/zsru1925",
+    title="Autor o Autora",
+    year=2025,
+    authors=(),
+    venue="",
+    kind="book-chapter",
+    score=35.4,
+)
+
+
+def test_a_short_title_found_inside_the_entry_is_not_the_work() -> None:
+    check = match(_SELF_ENTRY, 2025, [_AUTOR_O_AUTORA], title=_SELF_TITLE)
+
+    assert check.status == UNRESOLVED
+    assert check.doi == ""
+
+
+def test_the_records_title_must_cover_the_references_main_title() -> None:
+    # The subtitle may be missing from the record; the main title may not.
+    book = _record(_RISE, "North", 1973, "monograph")
+    full_title = "The rise of the Western world: A new economic history"
+
+    assert match(_NORTH_ENTRY, 1973, [book], title=full_title).status == VERIFIED
+
+
+def test_a_marker_for_an_author_is_recognised() -> None:
+    assert hidden_author("[autor], J. P.", _SELF_ENTRY) == "[autor]"
+    assert hidden_author("", "[promotor], K. (2019). Tytuł.") == "[promotor]"
+    assert hidden_author("Nowak, T. i [autor], J. P.", "Nowak, T. …") == ""
+    assert hidden_author("Laibson, D.", _LAIBSON_ENTRY) == ""
 
 
 def test_websites_and_dois_are_recognised() -> None:
@@ -441,6 +483,44 @@ def test_the_loop_ends_when_the_budget_is_spent_whatever_the_agent_asks() -> Non
     ]
     assert len(agent_searches) == nodes.TOOL_BUDGET
     assert final["status"] == "bibliography_checked"
+
+
+def test_an_entry_by_a_marker_is_not_looked_up_and_never_verified() -> None:
+    """The name never left Corvus, so no source can confirm the author."""
+    listed = json.dumps(
+        {
+            "references": [
+                {
+                    "entry": _SELF_ENTRY,
+                    "authors": "[autor], J. P.",
+                    "year": 2025,
+                    "title": _SELF_TITLE,
+                }
+            ]
+        }
+    )
+    llm = _llm([], [])
+    llm.invoke.side_effect = lambda messages, **_: AIMessage(content=listed)
+    crossref = MagicMock()
+    crossref.search.return_value = [_AUTOR_O_AUTORA]
+
+    with (
+        patch("src.application.nodes.bibliography.get_llm", return_value=llm),
+        patch(
+            "src.application.nodes.bibliography.CrossrefClient", return_value=crossref
+        ),
+        patch("src.application.nodes.bibliography.NationalLibraryClient") as library,
+        patch("src.application.nodes.bibliography.OpenLibraryClient") as open_library,
+    ):
+        final = build_action_graph(ActionType.VERIFY_BIBLIOGRAPHY).invoke(_state())
+
+    crossref.search.assert_not_called()
+    library.return_value.search.assert_not_called()
+    open_library.return_value.search.assert_not_called()
+    llm.bind_tools.assert_not_called()
+    row = final["output"]["references"][0]
+    assert (row["status"], row["doi"]) == ("unchecked", "")
+    assert "[autor]" in row["note"]
 
 
 def test_no_bibliography_is_an_error() -> None:

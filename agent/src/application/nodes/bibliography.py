@@ -54,6 +54,7 @@ from src.application.bibliography import (
     bibliography_section,
     doi_in,
     first_surname,
+    hidden_author,
     is_website,
     match,
     search_title,
@@ -80,6 +81,13 @@ _MAX_REFERENCES = 80
 # Crossref records looked at per entry. Three was too few: a classic's reviews
 # outrank the book itself.
 _CANDIDATES = 5
+# An entry whose first author is a marker (ADR 0023): the name stayed in
+# Corvus, so no source can confirm the author — and an author-less record
+# with a matching title would pass for the work.
+_HIDDEN_AUTHOR = (
+    "Pierwszy autor to {marker} — nazwisko nie wychodzi poza Corvusa, więc "
+    "pozycji nie porównano z katalogami. Sprawdź ją sam."
+)
 # Tool calls the agent may make across all the references it investigates.
 TOOL_BUDGET = 12
 
@@ -193,13 +201,15 @@ def _in_catalogues(ref: dict[str, Any], entry: str, year: int | None) -> Check:
     catalogue that does not answer is skipped: the entry stays open for the
     agent rather than being called unchecked over a second opinion.
     """
-    title = search_title(str(ref.get("title") or ""))
+    full_title = str(ref.get("title") or "")
+    title = search_title(full_title)
     if not title:
         return Check(UNRESOLVED)
     author = first_surname(str(ref.get("authors") or ""))
     for client in (NationalLibraryClient(), OpenLibraryClient()):
         try:
-            check = match(entry, year, client.search(title, author), client.name)
+            found = client.search(title, author)
+            check = match(entry, year, found, client.name, title=full_title)
         except SourceUnavailableError as exc:
             logger.warning("catalogue_skipped", catalogue=client.name, error=str(exc))
             continue
@@ -218,13 +228,17 @@ def match_references(state: BibliographyState) -> dict[str, Any]:
     for index, ref in enumerate(references):
         entry = str(ref.get("entry", ""))
         year = cast(int | None, ref.get("year"))
+        marker = hidden_author(str(ref.get("authors") or ""), entry)
         if index >= _MAX_REFERENCES:
             check = Check(UNCHECKED, note="poza limitem sprawdzanych pozycji")
+        elif marker:
+            check = Check(UNCHECKED, note=_HIDDEN_AUTHOR.format(marker=marker))
         elif is_website(entry):
             check = Check(WEBSITE)
         else:
             try:
-                check = match(entry, year, client.search(entry, rows=_CANDIDATES))
+                found = client.search(entry, rows=_CANDIDATES)
+                check = match(entry, year, found, title=str(ref.get("title") or ""))
             except CrossrefUnavailableError as exc:
                 check = Check(UNCHECKED, note=f"Crossref niedostępny: {exc}")
             if check.status == UNRESOLVED:
