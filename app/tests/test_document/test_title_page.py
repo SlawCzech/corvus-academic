@@ -60,6 +60,13 @@ def test_labelled_lines_from_outside_the_template() -> None:
 
     assert page.author == "Anna Nowak"
     assert page.field_of_study == "Socjologia"
+    # Article or usual master's thesis: the title page does not say.
+    assert page.thesis_type is None
+
+
+def test_a_master_thesis_written_as_an_article_says_so() -> None:
+    page = read_title_page("Praca magisterska\nw formie artykułu naukowego\n")
+
     assert page.thesis_type == "master_article"
 
 
@@ -120,7 +127,7 @@ def test_reads_a_pdf_too() -> None:
 
     assert found.author == "Anna Nowak"
     assert found.field_of_study == "Ekonomia"
-    assert found.thesis_type == "master_article"
+    assert found.thesis_type is None
 
 
 def test_every_demo_thesis_is_read_as_its_student() -> None:
@@ -132,5 +139,6 @@ def test_every_demo_thesis_is_read_as_its_student() -> None:
             page = read_title_page(extract(path.read_bytes(), path.name).text)
             assert page.author == student["full_name"], path
             assert page.field_of_study == student["field_of_study"], path
-            assert page.thesis_type == student["thesis_type"], path
+            # A master's title page does not say article or not: no guess.
+            assert page.thesis_type in (student["thesis_type"], None), path
             assert page.title == student["topic"], path

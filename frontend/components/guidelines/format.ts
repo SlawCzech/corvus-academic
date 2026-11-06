@@ -2,6 +2,7 @@ import type { GuidelineVersionStatus, Thresholds } from "@/lib/api.types"
 
 export const THESIS_TYPE_LABELS: Record<string, string> = {
   bachelor: "Licencjacka",
+  master: "Magisterska",
   master_article: "Magisterska (artykuł)",
 }
 

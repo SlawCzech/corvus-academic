@@ -26,6 +26,8 @@ _NAME = re.compile(rf"^{_WORD}(?: {_WORD}){{1,3}}$")
 _QUOTED_TITLE = re.compile(r"pt\.?\s*:?\s*[„\"“](.+)[”\"]")
 _BACHELOR = re.compile(r"^praca\s+(?:licencjacka|inżynierska)\b", re.IGNORECASE)
 _MASTER = re.compile(r"^praca\s+magisterska\b", re.IGNORECASE)
+# A master's thesis written as a research article says so on its title page.
+_ARTICLE = re.compile(r"\bartyku[łl]", re.IGNORECASE)
 _TITLE_PLACEHOLDER = re.compile(r"^tytuł\s+pracy\b", re.IGNORECASE)
 _AUTHOR_PLACEHOLDER = "imię i nazwisko autora"
 _NOT_A_NAME = re.compile(r"\b(?:uniwersytet|praca|kierunek|wydział)\b", re.IGNORECASE)
@@ -110,7 +112,13 @@ def _thesis_type(lines: list[str]) -> str | None:
     master = any(_MASTER.match(line) for line in lines)
     if bachelor == master:
         return None
-    return "bachelor" if bachelor else "master_article"
+    if bachelor:
+        return "bachelor"
+    # "Praca magisterska" alone does not say which: a Katowice article and a
+    # usual master's thesis share the words. The promoter picks.
+    if any(_ARTICLE.search(line) for line in lines):
+        return "master_article"
+    return None
 
 
 def _title(front: str, lines: list[str]) -> str | None:

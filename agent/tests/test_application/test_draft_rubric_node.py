@@ -91,3 +91,18 @@ def test_a_reply_missing_a_section_fails_the_draft() -> None:
 
     assert result["error"] is not None
     assert result["output"] is None
+
+
+def test_a_usual_masters_thesis_is_not_asked_for_as_an_article() -> None:
+    _, llm = _run(_state(thesis_type="master"))
+
+    sent = llm.invoke.call_args[0][0][1].content
+    assert "not a research article" in sent
+
+
+def test_a_length_in_pages_is_left_out_of_the_thresholds() -> None:
+    """Code measures characters; a page count converted by the model is a guess."""
+    system = get_system_prompt(None)
+
+    assert "pages" in system
+    assert "NOT converted" in system

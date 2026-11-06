@@ -138,6 +138,7 @@ export default function ReviewForm({ onCreated, onCancel }: ReviewFormProps) {
             className={inputClass}
           >
             <option value="bachelor">Licencjacka</option>
+            <option value="master">Magisterska</option>
             <option value="master_article">Magisterska (artykuł)</option>
           </select>
         </label>

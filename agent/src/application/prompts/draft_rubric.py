@@ -9,6 +9,10 @@ against the original before publishing it (ADR 0024).
 
 THESIS_TYPES = {
     "bachelor": "a first-cycle diploma thesis (bachelor's or engineer's thesis)",
+    "master": (
+        "a second-cycle (master's) thesis in the usual form — chapters and a "
+        "conclusion, not a research article"
+    ),
     "master_article": (
         "a second-cycle (master's) thesis written in the form of a research article"
     ),
@@ -39,7 +43,7 @@ heading.
 the list of references, language, layout, team work and the like, each under \
 its own "### " heading with "- " bullets. The numbers that are thresholds — \
 the minimum number of sources, the minimum of foreign-language sources, the \
-length range — go into "thresholds", NOT into this text: here say only how to \
+length range in characters — go into "thresholds", NOT into this text: here say only how to \
 read them (whether a length is suggested or required, what does not count \
 towards the minimum, which theses may have fewer sources). Start this section \
 with one sentence saying that the numbers are in the version's thresholds. \
@@ -78,8 +82,12 @@ recommends.
 "thresholds" — an object with "min_sources", "min_foreign_sources", \
 "min_body_chars" and "max_body_chars" as integers, or null for a number the \
 regulation does not set. A length given in thousands of characters becomes \
-characters (80 tysięcy → 80000). Count only what the regulation states; \
-never assume a usual value.
+characters (80 tysięcy → 80000). A length given in pages, words or any \
+unit other than characters is NOT converted: leave both length thresholds \
+null, write the range in "formal" under the length heading, in the \
+regulation's unit, and add a doubt saying that Corvus measures length in \
+characters and will not check this one. Count only what the regulation \
+states; never assume a usual value.
 
 "doubts" — a list of short sentences, in the rubric's language, about what \
 the administrator should check: a passage you could read two ways, a rule \

@@ -22,7 +22,7 @@ export interface Score {
   max_points: number
 }
 
-export type ThesisType = "bachelor" | "master_article"
+export type ThesisType = "bachelor" | "master" | "master_article"
 export type StudentStatus = "active" | "graduated" | "archived"
 
 export interface Student {

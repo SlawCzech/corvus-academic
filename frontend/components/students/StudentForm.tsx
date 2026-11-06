@@ -7,6 +7,7 @@ import type { Student, ThesisType } from "@/lib/api.types"
 
 const THESIS_TYPES: { value: ThesisType; label: string }[] = [
   { value: "bachelor", label: "Licencjacka" },
+  { value: "master", label: "Magisterska" },
   { value: "master_article", label: "Magisterska (artykuł)" },
 ]
 
