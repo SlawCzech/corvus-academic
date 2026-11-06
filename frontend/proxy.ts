@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { isTokenExpired, getRole, homeFor } from "@/lib/auth"
+import { PASSWORD_PAGE, isTokenExpired, getRole, homeFor, mustChangePassword } from "@/lib/auth"
 
 // Screens behind a login, and the file links that need a renewed token.
 const PROTECTED = [
@@ -9,6 +9,7 @@ const PROTECTED = [
   /^\/reviews(\/|$)/,
   /^\/profile(\/|$)/,
   /^\/guidelines(\/|$)/,
+  /^\/password$/,
   // Accepting the terms needs a session; reading them (/terms) does not.
   /^\/terms\/accept$/,
   // File links are plain navigations: no API client stands behind them to
@@ -59,6 +60,17 @@ function guard(request: NextRequest): NextResponse | null {
   }
 
   const role = getRole(accessToken!)
+
+  // A temporary password from an admin: the password page and nothing else
+  // until it is replaced. `app` refuses the rest anyway; this saves the user
+  // from screens that would only show errors.
+  const temporary = mustChangePassword(accessToken!)
+  if (temporary && pathname !== PASSWORD_PAGE) {
+    return NextResponse.redirect(new URL(PASSWORD_PAGE, request.url))
+  }
+  if (!temporary && pathname === PASSWORD_PAGE) {
+    return NextResponse.redirect(new URL(homeFor(role), request.url))
+  }
 
   if (pathname.startsWith("/admin")) {
     if (role !== "admin") {

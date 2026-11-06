@@ -472,6 +472,51 @@ function ActionPanelInner({
                 {STATUS_LABELS[shown.status] ?? shown.status}
               </p>
 
+              {/* Above the result, not under it: a review is long, and the next
+                  step should not wait at the bottom of the page. */}
+              <div className="mb-5 flex flex-col gap-2.5 empty:hidden">
+                {shown.action_type === "trial_review" && shown.status === "completed" && (
+                  <div
+                    data-testid="suggest-email"
+                    className="flex items-center justify-between gap-4 rounded-lg border border-line bg-surface-alt p-3.5"
+                  >
+                    <p className="text-[13px] text-muted-strong">
+                      Z tej recenzji powstanie szkic maila do studenta, bez punktów i oceny.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => choose("draft_student_email")}
+                      className="flex h-9 shrink-0 items-center gap-2 rounded-lg border border-accent px-3.5 text-[13px] font-semibold text-accent-hover hover:bg-accent-soft transition-colors"
+                    >
+                      <IconMail size={15} stroke={1.75} />
+                      Napisz mail
+                    </button>
+                  </div>
+                )}
+
+                {FULL_REVIEWS.includes(shown.action_type) &&
+                  shown.status === "completed" &&
+                  !bibliographyChecked && (
+                    <div
+                      data-testid="suggest-bibliography"
+                      className="flex items-center justify-between gap-4 rounded-lg border border-line bg-surface-alt p-3.5"
+                    >
+                      <p className="text-[13px] text-muted-strong">
+                        Recenzja ocenia dobór źródeł, ale nie sprawdza, czy cytowane
+                        prace istnieją. To osobny krok.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => choose("verify_bibliography")}
+                        className="flex h-9 shrink-0 items-center gap-2 rounded-lg border border-accent px-3.5 text-[13px] font-semibold text-accent-hover hover:bg-accent-soft transition-colors"
+                      >
+                        <IconBooks size={15} stroke={1.75} />
+                        Sprawdź bibliografię
+                      </button>
+                    </div>
+                  )}
+              </div>
+
               {shown.progress && (shown.status === "pending" || shown.status === "running") && (
                 <ActionProgress progress={shown.progress} />
               )}
@@ -503,47 +548,6 @@ function ActionPanelInner({
               {shown.accepted && (
                 <p className="mt-3 text-[13px] text-muted">Zaakceptowano.</p>
               )}
-
-              {shown.action_type === "trial_review" && shown.status === "completed" && (
-                <div
-                  data-testid="suggest-email"
-                  className="mt-5 flex items-center justify-between gap-4 rounded-lg border border-line bg-surface-alt p-3.5"
-                >
-                  <p className="text-[13px] text-muted-strong">
-                    Z tej recenzji powstanie szkic maila do studenta, bez punktów i oceny.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => choose("draft_student_email")}
-                    className="flex h-9 shrink-0 items-center gap-2 rounded-lg border border-accent px-3.5 text-[13px] font-semibold text-accent-hover hover:bg-accent-soft transition-colors"
-                  >
-                    <IconMail size={15} stroke={1.75} />
-                    Napisz mail
-                  </button>
-                </div>
-              )}
-
-              {FULL_REVIEWS.includes(shown.action_type) &&
-                shown.status === "completed" &&
-                !bibliographyChecked && (
-                  <div
-                    data-testid="suggest-bibliography"
-                    className="mt-5 flex items-center justify-between gap-4 rounded-lg border border-line bg-surface-alt p-3.5"
-                  >
-                    <p className="text-[13px] text-muted-strong">
-                      Recenzja ocenia dobór źródeł, ale nie sprawdza, czy cytowane
-                      prace istnieją. To osobny krok.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => choose("verify_bibliography")}
-                      className="flex h-9 shrink-0 items-center gap-2 rounded-lg border border-accent px-3.5 text-[13px] font-semibold text-accent-hover hover:bg-accent-soft transition-colors"
-                    >
-                      <IconBooks size={15} stroke={1.75} />
-                      Sprawdź bibliografię
-                    </button>
-                  </div>
-                )}
             </div>
           )}
 

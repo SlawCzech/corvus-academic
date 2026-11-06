@@ -335,6 +335,11 @@ describe("ActionPanel", () => {
 
     const hint = await screen.findByTestId("suggest-bibliography")
     expect(hint).toHaveTextContent("nie sprawdza, czy cytowane prace istnieją")
+    // Above the review, not under it: no scrolling to find the next step.
+    expect(
+      hint.compareDocumentPosition(screen.getByTestId("analysis-result")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
     await userEvent.click(
       screen.getAllByRole("button", { name: "Sprawdź bibliografię" }).at(-1)!,
     )

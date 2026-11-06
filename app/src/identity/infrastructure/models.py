@@ -7,7 +7,7 @@ data is physically isolated from other bounded contexts.
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, ForeignKey, Index, String, Text, Uuid
+from sqlalchemy import Boolean, ForeignKey, Index, String, Text, Uuid, false
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from src.shared.orm_types import UtcDateTime
@@ -40,6 +40,11 @@ class UserModel(Base):
     # catalog is another context, and identity never imports it.
     home_university_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True), nullable=True
+    )
+    # The password is a temporary one an admin set; the next login must
+    # replace it before anything else.
+    must_change_password: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
     )
 
 

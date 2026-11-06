@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { request } from "@/lib/api.client"
@@ -19,7 +20,17 @@ const schema = z
 
 type FormData = z.infer<typeof schema>
 
-export default function ChangePasswordForm() {
+interface ChangePasswordFormProps {
+  /**
+   * Where to go once a temporary password from an admin is replaced. Set,
+   * the form asks for that password instead of "the current one".
+   */
+  temporaryThen?: string
+}
+
+export default function ChangePasswordForm({ temporaryThen }: ChangePasswordFormProps = {}) {
+  const router = useRouter()
+  const temporary = temporaryThen !== undefined
   const [success, setSuccess] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
 
@@ -45,6 +56,13 @@ export default function ChangePasswordForm() {
       setServerError(body.detail ?? "Zmiana hasła nie powiodła się.")
       return
     }
+    if (temporary) {
+      // The new session cookie no longer carries the mark, so the proxy
+      // lets the rest of the app open again.
+      router.replace(temporaryThen)
+      router.refresh()
+      return
+    }
     setSuccess(true)
     reset()
   }
@@ -64,7 +82,7 @@ export default function ChangePasswordForm() {
 
       <div>
         <label className="block mb-1 text-[13px] font-medium text-muted-strong">
-          Aktualne hasło
+          {temporary ? "Hasło tymczasowe" : "Aktualne hasło"}
         </label>
         <input
           type="password"
@@ -109,7 +127,7 @@ export default function ChangePasswordForm() {
         disabled={isSubmitting}
         className="flex h-9 items-center px-4 text-[13px] font-semibold rounded-lg bg-accent text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
       >
-        {isSubmitting ? "Zapisywanie…" : "Zmień hasło"}
+        {isSubmitting ? "Zapisywanie…" : temporary ? "Ustaw hasło" : "Zmień hasło"}
       </button>
     </form>
   )

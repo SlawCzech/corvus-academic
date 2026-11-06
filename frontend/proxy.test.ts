@@ -44,6 +44,21 @@ describe("proxy", () => {
     expect(res.headers.get("location")).toBeNull()
   })
 
+  it("keeps a user on a temporary password on the password page", () => {
+    const token = fakeJwt({ sub: "u1", role: "promotor", exp: 9999999999, pwc: true })
+    for (const path of ["/dashboard", "/students/abc", "/profile"]) {
+      const res = proxy(makeRequest(path, token))
+      expect(res.headers.get("location")).toBe("http://localhost/password")
+    }
+    expect(proxy(makeRequest("/password", token)).headers.get("location")).toBeNull()
+  })
+
+  it("sends a user with their own password away from the password page", () => {
+    const token = fakeJwt({ sub: "u1", role: "promotor", exp: 9999999999 })
+    const res = proxy(makeRequest("/password", token))
+    expect(res.headers.get("location")).toBe("http://localhost/dashboard")
+  })
+
   it("allows /profile through with any valid token", () => {
     const token = fakeJwt({ sub: "u1", role: "promotor", exp: 9999999999 })
     const res = proxy(makeRequest("/profile", token))

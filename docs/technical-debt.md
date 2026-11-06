@@ -104,14 +104,14 @@ Zostaje:
   Schemat bez zmian; obejścia w `retention.py`, `timeline_service.py` i testach
   usunięte.
 
-- [ ] **Zapis statusu z workera połyka błędy bazy** — `agent/src/infrastructure/task_status.py`
+- [~] **Zapis statusu z workera połyka błędy bazy** — `agent/src/infrastructure/task_status.py`
   loguje i idzie dalej, żeby awaria zapisu nie powodowała retry analizy, która się udała
-  (kilka minut pracy LLM). Skutek: przy niedostępnej bazie wiersz zostaje nieświeży, a
-  jedynym śladem jest log `task_status_write_failed` — od 2026-11-03 `watch.sh` wysyła
-  na niego alert (check „watch” na healthchecks.io, [deploy.md](deploy.md)). Od
-  2026-11-06 taki wiersz nie wisi już w nieskończoność: odpytanie po 90 minutach bez
-  ruchu oznacza akcję jako przerwaną (ADR 0010, drugi addendum). Jeśli wynik był,
-  promotor go nie zobaczy i musi puścić akcję jeszcze raz.
+  (kilka minut pracy LLM). Od 2026-11-06 status z wynikiem (wszystko poza `running`)
+  przy niedostępnej bazie jest zapisywany ponownie po 2, 5, 15 i 30 s — ok. minuty,
+  tyle co restart Postgresa. Błąd, który nie jest brakiem połączenia (np. odrzucony
+  wiersz), nie czeka. Zostaje: dłuższa awaria nadal gubi wynik (checkpointy znikają
+  zaraz po zapisie), wiersz po 90 min dostaje `failed` (ADR 0010), a śladem jest log
+  `task_status_write_failed`, na który `watch.sh` wysyła alert ([deploy.md](deploy.md)).
 
 - [x] ~~**Zawieszony worker zostawia akcję w `running` na zawsze**~~ — od 2026-09-30
   (ADR 0010) taski są potwierdzane po zakończeniu, a padnięty worker wznawia
@@ -167,7 +167,13 @@ Zostaje:
 
 ### Funkcjonalność
 
-- [ ] **Brak password reset flow** — użytkownik nie może odzyskać zapomnianego hasła. Wymaga integracji SMTP i tokenu jednorazowego (np. krótkotrwały JWT wysyłany na e-mail).
+- [~] **Brak password reset flow** — od 2026-11-06 admin daje hasło tymczasowe
+  (`POST /users/{id}/password-reset`, „Resetuj hasło” w panelu): widać je raz, w bazie
+  zostaje tylko hash, wszystkie sesje użytkownika się kończą, a po zalogowaniu token
+  niesie `pwc` i każde API poza `GET /users/me` i zmianą hasła daje 403
+  `password_change_required` (frontend trzyma go na `/password`). Nowe hasło musi być
+  inne niż tymczasowe. Zostaje: samoobsługowy reset mailem (wymaga SMTP) — przy
+  kilkunastu promotorach admin wystarczy.
 
 - [x] ~~**Brak weryfikacji czy worker Celery działa**~~ — od 2026-11-01 agent ma
   `GET /health/worker` (503 bez workera), a `/health` w `app` pokazuje to w
@@ -326,8 +332,10 @@ są nieaktualne. Zostają dla historii.
 - [ ] **Fragment wklejony zapisuje się bez pliku** — po retencji nie zostaje nic do
   pobrania, ale też wcześniej nie było; dotyczy też PDF-ów z OCR-em, gdzie wklejony
   tekst bywa jedyną drogą.
-- [ ] **Kolejka na dashboardzie nie ma paginacji** — przy kilku studentach zbędna,
-  przy kilkudziesięciu trzeba ją przyciąć.
+- [x] ~~**Kolejka na dashboardzie nie ma paginacji**~~ — od 2026-11-06 „Czeka na
+  feedback” i „Po terminie” pokazują pięć najstarszych pozycji, resztę po „Pokaż
+  wszystkie”. Przycięte w widoku: `/dashboard/summary` dalej oddaje całość, co przy
+  kilkudziesięciu studentach jednego promotora to kilka KB.
 - [x] **`review_fragment` na żywo przez Celery** — przeszło 2026-10-31 przez prawdziwego
   workera i Redis, na Claude, w tym ścieżka odrzuconego klucza.
 - [x] **Evalsy fragmentów tylko na `qwen3`** — zmierzone 2026-11-01 na Claude:

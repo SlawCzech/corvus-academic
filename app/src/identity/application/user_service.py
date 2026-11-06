@@ -1,5 +1,6 @@
 """Use cases for user management."""
 
+import secrets
 import uuid
 from datetime import UTC, datetime
 from uuid import UUID
@@ -13,6 +14,14 @@ from src.identity.infrastructure.repositories import UserRepository
 
 class WrongPasswordError(Exception):
     """The current password given to confirm a change does not match."""
+
+
+class SamePasswordError(Exception):
+    """The new password is the one being replaced."""
+
+
+# 12 characters from a 64-letter alphabet: 72 bits, read out or pasted once.
+_TEMPORARY_PASSWORD_BYTES = 9
 
 
 def _hash_password(plain: str) -> str:
@@ -33,6 +42,7 @@ def _to_domain(model: UserModel) -> User:
         email=model.email,
         role=Role(model.role),
         created_at=model.created_at,
+        must_change_password=model.must_change_password,
     )
 
 
@@ -106,8 +116,26 @@ class UserService:
             current_password, model.hashed_password
         ):
             raise WrongPasswordError
+        if new_password == current_password:
+            # Above all for a temporary password: keeping it would leave the
+            # admin knowing the user's password for good.
+            raise SamePasswordError
         hashed = _hash_password(new_password)
         await self._repo.update_password(user_id, hashed)
+
+    async def set_temporary_password(self, user_id: UUID) -> str | None:
+        """Give the user a fresh temporary password, and return it once.
+
+        For a forgotten password, with no mail to send a link by: the admin
+        passes it on, and the user must replace it at the next login. None
+        when there is no such user. Ending the user's sessions is the
+        caller's job, like for a change.
+        """
+        temporary = secrets.token_urlsafe(_TEMPORARY_PASSWORD_BYTES)
+        stored = await self._repo.update_password(
+            user_id, _hash_password(temporary), temporary=True
+        )
+        return temporary if stored else None
 
     @staticmethod
     def hash_password(plain: str) -> str:

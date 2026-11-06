@@ -1,16 +1,23 @@
 """User management endpoints."""
 
+import dataclasses
 import uuid
 from typing import Annotated
 
+import structlog
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
-from src.identity.application.user_service import UserService, WrongPasswordError
+from src.identity.application.user_service import (
+    SamePasswordError,
+    UserService,
+    WrongPasswordError,
+)
 from src.identity.domain.terms import CURRENT_TERMS_VERSION
 from src.identity.domain.user import Role, UserRegistration
 from src.identity.infrastructure.dependencies import (
     AdminDep,
     CurrentUserDep,
+    SessionUserDep,
     TermsRepoDep,
     TokenStoreDep,
     UserServiceDep,
@@ -21,12 +28,15 @@ from src.identity.infrastructure.schemas import (
     ChangePasswordRequest,
     LoginResponse,
     RegisterRequest,
+    TemporaryPasswordResponse,
     TermsStatusResponse,
     UserResponse,
     UserSettings,
     user_response,
 )
 from src.identity.infrastructure.session import REFRESH_TTL, start_session
+
+logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -65,8 +75,8 @@ async def list_users(_admin: AdminDep, svc: UserServiceDep) -> list[UserResponse
 
 
 @router.get("/me", response_model=UserResponse)
-def get_me(user: CurrentUserDep) -> UserResponse:
-    """Return the current user's profile."""
+def get_me(user: SessionUserDep) -> UserResponse:
+    """Return the current user's profile, a temporary password or not."""
     return user_response(user)
 
 
@@ -129,11 +139,39 @@ async def delete_user(
     await svc.delete(user_id)
 
 
+@router.post("/{user_id}/password-reset", response_model=TemporaryPasswordResponse)
+async def reset_password(
+    user_id: uuid.UUID,
+    admin: AdminDep,
+    svc: UserServiceDep,
+    token_store: TokenStoreDep,
+) -> TemporaryPasswordResponse:
+    """Give a user a temporary password — ADMIN only.
+
+    For a forgotten password: Corvus sends no mail, so the admin passes it
+    on. Every session the user has ends, and the next login can do nothing
+    but replace it. An admin changes their own password in the profile.
+    """
+    if user_id == admin.id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Własne hasło zmień w profilu.",
+        )
+    temporary = await svc.set_temporary_password(user_id)
+    if temporary is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Nie ma takiego konta."
+        )
+    await token_store.end_sessions(user_id, REFRESH_TTL)
+    logger.info("password_reset_by_admin", user_id=str(user_id), admin=str(admin.id))
+    return TemporaryPasswordResponse(temporary_password=temporary)
+
+
 @router.patch("/me/password", response_model=LoginResponse)
 async def change_password(
     body: ChangePasswordRequest,
     response: Response,
-    user: CurrentUserDep,
+    user: SessionUserDep,
     svc: UserServiceDep,
     token_store: TokenStoreDep,
     _rl: Annotated[None, Depends(login_rate_limit)],
@@ -142,6 +180,7 @@ async def change_password(
 
     Every session the user has ends with it, this one included; the caller
     gets a new one back, so only the browser that made the change stays in.
+    The one endpoint open on a temporary password, which it replaces.
     """
     try:
         await svc.change_password(user.id, body.current_password, body.new_password)
@@ -152,9 +191,15 @@ async def change_password(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Aktualne hasło jest nieprawidłowe.",
         ) from exc
+    except SamePasswordError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Nowe hasło musi być inne niż obecne.",
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc
     await token_store.end_sessions(user.id, REFRESH_TTL)
-    return LoginResponse(access_token=start_session(response, user))
+    own = dataclasses.replace(user, must_change_password=False)
+    return LoginResponse(access_token=start_session(response, own))
