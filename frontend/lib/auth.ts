@@ -25,6 +25,8 @@ export interface TokenPayload {
   email: string
   role: string
   exp: number
+  /** Set while the password is a temporary one from an admin. */
+  pwc?: boolean
 }
 
 export function decodeToken(token: string): TokenPayload | null {
@@ -51,6 +53,14 @@ export function getRole(token: string): string | null {
 
 export function getUserId(token: string): string | null {
   return decodeToken(token)?.sub ?? null
+}
+
+/** Where a user on a temporary password picks their own; nothing else opens. */
+export const PASSWORD_PAGE = "/password"
+
+/** True while the token's owner still has to replace a temporary password. */
+export function mustChangePassword(token: string): boolean {
+  return decodeToken(token)?.pwc === true
 }
 
 /**

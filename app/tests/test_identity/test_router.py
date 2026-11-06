@@ -366,6 +366,118 @@ def test_change_password_over_bcrypt_limit_is_422(client: TestClient) -> None:
     assert len(_login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)) > 0
 
 
+# ---------- password reset by an admin ----------
+
+
+def _reset(client: TestClient, admin_token: str, user_id: str) -> Response:
+    return client.post(
+        f"/users/{user_id}/password-reset",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+
+
+def _promotor_id(client: TestClient, admin_token: str) -> str:
+    users = client.get(
+        "/users", headers={"Authorization": f"Bearer {admin_token}"}
+    ).json()
+    return next(str(u["id"]) for u in users if u["email"] == PROMOTOR_EMAIL)
+
+
+def test_a_reset_gives_a_temporary_password_and_ends_sessions(
+    client: TestClient,
+) -> None:
+    promotor_token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    admin_token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    resp = _reset(client, admin_token, _promotor_id(client, admin_token))
+    assert resp.status_code == 200
+    temporary = resp.json()["temporary_password"]
+    assert len(temporary) >= 12
+
+    headers = {"Authorization": f"Bearer {promotor_token}"}
+    assert client.get("/users/me", headers=headers).status_code == 401
+    old = client.post(
+        "/auth/login", json={"email": PROMOTOR_EMAIL, "password": PROMOTOR_PASSWORD}
+    )
+    assert old.status_code == 401
+    assert len(_login(client, PROMOTOR_EMAIL, temporary)) > 0
+
+
+def test_a_temporary_password_opens_only_the_password_change(
+    client: TestClient,
+) -> None:
+    admin_token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    temporary = _reset(client, admin_token, _promotor_id(client, admin_token)).json()[
+        "temporary_password"
+    ]
+    token = _login(client, PROMOTOR_EMAIL, temporary)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    me = client.get("/users/me", headers=headers)
+    assert me.status_code == 200
+    assert me.json()["must_change_password"] is True
+    for blocked in ("/users/me/settings", "/settings/api-key/status"):
+        resp = client.get(blocked, headers=headers)
+        assert resp.status_code == 403, blocked
+        assert resp.json()["detail"] == "password_change_required"
+
+    # A renewed token still carries it: the flag lives in the database.
+    login = client.post(
+        "/auth/login", json={"email": PROMOTOR_EMAIL, "password": temporary}
+    )
+    renewed = _refresh_with(client, login.cookies["refresh_token"])
+    renewed_headers = {"Authorization": f"Bearer {renewed.json()['access_token']}"}
+    assert client.get("/users/me/settings", headers=renewed_headers).status_code == 403
+
+    changed = client.patch(
+        "/users/me/password",
+        json={"current_password": temporary, "new_password": "my-own-password"},
+        headers=headers,
+    )
+    assert changed.status_code == 200
+    own = {"Authorization": f"Bearer {changed.json()['access_token']}"}
+    assert client.get("/users/me/settings", headers=own).status_code == 200
+    assert client.get("/users/me", headers=own).json()["must_change_password"] is False
+
+    fresh = _login(client, PROMOTOR_EMAIL, "my-own-password")
+    fresh_headers = {"Authorization": f"Bearer {fresh}"}
+    assert client.get("/users/me/settings", headers=fresh_headers).status_code == 200
+
+
+def test_the_temporary_password_cannot_be_kept(client: TestClient) -> None:
+    admin_token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    temporary = _reset(client, admin_token, _promotor_id(client, admin_token)).json()[
+        "temporary_password"
+    ]
+    token = _login(client, PROMOTOR_EMAIL, temporary)
+    resp = client.patch(
+        "/users/me/password",
+        json={"current_password": temporary, "new_password": temporary},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 422
+    assert isinstance(resp.json()["detail"], str)
+
+
+def test_a_reset_is_admin_only(client: TestClient) -> None:
+    admin_token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    promotor_id = _promotor_id(client, admin_token)
+    promotor_token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
+    assert _reset(client, promotor_token, promotor_id).status_code == 403
+    assert len(_login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)) > 0
+
+
+def test_an_admin_cannot_reset_their_own_password(client: TestClient) -> None:
+    admin_token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    me = client.get("/users/me", headers={"Authorization": f"Bearer {admin_token}"})
+    assert _reset(client, admin_token, me.json()["id"]).status_code == 409
+    assert len(_login(client, ADMIN_EMAIL, ADMIN_PASSWORD)) > 0
+
+
+def test_a_reset_of_an_unknown_user_is_404(client: TestClient) -> None:
+    admin_token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    assert _reset(client, admin_token, str(uuid.uuid4())).status_code == 404
+
+
 # ---------- admin login-events ----------
 
 

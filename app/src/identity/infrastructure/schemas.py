@@ -62,12 +62,23 @@ class UserResponse(BaseModel):
     email: str
     role: str
     created_at: datetime
+    # A temporary password from an admin is waiting to be replaced.
+    must_change_password: bool = False
 
 
 def user_response(user: User) -> UserResponse:
     return UserResponse(
-        id=user.id, email=user.email, role=str(user.role), created_at=user.created_at
+        id=user.id,
+        email=user.email,
+        role=str(user.role),
+        created_at=user.created_at,
+        must_change_password=user.must_change_password,
     )
+
+
+class TemporaryPasswordResponse(BaseModel):
+    # Shown to the admin once; only its hash is kept.
+    temporary_password: str
 
 
 class ChangePasswordRequest(BaseModel):

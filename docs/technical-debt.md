@@ -167,7 +167,13 @@ Zostaje:
 
 ### Funkcjonalność
 
-- [ ] **Brak password reset flow** — użytkownik nie może odzyskać zapomnianego hasła. Wymaga integracji SMTP i tokenu jednorazowego (np. krótkotrwały JWT wysyłany na e-mail).
+- [~] **Brak password reset flow** — od 2026-11-06 admin daje hasło tymczasowe
+  (`POST /users/{id}/password-reset`, „Resetuj hasło” w panelu): widać je raz, w bazie
+  zostaje tylko hash, wszystkie sesje użytkownika się kończą, a po zalogowaniu token
+  niesie `pwc` i każde API poza `GET /users/me` i zmianą hasła daje 403
+  `password_change_required` (frontend trzyma go na `/password`). Nowe hasło musi być
+  inne niż tymczasowe. Zostaje: samoobsługowy reset mailem (wymaga SMTP) — przy
+  kilkunastu promotorach admin wystarczy.
 
 - [x] ~~**Brak weryfikacji czy worker Celery działa**~~ — od 2026-11-01 agent ma
   `GET /health/worker` (503 bez workera), a `/health` w `app` pokazuje to w
@@ -326,8 +332,10 @@ są nieaktualne. Zostają dla historii.
 - [ ] **Fragment wklejony zapisuje się bez pliku** — po retencji nie zostaje nic do
   pobrania, ale też wcześniej nie było; dotyczy też PDF-ów z OCR-em, gdzie wklejony
   tekst bywa jedyną drogą.
-- [ ] **Kolejka na dashboardzie nie ma paginacji** — przy kilku studentach zbędna,
-  przy kilkudziesięciu trzeba ją przyciąć.
+- [x] ~~**Kolejka na dashboardzie nie ma paginacji**~~ — od 2026-11-06 „Czeka na
+  feedback” i „Po terminie” pokazują pięć najstarszych pozycji, resztę po „Pokaż
+  wszystkie”. Przycięte w widoku: `/dashboard/summary` dalej oddaje całość, co przy
+  kilkudziesięciu studentach jednego promotora to kilka KB.
 - [x] **`review_fragment` na żywo przez Celery** — przeszło 2026-10-31 przez prawdziwego
   workera i Redis, na Claude, w tym ścieżka odrzuconego klucza.
 - [x] **Evalsy fragmentów tylko na `qwen3`** — zmierzone 2026-11-01 na Claude:

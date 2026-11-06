@@ -13,6 +13,8 @@ interface User {
   email: string
   role: string
   created_at: string
+  /** A temporary password from an admin is waiting to be replaced. */
+  must_change_password?: boolean
 }
 
 // Matches identity's own `Role` StrEnum ("admin" / "promotor") — the create
@@ -46,6 +48,9 @@ export default function UserManagementTable({
   const { data: users, error, mutate } = useSWR<User[]>("/api/users", fetcher)
   const [showModal, setShowModal] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [resetConfirm, setResetConfirm] = useState<string | null>(null)
+  const [resetError, setResetError] = useState<string | null>(null)
+  const [issued, setIssued] = useState<{ email: string; password: string } | null>(null)
 
   const modalOpen = showModal || prefillEmail !== undefined
 
@@ -58,6 +63,22 @@ export default function UserManagementTable({
     await request(`/api/users/${id}`, { method: "DELETE" })
     await mutate()
     setDeleteConfirm(null)
+  }
+
+  async function onReset(user: User) {
+    setResetError(null)
+    const res = await request(`/api/users/${user.id}/password-reset`, { method: "POST" })
+    const body = (await res.json().catch(() => ({}))) as {
+      temporary_password?: string
+      detail?: string
+    }
+    setResetConfirm(null)
+    if (!res.ok || !body.temporary_password) {
+      setResetError(body.detail ?? "Nie udało się zresetować hasła.")
+      return
+    }
+    setIssued({ email: user.email, password: body.temporary_password })
+    await mutate()
   }
 
   if (error) {
@@ -74,6 +95,12 @@ export default function UserManagementTable({
           Dodaj użytkownika
         </button>
       </div>
+
+      {resetError && (
+        <p className="mb-3 rounded-lg bg-critical-bg p-3 text-[13px] text-critical-text">
+          {resetError}
+        </p>
+      )}
 
       <table className="w-full text-left text-[13.5px]">
         <thead>
@@ -101,13 +128,36 @@ export default function UserManagementTable({
           )}
           {users?.map((user) => (
             <tr key={user.id} className="border-b border-line/60">
-              <td className="py-3 text-foreground">{user.email}</td>
+              <td className="py-3 text-foreground">
+                {user.email}
+                {user.must_change_password && (
+                  <span className="ml-2 rounded bg-surface-alt px-1.5 py-0.5 text-[11px] text-muted">
+                    hasło tymczasowe
+                  </span>
+                )}
+              </td>
               <td className="py-3 text-muted-strong">{user.role}</td>
               <td className="py-3 text-muted">
                 {new Date(user.created_at).toLocaleDateString("pl-PL")}
               </td>
               <td className="py-3 text-right">
-                {deleteConfirm === user.id ? (
+                {resetConfirm === user.id ? (
+                  <span className="flex items-center justify-end gap-2">
+                    <span className="text-[12px] text-muted">Zresetować hasło?</span>
+                    <button
+                      onClick={() => onReset(user)}
+                      className="text-[12px] text-accent hover:underline"
+                    >
+                      Tak
+                    </button>
+                    <button
+                      onClick={() => setResetConfirm(null)}
+                      className="text-[12px] text-muted hover:underline"
+                    >
+                      Nie
+                    </button>
+                  </span>
+                ) : deleteConfirm === user.id ? (
                   <span className="flex items-center justify-end gap-2">
                     <span className="text-[12px] text-muted">Potwierdź usunięcie?</span>
                     <button
@@ -124,18 +174,40 @@ export default function UserManagementTable({
                     </button>
                   </span>
                 ) : (
-                  <button
-                    onClick={() => setDeleteConfirm(user.id)}
-                    className="text-[12px] text-critical-text hover:underline"
-                  >
-                    Usuń
-                  </button>
+                  <span className="flex items-center justify-end gap-3">
+                    <button
+                      onClick={() => {
+                        setDeleteConfirm(null)
+                        setResetConfirm(user.id)
+                      }}
+                      className="text-[12px] text-muted-strong hover:underline"
+                    >
+                      Resetuj hasło
+                    </button>
+                    <button
+                      onClick={() => {
+                        setResetConfirm(null)
+                        setDeleteConfirm(user.id)
+                      }}
+                      className="text-[12px] text-critical-text hover:underline"
+                    >
+                      Usuń
+                    </button>
+                  </span>
                 )}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      {issued && (
+        <TemporaryPasswordModal
+          email={issued.email}
+          password={issued.password}
+          onClose={() => setIssued(null)}
+        />
+      )}
 
       {modalOpen && (
         <CreateUserModal
@@ -148,6 +220,78 @@ export default function UserManagementTable({
           onClose={closeModal}
         />
       )}
+    </div>
+  )
+}
+
+/**
+ * The temporary password, shown once: only its hash is kept, so closing
+ * this is the last chance to copy it. Corvus sends no mail; the admin
+ * passes it on themselves.
+ */
+function TemporaryPasswordModal({
+  email,
+  password,
+  onClose,
+}: {
+  email: string
+  password: string
+  onClose: () => void
+}) {
+  const [copied, setCopied] = useState(false)
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(password)
+      setCopied(true)
+    } catch {
+      // No clipboard (an insecure context): the password stays on screen.
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div
+        role="dialog"
+        aria-labelledby="temporary-password-title"
+        className="w-full max-w-md rounded-xl border border-line bg-surface p-6 shadow-xl"
+      >
+        <h2
+          id="temporary-password-title"
+          className="mb-2 text-[16px] font-semibold text-foreground"
+        >
+          Hasło tymczasowe
+        </h2>
+        <p className="mb-4 text-[13px] text-muted">
+          Dla {email}. Przekaż je tej osobie: po zalogowaniu ustawi własne, a
+          do tego czasu nic innego się nie otworzy. Wszystkie jej sesje zostały
+          zakończone. Po zamknięciu tego okna hasła nie da się już zobaczyć.
+        </p>
+        <div className="mb-4 flex items-center gap-2">
+          <code
+            data-testid="temporary-password"
+            className="flex-1 select-all rounded-lg border border-line bg-surface-alt px-3 py-2 font-mono text-[14px] text-foreground"
+          >
+            {password}
+          </code>
+          <button
+            type="button"
+            onClick={() => void copy()}
+            className="flex h-9 items-center rounded-lg border border-line px-3 text-[13px] font-medium hover:bg-surface-alt transition-colors"
+          >
+            {copied ? "Skopiowane" : "Kopiuj"}
+          </button>
+        </div>
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 items-center rounded-lg bg-accent px-4 text-[13px] font-semibold text-white hover:bg-accent-hover transition-colors"
+          >
+            Gotowe
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

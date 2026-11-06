@@ -43,13 +43,22 @@ def get_token_store() -> RevokedTokenStore:
     return RevokedTokenStore()
 
 
-async def get_current_user(
+# The `detail` of the 403 every endpoint but the password change gives a
+# user with a temporary password. The frontend keeps them on the password
+# page; this is what stops a session that skips it.
+PASSWORD_CHANGE_REQUIRED = "password_change_required"  # noqa: S105 — a code
+
+
+async def get_session_user(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(_bearer)],
     token_store: Annotated[RevokedTokenStore, Depends(get_token_store)],
 ) -> User:
     """FastAPI dependency — decode Bearer token and return the calling User.
 
     A token logged out of is refused even though its signature still holds.
+    A user on a temporary password passes: only the endpoints that let them
+    replace it use this directly. Everything else goes by
+    ``get_current_user``.
     """
     try:
         claims = decode_access_token(credentials.credentials)
@@ -60,6 +69,21 @@ async def get_current_user(
     ):
         raise _unauthorized("Token revoked")
     return claims.user
+
+
+async def get_current_user(
+    user: Annotated[User, Depends(get_session_user)],
+) -> User:
+    """FastAPI dependency — the calling User, once they have their own password.
+
+    A temporary password from an admin opens only the password change: a
+    403, not a 401, since the session itself is fine.
+    """
+    if user.must_change_password:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=PASSWORD_CHANGE_REQUIRED
+        )
+    return user
 
 
 def _unauthorized(detail: str) -> HTTPException:
@@ -132,6 +156,7 @@ def get_key_checker(request: Request) -> KeyChecker:
 # ---------- Annotated aliases — what every endpoint actually types ----------
 
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
+SessionUserDep = Annotated[User, Depends(get_session_user)]
 AdminDep = Annotated[User, Depends(require_admin)]
 UserRepoDep = Annotated[UserRepository, Depends(get_user_repo)]
 ApiKeyRepoDep = Annotated[ApiKeyRepository, Depends(get_api_key_repo)]

@@ -56,13 +56,21 @@ class UserRepository:
             await self._session.delete(user)
             await self._session.commit()
 
-    async def update_password(self, user_id: uuid.UUID, hashed: str) -> None:
-        """Replace the hashed password on the user record and commit."""
+    async def update_password(
+        self, user_id: uuid.UUID, hashed: str, *, temporary: bool = False
+    ) -> bool:
+        """Replace the hashed password and commit; False if there is no user.
+
+        ``temporary`` marks a password an admin set, which the user must
+        replace; a password the user chose clears the mark.
+        """
         user = await self._session.get(UserModel, user_id)
         if user is None:
-            return
+            return False
         user.hashed_password = hashed
+        user.must_change_password = temporary
         await self._session.commit()
+        return True
 
     async def update_home_university(
         self, user_id: uuid.UUID, university_id: uuid.UUID | None
