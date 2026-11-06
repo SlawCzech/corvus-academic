@@ -8,7 +8,9 @@
  */
 import Link from "next/link"
 
+import { hideEmail } from "@/components/legal/hiddenEmail"
 import { Bullets, Items, Section } from "@/components/legal/Prose"
+import RevealEmail from "@/components/legal/RevealEmail"
 import type { Operator } from "@/content/legal/operator"
 import { TERMS_DATE } from "@/content/legal/version"
 
@@ -20,7 +22,7 @@ export default function Privacy({ operator }: { operator: Operator }) {
 
       <Section title="1. Administrator">
         <p>
-          Administratorem danych opisanych poniżej jest {operator.name}, kontakt: {operator.email}.
+          Administratorem danych opisanych poniżej jest {operator.name}, kontakt: <RevealEmail hidden={hideEmail(operator.email)} />.
         </p>
       </Section>
 

@@ -9,7 +9,9 @@
  */
 import Link from "next/link"
 
+import { hideEmail } from "@/components/legal/hiddenEmail"
 import { Bullets, Items, Section } from "@/components/legal/Prose"
+import RevealEmail from "@/components/legal/RevealEmail"
 import type { Operator } from "@/content/legal/operator"
 import { TERMS_DATE } from "@/content/legal/version"
 
@@ -26,7 +28,7 @@ export default function Terms({ operator }: { operator: Operator }) {
             pod adresem tej strony (dalej: <strong>Serwis</strong>).
           </li>
           <li>
-            Serwis prowadzi {operator.name}, kontakt: {operator.email} (dalej:{" "}
+            Serwis prowadzi {operator.name}, kontakt: <RevealEmail hidden={hideEmail(operator.email)} /> (dalej:{" "}
             <strong>Usługodawca</strong>).
           </li>
           <li>

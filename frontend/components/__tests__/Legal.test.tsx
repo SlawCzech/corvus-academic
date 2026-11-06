@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import AcceptTermsForm from "@/components/legal/AcceptTermsForm"
+import { hideEmail, revealEmail } from "@/components/legal/hiddenEmail"
 import Privacy from "@/content/legal/Privacy"
 import Terms from "@/content/legal/Terms"
 import { operator } from "@/content/legal/operator"
@@ -34,6 +35,24 @@ describe("legal documents", () => {
   it("keep login events for ninety days", () => {
     render(<Privacy operator={OPERATOR} />)
     expect(screen.getByText("Logi logowań — 90 dni.")).toBeTruthy()
+  })
+
+  it("keep the operator's address out of the page until asked", async () => {
+    const { container } = render(<Privacy operator={OPERATOR} />)
+    expect(container.innerHTML).not.toContain("kontakt@example.com")
+
+    await userEvent.click(screen.getByRole("button", { name: "pokaż adres e-mail" }))
+
+    const link = screen.getByRole("link", { name: "kontakt@example.com" })
+    expect(link.getAttribute("href")).toBe("mailto:kontakt@example.com")
+  })
+
+  it("encode an address so it comes back whole, whatever it holds", () => {
+    for (const email of ["kontakt@example.com", "[adres kontaktowy — OPERATOR_EMAIL]"]) {
+      const hidden = hideEmail(email)
+      expect(hidden).not.toContain("@")
+      expect(revealEmail(hidden)).toBe(email)
+    }
   })
 
   it("show a visible gap when the operator is not configured", () => {
