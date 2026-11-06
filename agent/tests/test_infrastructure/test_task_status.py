@@ -20,6 +20,7 @@ from src.domain.action import ActionType, TaskStatus
 from src.infrastructure.models import AgentTaskModel, Base
 from src.infrastructure.repositories import AgentTaskRepository
 from src.infrastructure.task_status import (
+    read_task_status,
     record_task_progress,
     record_task_status,
     record_task_usage,
@@ -52,6 +53,23 @@ def test_without_task_id_nothing_is_written() -> None:
         record_task_status(None, TaskStatus.RUNNING)
 
     write.assert_not_called()
+
+
+def test_status_reads_through_and_a_failed_read_is_unknown() -> None:
+    with patch(
+        "src.infrastructure.task_status._read_status", return_value="cancelled"
+    ) as read:
+        assert read_task_status("task-1") == "cancelled"
+    assert read.call_args.args == ("task-1",)
+
+    with patch(
+        "src.infrastructure.task_status._read_status", side_effect=OSError("db down")
+    ):
+        assert read_task_status("task-1") is None
+
+    with patch("src.infrastructure.task_status._read_status") as read:
+        assert read_task_status(None) is None
+    read.assert_not_called()
 
 
 def test_progress_writes_through_and_swallows_failures() -> None:

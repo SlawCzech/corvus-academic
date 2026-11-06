@@ -4,7 +4,7 @@ import json
 import os
 import uuid
 from collections.abc import AsyncGenerator, Generator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -255,10 +255,11 @@ async def _store(
     status: TaskStatus,
     result: dict[str, Any] | None = None,
     error: str | None = None,
+    age: timedelta = timedelta(0),
 ) -> None:
     """Write a finished task the way the Celery worker would."""
     repo = AgentTaskRepository(session)
-    now = datetime.now(UTC)
+    now = datetime.now(UTC) - age
     await repo.save(
         AgentTaskModel(
             id=uuid.uuid4(),
@@ -338,6 +339,47 @@ async def test_running_task_is_reported_as_running(
 
     assert resp.json()["status"] == "running"
     assert resp.json()["result"] is None
+
+
+@pytest.mark.parametrize("status", [TaskStatus.RUNNING, TaskStatus.PENDING])
+async def test_a_task_that_stopped_moving_long_ago_is_failed(
+    status: TaskStatus,
+    client: TestClient,
+    db_session: AsyncSession,
+    dispatch: MagicMock,
+) -> None:
+    """Its worker died with it, or its last status write was lost."""
+    task_id = str(uuid.uuid4())
+    await _store(db_session, task_id, status, age=timedelta(hours=2))
+
+    resp = client.get(f"/actions/{task_id}", headers=_auth(PROMOTOR_ID, "promotor"))
+
+    assert resp.json()["status"] == "failed"
+    assert "ponownie" in resp.json()["error"]
+    stored = await AgentTaskRepository(db_session).find_by_task_id(task_id)
+    assert stored is not None and stored.status == TaskStatus.FAILED
+
+
+async def test_a_run_paused_for_the_promoter_waits_as_long_as_it_takes(
+    client: TestClient, db_session: AsyncSession, dispatch: MagicMock
+) -> None:
+    task_id = str(uuid.uuid4())
+    await _store(db_session, task_id, TaskStatus.AWAITING_INPUT, age=timedelta(days=3))
+
+    resp = client.get(f"/actions/{task_id}", headers=_auth(PROMOTOR_ID, "promotor"))
+
+    assert resp.json()["status"] == "awaiting_input"
+
+
+async def test_a_long_run_that_still_moves_is_left_running(
+    client: TestClient, db_session: AsyncSession, dispatch: MagicMock
+) -> None:
+    task_id = str(uuid.uuid4())
+    await _store(db_session, task_id, TaskStatus.RUNNING, age=timedelta(minutes=40))
+
+    resp = client.get(f"/actions/{task_id}", headers=_auth(PROMOTOR_ID, "promotor"))
+
+    assert resp.json()["status"] == "running"
 
 
 # ---------- cancelling ----------

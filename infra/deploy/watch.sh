@@ -13,7 +13,10 @@
 #   - a log event that means the app chose availability over correctness and
 #     a person should know: a worker that could not write an action's status
 #     (`task_status_write_failed`), and revoked tokens accepted while Redis
-#     was away (`token_store_check_failed_fail_open`).
+#     was away (`token_store_check_failed_fail_open`);
+#   - an action the promoter lost to the worker rather than to the model: one
+#     whose run kept killing the worker (`task_delivered_too_often`), and one
+#     that stopped moving and was given up (`action_abandoned`).
 #
 # Run by cron (setup-server.sh installs it); by hand: ./watch.sh
 set -euo pipefail
@@ -33,7 +36,7 @@ COMPOSE=(docker compose -f docker-compose.prod.yml)
 # A little over the cron period, so an event logged between two runs is seen
 # by one of them; seen twice is fine, missed is not.
 SINCE=6m
-EVENTS='task_status_write_failed|token_store_check_failed_fail_open'
+EVENTS='task_status_write_failed|token_store_check_failed_fail_open|task_delivered_too_often|action_abandoned'
 
 problems=""
 

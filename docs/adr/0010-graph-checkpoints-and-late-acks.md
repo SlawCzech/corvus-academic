@@ -48,7 +48,8 @@ one, given a checkpointer and a stable thread id.
   review only.
 - A task that kills its worker every time (out of memory on a huge thesis)
   now comes back every time instead of vanishing. Celery's retry limit does not
-  count redeliveries; if this shows up, cap it with a delivery counter.
+  count redeliveries; if this shows up, cap it with a delivery counter. (Done
+  2026-11-06, see the second addendum.)
 - A run in flight keeps up to one copy of the state per step (a few hundred kB
   each for a long thesis) until it ends.
 - The user's own provider key is not in any checkpoint: it never enters the
@@ -73,3 +74,38 @@ the graph continues with `Command(resume=…)`.
 - The provider key is decrypted again for the resume; it was never stored.
 - Without checkpoints there is nowhere to pause, so the flag is dropped and
   the review runs straight through.
+
+## Addendum — runs that never end (2026-11-06)
+
+Late acks left three ways for an action to stay `running` for good, which
+mattered once the server was meant for more than a handful of promoters:
+
+- **A task that keeps killing its worker** came back forever. The worker now
+  counts deliveries of each attempt in Redis (`infrastructure/deliveries.py`,
+  key per task, task id and retry number, a day's TTL). The fifth delivery of
+  one attempt fails the task and drops its checkpoints instead of running.
+  Four, not one: every deploy that lands mid-run hands the run back once.
+  Counting fails open — no Redis, no limit.
+- **A run stuck on something** held a worker slot indefinitely. Celery now has
+  a soft time limit of 30 minutes, which the task records as a failure without
+  a retry, and a hard one five minutes later. The visibility timeout dropped
+  from 2 h to 45 minutes: it only has to stay above the hard limit, so a live
+  run is never handed out twice.
+- **A deploy mid-run** killed the worker after Docker's 10 s grace, and the
+  unacknowledged task waited out the whole visibility timeout before anyone
+  picked it up. Both composes now remap SIGTERM to Celery's cold shutdown
+  (`REMAP_SIGTERM=SIGQUIT`) with a 30 s soft shutdown and a 60 s grace: short
+  runs finish, long ones go back to the queue at once (checked with a real
+  worker on Redis: "Restoring 1 unacknowledged message(s)").
+
+What none of that catches — a final status write lost to a database blip, a
+run killed by the hard limit, a message lost with Redis — is caught where
+someone waits for it: `GET /actions/{task_id}` fails a pending or running task
+whose row has not moved for 90 minutes (`domain.action.is_abandoned`). A run
+touches its row at every node, so 90 minutes is past the time limit and the
+visibility timeout together. A worker that gets such a task's message after
+all, or a cancelled one, leaves the finished row alone and does not run it.
+`watch.sh` alerts on both new outcomes.
+
+The worker also went from two processes to four: a review holds a slot for a
+few minutes, and two filled up as soon as a few promoters worked at once.
