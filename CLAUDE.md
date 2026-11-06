@@ -125,7 +125,9 @@ Użytkownik
                               (Biblioteka Narodowa, Open Library), bez modelu]
                               → [Agent ⇄ narzędzia tych źródeł]* → [Werdykty]
         (*tylko dla pozycji, których dopasowanie nie rozstrzygnęło; na zewnątrz
-         idą wyłącznie opisy bibliograficzne, nigdy tekst pracy)
+         idą wyłącznie opisy bibliograficzne, nigdy tekst pracy;
+         pozycja, której pierwszym autorem jest znacznik `[autor]`/`[promotor]`,
+         zostaje niesprawdzona — ADR 0023)
   → model selector
       → promotor wybiera przy akcji: własny klucz (BYOK) do Claude albo
         OpenAI — po jednym na dostawcę; bez dostawcy akcja to 409 (ADR 0022),

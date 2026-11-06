@@ -24,3 +24,11 @@ None of it helps the analysis. Cutting the front matter out is not the answer ei
 - Not covered: nicknames in notes ("Kasia" for Katarzyna), names of other people in the text (respondents, interviewees), and the promoter's name when the title page does not give it. The thesis itself still goes to the provider; this takes out who wrote it, not what it says.
 - Results can contain the markers (a meeting note draft saying "[autor]"); the promoter edits them before accepting.
 - Deploy order does not matter: the agent falls back to "Autorka" when `author_form` is missing, and an older agent ignores it.
+
+## Amendment (2026-11-06): the bibliography check and the markers
+
+A self-citation reached `verify_bibliography` as `[autor], J. P. (2025). O wyższości folwarku… [maszynopis w posiadaniu autora]` and came back confirmed, with the DOI of an author-less Crossref chapter titled "Autor o Autora": both its title words occur in the entry, and a record without authors passed the author check by default.
+
+- **An entry whose first author is a marker is not looked up.** No source can confirm an author whose name never left Corvus, and an author-less record with a fitting title would pass for the work. It is marked "Niesprawdzona" with a note saying why, without going to Crossref, the catalogues or the agent. A marker later in the author list changes nothing: the first author is the one compared. Sending the entry would leak nothing (it holds only the marker), so this is about the verdict, not privacy.
+- **A title must match both ways.** When the extraction gives the reference's title, the record's title must also cover at least half of its main title (no subtitle), not just have its own words somewhere in the entry. This holds for every entry, not only for marked ones.
+- **The result shows the marker, not the name.** As with the other results, `app` does not keep the mapping after it sends the context, and the entry is shown as the provider received it. The promoter knows whose work `[autor]` is; restoring it would mean pseudonymizing the thesis again at read time for one label.

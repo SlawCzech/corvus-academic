@@ -1,0 +1,49 @@
+name: Bug report
+description: Something in Corvus doesn't work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. **Do not paste real students' theses, names or API keys.**
+        Security problems go through the private advisory form instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a student…
+        2. Run "Trial review" on…
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - AI action result (review, feedback, bibliography…)
+        - Students, notes, thesis versions
+        - Guidelines and rubrics
+        - Accounts, login, API keys
+        - Running or deploying Corvus
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: action
+    attributes:
+      label: Action and provider
+      description: For AI results only — e.g. `generate_review` on Claude.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant output from `make logs`, with secrets removed.
+      render: text

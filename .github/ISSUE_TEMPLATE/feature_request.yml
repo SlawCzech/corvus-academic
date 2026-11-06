@@ -1,0 +1,22 @@
+name: Idea or feature request
+description: Suggest something Corvus should do differently.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What is hard or missing in supervising a thesis with Corvus today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you'd like
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else
+      description: Your university's rules, related ADRs in docs/adr/, alternatives you considered.

@@ -27,7 +27,7 @@ poprosi o certyfikat.
 Jeśli nie masz jeszcze klucza (`ls ~/.ssh/id_ed25519.pub`):
 
 ```bash
-ssh-keygen -t ed25519 -C "slaw.czech@gmail.com"
+ssh-keygen -t ed25519 -C "you@example.com"
 ```
 
 Drugi klucz, osobny, tylko dla GitHub Actions. Nie zakładaj na nim hasła, bo
