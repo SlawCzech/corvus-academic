@@ -3,6 +3,7 @@ name = "agent"
 version = "0.1.0"
 description = "Corvus agent service — LangGraph analysis + review"
 requires-python = ">=3.12"
+license = "MIT"
 dependencies = [
     "alembic>=1.20.1",
     "asyncpg>=0.32.0",

@@ -3,6 +3,7 @@ name = "app"
 version = "0.1.0"
 description = "Corvus app service — identity, document extraction, mentoring domain"
 requires-python = ">=3.12"
+license = "MIT"
 dependencies = [
     "fastapi>=0.162.0",
     "bcrypt>=4.3.0",
