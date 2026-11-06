@@ -24,6 +24,16 @@ export default function Hero() {
           wskazuje cytat w tekście. Pomaga też prowadzić studenta od tematu do
           obrony. Każdy szkic promotor czyta i akceptuje albo odrzuca.
         </p>
+        <p className="mt-4 max-w-[520px] text-[15px] leading-relaxed text-muted-strong">
+          Do modelu praca trafia{" "}
+          <a
+            href="#dane"
+            className="font-medium text-foreground underline decoration-line underline-offset-4 hover:text-accent"
+          >
+            bez nazwisk studenta i promotora
+          </a>
+          .
+        </p>
       </div>
 
       <div className="hidden flex-1 justify-center lg:flex">

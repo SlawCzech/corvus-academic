@@ -42,7 +42,7 @@ class TitlePage:
     title: str | None = None
 
 
-def _front_lines(text: str) -> list[str]:
+def front_lines(text: str) -> list[str]:
     lines: list[str] = []
     for raw in text[:_FRONT_CHARS].splitlines():
         line = raw.strip()
@@ -127,7 +127,7 @@ def _title(front: str, lines: list[str]) -> str | None:
 
 def read_title_page(text: str) -> TitlePage:
     """Read the title page at the start of an extracted thesis."""
-    lines = _front_lines(text)
+    lines = front_lines(text)
     return TitlePage(
         author=_author(lines),
         field_of_study=_field_of_study(lines),
