@@ -407,7 +407,7 @@ def test_result_payload_keeps_which_analysis_raised_each_finding() -> None:
 
 
 def test_the_rubric_from_app_reaches_the_graph_untouched() -> None:
-    """The agent has no requirements of its own to add, ADR 0023."""
+    """The agent has no requirements of its own to add, ADR 0024."""
     graph = _mock_graph()
     sections = {"elements": "a", "formal": "b", "merit": "c", "severity": "d"}
 

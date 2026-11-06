@@ -34,7 +34,7 @@ function groupByUniversity(sets: GuidelineSet[]): [string, GuidelineSet[]][] {
 /**
  * The catalog as an admin manages it. New guidelines start from the
  * university's regulation: the admin names the university and the kind of
- * thesis and uploads the file, and the model drafts the rubric (ADR 0024).
+ * thesis and uploads the file, and the model drafts the rubric (ADR 0025).
  */
 export default function GuidelineAdmin() {
   const { data: sets, mutate: mutateSets } = useSWR<GuidelineSet[]>(

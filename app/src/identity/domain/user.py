@@ -24,7 +24,7 @@ class Permission(StrEnum):
     MANAGE_STUDENTS = "manage_students"
     MANAGE_GUIDELINES = "manage_guidelines"
     # Keep one's own provider keys: a promoter for actions, an admin for
-    # rubrics drafted from a regulation (ADR 0024).
+    # rubrics drafted from a regulation (ADR 0025).
     HOLD_PROVIDER_KEYS = "hold_provider_keys"
 
 

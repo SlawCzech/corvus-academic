@@ -88,7 +88,7 @@ class VersionResponse(VersionSummaryResponse):
     source: SourceResponse | None
     created_by: uuid.UUID
     published_by: uuid.UUID | None
-    # The rubric is being drafted from the source (ADR 0024); and why the
+    # The rubric is being drafted from the source (ADR 0025); and why the
     # last attempt failed, until the next one.
     drafting: bool = False
     drafting_error: str | None = None

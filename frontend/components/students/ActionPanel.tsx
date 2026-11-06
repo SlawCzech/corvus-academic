@@ -250,7 +250,7 @@ function ActionPanelInner({
     shown?.status === "completed" && !shown.accepted && spec?.acceptable
   const showTone = selectedType === "generate_review"
   const showGuidelines = selectedType !== null && USES_GUIDELINES.includes(selectedType)
-  // No built-in requirements to judge by (ADR 0023): the picker below says so.
+  // No built-in requirements to judge by (ADR 0024): the picker below says so.
   const missingGuidelines = showGuidelines && !student.guideline_set_id
 
   async function start(): Promise<void> {

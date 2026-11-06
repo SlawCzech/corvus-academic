@@ -17,6 +17,11 @@ set -a
 . ./.env
 set +a
 
+# The compose file refuses to load without IMAGE_TAG (deploy.sh sets it), and
+# cron does not. Without this line every nightly run died before pg_dump, from
+# the first deploy until 2026-11-05, and nothing said so.
+export IMAGE_TAG="${IMAGE_TAG:-$(cat .deployed-tag)}"
+
 PASSPHRASE_FILE=/srv/corvus/.backup-passphrase
 BACKUP_DIR=/srv/corvus/backups
 KEEP_DAYS="${BACKUP_KEEP_DAYS:-14}"
@@ -25,6 +30,10 @@ OUT="$BACKUP_DIR/corvus-$STAMP.dump.gpg"
 
 mkdir -p "$BACKUP_DIR"
 umask 077
+
+# A run that fails leaves no file behind: gpg writes even an empty stream,
+# and a 70-byte "backup" next to the real ones is worse than none.
+trap 'rm -f "$OUT"' ERR
 
 # -Fc: compressed custom format, restored with pg_restore. Streamed straight
 # into gpg, so no unencrypted copy ever lands on disk.
@@ -36,8 +45,11 @@ docker compose -f docker-compose.prod.yml exec -T postgres \
 # A dump of a few KB means pg_dump failed after the pipe had started.
 if [ "$(stat -c %s "$OUT")" -lt 10240 ]; then
     echo "backup: $OUT is suspiciously small — check pg_dump" >&2
+    rm -f "$OUT"
     exit 1
 fi
+# From here the dump is good: an rclone failure must not take it with it.
+trap - ERR
 
 find "$BACKUP_DIR" -name 'corvus-*.dump.gpg' -mtime +"$KEEP_DAYS" -delete
 

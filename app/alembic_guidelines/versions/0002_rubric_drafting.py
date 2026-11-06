@@ -6,7 +6,7 @@ Create Date: 2026-11-06 00:00:00.000000
 
 A draft version remembers the agent's task drafting its rubric from the
 attached regulation, why the last attempt failed, and what the model asks
-the admin to check (ADR 0024).
+the admin to check (ADR 0025).
 
 """
 

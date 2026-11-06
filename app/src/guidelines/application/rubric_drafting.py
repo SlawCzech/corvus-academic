@@ -1,8 +1,8 @@
-"""Drafting a rubric from a university's regulation (ADR 0024).
+"""Drafting a rubric from a university's regulation (ADR 0025).
 
 The admin names the university and the kind of thesis and uploads the
 regulation; the model reads it and writes the rubric in its four sections
-(ADR 0023), with the thresholds. The result lands in the draft version the
+(ADR 0024), with the thresholds. The result lands in the draft version the
 regulation is attached to, where the admin checks it against the original
 and publishes it. Nothing is judged by a drafted rubric until then.
 

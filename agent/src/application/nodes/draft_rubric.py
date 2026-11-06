@@ -4,7 +4,7 @@ The one action with no student: `app` sends the regulation's text, the kind
 of thesis and, when the catalog has one, a published rubric as a model of
 the shape. The output is a draft an administrator checks against the
 original and publishes — never a rubric anything is judged by until then
-(ADR 0024). Only the regulation is sent; no thesis is involved.
+(ADR 0025). Only the regulation is sent; no thesis is involved.
 """
 
 from typing import Any

@@ -252,7 +252,7 @@ def test_promotor_picks_a_guideline_set_for_a_student(client: TestClient) -> Non
     assert chosen.status_code == 200, chosen.text
     assert chosen.json()["guideline_set_id"] == guideline_set["id"]
     assert kept.json()["guideline_set_id"] == guideline_set["id"]
-    # Changed, never removed: there are no built-in requirements, ADR 0023.
+    # Changed, never removed: there are no built-in requirements, ADR 0024.
     assert cleared.status_code == 422
 
 

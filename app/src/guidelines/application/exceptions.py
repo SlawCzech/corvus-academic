@@ -18,7 +18,7 @@ class GuidelineConflictError(Exception):
 
 
 class ProviderKeyMissingError(Exception):
-    """The admin asked for a provider they hold no key for (ADR 0024)."""
+    """The admin asked for a provider they hold no key for (ADR 0025)."""
 
 
 class DrafterUnavailableError(Exception):

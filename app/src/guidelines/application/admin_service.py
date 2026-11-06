@@ -146,7 +146,7 @@ class GuidelineAdminService:
         """Delete a set with every version and original, to start again.
 
         Students who had it chosen are left without a set, and their reviews
-        wait until the promoter picks another (ADR 0023). Actions already run
+        wait until the promoter picks another (ADR 0024). Actions already run
         keep the id of the version they were judged against.
         """
         if await self._repo.get_set(set_id) is None:

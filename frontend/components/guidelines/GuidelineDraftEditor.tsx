@@ -36,7 +36,7 @@ interface Props {
  * A draft version of a guideline set, from regulation to published rubric.
  *
  * The admin attaches the regulation and the model writes the rubric from it
- * — four sections and the thresholds (ADR 0024). The admin then reads it
+ * — four sections and the thresholds (ADR 0025). The admin then reads it
  * against the original, corrects what needs it and publishes. Publishing
  * freezes the version and replaces the one in force.
  */

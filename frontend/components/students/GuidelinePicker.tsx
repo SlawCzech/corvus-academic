@@ -16,7 +16,7 @@ interface Props {
  * Which university requirements this thesis is judged against.
  *
  * Only sets for the student's own kind of thesis are offered. There is no
- * built-in fallback (ADR 0023): a student without a set — one added before
+ * built-in fallback (ADR 0024): a student without a set — one added before
  * sets were required, or whose thesis type changed — gets a review only
  * once a set is chosen here.
  */

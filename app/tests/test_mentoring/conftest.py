@@ -138,7 +138,7 @@ def guideline_set(client: TestClient, thesis_type: str = "bachelor") -> str:
     """A published guideline set for this thesis type, made once per test.
 
     Every review a promoter runs is judged against a university's rubric,
-    ADR 0023, so a test that runs one gives its student a set first.
+    ADR 0024, so a test that runs one gives its student a set first.
     """
     from tests.rubrics import rubric
 

@@ -234,7 +234,7 @@ def test_without_thresholds_the_key_is_absent() -> None:
 
 
 def test_without_a_rubric_the_review_and_methodology_are_refused() -> None:
-    """No built-in requirements to fall back on, ADR 0023."""
+    """No built-in requirements to fall back on, ADR 0024."""
     with pytest.raises(MissingContextError, match="guidelines"):
         assemble_generate_review_context(_student(), _draft(_LONG_THESIS))
     with pytest.raises(MissingContextError, match="guidelines"):

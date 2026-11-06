@@ -1,12 +1,12 @@
-# ADR 0025: A promoter's home university
+# ADR 0026: A promoter's home university
 
 - Status: Accepted
 - Date: 2026-11-06
-- Builds on: [ADR 0023](0023-a-rubric-in-four-sections-and-no-default.md), [ADR 0024](0024-the-model-drafts-the-rubric-from-the-regulation.md)
+- Builds on: [ADR 0024](0024-a-rubric-in-four-sections-and-no-default.md), [ADR 0025](0025-the-model-drafts-the-rubric-from-the-regulation.md)
 
 ## Context
 
-Every thesis needs a guideline set (ADR 0023), and with drafting from a regulation (ADR 0024) the catalog grows by a university at a time. The pickers listed every set for the kind of thesis, from every university. A promoter works at one university nearly always, and reviews a thesis from elsewhere now and then.
+Every thesis needs a guideline set (ADR 0024), and with drafting from a regulation (ADR 0025) the catalog grows by a university at a time. The pickers listed every set for the kind of thesis, from every university. A promoter works at one university nearly always, and reviews a thesis from elsewhere now and then.
 
 ## Decision
 

@@ -1,4 +1,4 @@
-"""A rubric drafted by the model from an uploaded regulation (ADR 0024)."""
+"""A rubric drafted by the model from an uploaded regulation (ADR 0025)."""
 
 import uuid
 from collections.abc import Generator

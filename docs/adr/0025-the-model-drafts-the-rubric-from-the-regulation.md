@@ -1,13 +1,13 @@
-# ADR 0024: The model drafts the rubric from the regulation
+# ADR 0025: The model drafts the rubric from the regulation
 
 - Status: Accepted
 - Date: 2026-11-06
 - Amends: [ADR 0008](0008-admin-and-promoter-are-separate-roles.md) (an admin keeps provider keys), [ADR 0020](0020-code-measures-the-model-judges.md) (a length in pages) and [ADR 0022](0022-every-action-runs-on-a-providers-key.md) (one action has no student)
-- Builds on: [ADR 0023](0023-a-rubric-in-four-sections-and-no-default.md)
+- Builds on: [ADR 0024](0024-a-rubric-in-four-sections-and-no-default.md)
 
 ## Context
 
-A rubric is Corvus's reading of a university's regulation, in four sections (ADR 0023). Until now an admin wrote it by hand: read the regulation, sort its rules into the sections, take the numbers out into the thresholds, add the severity rules. The two UE Katowice rubrics took about an hour each. Every university writes its rules in its own order and documents, so there is no template to fill; the reading is the work. That makes adding a university the slow step, and the one a model does well.
+A rubric is Corvus's reading of a university's regulation, in four sections (ADR 0024). Until now an admin wrote it by hand: read the regulation, sort its rules into the sections, take the numbers out into the thresholds, add the severity rules. The two UE Katowice rubrics took about an hour each. Every university writes its rules in its own order and documents, so there is no template to fill; the reading is the work. That makes adding a university the slow step, and the one a model does well.
 
 ADR 0022 runs every model call on a user's own key, and ADR 0008 left the admin without one: an admin ran no actions.
 
@@ -20,7 +20,7 @@ ADR 0022 runs every model call on a user's own key, and ADR 0008 left the admin 
 - **An admin keeps their own provider keys.** A new permission, `HOLD_PROVIDER_KEYS`, goes to both roles; the key settings need it instead of `SUBMIT_ANALYSIS`. An admin still sees no students and runs no student actions (ADR 0008).
 - **A third thesis type, `master`**: a master's thesis in the usual form, next to `master_article` (UE Katowice's article). Poznań's regulation (Zarządzenie 92/2021 UEP) has no article form, and drafting its master's rubric as an article would ask for parts it never names. A title page that says "Praca magisterska" no longer suggests a type: only one that mentions an article suggests `master_article`, and otherwise the promoter picks.
 - **A length in pages is a threshold of its own**, `min_pages` and `max_pages`, next to the length in characters; the model never converts one into the other. Code counts the pages of a PDF only, the whole file with front matter and annexes, and says so to the requirements node; a Word file does not know its own page count (its metadata holds whatever the last program wrote), so for one the node is told not to estimate.
-- **A published version is corrected, not edited.** "Popraw" opens the next version with the rubric, the thresholds and a copy of the original regulation; the version in force stays as it was until the correction is published, because a review records the version it was judged against. A draft can be thrown away ("Odrzuć szkic"), and a whole set deleted with its versions and originals ("Usuń zestaw", confirmed twice) to start again from the regulation. Students who had a deleted set chosen are told to pick another; their reviews answer 409 until they do (ADR 0023).
+- **A published version is corrected, not edited.** "Popraw" opens the next version with the rubric, the thresholds and a copy of the original regulation; the version in force stays as it was until the correction is published, because a review records the version it was judged against. A draft can be thrown away ("Odrzuć szkic"), and a whole set deleted with its versions and originals ("Usuń zestaw", confirmed twice) to start again from the regulation. Students who had a deleted set chosen are told to pick another; their reviews answer 409 until they do (ADR 0024).
 - **`make eval-rubric`** drafts from the two UE Katowice annexes and compares with the hand-written rubrics: code checks the shape, the paragraph references, that no threshold sits in the text and that the thresholds are right; a judge lists the rules missed and the rules invented, and whether questions and hypotheses were both made required.
 
 ## Consequences

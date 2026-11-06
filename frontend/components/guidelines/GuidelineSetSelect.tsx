@@ -26,7 +26,7 @@ interface Props {
  * The guideline sets in force for one kind of thesis.
  *
  * Every thesis is judged against a university's rules and Corvus has none of
- * its own (ADR 0023), so there is no "none" to pick: before a choice the
+ * its own (ADR 0024), so there is no "none" to pick: before a choice the
  * select shows a placeholder, and a form using it requires a value.
  *
  * A promoter with a home university sees its sets; the others are one

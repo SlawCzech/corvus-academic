@@ -168,7 +168,7 @@ class GuidelineVersion:
     published_by: UUID | None = None
     published_at: datetime | None = None
     # The agent's task drafting this version's rubric from its source, while
-    # it runs (ADR 0024); the reason the last attempt failed, until the next.
+    # it runs (ADR 0025); the reason the last attempt failed, until the next.
     drafting_task_id: str | None = None
     drafting_error: str | None = None
     # What the model asks the admin to check in its draft. Shown beside the

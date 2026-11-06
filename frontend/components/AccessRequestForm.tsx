@@ -36,7 +36,7 @@ export default function AccessRequestForm() {
   return (
     <form onSubmit={(e) => void onSubmit(e)} data-testid="access-request-form">
       <h1 className="mb-1.5 text-[24px] font-semibold text-foreground">
-        Poproś o dostęp
+        Prośba o konto
       </h1>
       <p className="mb-7 text-[13.5px] text-muted">
         Konta zakłada administrator uczelni. Zostaw email, a się z Tobą

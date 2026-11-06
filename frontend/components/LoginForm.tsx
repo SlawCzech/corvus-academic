@@ -7,8 +7,8 @@ import { z } from "zod"
 import { useRouter } from "next/navigation"
 
 const schema = z.object({
-  email: z.string().email("Enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  email: z.string().email("Podaj poprawny adres email"),
+  password: z.string().min(8, "Hasło ma co najmniej 8 znaków"),
 })
 
 type FormData = z.infer<typeof schema>
@@ -32,7 +32,7 @@ export default function LoginForm() {
       body: JSON.stringify(data),
     })
     if (!res.ok) {
-      setServerError("Invalid email or password.")
+      setServerError("Nieprawidłowy email lub hasło.")
       return
     }
     const { home } = (await res.json()) as { home?: string }
@@ -78,7 +78,7 @@ export default function LoginForm() {
           htmlFor="password"
           className="block text-[13px] font-medium text-muted-strong"
         >
-          Password
+          Hasło
         </label>
         <input
           id="password"
@@ -116,7 +116,7 @@ export default function LoginForm() {
         data-testid="submit-button"
         className="h-11 w-full rounded-lg bg-accent text-[14px] font-semibold text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
       >
-        {isSubmitting ? "Signing in…" : "Sign in"}
+        {isSubmitting ? "Logowanie…" : "Zaloguj się"}
       </button>
     </form>
   )

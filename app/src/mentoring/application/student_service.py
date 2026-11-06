@@ -290,7 +290,7 @@ class StudentService:
         # Checked against the thesis type as it is after this change.
         if set_guidelines:
             if guideline_set_id is None:
-                # No built-in requirements to fall back on, ADR 0023.
+                # No built-in requirements to fall back on, ADR 0024.
                 raise ValueError("A guideline set can be changed, not removed")
             await self._check_guideline_set(student, guideline_set_id)
             student.guideline_set_id = guideline_set_id

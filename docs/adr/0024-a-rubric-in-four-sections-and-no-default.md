@@ -1,4 +1,4 @@
-# ADR 0023: A rubric in four sections, and no default requirements
+# ADR 0024: A rubric in four sections, and no default requirements
 
 - Status: Accepted
 - Date: 2026-11-05

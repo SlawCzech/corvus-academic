@@ -1,10 +1,10 @@
 """System prompt for drafting a rubric from a university's regulation.
 
 The rubric is Corvus's reading of a regulation, in four fixed sections
-(ADR 0023): whatever order the university wrote its rules in, the review
+(ADR 0024): whatever order the university wrote its rules in, the review
 nodes always find the elements, the formal rules, what the thesis must show
 and how severe a shortfall is in the same place. The admin reads the draft
-against the original before publishing it (ADR 0024).
+against the original before publishing it (ADR 0025).
 """
 
 THESIS_TYPES = {

@@ -223,7 +223,7 @@ async def draft_rubric(
     token: BearerTokenDep,
     catalog: CatalogDep,
 ) -> VersionResponse:
-    """Have the model draft the rubric from the attached regulation (ADR 0024).
+    """Have the model draft the rubric from the attached regulation (ADR 0025).
 
     Runs on the admin's own key for the provider. The draft fills in when
     `GET /admin/versions/{id}` finds the run finished.

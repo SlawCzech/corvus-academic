@@ -532,7 +532,7 @@ def test_a_key_that_could_not_be_checked_is_stored_unverified(
 
 
 def test_an_admin_keeps_a_key_for_drafting_rubrics(client: TestClient) -> None:
-    """The admin's model runs draft the guideline catalog's rubrics, ADR 0024."""
+    """The admin's model runs draft the guideline catalog's rubrics, ADR 0025."""
     headers = {"Authorization": f"Bearer {_login(client, ADMIN_EMAIL, ADMIN_PASSWORD)}"}
     resp = client.patch(
         "/settings/api-key",

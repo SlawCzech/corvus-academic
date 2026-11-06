@@ -1,25 +1,26 @@
-import { cookies } from "next/headers"
-import Nav from "@/components/landing/Nav"
-import Hero from "@/components/landing/Hero"
-import Capabilities from "@/components/landing/Capabilities"
-import MetaBar from "@/components/landing/MetaBar"
-import Footer from "@/components/landing/Footer"
-import { decodeToken, isTokenExpired } from "@/lib/auth"
+import { cookies } from "next/headers";
+import Nav from "@/components/landing/Nav";
+import Hero from "@/components/landing/Hero";
+import Actions from "@/components/landing/Actions";
+import DataAndKeys from "@/components/landing/DataAndKeys";
+import { decodeToken, isTokenExpired } from "@/lib/auth";
 
 export default async function Home() {
-  const cookieStore = await cookies()
-  const token = cookieStore.get("access_token")?.value
-  const payload = token && !isTokenExpired(token) ? decodeToken(token) : null
+  const cookieStore = await cookies();
+  const token = cookieStore.get("access_token")?.value;
+  const payload = token && !isTokenExpired(token) ? decodeToken(token) : null;
 
   return (
     <>
       <Nav role={payload?.role} isLoggedIn={!!payload} />
       <main>
         <Hero />
-        <Capabilities />
-        <MetaBar />
+        <Actions />
+        <DataAndKeys />
       </main>
-      <Footer />
+      <footer className="mx-auto w-full max-w-[1280px] border-t border-line px-4 py-8 text-[13px] text-muted sm:px-8 lg:px-16">
+        Corvus
+      </footer>
     </>
-  )
+  );
 }

@@ -1,7 +1,7 @@
 """The university's rubric, cut to what one analysis judges by.
 
 `app` sends the rubric of the student's guideline set in four sections
-(`app/src/guidelines/domain/rubric.py`, ADR 0023). Each node takes the
+(`app/src/guidelines/domain/rubric.py`, ADR 0024). Each node takes the
 sections its question needs: the requirements check reads the elements, the
 formal rules and the severity rules; the methodology and the review read the
 elements and what the thesis must show. A node never sees the severity rules

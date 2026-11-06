@@ -198,7 +198,7 @@ rekomendacje 3/3, 8–13 duplikatów, ok. 85 s; poziom sprzed zmian.
 
 ## Rubryka z regulaminu (`make eval-rubric`)
 
-`evals/rubric.py` (ADR 0024): model pisze rubrykę z załącznika 1 i 2 do zarządzenia
+`evals/rubric.py` (ADR 0025): model pisze rubrykę z załącznika 1 i 2 do zarządzenia
 117/22 (pliki z `app/scripts/seed_data/guidelines/`), a kluczem są rubryki napisane z
 nich ręcznie. Kod sprawdza kształt (cztery sekcje, bez `#`/`##`, nagłówki CRITICAL,
 MAJOR, MINOR), odnośniki do paragrafów, progi co do liczby i to, że żadnej liczby progu

@@ -10,7 +10,7 @@ export default async function ProfilePage() {
   const token = cookieStore.get("access_token")?.value ?? ""
   const payload = decodeToken(token)
   // Both roles keep their own provider keys: a promoter for actions, an admin
-  // for rubrics drafted from a regulation (ADR 0024). AI defaults are the
+  // for rubrics drafted from a regulation (ADR 0025). AI defaults are the
   // promoter's alone.
   const isPromoter = payload?.role !== "admin"
 

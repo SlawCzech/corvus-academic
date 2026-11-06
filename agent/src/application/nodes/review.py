@@ -80,8 +80,9 @@ czemu służyły [methods used]."
 ## Language rules
 
 - Formal Polish academic prose — no bullet points, no headers in the review
-- Refer to the author as "Autorka" (female) or "Autor" (male) \
-based on author name in metadata — default to "Autorka" if unclear
+- Refer to the author with the word given as "Author form" (Autorka or \
+Autor). The text names the author and the promoter only as [autor] and \
+[promotor]: never repeat a marker in the review
 - One paragraph, no line breaks within the review text
 - 150–250 words
 - Never mention AI, analysis tools, or the review generation process
@@ -184,8 +185,9 @@ work that remains, concretely enough to act on. Nothing about the defence.
 ## Language rules
 
 - No bullet points and no headers in the review
-- Refer to the author as "Autorka" (female) or "Autor" (male) based on author \
-name in metadata — default to "Autorka" if unclear
+- Refer to the author with the word given as "Author form" (Autorka or \
+Autor). The text names the author and the promoter only as [autor] and \
+[promotor]: never repeat a marker in the review
 - One paragraph, no line breaks within the review text
 - 200–350 words
 - Never mention AI, analysis tools, or the review generation process
@@ -519,7 +521,7 @@ def generate_review(state: ActionState) -> ReviewUpdate:
         meta: dict[str, object] = ctx.get("metadata", {})
         user_message = (
             f"Thesis title: {meta.get('title', 'Unknown')}\n"
-            f"Author: {meta.get('author', 'Unknown')}\n"
+            f"Author form: {meta.get('author_form', 'Autorka')}\n"
             f"Type: {meta.get('thesis_type', 'bachelor')}\n"
             f"Field: {meta.get('field_of_study', 'Unknown')}\n"
             f"{render_research(ctx)}\n"
