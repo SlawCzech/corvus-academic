@@ -12,6 +12,7 @@ from src.mentoring.application.context import (
     assemble_generate_review_context,
     assemble_propose_topic_context,
     notes_between_versions,
+    pseudonymize_context,
 )
 from src.mentoring.application.exceptions import MissingContextError
 from src.mentoring.domain.draft import ThesisDraft
@@ -287,3 +288,14 @@ def test_the_map_counts_the_pages_of_a_pdf_only() -> None:
 
     assert pdf["document_map"]["pages"] == 40
     assert docx["document_map"]["pages"] is None
+
+
+def test_the_page_count_survives_the_names_going_out() -> None:
+    """The map is drawn again over the pseudonymized text; pages are the file's."""
+    context = assemble_generate_review_context(
+        _student(), _draft("Tekst pracy."), guidelines=_RUBRIC
+    )
+
+    swapped = pseudonymize_context(_student(), context)
+
+    assert swapped["document_map"]["pages"] == 40
