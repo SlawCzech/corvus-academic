@@ -6,7 +6,11 @@ from collections.abc import AsyncGenerator
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from src.identity.application.user_service import UserService, WrongPasswordError
+from src.identity.application.user_service import (
+    EmailTakenError,
+    UserService,
+    WrongPasswordError,
+)
 from src.identity.domain.user import Role, UserRegistration
 from src.identity.infrastructure.models import Base
 from src.identity.infrastructure.repositories import UserRepository
@@ -52,6 +56,25 @@ async def test_register_duplicate_email_raises(svc: UserService) -> None:
     await svc.register(_reg())
     with pytest.raises(ValueError, match="already registered"):
         await svc.register(_reg())
+
+
+async def test_a_temporary_registration_must_change_its_password(
+    svc: UserService,
+) -> None:
+    user, temporary = await svc.register_with_temporary_password(
+        "nowy@example.com", Role.PROMOTOR
+    )
+
+    assert user.must_change_password is True
+    assert await svc.authenticate("nowy@example.com", temporary) is not None
+
+
+async def test_a_temporary_registration_reports_a_taken_email(
+    svc: UserService,
+) -> None:
+    await svc.register(_reg())
+    with pytest.raises(EmailTakenError):
+        await svc.register_with_temporary_password("user@example.com", Role.PROMOTOR)
 
 
 async def test_register_invalid_email_raises(svc: UserService) -> None:

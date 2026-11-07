@@ -26,10 +26,11 @@ export async function POST(request: Request): Promise<Response> {
   if (!token) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+  // No password: the app makes a temporary one and returns it once.
   const body = (await request.json()) as {
     email: string
-    password: string
     role: string
+    home_university_id?: string | null
   }
   const res = await fetch(`${APP_URL}/users`, {
     method: "POST",
@@ -39,8 +40,7 @@ export async function POST(request: Request): Promise<Response> {
     },
     body: JSON.stringify(body),
   })
-  if (!res.ok) {
-    return NextResponse.json({ error: "Failed to create user" }, { status: res.status })
-  }
-  return NextResponse.json(await res.json(), { status: 201 })
+  // The app's `detail` (a taken or invalid email) reaches the form as-is.
+  const upstream: unknown = await res.json().catch(() => ({ detail: "Failed to create user" }))
+  return NextResponse.json(upstream, { status: res.status })
 }

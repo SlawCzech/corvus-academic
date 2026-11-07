@@ -1,11 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import useSWR from "swr"
+import useSWR, { useSWRConfig } from "swr"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { fetcher as apiFetcher, request } from "@/lib/api.client"
 import type { University } from "@/lib/api.types"
+import { invitationText } from "@/lib/invitation"
 import { z } from "zod"
 
 interface User {
@@ -22,12 +23,19 @@ interface User {
 // never accepted, so every submission failed with a 422.
 const createSchema = z.object({
   email: z.string().email("Nieprawidłowy email"),
-  password: z.string().min(8, "Minimum 8 znaków"),
   role: z.enum(["promotor", "admin"]),
   home_university_id: z.string().optional(),
 })
 
 type CreateForm = z.infer<typeof createSchema>
+
+/** A temporary password just issued: for a new account, or after a reset. */
+interface Issued {
+  email: string
+  password: string
+  role: string
+  kind: "new" | "reset"
+}
 
 const fetcher = (url: string) =>
   request(url).then((r) => {
@@ -50,7 +58,8 @@ export default function UserManagementTable({
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [resetConfirm, setResetConfirm] = useState<string | null>(null)
   const [resetError, setResetError] = useState<string | null>(null)
-  const [issued, setIssued] = useState<{ email: string; password: string } | null>(null)
+  const [issued, setIssued] = useState<Issued | null>(null)
+  const { mutate: mutateKey } = useSWRConfig()
 
   const modalOpen = showModal || prefillEmail !== undefined
 
@@ -77,7 +86,12 @@ export default function UserManagementTable({
       setResetError(body.detail ?? "Nie udało się zresetować hasła.")
       return
     }
-    setIssued({ email: user.email, password: body.temporary_password })
+    setIssued({
+      email: user.email,
+      password: body.temporary_password,
+      role: user.role,
+      kind: "reset",
+    })
     await mutate()
   }
 
@@ -202,20 +216,19 @@ export default function UserManagementTable({
       </table>
 
       {issued && (
-        <TemporaryPasswordModal
-          email={issued.email}
-          password={issued.password}
-          onClose={() => setIssued(null)}
-        />
+        <TemporaryPasswordModal issued={issued} onClose={() => setIssued(null)} />
       )}
 
       {modalOpen && (
         <CreateUserModal
           key={prefillEmail ?? "blank"}
           initialEmail={prefillEmail}
-          onCreated={() => {
+          onCreated={(created) => {
             void mutate()
+            // Creating the account closed its access request, if there was one.
+            void mutateKey("/api/admin/access-requests")
             closeModal()
+            setIssued({ ...created, kind: "new" })
           }}
           onClose={closeModal}
         />
@@ -227,23 +240,26 @@ export default function UserManagementTable({
 /**
  * The temporary password, shown once: only its hash is kept, so closing
  * this is the last chance to copy it. Corvus sends no mail; the admin
- * passes it on themselves.
+ * passes it on themselves, for a new account as a ready invitation.
  */
 function TemporaryPasswordModal({
-  email,
-  password,
+  issued,
   onClose,
 }: {
-  email: string
-  password: string
+  issued: Issued
   onClose: () => void
 }) {
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState<"password" | "invitation" | null>(null)
+  const isNew = issued.kind === "new"
 
-  async function copy() {
+  async function copy(what: "password" | "invitation") {
+    const text =
+      what === "password"
+        ? issued.password
+        : invitationText({ origin: window.location.origin, ...issued })
     try {
-      await navigator.clipboard.writeText(password)
-      setCopied(true)
+      await navigator.clipboard.writeText(text)
+      setCopied(what)
     } catch {
       // No clipboard (an insecure context): the password stays on screen.
     }
@@ -260,29 +276,40 @@ function TemporaryPasswordModal({
           id="temporary-password-title"
           className="mb-2 text-[16px] font-semibold text-foreground"
         >
-          Hasło tymczasowe
+          {isNew ? "Konto utworzone" : "Hasło tymczasowe"}
         </h2>
         <p className="mb-4 text-[13px] text-muted">
-          Dla {email}. Przekaż je tej osobie: po zalogowaniu ustawi własne, a
-          do tego czasu nic innego się nie otworzy. Wszystkie jej sesje zostały
-          zakończone. Po zamknięciu tego okna hasła nie da się już zobaczyć.
+          {isNew
+            ? `Hasło tymczasowe dla ${issued.email}. Skopiuj zaproszenie i wyślij je ze swojej skrzynki: jest w nim adres, login, to hasło i co czeka po pierwszym logowaniu. `
+            : `Dla ${issued.email}. Przekaż je tej osobie. Wszystkie jej sesje zostały zakończone. `}
+          Po zalogowaniu ustawi własne hasło, a do tego czasu nic innego się nie
+          otworzy. Po zamknięciu tego okna hasła nie da się już zobaczyć.
         </p>
         <div className="mb-4 flex items-center gap-2">
           <code
             data-testid="temporary-password"
             className="flex-1 select-all rounded-lg border border-line bg-surface-alt px-3 py-2 font-mono text-[14px] text-foreground"
           >
-            {password}
+            {issued.password}
           </code>
           <button
             type="button"
-            onClick={() => void copy()}
+            onClick={() => void copy("password")}
             className="flex h-9 items-center rounded-lg border border-line px-3 text-[13px] font-medium hover:bg-surface-alt transition-colors"
           >
-            {copied ? "Skopiowane" : "Kopiuj"}
+            {copied === "password" ? "Skopiowane" : "Kopiuj"}
           </button>
         </div>
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          {isNew && (
+            <button
+              type="button"
+              onClick={() => void copy("invitation")}
+              className="flex h-9 items-center rounded-lg border border-line px-3.5 text-[13px] font-medium hover:bg-surface-alt transition-colors"
+            >
+              {copied === "invitation" ? "Zaproszenie skopiowane" : "Kopiuj zaproszenie"}
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}
@@ -302,7 +329,7 @@ function CreateUserModal({
   onClose,
 }: {
   initialEmail?: string
-  onCreated: () => void
+  onCreated: (created: { email: string; password: string; role: string }) => void
   onClose: () => void
 }) {
   const [serverError, setServerError] = useState<string | null>(null)
@@ -329,12 +356,25 @@ function CreateUserModal({
         home_university_id: data.home_university_id || null,
       }),
     })
-    if (!res.ok) {
-      const body = (await res.json()) as { detail?: string }
-      setServerError(body.detail ?? "Nie udało się utworzyć użytkownika.")
+    const body = (await res.json().catch(() => ({}))) as {
+      email?: string
+      role?: string
+      temporary_password?: string
+      detail?: unknown
+    }
+    if (!res.ok || !body.temporary_password) {
+      setServerError(
+        typeof body.detail === "string"
+          ? body.detail
+          : "Nie udało się utworzyć użytkownika.",
+      )
       return
     }
-    onCreated()
+    onCreated({
+      email: body.email ?? data.email,
+      password: body.temporary_password,
+      role: body.role ?? data.role,
+    })
   }
 
   return (
@@ -343,6 +383,11 @@ function CreateUserModal({
         <h2 className="mb-4 text-[16px] font-semibold text-foreground">
           Nowy użytkownik
         </h2>
+
+        <p className="mb-4 text-[13px] text-muted">
+          Hasło tymczasowe powstanie samo i pokaże się raz, razem z gotowym
+          zaproszeniem do wysłania.
+        </p>
 
         <form onSubmit={handleSubmit(onCreate)} className="space-y-4">
           {serverError && (
@@ -362,20 +407,6 @@ function CreateUserModal({
             />
             {errors.email && (
               <p className="mt-1 text-[12px] text-critical-text">{errors.email.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="mb-1 block text-[13px] font-medium text-muted-strong">
-              Hasło
-            </label>
-            <input
-              type="password"
-              {...register("password")}
-              className="w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-[14px] focus:border-accent focus:outline-none"
-            />
-            {errors.password && (
-              <p className="mt-1 text-[12px] text-critical-text">{errors.password.message}</p>
             )}
           </div>
 

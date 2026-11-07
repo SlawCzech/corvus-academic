@@ -36,8 +36,8 @@ class RefreshResponse(BaseModel):
 
 
 class RegisterRequest(BaseModel):
+    # No password: Corvus makes a temporary one (CreatedUserResponse).
     email: str
-    password: str
     role: str = "promotor"
     # Optional: a promoter can set it later in their profile.
     home_university_id: uuid.UUID | None = None
@@ -78,6 +78,11 @@ def user_response(user: User) -> UserResponse:
 
 class TemporaryPasswordResponse(BaseModel):
     # Shown to the admin once; only its hash is kept.
+    temporary_password: str
+
+
+class CreatedUserResponse(UserResponse):
+    # The new account's first password, shown to the admin once.
     temporary_password: str
 
 

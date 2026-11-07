@@ -20,6 +20,10 @@ class SamePasswordError(Exception):
     """The new password is the one being replaced."""
 
 
+class EmailTakenError(ValueError):
+    """An account with this email already exists."""
+
+
 # 12 characters from a 64-letter alphabet: 72 bits, read out or pasted once.
 _TEMPORARY_PASSWORD_BYTES = 9
 
@@ -53,12 +57,16 @@ class UserService:
         self._repo = repo
 
     async def register(
-        self, registration: UserRegistration, home_university_id: UUID | None = None
+        self,
+        registration: UserRegistration,
+        home_university_id: UUID | None = None,
+        *,
+        must_change_password: bool = False,
     ) -> User:
-        """Persist a new user. Raises ValueError on duplicate email."""
+        """Persist a new user. Raises EmailTakenError on duplicate email."""
         existing = await self._repo.find_by_email(registration.email)
         if existing is not None:
-            raise ValueError(f"Email already registered: {registration.email}")
+            raise EmailTakenError(f"Email already registered: {registration.email}")
         model = UserModel(
             id=uuid.uuid4(),
             email=registration.email,
@@ -66,9 +74,29 @@ class UserService:
             hashed_password=registration.hashed_password,
             created_at=datetime.now(UTC),
             home_university_id=home_university_id,
+            must_change_password=must_change_password,
         )
         await self._repo.save(model)
         return _to_domain(model)
+
+    async def register_with_temporary_password(
+        self, email: str, role: Role, home_university_id: UUID | None = None
+    ) -> tuple[User, str]:
+        """Create an account whose first login can only set a password.
+
+        The admin never picks the password, so they never know the one the
+        user ends up with: Corvus makes a temporary one, returned once for
+        the admin to pass on, exactly as after a reset. Raises ValueError on
+        an invalid email and EmailTakenError on a duplicate.
+        """
+        temporary = secrets.token_urlsafe(_TEMPORARY_PASSWORD_BYTES)
+        registration = UserRegistration(
+            email=email, hashed_password=_hash_password(temporary), role=role
+        )
+        user = await self.register(
+            registration, home_university_id, must_change_password=True
+        )
+        return user, temporary
 
     async def home_university(self, user_id: UUID) -> UUID | None:
         """The university whose guidelines the user sees first, if set."""

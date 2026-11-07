@@ -75,6 +75,37 @@ def test_admin_can_dismiss_a_request(client: TestClient) -> None:
     assert client.get("/access-requests", headers=headers).json() == []
 
 
+def test_creating_the_account_closes_its_request(client: TestClient) -> None:
+    client.post("/access-requests", json={"email": "Kandydat@uczelnia.edu.pl"})
+    client.post("/access-requests", json={"email": "kandydat@uczelnia.edu.pl"})
+    client.post("/access-requests", json={"email": "inny@uczelnia.edu.pl"})
+    headers = login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+
+    created = client.post(
+        "/users", json={"email": "kandydat@uczelnia.edu.pl"}, headers=headers
+    )
+
+    assert created.status_code == 201, created.text
+    emails = [
+        r["email"] for r in client.get("/access-requests", headers=headers).json()
+    ]
+    assert emails == ["inny@uczelnia.edu.pl"]
+
+
+def test_a_failed_creation_keeps_the_request(client: TestClient) -> None:
+    client.post("/access-requests", json={"email": "kandydat@uczelnia.edu.pl"})
+    headers = login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    client.post("/users", json={"email": "kandydat@uczelnia.edu.pl"}, headers=headers)
+    client.post("/access-requests", json={"email": "kandydat@uczelnia.edu.pl"})
+
+    duplicate = client.post(
+        "/users", json={"email": "kandydat@uczelnia.edu.pl"}, headers=headers
+    )
+
+    assert duplicate.status_code == 409
+    assert len(client.get("/access-requests", headers=headers).json()) == 1
+
+
 def test_dismissing_an_unknown_request_is_not_found(client: TestClient) -> None:
     headers = login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
     resp = client.delete(
