@@ -51,7 +51,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await app.state.http_client.aclose()
 
 
-app = FastAPI(title="Corvus App", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Corvus App", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,  # type: ignore[arg-type]  # starlette stubs defect
