@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
 
-app = FastAPI(title="Corvus Agent", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Corvus Agent", version="1.0.0", lifespan=lifespan)
 
 app.include_router(router)
 
