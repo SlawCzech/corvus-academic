@@ -244,6 +244,119 @@ zanonimizowane albo za zgodą autora.
   podejmuje je od ostatniego kroku. Akcja, która 90 minut stoi bez ruchu, przy
   najbliższym odpytaniu zmienia się w `failed` (ADR 0010).
 
+## Rotacja `JWT_SECRET` i `FERNET_KEY`
+
+Kiedy: sekret wyciekł (tak było z wartościami z commita `0d7ea0d`) albo ktoś,
+kto go znał, traci dostęp. Około 15 minut, aplikacja leży przez 2–3 z nich.
+
+Co się dzieje przy zmianie:
+
+- **`JWT_SECRET`** podpisuje sesje, więc **wszyscy zostają wylogowani**. Z niego
+  pochodzi też klucz, którym `app` szyfruje klucz dostawcy na czas kolejki
+  (ADR 0012). Akcja, która stoi w kolejce albo właśnie się wykonuje, nie otworzy
+  już swojego klucza, dlatego rotację robi się, gdy nic nie jest w toku. Akcja
+  `awaiting_input` (czeka na wybór uwag) nie przeszkadza: przy wznowieniu
+  dostaje klucz od nowa.
+- **`FERNET_KEY`** szyfruje klucze dostawców w `identity.user_api_keys` i nic
+  poza tym. `scripts/rotate_fernet_key.py` szyfruje je kluczem nowym, więc nikt
+  nie musi ich wpisywać jeszcze raz. Kopie zrobione przed rotacją mają klucze
+  pod starym `FERNET_KEY`, więc **stary klucz zostaje w menedżerze haseł**, dopóki
+  te kopie istnieją (14 dni na serwerze, w R2 tyle, ile trzyma bucket).
+
+Na serwerze, wszystko z `/srv/corvus`:
+
+```bash
+cd /srv/corvus && export IMAGE_TAG=$(cat .deployed-tag)
+DC="docker compose -f docker-compose.prod.yml"
+```
+
+**1. Nic nie jest w toku.** Wynik ma być `0`; jeśli nie jest, poczekaj (przebieg
+trwa najwyżej 30 minut) i zapytaj jeszcze raz.
+
+```bash
+$DC exec -T postgres psql -U corvus -d corvus -tAc "select count(*) from mentoring.agent_actions where status in ('pending','running')"
+```
+
+**2. Kopia i stary `.env` na bok.**
+
+```bash
+./backup.sh
+cp .env .env.before-rotation && chmod 600 .env.before-rotation
+grep '^FERNET_KEY=' .env | cut -d= -f2- > .fernet-old && chmod 600 .fernet-old
+```
+
+Stary `FERNET_KEY` (`cat .fernet-old`) skopiuj do menedżera haseł jako osobny
+wpis, np. „Corvus FERNET_KEY — kopie sprzed <data>”.
+
+**3. Nowe wartości w `.env`** (te same generatory co przy pierwszym ustawieniu):
+
+```bash
+sed -i -e "s|^JWT_SECRET=.*|JWT_SECRET=$(openssl rand -hex 32)|" -e "s|^FERNET_KEY=.*|FERNET_KEY=$(openssl rand -base64 32 | tr '+/' '-_')|" .env
+```
+
+**4. Zatrzymaj aplikację, przeszyfruj klucze, sprawdź na sucho.** Postgres i Redis
+chodzą dalej; strona przez chwilę pokazuje błąd.
+
+```bash
+$DC stop app agent agent-worker
+OLD_FERNET_KEY="$(cat .fernet-old)" $DC run --rm -e OLD_FERNET_KEY app python scripts/rotate_fernet_key.py
+```
+
+Ma wypisać `re-encrypted: N … unreadable: 0` i `dry run`. Liczba `N` to liczba
+zapisanych kluczy (promotorzy i admin). Jeśli coś jest `unreadable`, nie idź dalej:
+patrz „Wycofanie” niżej. Potem naprawdę:
+
+```bash
+OLD_FERNET_KEY="$(cat .fernet-old)" $DC run --rm -e OLD_FERNET_KEY app python scripts/rotate_fernet_key.py --apply
+```
+
+**5. Start na nowych sekretach.** `--force-recreate`, bo kontener czyta `.env`
+tylko przy tworzeniu.
+
+```bash
+$DC up -d --force-recreate app agent agent-worker
+$DC ps
+curl -fsS https://corvus.saek.dev/api/health
+```
+
+**6. Sprawdzenie.**
+
+- Logowanie działa (stara sesja w przeglądarce wylogowuje — tak ma być).
+- W ustawieniach promotora klucz dostawcy jest zapisany; jedna tania akcja
+  (np. propozycja tematu) przechodzi do końca.
+- W logach nie ma odrzuconych kluczy:
+
+```bash
+$DC logs --since 15m app agent-worker | grep -E 'api_key_undecryptable|could not be decrypted' || echo czysto
+```
+
+**7. Sprzątanie.** Nowy `FERNET_KEY` do menedżera haseł (podmień wpis
+„bieżący”), potem:
+
+```bash
+shred -u .fernet-old .env.before-rotation
+./backup.sh
+```
+
+Druga kopia ma już klucze pod nowym `FERNET_KEY`.
+
+**Wycofanie** (przed krokiem 7): przywróć `.env` i, jeśli `--apply` już poszło,
+przeszyfruj klucze z powrotem — skrypt działa w obie strony.
+
+```bash
+$DC stop app agent agent-worker
+grep '^FERNET_KEY=' .env | cut -d= -f2- > .fernet-new && chmod 600 .fernet-new
+cp .env.before-rotation .env
+OLD_FERNET_KEY="$(cat .fernet-new)" $DC run --rm -e OLD_FERNET_KEY app python scripts/rotate_fernet_key.py --apply
+$DC up -d --force-recreate app agent agent-worker
+shred -u .fernet-new
+```
+
+Klucz `unreadable` przy suchym przebiegu znaczy zwykle, że `.fernet-old` nie
+zawiera tego klucza, którym aplikacja szyfrowała (np. `.env` był już zmieniony
+wcześniej). Pojedynczy uszkodzony wiersz można też usunąć, a jego właściciel
+wpisze klucz jeszcze raz w ustawieniach.
+
 ## Odtworzenie z kopii
 
 Kopie: `/srv/corvus/backups/` (14 dni) i bucket R2.
