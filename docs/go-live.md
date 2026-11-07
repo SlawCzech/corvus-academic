@@ -23,7 +23,7 @@
 - [x] **Ręczny backup** tuż przed merge'em: `/srv/corvus/backup.sh`. Migracja
       czyści numery indeksu, retencja kasuje pliki — cofnąć to można tylko z kopii.
 
-- [ ] **Alias kontaktowy** `corvus@saek.dev` → ta sama skrzynka (Email Routing jak
+- [x] **Alias kontaktowy** `corvus@saek.dev` → ta sama skrzynka (Email Routing jak
       wyżej). Podają go README, Code of Conduct i przewodnik dla promotora.
 - [x] **Przewodnik dla promotora** w `frontend/content/guide/przewodnik-promotora.pdf`,
       po zalogowaniu pod `/przewodnik.pdf`. Odświeżanie: README obok pliku.
@@ -36,9 +36,9 @@
 
 - [x] `https://corvus.saek.dev/terms`: Twoje imię i nazwisko, przycisk „pokaż adres
       e-mail” odsłania alias (nie `[… — OPERATOR_NAME]`).
-- [ ] Konto promotora: po zalogowaniu od razu regulamin do akceptacji, po kliknięciu
+- [x] Konto promotora: po zalogowaniu od razu regulamin do akceptacji, po kliknięciu
       dashboard.
-- [ ] Testerzy akceptują raz, przy pierwszym wejściu.
+- [x] Testerzy akceptują raz, przy pierwszym wejściu.
 
 ## Zaraz potem
 
