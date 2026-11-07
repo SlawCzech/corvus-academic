@@ -14,8 +14,10 @@ import {
   IconBook,
   IconSchool,
   IconFileText,
+  IconHelpCircle,
 } from "@tabler/icons-react"
 import Logo from "@/components/Logo"
+import { GUIDE_PATH } from "@/lib/guide"
 import LogoutButton from "@/components/LogoutButton"
 import { useHydrated } from "@/hooks/useHydrated"
 
@@ -30,6 +32,8 @@ interface NavItem {
   icon: React.ReactNode
   /** Other path prefixes that belong to this item. */
   also?: string[]
+  /** A file, not a screen: opens in a new tab, never prefetched. */
+  file?: boolean
 }
 
 function useActive(item: NavItem): boolean {
@@ -41,20 +45,33 @@ function useActive(item: NavItem): boolean {
 
 function NavLink({ item, compact }: { item: NavItem; compact: boolean }) {
   const active = useActive(item)
-  return (
-    <Link
-      href={item.href}
-      title={compact ? item.label : undefined}
-      className={`flex h-10 items-center gap-3 whitespace-nowrap rounded-lg text-[13.5px] font-medium transition-colors ${
-        compact ? "px-3" : "px-4"
-      } ${
-        active
-          ? "bg-white/8 text-white"
-          : "text-[#a8b6c7] hover:bg-white/5 hover:text-white"
-      }`}
-    >
+  const className = `flex h-10 items-center gap-3 whitespace-nowrap rounded-lg text-[13.5px] font-medium transition-colors ${
+    compact ? "px-3" : "px-4"
+  } ${
+    active ? "bg-white/8 text-white" : "text-[#a8b6c7] hover:bg-white/5 hover:text-white"
+  }`
+  const content = (
+    <>
       <span className="shrink-0">{item.icon}</span>
       {item.label}
+    </>
+  )
+  if (item.file) {
+    return (
+      <a
+        href={item.href}
+        target="_blank"
+        rel="noopener"
+        title={compact ? item.label : undefined}
+        className={className}
+      >
+        {content}
+      </a>
+    )
+  }
+  return (
+    <Link href={item.href} title={compact ? item.label : undefined} className={className}>
+      {content}
     </Link>
   )
 }
@@ -128,6 +145,12 @@ export default function Sidebar({ email, role }: SidebarProps) {
             href: "/profile",
             label: "Profil",
             icon: <IconUserCircle size={17} stroke={1.75} />,
+          },
+          {
+            href: GUIDE_PATH,
+            label: "Przewodnik",
+            icon: <IconHelpCircle size={17} stroke={1.75} />,
+            file: true,
           },
         ]
 

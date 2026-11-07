@@ -53,6 +53,16 @@ describe("proxy", () => {
     expect(proxy(makeRequest("/password", token)).headers.get("location")).toBeNull()
   })
 
+  it("serves the guide only to someone logged in, without a page policy", () => {
+    const anonymous = proxy(makeRequest("/przewodnik.pdf"))
+    expect(anonymous.headers.get("location")).toContain("/login")
+
+    const token = fakeJwt({ sub: "u1", role: "promotor", exp: 9999999999 })
+    const res = proxy(makeRequest("/przewodnik.pdf", token))
+    expect(res.headers.get("location")).toBeNull()
+    expect(res.headers.get("Content-Security-Policy")).toBeNull()
+  })
+
   it("sends a user with their own password away from the password page", () => {
     const token = fakeJwt({ sub: "u1", role: "promotor", exp: 9999999999 })
     const res = proxy(makeRequest("/password", token))

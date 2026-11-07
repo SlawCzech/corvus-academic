@@ -23,6 +23,11 @@
 - [ ] **Ręczny backup** tuż przed merge'em: `/srv/corvus/backup.sh`. Migracja
       czyści numery indeksu, retencja kasuje pliki — cofnąć to można tylko z kopii.
 
+- [ ] **Alias kontaktowy** `corvus@saek.dev` → ta sama skrzynka (Email Routing jak
+      wyżej). Podają go README, Code of Conduct i przewodnik dla promotora.
+- [x] **Przewodnik dla promotora** w `frontend/content/guide/przewodnik-promotora.pdf`,
+      po zalogowaniu pod `/przewodnik.pdf`. Odświeżanie: README obok pliku.
+
 ## Wypchnięcie
 
 - [ ] Push `claude/gdpr-terms`, PR, zielone CI, merge → deploy sam.
