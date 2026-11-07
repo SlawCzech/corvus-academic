@@ -277,6 +277,9 @@ working scaffolding of that process, not after-the-fact documentation.
 Issues and suggestions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). To report a
 vulnerability, follow [SECURITY.md](SECURITY.md) instead of opening an issue.
 
+Anything else — access to the hosted instance, questions from supervisors — goes to
+**corvus@saek.dev**.
+
 ## License
 
 [MIT](LICENSE) © 2026 Sławomir Czech.

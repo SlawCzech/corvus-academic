@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { PASSWORD_PAGE, isTokenExpired, getRole, homeFor, mustChangePassword } from "@/lib/auth"
+import { GUIDE_PATH } from "@/lib/guide"
 
 // Screens behind a login, and the file links that need a renewed token.
 const PROTECTED = [
@@ -17,6 +18,8 @@ const PROTECTED = [
   /^\/api\/students\/[^/]+\/drafts\/[^/]+\/file$/,
   /^\/api\/students\/[^/]+\/fragments\/[^/]+\/file$/,
   /^\/api\/guidelines\/versions\/[^/]+\/source$/,
+  // The user guide is for people with an account, not for the public site.
+  /^\/przewodnik\.pdf$/,
 ]
 
 /**
@@ -104,7 +107,7 @@ export function proxy(request: NextRequest): NextResponse {
     if (redirect) return redirect
   }
   // A file is not a page: it runs no script and needs no policy.
-  if (pathname.startsWith("/api/")) return NextResponse.next()
+  if (pathname.startsWith("/api/") || pathname === GUIDE_PATH) return NextResponse.next()
 
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64")
   const policy = contentSecurityPolicy(nonce, process.env.NODE_ENV === "development")
