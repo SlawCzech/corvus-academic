@@ -207,7 +207,7 @@ def test_create_user_admin(client: TestClient) -> None:
     token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
     resp = client.post(
         "/users",
-        json={"email": "new@example.com", "password": "pass123", "role": "promotor"},
+        json={"email": "new@example.com", "role": "promotor"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 201
@@ -220,15 +220,17 @@ def test_create_user_duplicate_email(client: TestClient) -> None:
     token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
     client.post(
         "/users",
-        json={"email": "dup@example.com", "password": "pass", "role": "promotor"},
+        json={"email": "dup@example.com", "role": "promotor"},
         headers={"Authorization": f"Bearer {token}"},
     )
     resp = client.post(
         "/users",
-        json={"email": "dup@example.com", "password": "pass2", "role": "promotor"},
+        json={"email": "dup@example.com", "role": "promotor"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 409
+    # The admin form shows `detail` as-is.
+    assert resp.json()["detail"] == "Konto z tym adresem już istnieje."
 
 
 @pytest.mark.parametrize("email", ["ktos@uczelnia.local", "bez-malpy"])
@@ -238,7 +240,7 @@ def test_create_user_invalid_email_is_422(client: TestClient, email: str) -> Non
 
     resp = client.post(
         "/users",
-        json={"email": email, "password": "pass123", "role": "promotor"},
+        json={"email": email, "role": "promotor"},
         headers=auth,
     )
 
@@ -249,21 +251,37 @@ def test_create_user_invalid_email_is_422(client: TestClient, email: str) -> Non
     assert email not in emails
 
 
-def test_create_user_password_over_bcrypt_limit_is_422(client: TestClient) -> None:
-    token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+def test_a_new_account_starts_with_a_temporary_password(client: TestClient) -> None:
+    admin = {"Authorization": f"Bearer {_login(client, ADMIN_EMAIL, ADMIN_PASSWORD)}"}
+
     resp = client.post(
         "/users",
-        json={"email": "dlugie@example.com", "password": "x" * 73, "role": "promotor"},
-        headers={"Authorization": f"Bearer {token}"},
+        # A password sent by an old client is ignored, never stored.
+        json={"email": "nowa@example.com", "password": "admin-picked-it"},
+        headers=admin,
     )
-    assert resp.status_code == 422
+
+    assert resp.status_code == 201, resp.text
+    body: dict[str, Any] = resp.json()
+    assert body["must_change_password"] is True
+    temporary = body["temporary_password"]
+    assert len(temporary) >= 12
+    refused = client.post(
+        "/auth/login", json={"email": "nowa@example.com", "password": "admin-picked-it"}
+    )
+    assert refused.status_code == 401
+    own = {"Authorization": f"Bearer {_login(client, 'nowa@example.com', temporary)}"}
+    # Until it is replaced, the account can do nothing else.
+    assert client.get("/users/me/settings", headers=own).status_code == 403
+    listed = [u for u in client.get("/users", headers=admin).json()]
+    assert not any("temporary_password" in u for u in listed)
 
 
 def test_create_user_forbidden_for_promotor(client: TestClient) -> None:
     token = _login(client, PROMOTOR_EMAIL, PROMOTOR_PASSWORD)
     resp = client.post(
         "/users",
-        json={"email": "x@x.com", "password": "p", "role": "promotor"},
+        json={"email": "x@x.com", "role": "promotor"},
         headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 403
@@ -273,11 +291,7 @@ def test_delete_user_admin(client: TestClient) -> None:
     token = _login(client, ADMIN_EMAIL, ADMIN_PASSWORD)
     create_resp = client.post(
         "/users",
-        json={
-            "email": "todelete@example.com",
-            "password": "pass",
-            "role": "promotor",
-        },
+        json={"email": "todelete@example.com", "role": "promotor"},
         headers={"Authorization": f"Bearer {token}"},
     )
     user_id = create_resp.json()["id"]
@@ -805,16 +819,19 @@ def test_an_admin_can_give_a_new_account_its_university(client: TestClient) -> N
 
     resp = client.post(
         "/users",
-        json={
-            "email": "nowy@example.com",
-            "password": "dlugie-haslo-123",
-            "home_university_id": university,
-        },
+        json={"email": "nowy@example.com", "home_university_id": university},
         headers=admin,
     )
-    token = _login(client, "nowy@example.com", "dlugie-haslo-123")
-
     assert resp.status_code == 201, resp.text
+    temporary = resp.json()["temporary_password"]
+    first = _login(client, "nowy@example.com", temporary)
+    changed = client.patch(
+        "/users/me/password",
+        json={"current_password": temporary, "new_password": "dlugie-haslo-123"},
+        headers={"Authorization": f"Bearer {first}"},
+    )
+    token = changed.json()["access_token"]
+
     settings = client.get(
         "/users/me/settings", headers={"Authorization": f"Bearer {token}"}
     ).json()

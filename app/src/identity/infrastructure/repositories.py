@@ -3,7 +3,7 @@
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.identity.infrastructure.models import (
@@ -204,6 +204,20 @@ class AccessRequestRepository:
         await self._session.delete(model)
         await self._session.commit()
         return True
+
+    async def delete_by_email(self, email: str) -> int:
+        """Remove every request from this address, case aside; how many went.
+
+        Called once an account exists for it, so the queue only shows people
+        still waiting.
+        """
+        result = await self._session.execute(
+            delete(AccessRequestModel)
+            .where(func.lower(AccessRequestModel.email) == email.lower())
+            .returning(AccessRequestModel.id)
+        )
+        await self._session.commit()
+        return len(result.all())
 
 
 class TermsAcceptanceRepository:

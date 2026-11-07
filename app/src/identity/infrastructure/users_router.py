@@ -8,13 +8,14 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from src.identity.application.user_service import (
+    EmailTakenError,
     SamePasswordError,
-    UserService,
     WrongPasswordError,
 )
 from src.identity.domain.terms import CURRENT_TERMS_VERSION
-from src.identity.domain.user import Role, UserRegistration
+from src.identity.domain.user import Role
 from src.identity.infrastructure.dependencies import (
+    AccessRequestRepoDep,
     AdminDep,
     CurrentUserDep,
     SessionUserDep,
@@ -26,6 +27,7 @@ from src.identity.infrastructure.limiter import login_rate_limit
 from src.identity.infrastructure.schemas import (
     AcceptTermsRequest,
     ChangePasswordRequest,
+    CreatedUserResponse,
     LoginResponse,
     RegisterRequest,
     TemporaryPasswordResponse,
@@ -41,31 +43,44 @@ logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-@router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=CreatedUserResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_user(
     body: RegisterRequest,
-    _admin: AdminDep,
+    admin: AdminDep,
     svc: UserServiceDep,
-) -> UserResponse:
-    """Register a new user — ADMIN only."""
-    role = Role(body.role)
+    requests: AccessRequestRepoDep,
+) -> CreatedUserResponse:
+    """Create an account with a temporary password — ADMIN only.
+
+    The admin passes the password on with the invitation; the first login
+    can only replace it. A pending access request from the same address is
+    closed, since it has been answered.
+    """
     try:
-        registration = UserRegistration(
-            email=body.email,
-            hashed_password=UserService.hash_password(body.password),
-            role=role,
+        user, temporary = await svc.register_with_temporary_password(
+            body.email, Role(body.role), body.home_university_id
         )
+    except EmailTakenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Konto z tym adresem już istnieje.",
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)
         ) from exc
-    try:
-        user = await svc.register(registration, body.home_university_id)
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
-        ) from exc
-    return user_response(user)
+    closed = await requests.delete_by_email(user.email)
+    logger.info(
+        "user_created_by_admin",
+        user_id=str(user.id),
+        admin=str(admin.id),
+        access_requests_closed=closed,
+    )
+    return CreatedUserResponse(
+        **user_response(user).model_dump(), temporary_password=temporary
+    )
 
 
 @router.get("", response_model=list[UserResponse])
